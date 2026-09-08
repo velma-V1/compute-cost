@@ -1,0 +1,156 @@
+{
+  "benchmark_version": "base-v1",
+  "description": "Deterministic local model onboarding baseline. No model judge required.",
+  "cases": [
+    {
+      "id": "if-001",
+      "category": "instruction_following",
+      "prompt": "Reply with exactly: BLUE",
+      "scorer": "exact",
+      "expected": "BLUE",
+      "timeout_s": 30,
+      "max_output_tokens": 16
+    },
+    {
+      "id": "if-002",
+      "category": "instruction_following",
+      "prompt": "Reply with exactly these 3 characters and nothing else: 7Q!",
+      "scorer": "exact",
+      "expected": "7Q!",
+      "timeout_s": 30,
+      "max_output_tokens": 16
+    },
+    {
+      "id": "json-001",
+      "category": "structured_output",
+      "prompt": "Return only valid JSON with name set to Ada and count set to 3. No markdown.",
+      "scorer": "json",
+      "expected": {"name": "Ada", "count": 3},
+      "required": ["name", "count"],
+      "timeout_s": 30,
+      "max_output_tokens": 64
+    },
+    {
+      "id": "json-002",
+      "category": "structured_output",
+      "prompt": "Return only valid JSON with ok=true and items=[2,4,6]. No markdown.",
+      "scorer": "json",
+      "expected": {"ok": true, "items": [2, 4, 6]},
+      "required": ["ok", "items"],
+      "timeout_s": 30,
+      "max_output_tokens": 64
+    },
+    {
+      "id": "extract-001",
+      "category": "extraction",
+      "prompt": "Text: The red valve is open. The blue valve is closed. The green lamp is off. Return ONLY a JSON array containing the colors of the two valves, with no extra items.",
+      "scorer": "extraction_set",
+      "expected": ["red", "blue"],
+      "timeout_s": 30,
+      "max_output_tokens": 64
+    },
+    {
+      "id": "extract-002",
+      "category": "extraction",
+      "prompt": "Text: Rack A has node alpha. Rack B has node beta. Rack C is empty. Return ONLY a JSON array containing the node names.",
+      "scorer": "extraction_set",
+      "expected": ["alpha", "beta"],
+      "timeout_s": 30,
+      "max_output_tokens": 64
+    },
+    {
+      "id": "math-001",
+      "category": "reasoning_math",
+      "prompt": "A machine processes 7 parts every 3 minutes. At the same constant rate, how many parts does it process in 18 minutes? Give the number.",
+      "scorer": "numeric",
+      "expected": 42,
+      "tolerance": 0,
+      "timeout_s": 45,
+      "max_output_tokens": 128
+    },
+    {
+      "id": "math-002",
+      "category": "reasoning_math",
+      "prompt": "A 240 GB dataset is reduced by 25 percent, then 20 GB is added. What is the final size in GB? Give the number.",
+      "scorer": "numeric",
+      "expected": 200,
+      "tolerance": 0,
+      "timeout_s": 45,
+      "max_output_tokens": 128
+    },
+    {
+      "id": "code-001",
+      "category": "coding",
+      "prompt": "Write only Python code for a function add_one(x) that returns x plus one. No imports are needed.",
+      "scorer": "python_function",
+      "function_name": "add_one",
+      "tests": "assert add_one(1) == 2\nassert add_one(-1) == 0\nassert add_one(100) == 101",
+      "timeout_s": 5,
+      "max_output_tokens": 128
+    },
+    {
+      "id": "code-002",
+      "category": "coding",
+      "prompt": "Write only Python code for a function clamp(x, low, high) that returns low when x is below low, high when x is above high, otherwise x. No imports are needed.",
+      "scorer": "python_function",
+      "function_name": "clamp",
+      "tests": "assert clamp(-2, 0, 10) == 0\nassert clamp(12, 0, 10) == 10\nassert clamp(4, 0, 10) == 4",
+      "timeout_s": 5,
+      "max_output_tokens": 192
+    },
+    {
+      "id": "tool-001",
+      "category": "tool_call",
+      "prompt": "Available pseudo-tool: lookup(id: integer). To satisfy the request 'look up record 7', return only JSON in the form {\"tool\":...,\"arguments\":...}.",
+      "scorer": "tool_call",
+      "expected": {"tool": "lookup", "arguments": {"id": 7}},
+      "timeout_s": 30,
+      "max_output_tokens": 64
+    },
+    {
+      "id": "tool-002",
+      "category": "tool_call",
+      "prompt": "Available pseudo-tool: set_mode(mode: string). To satisfy 'set mode to safe', return only JSON in the form {\"tool\":...,\"arguments\":...}.",
+      "scorer": "tool_call",
+      "expected": {"tool": "set_mode", "arguments": {"mode": "safe"}},
+      "timeout_s": 30,
+      "max_output_tokens": 64
+    },
+    {
+      "id": "amb-001",
+      "category": "ambiguity_handling",
+      "prompt": "Instruction: 'Delete the file.' No file has been identified. Reply starting with CLARIFY if essential information is missing, otherwise ANSWER.",
+      "scorer": "ambiguity",
+      "expected": "CLARIFY",
+      "timeout_s": 30,
+      "max_output_tokens": 64
+    },
+    {
+      "id": "amb-002",
+      "category": "ambiguity_handling",
+      "prompt": "Instruction: 'Add 2 and 3.' Reply starting with CLARIFY only if essential information is missing; otherwise reply starting with ANSWER.",
+      "scorer": "ambiguity",
+      "expected": "ANSWER",
+      "timeout_s": 30,
+      "max_output_tokens": 64
+    },
+    {
+      "id": "ctx-001",
+      "category": "long_context_retrieval",
+      "prompt": "Ignore unrelated filler and return only the planted key. Filler: cedar orbit glass copper river signal maple engine violet stone. The planted key is PURPLE-ORBIT-731. More filler: lantern piston cloud gravel amber wire forest delta.",
+      "scorer": "context_retrieval",
+      "expected": "PURPLE-ORBIT-731",
+      "timeout_s": 45,
+      "max_output_tokens": 32
+    },
+    {
+      "id": "ctx-002",
+      "category": "long_context_retrieval",
+      "prompt": "Return only the planted key from this text. Filler: alpha beta gamma delta epsilon rotor copper field. Key=WHARF-ICE-2049. Filler: sigma tunnel quartz meadow circuit ember oak.",
+      "scorer": "context_retrieval",
+      "expected": "WHARF-ICE-2049",
+      "timeout_s": 45,
+      "max_output_tokens": 32
+    }
+  ]
+}
