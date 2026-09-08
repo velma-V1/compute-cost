@@ -6,6 +6,7 @@ from dataclasses import dataclass
 
 PASS = {"ANSWER_CORRECT"}
 TRUNCATION = {"THINK_TRUNCATED", "ANSWER_TRUNCATED"}
+SEMANTIC_FAILURE = {"ANSWER_WRONG", "FORMAT_FAILURE", "TOOL_FAILURE", "CONTEXT_FAILURE"}
 INVALID = {"SCORER_DEFECT", "TEST_DEFECT", "CAPTURE_GAP", "RUNTIME_FAILURE", "TIMEOUT", "RESOURCE_LIMIT"}
 
 
@@ -58,7 +59,21 @@ class AdaptiveBudgetController:
                     min(self.max_budget, latest.budget * 2),
                     "truncation justifies more generation headroom",
                 )
-            return BudgetDecision("STOP", None, "semantic failure without evidence that more budget will help")
+
+            semantic = [item for item in observations if item.result_class in SEMANTIC_FAILURE]
+            if len(semantic) == 1 and latest.result_class in SEMANTIC_FAILURE and latest.budget < self.max_budget:
+                return BudgetDecision(
+                    "PROBE",
+                    min(self.max_budget, latest.budget * 2),
+                    "single diagnostic budget escalation for semantic failure",
+                )
+            if len(semantic) >= 2:
+                return BudgetDecision(
+                    "STOP",
+                    None,
+                    "semantic failure persisted after diagnostic budget escalation",
+                )
+            return BudgetDecision("STOP", None, "failure does not implicate generation budget")
 
         minimum_pass = min(item.budget for item in passes)
         lower_failures = [item.budget for item in failures if item.budget < minimum_pass]
