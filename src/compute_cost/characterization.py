@@ -251,6 +251,9 @@ def run_characterization(runner: Any, cases: list[dict[str, Any]]) -> list[dict[
         ]
         previous_spec = on_spec
         previous_row = on_row
+        latest_spec_by_budget: dict[int, ExperimentSpec] = {
+            on_spec.generation_budget: on_spec,
+        }
         stop_reason = "CONTROLLER_STOP"
 
         while len(task_rows) < int(cfg["max_experiments_per_task"]):
@@ -264,16 +267,19 @@ def run_characterization(runner: Any, cases: list[dict[str, Any]]) -> list[dict[
                 runner,
                 f"{case['id']} {decision.action.lower()} {next_budget}",
             )
-            previous_class = str(previous_row["classification"]["result_class"])
-            increased_after_truncation = (
-                previous_class in TRUNCATION
-                and next_budget > previous_spec.generation_budget
-            )
-            recovery_level = "R1" if increased_after_truncation else None
             if decision.action == "REPLICATE":
+                parent_spec = latest_spec_by_budget[next_budget]
                 changed_variable = "replication"
                 hypothesis = "reproduce minimum passing boundary"
+                recovery_level = None
             else:
+                parent_spec = previous_spec
+                previous_class = str(previous_row["classification"]["result_class"])
+                increased_after_truncation = (
+                    previous_class in TRUNCATION
+                    and next_budget > previous_spec.generation_budget
+                )
+                recovery_level = "R1" if increased_after_truncation else None
                 changed_variable = "generation_budget"
                 hypothesis = (
                     "insufficient generation headroom caused truncation"
@@ -284,14 +290,14 @@ def run_characterization(runner: Any, cases: list[dict[str, Any]]) -> list[dict[
             child = _spec(
                 sequence=sequence,
                 case=case,
-                parent=previous_spec,
+                parent=parent_spec,
                 thinking=True,
                 budget=next_budget,
                 hypothesis=hypothesis,
                 changed_variable=changed_variable,
                 recovery_level=recovery_level,
             )
-            row = _run_with_progress(runner, case, child, previous_spec)
+            row = _run_with_progress(runner, case, child, parent_spec)
             task_rows.append(row)
             all_rows.append(row)
             observations.append(
@@ -300,6 +306,7 @@ def run_characterization(runner: Any, cases: list[dict[str, Any]]) -> list[dict[
                     result_class=str(row["classification"]["result_class"]),
                 )
             )
+            latest_spec_by_budget[child.generation_budget] = child
             previous_spec = child
             previous_row = row
         else:
