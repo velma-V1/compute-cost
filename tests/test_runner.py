@@ -34,7 +34,7 @@ class FakeRuntime:
         return {**envelope(), "parsed": {"models": [{"name": "fake", "size": 1234, "future": True}]}}
 
     def model_info(self, model):
-        return {**envelope(), "parsed": {"details": {"parameter_size": "1B"}, "model_info": {"context_length": 32}, "future": {"x": 1}}}
+        return {**envelope(), "parsed": {"details": {"parameter_size": "1B"}, "model_info": {"context_length": 32768}, "future": {"x": 1}}}
 
     def model_available_in(self, tags, model):
         return True
@@ -51,11 +51,13 @@ class FakeRuntime:
     def generate(self, model, messages, options, *, stream=True, request_fields=None):
         prompt = messages[-1]["content"]
         self.calls.append({"model": model, "messages": messages, "options": options, "stream": stream, "request_fields": request_fields})
-        if "CONTEXT_SWEEP target=16" in prompt:
+        if "CONTEXT_SWEEP target=8192" in prompt:
             return envelope("WRONG")
         if "CONTEXT_SWEEP" in prompt:
-            key = prompt.split("PLANTED_KEY=")[1].split()[0]
-            return envelope(key)
+            facts = []
+            for label in ("FACT_A=", "FACT_B=", "FACT_C="):
+                facts.append(prompt.split(label, 1)[1].split()[0])
+            return envelope("|".join(facts))
         if "PING" in prompt:
             return envelope("PING")
         if "BASE-OK" in prompt:
@@ -91,7 +93,7 @@ def suite():
 def config():
     value = load_config()
     value["telemetry"]["background"] = False
-    value["limits"]["context_schedule"] = [8, 16]
+    value["limits"]["context_schedule"] = [4096, 8192]
     value["limits"]["consecutive_context_failures"] = 1
     value["limits"]["sustained_iterations"] = 2
     return value
@@ -111,8 +113,8 @@ def test_onboarding_retains_raw_runtime_telemetry_cases_reports_and_integrity(tm
     assert EvidenceStore(tmp_path, run_dir.name).verify_manifest() == []
 
     summary = json.loads((run_dir / "summary.json").read_text())
-    assert summary["context_boundary"]["last_success"] == 8
-    assert summary["context_boundary"]["first_stop"] == 16
+    assert summary["context_boundary"]["last_success"] == 4096
+    assert summary["context_boundary"]["first_stop"] == 8192
     rows = [json.loads(line) for line in (run_dir / "cases.jsonl").read_text().splitlines()]
     assert len([r for r in rows if r.get("stage") == "sustained"]) == 2
 
@@ -127,4 +129,4 @@ def test_failed_case_becomes_exact_replay_snapshot(tmp_path: Path):
     assert replay["generation"]["normalized"]["text"] == "WRONG"
     assert replay["scoring"]["score"] == 0.0
     assert replay["telemetry_before_failure"]
-    assert replay["resolved_config"]["limits"]["context_schedule"] == [8, 16]
+    assert replay["resolved_config"]["limits"]["context_schedule"] == [4096, 8192]
