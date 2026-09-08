@@ -19,6 +19,13 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_CONFIG_PATH = PROJECT_ROOT / "config" / "default.toml"
 DEFAULT_SUITE_PATH = PROJECT_ROOT / "benchmarks" / "base-v1.json"
 DEFAULT_CHARACTERIZATION_SUITE_PATH = PROJECT_ROOT / "benchmarks" / "qwen-characterization-v1.json"
+PLANNED_CHARACTERIZATION_MODELS = (
+    "qwen3.5:27b-q4_K_M",
+    "qwen3.5:27b-q8_0",
+    "qwen3.5:35b-a3b-q4_K_M",
+    "qwen3.5:35b-a3b-q8_0",
+    "devstral-small-2:24b-instruct-2512-q8_0",
+)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -48,6 +55,13 @@ def build_parser() -> argparse.ArgumentParser:
     characterize.add_argument("--model", required=True)
     characterize.add_argument("--suite", default=str(DEFAULT_CHARACTERIZATION_SUITE_PATH))
     characterize.add_argument("--pull", action="store_true", help="Pull the model if it is not already local.")
+
+    campaign = sub.add_parser(
+        "characterize-campaign",
+        help="Characterize the planned five-model set sequentially with fail-fast verification.",
+    )
+    campaign.add_argument("--suite", default=str(DEFAULT_CHARACTERIZATION_SUITE_PATH))
+    campaign.add_argument("--pull", action="store_true", help="Pull a planned model if it is not already local.")
 
     compare = sub.add_parser("compare", help="Compare completed runs without model execution.")
     compare.add_argument("runs", nargs="+", help="Two or more run IDs or run directories.")
@@ -87,6 +101,25 @@ def _resolve_run(results_root: Path, value: str) -> Path:
     return results_root / value
 
 
+def _characterization_run_failure(run_dir: Path) -> str | None:
+    events_path = run_dir / "events.jsonl"
+    if not events_path.is_file():
+        return "RUN_INCOMPLETE"
+    complete = False
+    for raw_line in events_path.read_text(encoding="utf-8").splitlines():
+        if not raw_line.strip():
+            continue
+        try:
+            event = json.loads(raw_line)
+        except json.JSONDecodeError:
+            return "RUN_INCOMPLETE"
+        if event.get("event") == "RUN_FAILED":
+            return "RUN_FAILED"
+        if event.get("event") == "CHARACTERIZATION_COMPLETE":
+            complete = True
+    return None if complete else "RUN_INCOMPLETE"
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(list(argv) if argv is not None else None)
@@ -121,6 +154,43 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 0 if result["runtime"].get("ok", False) else 2
 
     suite = _load_suite(args.suite)
+
+    if args.command == "characterize-campaign":
+        runs: list[dict[str, Any]] = []
+        for model in PLANNED_CHARACTERIZATION_MODELS:
+            runner = BenchmarkRunner(runtime, config, suite, results_root=results_root)
+            run_dir = runner.characterize(model, pull=bool(args.pull))
+            run_failure = _characterization_run_failure(run_dir)
+            problems = EvidenceStore(results_root, run_dir.name).verify_manifest()
+            row = {
+                "model": model,
+                "run_id": run_dir.name,
+                "run_dir": str(run_dir),
+                "manifest_ok": not problems,
+                "manifest_problems": problems,
+            }
+            runs.append(row)
+
+            if run_failure is not None:
+                print(json.dumps({
+                    "ok": False,
+                    "failed_model": model,
+                    "failure": run_failure,
+                    "runs": runs,
+                }, indent=2, sort_keys=True, default=str))
+                return 2
+            if problems:
+                print(json.dumps({
+                    "ok": False,
+                    "failed_model": model,
+                    "failure": "MANIFEST_VERIFICATION_FAILED",
+                    "runs": runs,
+                }, indent=2, sort_keys=True, default=str))
+                return 2
+
+        print(json.dumps({"ok": True, "runs": runs}, indent=2, sort_keys=True, default=str))
+        return 0
+
     runner = BenchmarkRunner(runtime, config, suite, results_root=results_root)
 
     if args.command in {"onboard", "benchmark"}:
