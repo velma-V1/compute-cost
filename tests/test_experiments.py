@@ -37,3 +37,15 @@ def test_child_budget_probe_changes_exactly_one_controlled_field():
     )
     assert changed_fields(parent, child) == ["generation_budget"]
     assert child.to_dict()["parent_experiment_id"] == "exp-root"
+
+
+def test_child_difficulty_probe_changes_exactly_one_controlled_field():
+    parent = make_spec(difficulty_level=3)
+    child = make_spec(
+        experiment_id="exp-child",
+        parent_experiment_id="exp-root",
+        hypothesis="probe harder family-local fixture",
+        changed_variable="difficulty_level",
+        difficulty_level=6,
+    )
+    assert changed_fields(parent, child) == ["difficulty_level"]
