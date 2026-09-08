@@ -1,7 +1,8 @@
-"""Pure adaptive reasoning-budget boundary search."""
+"""Pure adaptive boundary-search controllers."""
 
 from __future__ import annotations
 
+from collections import Counter
 from dataclasses import dataclass
 
 PASS = {"ANSWER_CORRECT"}
@@ -96,3 +97,177 @@ class AdaptiveBudgetController:
         if pass_count < self.boundary_repeats:
             return BudgetDecision("REPLICATE", minimum_pass, "reproduce minimum passing boundary")
         return BudgetDecision("STOP", None, "minimum passing boundary reproduced")
+
+
+@dataclass(frozen=True)
+class DifficultyObservation:
+    level: int
+    passed: bool | None
+    valid_for_capability: bool = True
+
+
+@dataclass(frozen=True)
+class DifficultyDecision:
+    action: str
+    level: int | None
+    reason: str
+
+
+class AdaptiveDifficultyController:
+    """Search a family-local L0-L10 pass/fail boundary with bounded replication."""
+
+    def __init__(
+        self,
+        *,
+        min_level: int = 0,
+        max_level: int = 10,
+        anchor_level: int = 1,
+        jump: int = 3,
+        boundary_repeats: int = 5,
+    ) -> None:
+        if not 0 <= min_level <= anchor_level <= max_level <= 10:
+            raise ValueError("difficulty bounds must satisfy 0 <= min <= anchor <= max <= 10")
+        if jump < 1:
+            raise ValueError("jump must be positive")
+        if boundary_repeats < 1:
+            raise ValueError("boundary_repeats must be positive")
+        self.min_level = min_level
+        self.max_level = max_level
+        self.anchor_level = anchor_level
+        self.jump = jump
+        self.boundary_repeats = boundary_repeats
+
+    def next(self, observations: list[DifficultyObservation]) -> DifficultyDecision:
+        if not observations:
+            return DifficultyDecision(
+                "PROBE",
+                self.anchor_level,
+                "establish family difficulty anchor",
+            )
+
+        latest = observations[-1]
+        if not latest.valid_for_capability or not isinstance(latest.passed, bool):
+            return DifficultyDecision(
+                "REPLICATE",
+                latest.level,
+                "retry invalid difficulty observation",
+            )
+
+        valid = [
+            item
+            for item in observations
+            if item.valid_for_capability and isinstance(item.passed, bool)
+        ]
+        counts = Counter(item.level for item in valid)
+        pass_counts = Counter(item.level for item in valid if item.passed is True)
+        fail_counts = Counter(item.level for item in valid if item.passed is False)
+        pass_levels = sorted(pass_counts)
+        fail_levels = sorted(fail_counts)
+
+        mixed_levels = sorted(set(pass_levels) & set(fail_levels))
+        if mixed_levels:
+            level = mixed_levels[0]
+            if counts[level] < self.boundary_repeats:
+                return DifficultyDecision(
+                    "REPLICATE",
+                    level,
+                    "reproduce mixed difficulty behavior",
+                )
+            return DifficultyDecision(
+                "STOP",
+                None,
+                "mixed difficulty behavior reproduced",
+            )
+
+        if pass_levels and not fail_levels:
+            highest_pass = pass_levels[-1]
+            if highest_pass < self.max_level:
+                return DifficultyDecision(
+                    "PROBE",
+                    min(self.max_level, highest_pass + self.jump),
+                    "jump upward after passing difficulty",
+                )
+            if pass_counts[highest_pass] < self.boundary_repeats:
+                return DifficultyDecision(
+                    "REPLICATE",
+                    highest_pass,
+                    "reproduce maximum difficulty pass",
+                )
+            return DifficultyDecision(
+                "STOP",
+                None,
+                "maximum difficulty pass reproduced",
+            )
+
+        if fail_levels and not pass_levels:
+            lowest_fail = fail_levels[0]
+            if lowest_fail > self.min_level:
+                return DifficultyDecision(
+                    "PROBE",
+                    max(self.min_level, lowest_fail - self.jump),
+                    "search downward after failing difficulty",
+                )
+            if fail_counts[lowest_fail] < self.boundary_repeats:
+                return DifficultyDecision(
+                    "REPLICATE",
+                    lowest_fail,
+                    "reproduce minimum difficulty failure",
+                )
+            return DifficultyDecision(
+                "STOP",
+                None,
+                "minimum difficulty failure reproduced",
+            )
+
+        monotonic_pairs = [
+            (pass_level, fail_level)
+            for pass_level in pass_levels
+            for fail_level in fail_levels
+            if pass_level < fail_level
+        ]
+        if not monotonic_pairs:
+            level = latest.level
+            if counts[level] < self.boundary_repeats:
+                return DifficultyDecision(
+                    "REPLICATE",
+                    level,
+                    "reproduce non-monotonic difficulty observation",
+                )
+            return DifficultyDecision(
+                "STOP",
+                None,
+                "non-monotonic difficulty observations reproduced",
+            )
+
+        lower_pass, upper_fail = min(
+            monotonic_pairs,
+            key=lambda pair: (pair[1] - pair[0], -pair[0]),
+        )
+        gap = upper_fail - lower_pass
+        if gap > 1:
+            candidate = lower_pass + gap // 2
+            if candidate <= lower_pass:
+                candidate = lower_pass + 1
+            return DifficultyDecision(
+                "PROBE",
+                candidate,
+                "bisect difficulty pass/fail bracket",
+            )
+
+        if counts[lower_pass] < self.boundary_repeats:
+            return DifficultyDecision(
+                "REPLICATE",
+                lower_pass,
+                "reproduce passing side of difficulty boundary",
+            )
+        if counts[upper_fail] < self.boundary_repeats:
+            return DifficultyDecision(
+                "REPLICATE",
+                upper_fail,
+                "reproduce failing side of difficulty boundary",
+            )
+        return DifficultyDecision(
+            "STOP",
+            None,
+            "adjacent difficulty boundary reproduced",
+        )

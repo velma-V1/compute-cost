@@ -1,7 +1,8 @@
-"""Validation for versioned capability-map benchmark suites."""
+"""Validation and normalization for versioned capability-map benchmark suites."""
 
 from __future__ import annotations
 
+import copy
 from typing import Any
 
 
@@ -24,6 +25,107 @@ LEGACY_FIELDS = (
     "scorer",
     "timeout_s",
 )
+
+
+def normalize_capability_case(
+    case: dict[str, Any],
+    *,
+    suite_version: str,
+    taxonomy_version: str | None = None,
+) -> dict[str, Any]:
+    """Return one canonical capability case without mutating source evidence."""
+    normalized = copy.deepcopy(case)
+    meta = case.get("capability_map")
+    extended = isinstance(meta, dict)
+    meta = meta if extended else {}
+
+    family_id = case.get("family_id", meta.get("family_id", case.get("category")))
+    source_taxonomy = case.get(
+        "taxonomy_version",
+        meta.get("taxonomy_version", taxonomy_version),
+    )
+
+    structured = case.get("difficulty")
+    if not isinstance(structured, dict):
+        structured = meta.get("difficulty")
+    if not isinstance(structured, dict):
+        structured = {}
+
+    level = structured.get("level", case.get("difficulty_level", 0))
+    rubric_version = structured.get("rubric_version")
+    if rubric_version is None:
+        rubric_version = meta.get("rubric_version")
+    if rubric_version is None:
+        rubric_version = "legacy"
+
+    dimensions = structured.get("dimensions", {})
+    if not isinstance(dimensions, dict):
+        dimensions = {}
+
+    if extended or case.get("family_id") is not None:
+        scorer_version = str(case.get("scorer_version", "1"))
+        capabilities_required = case.get(
+            "capabilities_required",
+            meta.get("capabilities_required", [family_id]),
+        )
+        recovery_eligible = case.get(
+            "recovery_eligible",
+            meta.get("recovery_eligible", True),
+        )
+        robustness_eligible = case.get(
+            "robustness_eligible",
+            meta.get("robustness_eligible", True),
+        )
+        compound = bool(case.get("compound", meta.get("compound", False)))
+        tags = copy.deepcopy(case.get("tags", meta.get("tags", [])))
+    else:
+        scorer_version = "legacy"
+        capabilities_required = [family_id]
+        recovery_eligible = True
+        robustness_eligible = True
+        compound = False
+        tags = []
+
+    normalized.update(
+        {
+            "suite_version": suite_version,
+            "family_id": family_id,
+            "taxonomy_version": source_taxonomy,
+            "difficulty": {
+                "level": level,
+                "rubric_version": rubric_version,
+                "dimensions": copy.deepcopy(dimensions),
+            },
+            "scorer_version": scorer_version,
+            "capabilities_required": copy.deepcopy(capabilities_required),
+            "recovery_eligible": bool(recovery_eligible),
+            "robustness_eligible": bool(robustness_eligible),
+            "compound": compound,
+            "tags": tags,
+        }
+    )
+    return normalized
+
+
+def normalize_capability_suite(
+    suite: dict[str, Any],
+    taxonomy: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Normalize a legacy or extended suite into canonical in-memory cases."""
+    if taxonomy is not None:
+        validate_capability_suite(suite, taxonomy)
+    normalized = copy.deepcopy(suite)
+    suite_version = str(suite.get("benchmark_version", "unknown"))
+    taxonomy_version = suite.get("taxonomy_version")
+    normalized["cases"] = [
+        normalize_capability_case(
+            case,
+            suite_version=suite_version,
+            taxonomy_version=taxonomy_version,
+        )
+        for case in suite.get("cases", [])
+    ]
+    return normalized
 
 
 def validate_capability_suite(

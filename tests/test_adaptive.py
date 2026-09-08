@@ -1,4 +1,9 @@
-from compute_cost.adaptive import AdaptiveBudgetController, BudgetObservation
+from compute_cost.adaptive import (
+    AdaptiveBudgetController,
+    AdaptiveDifficultyController,
+    BudgetObservation,
+    DifficultyObservation,
+)
 
 
 def obs(budget, result):
@@ -11,6 +16,24 @@ def controller():
         min_budget=32,
         max_budget=2048,
         granularity=32,
+        boundary_repeats=3,
+    )
+
+
+def dobs(level, passed, valid=True):
+    return DifficultyObservation(
+        level=level,
+        passed=passed,
+        valid_for_capability=valid,
+    )
+
+
+def difficulty_controller():
+    return AdaptiveDifficultyController(
+        min_level=0,
+        max_level=10,
+        anchor_level=1,
+        jump=3,
         boundary_repeats=3,
     )
 
@@ -63,3 +86,77 @@ def test_minimum_pass_is_replicated():
     decision = c.next(rows)
     assert decision.action == "STOP"
     assert decision.reason == "minimum passing boundary reproduced"
+
+
+def test_difficulty_search_starts_at_family_anchor():
+    decision = difficulty_controller().next([])
+    assert decision.action == "PROBE"
+    assert decision.level == 1
+    assert decision.reason == "establish family difficulty anchor"
+
+
+def test_difficulty_search_jumps_up_after_passes():
+    c = difficulty_controller()
+    first = c.next([dobs(1, True)])
+    assert (first.action, first.level) == ("PROBE", 4)
+    second = c.next([dobs(1, True), dobs(4, True)])
+    assert (second.action, second.level) == ("PROBE", 7)
+
+
+def test_difficulty_search_bisects_pass_fail_bracket():
+    c = difficulty_controller()
+    rows = [dobs(1, True), dobs(4, True), dobs(7, False)]
+    decision = c.next(rows)
+    assert (decision.action, decision.level) == ("PROBE", 5)
+    rows.append(dobs(5, True))
+    decision = c.next(rows)
+    assert (decision.action, decision.level) == ("PROBE", 6)
+
+
+def test_adjacent_difficulty_transition_replicates_both_sides_then_stops():
+    c = difficulty_controller()
+    rows = [dobs(5, True), dobs(6, False)]
+
+    decision = c.next(rows)
+    assert (decision.action, decision.level) == ("REPLICATE", 5)
+    rows.extend([dobs(5, True), dobs(5, True)])
+
+    decision = c.next(rows)
+    assert (decision.action, decision.level) == ("REPLICATE", 6)
+    rows.extend([dobs(6, False), dobs(6, False)])
+
+    decision = c.next(rows)
+    assert decision.action == "STOP"
+    assert decision.level is None
+    assert decision.reason == "adjacent difficulty boundary reproduced"
+
+
+def test_invalid_difficulty_observation_retries_same_level_without_counting_failure():
+    c = difficulty_controller()
+    decision = c.next([dobs(4, None, valid=False)])
+    assert (decision.action, decision.level) == ("REPLICATE", 4)
+    assert decision.reason == "retry invalid difficulty observation"
+
+
+def test_difficulty_ceiling_pass_is_reproduced_before_stop():
+    c = difficulty_controller()
+    rows = [dobs(1, True), dobs(4, True), dobs(7, True), dobs(10, True)]
+    decision = c.next(rows)
+    assert (decision.action, decision.level) == ("REPLICATE", 10)
+    rows.extend([dobs(10, True), dobs(10, True)])
+    decision = c.next(rows)
+    assert decision.action == "STOP"
+    assert decision.reason == "maximum difficulty pass reproduced"
+
+
+def test_difficulty_anchor_failure_searches_down_to_floor_and_reproduces_it():
+    c = difficulty_controller()
+    decision = c.next([dobs(1, False)])
+    assert (decision.action, decision.level) == ("PROBE", 0)
+    rows = [dobs(1, False), dobs(0, False)]
+    decision = c.next(rows)
+    assert (decision.action, decision.level) == ("REPLICATE", 0)
+    rows.extend([dobs(0, False), dobs(0, False)])
+    decision = c.next(rows)
+    assert decision.action == "STOP"
+    assert decision.reason == "minimum difficulty failure reproduced"

@@ -22,7 +22,7 @@ EXPECTED_FAMILIES = {
     "planning_optimization",
     "coding_generation",
     "code_comprehension",
-    "debugging_root_cause",
+    "debugging_root_cause_diagnosis",
     "refactoring_under_constraints",
     "test_generation_verification",
     "tool_selection",
@@ -40,7 +40,7 @@ EXPECTED_FAMILIES = {
     "contradictory_information_handling",
     "multi_turn_state_tracking",
     "updated_obsolete_state_rejection",
-    "memory_compression_summarization_fidelity",
+    "memory_compression_summary_fidelity",
     "decomposition",
     "self_correction",
     "verification_critique",
@@ -72,12 +72,23 @@ def _load_required_json(path: str) -> dict:
     return value
 
 
-def _load_validator():
+def _load_capability_module():
     spec = importlib.util.find_spec("compute_cost.capability_suite")
     assert spec is not None, "compute_cost.capability_suite is not implemented"
-    module = importlib.import_module("compute_cost.capability_suite")
+    return importlib.import_module("compute_cost.capability_suite")
+
+
+def _load_validator():
+    module = _load_capability_module()
     assert hasattr(module, "validate_capability_suite")
     return module.validate_capability_suite
+
+
+def _load_normalizers():
+    module = _load_capability_module()
+    assert hasattr(module, "normalize_capability_case"), "normalize_capability_case is not implemented"
+    assert hasattr(module, "normalize_capability_suite"), "normalize_capability_suite is not implemented"
+    return module.normalize_capability_case, module.normalize_capability_suite
 
 
 def test_qwen_characterization_template_is_byte_for_byte_unchanged():
@@ -144,6 +155,71 @@ def test_each_gpt_oss_case_preserves_legacy_runner_fields_and_adds_capability_me
         assert set(meta["capabilities_required"]) <= taxonomy_ids
         assert isinstance(meta["recovery_eligible"], bool)
         assert isinstance(meta["robustness_eligible"], bool)
+
+
+def test_legacy_qwen_case_normalizes_without_source_mutation():
+    normalize_case, normalize_suite = _load_normalizers()
+    suite = _load_required_json("benchmarks/qwen-characterization-v1.json")
+    source = copy.deepcopy(suite)
+    case = suite["cases"][0]
+
+    normalized = normalize_case(
+        case,
+        suite_version=suite["benchmark_version"],
+        taxonomy_version=None,
+    )
+    assert normalized["id"] == case["id"]
+    assert normalized["family_id"] == case["category"]
+    assert normalized["taxonomy_version"] is None
+    assert normalized["difficulty"] == {
+        "level": case["difficulty_level"],
+        "rubric_version": "legacy",
+        "dimensions": {},
+    }
+    assert normalized["scorer_version"] == "legacy"
+    assert normalized["capabilities_required"] == [case["category"]]
+    assert normalized["recovery_eligible"] is True
+    assert normalized["robustness_eligible"] is True
+    assert normalized["compound"] is False
+    assert normalized["tags"] == []
+
+    normalized_suite = normalize_suite(suite)
+    assert normalized_suite["benchmark_version"] == suite["benchmark_version"]
+    assert normalized_suite["cases"][0]["family_id"] == case["category"]
+    assert suite == source
+
+
+def test_extended_nested_case_normalizes_to_canonical_top_level_shape():
+    normalize_case, normalize_suite = _load_normalizers()
+    taxonomy = _load_required_json("benchmarks/capability-taxonomy-v1.json")
+    suite = _load_required_json("benchmarks/gpt-oss-20b-capability-v1.json")
+    source = copy.deepcopy(suite)
+    case = suite["cases"][0]
+
+    normalized = normalize_case(
+        case,
+        suite_version=suite["benchmark_version"],
+        taxonomy_version=suite["taxonomy_version"],
+    )
+    meta = case["capability_map"]
+    assert normalized["family_id"] == meta["family_id"]
+    assert normalized["taxonomy_version"] == meta["taxonomy_version"]
+    assert normalized["difficulty"] == {
+        "level": case["difficulty_level"],
+        "rubric_version": meta["rubric_version"],
+        "dimensions": meta["difficulty"]["dimensions"],
+    }
+    assert normalized["capabilities_required"] == meta["capabilities_required"]
+    assert normalized["scorer_version"] == "1"
+    assert normalized["recovery_eligible"] == meta["recovery_eligible"]
+    assert normalized["robustness_eligible"] == meta["robustness_eligible"]
+    assert normalized["compound"] is False
+    assert normalized["tags"] == []
+
+    normalized_suite = normalize_suite(suite, taxonomy)
+    assert len(normalized_suite["cases"]) == 40
+    assert normalized_suite["taxonomy_version"] == "capability-taxonomy-v1"
+    assert suite == source
 
 
 def test_validator_accepts_the_committed_capability_suite():
