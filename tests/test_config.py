@@ -14,13 +14,13 @@ def test_default_config_contains_safe_bounded_run_settings():
     assert config["cost"]["electricity_configured"] is False
 
     characterization = config["characterization"]
-    assert characterization["initial_think_budget"] == 256
-    assert characterization["min_think_budget"] == 32
-    assert characterization["max_think_budget"] == 2048
-    assert characterization["budget_granularity"] == 32
+    assert characterization["initial_generation_budget"] == 256
+    assert characterization["min_generation_budget"] == 32
+    assert characterization["max_generation_budget"] == 2048
+    assert characterization["generation_budget_granularity"] == 32
     assert characterization["boundary_repeats"] == 3
     assert characterization["max_experiments_per_task"] == 12
-    assert characterization["think_off_budget"] == 256
+    assert characterization["think_off_generation_budget"] == 256
 
 
 def test_user_toml_and_dotted_overrides_merge_without_erasing_other_defaults(tmp_path: Path):
@@ -41,7 +41,7 @@ def test_user_toml_and_dotted_overrides_merge_without_erasing_other_defaults(tmp
 def test_characterization_budget_order_is_validated(tmp_path: Path):
     custom = tmp_path / "bad.toml"
     custom.write_text(
-        '[characterization]\nmin_think_budget = 512\ninitial_think_budget = 256\nmax_think_budget = 2048\n',
+        '[characterization]\nmin_generation_budget = 512\ninitial_generation_budget = 256\nmax_generation_budget = 2048\n',
         encoding="utf-8",
     )
 
