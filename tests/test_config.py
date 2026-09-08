@@ -1,5 +1,7 @@
 from pathlib import Path
 
+import pytest
+
 from compute_cost.config import load_config
 
 
@@ -10,6 +12,15 @@ def test_default_config_contains_safe_bounded_run_settings():
     assert config["limits"]["context_schedule"]
     assert config["limits"]["sustained_iterations"] > 0
     assert config["cost"]["electricity_configured"] is False
+
+    characterization = config["characterization"]
+    assert characterization["initial_think_budget"] == 256
+    assert characterization["min_think_budget"] == 32
+    assert characterization["max_think_budget"] == 2048
+    assert characterization["budget_granularity"] == 32
+    assert characterization["boundary_repeats"] == 3
+    assert characterization["max_experiments_per_task"] == 12
+    assert characterization["think_off_budget"] == 256
 
 
 def test_user_toml_and_dotted_overrides_merge_without_erasing_other_defaults(tmp_path: Path):
@@ -24,3 +35,20 @@ def test_user_toml_and_dotted_overrides_merge_without_erasing_other_defaults(tmp
     assert config["limits"]["context_schedule"]
     assert config["cost"]["electricity_per_kwh"] == 0.12
     assert config["cost"]["electricity_configured"] is True
+    assert config["characterization"]["boundary_repeats"] == 3
+
+
+def test_characterization_budget_order_is_validated(tmp_path: Path):
+    custom = tmp_path / "bad.toml"
+    custom.write_text(
+        '[characterization]\nmin_think_budget = 512\ninitial_think_budget = 256\nmax_think_budget = 2048\n',
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="min <= initial <= max"):
+        load_config(custom)
+
+
+def test_characterization_integer_controls_must_be_positive():
+    with pytest.raises(ValueError, match="positive integer"):
+        load_config(overrides={"characterization.boundary_repeats": 0})
