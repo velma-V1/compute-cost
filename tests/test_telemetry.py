@@ -41,6 +41,64 @@ def test_sampler_records_raw_collector_failure_as_unavailable():
     assert sample["gpu"]["availability"] == "unavailable"
     assert sample["nvidia_collector"]["error"]["type"] == "FileNotFoundError"
     assert sample["host"]["memory_total_bytes"] > 0
+    assert isinstance(sample["runtime_processes"], list)
+
+
+def test_runtime_process_capture_retains_cpu_memory_io_and_identity_fields():
+    class FakeMemory:
+        rss = 123
+        vms = 456
+
+    class FakeIO:
+        read_count = 1
+        write_count = 2
+        read_bytes = 3
+        write_bytes = 4
+        other_count = 5
+        other_bytes = 6
+
+    class FakeTimes:
+        user = 1.25
+        system = 0.5
+
+    class FakeProcess:
+        pid = 77
+        info = {"pid": 77, "name": "ollama.exe", "exe": "C:/Ollama/ollama.exe", "cmdline": ["ollama", "serve"]}
+
+        def cpu_percent(self, interval=None):
+            return 12.5
+
+        def memory_info(self):
+            return FakeMemory()
+
+        def io_counters(self):
+            return FakeIO()
+
+        def cpu_times(self):
+            return FakeTimes()
+
+        def num_threads(self):
+            return 9
+
+        def num_handles(self):
+            return 11
+
+    def fake_process_iter(attrs):
+        assert "name" in attrs
+        return [FakeProcess()]
+
+    def fake_runner(argv, timeout):
+        return {"command": list(argv), "returncode": None, "stdout_b64": "", "stderr_b64": "", "stdout_text": "", "stderr_text": "", "duration_ns": 1, "error": {"type": "FileNotFoundError", "message": "no gpu"}}
+
+    sample = TelemetrySampler(command_runner=fake_runner, process_iter=fake_process_iter).sample()
+    proc = sample["runtime_processes"][0]
+    assert proc["pid"] == 77
+    assert proc["name"] == "ollama.exe"
+    assert proc["rss_bytes"] == 123
+    assert proc["io"]["read_bytes"] == 3
+    assert proc["cpu_times"]["user_s"] == 1.25
+    assert proc["num_threads"] == 9
+    assert proc["num_handles"] == 11
 
 
 def test_integrate_power_uses_trapezoidal_rule():
