@@ -141,3 +141,35 @@ def build_family_frontier(
             "tested_count": len(tested_levels),
         },
     }
+
+
+def build_capability_frontiers(
+    taxonomy_version: str,
+    family_observations: dict[str, list[dict[str, Any]]],
+    *,
+    thresholds: dict[str, float] | None = None,
+) -> dict[str, Any]:
+    """Build the versioned aggregate capability-frontiers artifact."""
+    resolved = thresholds or {"reliable": 0.90, "unstable": 0.40}
+    reliable_threshold = float(resolved["reliable"])
+    unstable_threshold = float(resolved["unstable"])
+    _validate_thresholds(reliable_threshold, unstable_threshold)
+
+    families = {
+        family_id: build_family_frontier(
+            family_id,
+            family_observations[family_id],
+            reliable_threshold=reliable_threshold,
+            unstable_threshold=unstable_threshold,
+        )
+        for family_id in sorted(family_observations)
+    }
+    return {
+        "schema_version": 1,
+        "taxonomy_version": taxonomy_version,
+        "thresholds": {
+            "reliable": reliable_threshold,
+            "unstable": unstable_threshold,
+        },
+        "families": families,
+    }
