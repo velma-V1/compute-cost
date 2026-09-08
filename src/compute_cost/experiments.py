@@ -6,6 +6,7 @@ import re
 from dataclasses import asdict, dataclass
 
 CONTROLLED_FIELDS = (
+    "difficulty_level",
     "thinking_mode",
     "generation_budget",
     "context_request",
