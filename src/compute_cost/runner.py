@@ -3,14 +3,17 @@
 from __future__ import annotations
 
 import copy
+import json
 import traceback
 import uuid
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable
 
+from .capability_campaign import run_capability_campaign
 from .characterization import build_characterization_summary, render_characterization_report, run_characterization
 from .evidence import EvidenceStore
+from .frontier import build_capability_frontiers
 from .hardware import collect_hardware_snapshot
 from .progress import ProgressDisplay
 from .report import build_summary, render_report
@@ -61,6 +64,14 @@ class BenchmarkRunner(_CoreBenchmarkRunner):
 
     def _planned_characterization_tasks(self) -> int:
         return 1 + (2 * len(self.suite.get("cases", []) or [])) + 1
+
+    def _planned_capability_tasks(self) -> int:
+        families = {
+            str(case.get("family_id") or case.get("category"))
+            for case in (self.suite.get("cases", []) or [])
+            if case.get("family_id") or case.get("category")
+        }
+        return 1 + len(families) + 1
 
     def _progress_snapshot(self) -> dict[str, Any]:
         if self.progress is None:
@@ -270,6 +281,216 @@ class BenchmarkRunner(_CoreBenchmarkRunner):
                 stage="fatal",
             )
             self._event("RUN_FAILED", failure="CHARACTERIZATION_ERROR", error_type=type(exc).__name__, error=str(exc))
+            return self._finalize_run()
+        finally:
+            if self.progress is not None and not self._progress_stopped:
+                self.progress.stop_live(newline=True)
+                self._progress_stopped = True
+
+    @staticmethod
+    def _coverage_state(frontier: dict[str, Any], boundary_repeats: int) -> str:
+        levels = frontier.get("levels", []) or []
+        valid_total = sum(int(row.get("valid_count", 0)) for row in levels)
+        invalid_total = sum(int(row.get("invalid_count", 0)) for row in levels)
+        if valid_total == 0:
+            return "UNCERTAIN" if invalid_total else "UNTESTED"
+
+        by_level = {int(row["level"]): row for row in levels}
+        bracket = frontier.get("transition_bracket")
+        if isinstance(bracket, dict):
+            lower = by_level.get(int(bracket["lower_level"]))
+            upper = by_level.get(int(bracket["upper_level"]))
+            if (
+                lower is not None
+                and upper is not None
+                and int(lower.get("valid_count", 0)) >= boundary_repeats
+                and int(upper.get("valid_count", 0)) >= boundary_repeats
+            ):
+                return "PROVEN"
+
+        max_row = by_level.get(10)
+        if (
+            max_row is not None
+            and max_row.get("label") == "reliable"
+            and int(max_row.get("valid_count", 0)) >= boundary_repeats
+        ):
+            return "PROVEN"
+
+        min_row = by_level.get(0)
+        if (
+            min_row is not None
+            and min_row.get("label") == "failure"
+            and int(min_row.get("valid_count", 0)) >= boundary_repeats
+        ):
+            return "PROVEN"
+        return "PARTIAL"
+
+    def _build_coverage_ledger(self, frontiers: dict[str, Any]) -> dict[str, Any]:
+        boundary_repeats = int(self.config["capability_campaign"]["boundary_repeats"])
+        families: dict[str, Any] = {}
+        for family_id, frontier in sorted((frontiers.get("families") or {}).items()):
+            levels = frontier.get("levels", []) or []
+            families[family_id] = {
+                "state": self._coverage_state(frontier, boundary_repeats),
+                "tested_levels": list(frontier.get("coverage", {}).get("tested_levels", [])),
+                "untested_levels": list(frontier.get("coverage", {}).get("untested_levels", [])),
+                "valid_observations": sum(int(row.get("valid_count", 0)) for row in levels),
+                "invalid_observations": sum(int(row.get("invalid_count", 0)) for row in levels),
+                "reliable_floor": frontier.get("reliable_floor"),
+                "first_failure_level": frontier.get("first_failure_level"),
+            }
+        return {
+            "schema_version": 1,
+            "taxonomy_version": frontiers.get("taxonomy_version"),
+            "families": families,
+        }
+
+    def capability_characterize(self, model: str, *, pull: bool = False) -> Path:
+        """Run adaptive family-local capability frontier search as a sibling mode."""
+        self.progress = self._progress_factory(self._planned_capability_tasks())
+        self._progress_preflight_complete = False
+        self._progress_stopped = False
+        self.progress.start("preflight")
+        self.progress.start_live()
+
+        self.model = model
+        run_id = f"{datetime.now().strftime('%Y%m%d-%H%M%S')}-{uuid.uuid4().hex[:8]}"
+        self.store = EvidenceStore(self.results_root, run_id)
+        store = self.store
+        store.write_json("resolved-config.json", self.config, producer="runner", stage="preflight")
+        store.write_json("benchmark-snapshot.json", self.suite, producer="runner", stage="preflight")
+        self._event(
+            "RUN_START",
+            model=model,
+            benchmark_version=self.suite.get("benchmark_version"),
+            mode="capability-characterize",
+        )
+        self._start_telemetry()
+
+        try:
+            hardware = self.hardware_collector()
+            store.write_json("hardware.json", hardware, producer="hardware", stage="preflight")
+
+            version = self.runtime.version()
+            version_refs = self._persist_control_exchange("runtime-version", version)
+            tags = self.runtime.list_models()
+            tags_refs = self._persist_control_exchange("model-list", tags)
+            available = (
+                self.runtime.model_available_in(tags, model)
+                if hasattr(self.runtime, "model_available_in")
+                else self.runtime.is_model_available(model)
+            )
+
+            pull_refs = None
+            if not available and pull:
+                pull_result = self.runtime.pull(model)
+                pull_refs = self._persist_control_exchange("model-pull", pull_result)
+                tags = self.runtime.list_models()
+                tags_refs = self._persist_control_exchange("model-list-after-pull", tags)
+                available = (
+                    self.runtime.model_available_in(tags, model)
+                    if hasattr(self.runtime, "model_available_in")
+                    else self.runtime.is_model_available(model)
+                )
+
+            if not available:
+                store.write_json(
+                    "runtime.json",
+                    {
+                        "model": model,
+                        "available": False,
+                        "version": version.get("parsed"),
+                        "model_size_bytes": None,
+                        "evidence_refs": {"version": version_refs, "tags": tags_refs, "pull": pull_refs},
+                    },
+                    producer="runner",
+                    stage="preflight",
+                )
+                self._event("RUN_FAILED", failure="MODEL_NOT_FOUND", model=model)
+                return self._finalize_run()
+
+            info = self.runtime.model_info(model)
+            info_refs = self._persist_control_exchange("model-info", info)
+            store.write_json(
+                "runtime.json",
+                {
+                    "model": model,
+                    "available": True,
+                    "version": version.get("parsed"),
+                    "model_size_bytes": self._find_model_size(tags, model),
+                    "model_info": info.get("parsed"),
+                    "evidence_refs": {"version": version_refs, "tags": tags_refs, "show": info_refs, "pull": pull_refs},
+                },
+                producer="runner",
+                stage="preflight",
+            )
+            self._event("PREFLIGHT_COMPLETE", model=model, mode="capability-characterize")
+            self._progress_complete("preflight")
+            self._progress_preflight_complete = True
+
+            cases = self.suite.get("cases", []) or []
+            rows = run_capability_campaign(self, cases)
+
+            declared_families = set((self.suite.get("coverage") or {}).keys())
+            declared_families.update(
+                str(case.get("family_id") or case.get("category"))
+                for case in cases
+                if case.get("family_id") or case.get("category")
+            )
+            family_observations: dict[str, list[dict[str, Any]]] = {
+                family_id: [] for family_id in sorted(declared_families)
+            }
+            observations_path = store.run_dir / "capability-observations.jsonl"
+            if observations_path.is_file():
+                for raw_line in observations_path.read_text(encoding="utf-8").splitlines():
+                    if not raw_line.strip():
+                        continue
+                    observation = json.loads(raw_line)
+                    family_id = str(observation["family_id"])
+                    family_observations.setdefault(family_id, []).append(observation)
+
+            cfg = self.config["capability_campaign"]
+            frontiers = build_capability_frontiers(
+                str(self.suite.get("taxonomy_version") or "unknown"),
+                family_observations,
+                thresholds={
+                    "reliable": float(cfg.get("reliable_threshold", 0.90)),
+                    "unstable": float(cfg.get("unstable_threshold", 0.40)),
+                },
+            )
+            store.write_json(
+                "capability-frontiers.json",
+                frontiers,
+                producer="capability-characterization",
+                stage="report",
+            )
+            ledger = self._build_coverage_ledger(frontiers)
+            store.write_json(
+                "coverage-ledger.json",
+                ledger,
+                producer="capability-characterization",
+                stage="report",
+            )
+            self._event(
+                "CAPABILITY_CHARACTERIZATION_COMPLETE",
+                model=model,
+                experiments=len(rows),
+                families=len(frontiers["families"]),
+            )
+            return self._finalize_run()
+        except Exception as exc:
+            store.write_json(
+                "raw/runner-failure.json",
+                {"type": type(exc).__name__, "message": str(exc), "traceback": traceback.format_exc()},
+                producer="runner",
+                stage="fatal",
+            )
+            self._event(
+                "RUN_FAILED",
+                failure="CAPABILITY_CHARACTERIZATION_ERROR",
+                error_type=type(exc).__name__,
+                error=str(exc),
+            )
             return self._finalize_run()
         finally:
             if self.progress is not None and not self._progress_stopped:
