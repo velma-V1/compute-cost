@@ -19,6 +19,7 @@ def _spec(
     changed_variable: str,
     hypothesis: str,
     thinking_mode: bool,
+    reasoning_effort: str | None,
     generation_budget: int,
 ) -> ExperimentSpec:
     level = int(fixture["difficulty_level"])
@@ -41,6 +42,7 @@ def _spec(
         seed=42,
         prompt_variant="base",
         recovery_level=None,
+        reasoning_effort=reasoning_effort,
     )
 
 
@@ -112,6 +114,7 @@ def run_family_frontier(
         boundary_repeats=int(cfg["boundary_repeats"]),
     )
     thinking_mode = bool(cfg["thinking_mode"])
+    reasoning_effort = str(cfg["reasoning_effort"]) if cfg.get("reasoning_effort") is not None else None
     generation_budget = int(cfg["generation_budget"])
     max_experiments = int(cfg["max_experiments_per_family"])
 
@@ -171,6 +174,7 @@ def run_family_frontier(
             changed_variable=changed_variable,
             hypothesis=decision.reason,
             thinking_mode=thinking_mode,
+            reasoning_effort=reasoning_effort,
             generation_budget=generation_budget,
         )
         if rows:
