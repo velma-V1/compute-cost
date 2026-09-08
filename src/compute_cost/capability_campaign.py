@@ -64,6 +64,21 @@ def _record_family_stop(
     runner.store.append_jsonl("capability-events.jsonl", row)
 
 
+def _add_adaptive_progress_task(runner: Any, label: str) -> None:
+    progress = getattr(runner, "progress", None)
+    if progress is None:
+        return
+    old_total = int(progress.total_tasks)
+    progress.total_tasks = old_total + 1
+    runner._record_progress(
+        "plan_adjusted",
+        label,
+        old_total=old_total,
+        new_total=int(progress.total_tasks),
+        reason="adaptive experiment added",
+    )
+
+
 def _run_with_progress(
     runner: Any,
     family_id: str,
@@ -158,6 +173,11 @@ def run_family_frontier(
             thinking_mode=thinking_mode,
             generation_budget=generation_budget,
         )
+        if rows:
+            _add_adaptive_progress_task(
+                runner,
+                f"{family_id} {decision.action.lower()} L{level}",
+            )
         row = _run_with_progress(runner, family_id, fixture, spec, parent)
         rows.append(row)
 
