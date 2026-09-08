@@ -96,12 +96,17 @@ def execute_experiment(
             "seed": spec.seed,
         },
     )
+    think_request = (
+        spec.reasoning_effort
+        if spec.reasoning_effort is not None
+        else spec.thinking_mode
+    )
     generation, invocation, refs = runner._invoke_generation(
         stage="characterize",
         case_id=spec.experiment_id,
         messages=messages,
         options=options,
-        request_fields={"think": spec.thinking_mode},
+        request_fields={"think": think_request},
     )
     if generation.get("ok", False):
         response = str((generation.get("normalized") or {}).get("text", ""))
