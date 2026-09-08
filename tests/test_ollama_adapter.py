@@ -52,6 +52,38 @@ def test_generate_preserves_exact_request_stream_chunks_unknown_fields_and_think
     assert result["timing"]["first_event_latency_ns"] == 10
 
 
+def test_generate_derives_observable_thinking_and_answer_phases():
+    events = [
+        b'{"message":{"role":"assistant","thinking":"plan","content":""},"done":false}\n',
+        b'{"message":{"role":"assistant","thinking":" more","content":""},"done":false}\n',
+        b'{"message":{"role":"assistant","content":"42"},"done":false}\n',
+        b'{"message":{"role":"assistant","content":""},"done":true,"done_reason":"stop","eval_count":5}\n',
+    ]
+    transport = FakeTransport([
+        HttpExchange(200, {}, [chunk(events[0], 110), chunk(events[1], 120), chunk(events[2], 140), chunk(events[3], 150)])
+    ])
+    adapter = OllamaAdapter("http://127.0.0.1:11434", transport=transport, monotonic_ns=lambda: 100)
+
+    result = adapter.generate(
+        "fake",
+        [{"role": "user", "content": "solve"}],
+        {"num_predict": 64},
+        request_fields={"think": True},
+    )
+
+    phase = result["phase_metrics"]
+    assert phase["measurement_kind"] == "MEASURED"
+    assert phase["thinking_chunks"] == 2
+    assert phase["answer_chunks"] == 1
+    assert phase["thinking_chars"] == 9
+    assert phase["answer_chars"] == 2
+    assert phase["time_to_first_thinking_ns"] == 10
+    assert phase["time_to_first_answer_ns"] == 40
+    assert phase["thinking_span_ns"] == 10
+    assert phase["answer_span_ns"] == 0
+    assert "thinking_token_count" not in phase
+
+
 def test_http_error_retains_raw_error_body_and_status():
     raw = b'{"error":"model failed","future_error_field":17}'
     transport = FakeTransport([HttpExchange(500, {"content-type": "application/json"}, [chunk(raw, 200)])])
