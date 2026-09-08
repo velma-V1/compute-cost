@@ -51,6 +51,7 @@ def test_default_config_declares_bounded_capability_campaign_controls():
         "boundary_repeats": 5,
         "max_experiments_per_family": 24,
         "thinking_mode": True,
+        "reasoning_effort": "medium",
         "generation_budget": 256,
         "reliable_threshold": 0.90,
         "unstable_threshold": 0.40,
