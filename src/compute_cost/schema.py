@@ -27,6 +27,33 @@ class FailureCode(str, Enum):
     CAPTURE_GAP = "CAPTURE_GAP"
 
 
+class ResultClass(str, Enum):
+    ANSWER_CORRECT = "ANSWER_CORRECT"
+    ANSWER_WRONG = "ANSWER_WRONG"
+    THINK_TRUNCATED = "THINK_TRUNCATED"
+    ANSWER_TRUNCATED = "ANSWER_TRUNCATED"
+    NO_FINAL_ANSWER = "NO_FINAL_ANSWER"
+    FORMAT_FAILURE = "FORMAT_FAILURE"
+    TOOL_FAILURE = "TOOL_FAILURE"
+    CONTEXT_FAILURE = "CONTEXT_FAILURE"
+    SELF_CORRECTED = "SELF_CORRECTED"
+    REASONING_LOOP = "REASONING_LOOP"
+    OVERTHINK_CORRUPTION = "OVERTHINK_CORRUPTION"
+    TIMEOUT = "TIMEOUT"
+    RESOURCE_LIMIT = "RESOURCE_LIMIT"
+    RUNTIME_FAILURE = "RUNTIME_FAILURE"
+    TEST_DEFECT = "TEST_DEFECT"
+    SCORER_DEFECT = "SCORER_DEFECT"
+    CAPTURE_GAP = "CAPTURE_GAP"
+
+
+class MeasurementKind(str, Enum):
+    MEASURED = "MEASURED"
+    DERIVED = "DERIVED"
+    ESTIMATED = "ESTIMATED"
+    UNAVAILABLE = "UNAVAILABLE"
+
+
 def unavailable(reason: str, *, collector: str | None = None) -> dict[str, Any]:
     value: dict[str, Any] = {"availability": "unavailable", "reason": reason}
     if collector is not None:
