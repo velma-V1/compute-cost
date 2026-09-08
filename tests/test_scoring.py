@@ -74,3 +74,22 @@ def test_unknown_scorer_is_benchmark_error_not_model_failure():
     assert result["score"] is None
     assert result["status"] == "SCORER_ERROR"
     assert result["error"]["type"] == "UnknownScorer"
+
+
+def test_empty_json_is_scored_format_failure_not_scorer_error():
+    result = score_case(case("json", {"name": "Ada"}, required=["name"]), "")
+    assert result["status"] == "SCORED"
+    assert result["score"] == 0.0
+    assert result["checks"][0] == {"name": "valid_json", "pass": False}
+    assert result["evidence"]["parse_error"]["type"] == "JSONDecodeError"
+
+
+def test_malformed_extraction_and_tool_output_are_scored():
+    extraction = score_case(case("extraction_set", ["red", "blue"]), "[red, blue]")
+    tool = score_case(case("tool_call", {"tool": "lookup", "arguments": {"id": 7}}), "")
+    assert extraction["status"] == "SCORED"
+    assert extraction["score"] == 0.0
+    assert extraction["checks"][0] == {"name": "valid_json", "pass": False}
+    assert tool["status"] == "SCORED"
+    assert tool["score"] == 0.0
+    assert tool["checks"][0] == {"name": "valid_json", "pass": False}
