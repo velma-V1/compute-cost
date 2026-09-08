@@ -31,6 +31,16 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "max_experiments_per_task": 12,
         "think_off_generation_budget": 256,
     },
+    "capability_campaign": {
+        "anchor_level": 2,
+        "jump": 3,
+        "boundary_repeats": 5,
+        "max_experiments_per_family": 24,
+        "thinking_mode": True,
+        "generation_budget": 256,
+        "reliable_threshold": 0.90,
+        "unstable_threshold": 0.40,
+    },
 }
 
 
@@ -83,6 +93,33 @@ def _validate_characterization(config: dict[str, Any]) -> None:
         )
 
 
+def _validate_capability_campaign(config: dict[str, Any]) -> None:
+    c = config.get("capability_campaign")
+    if not isinstance(c, dict):
+        raise ValueError("capability_campaign config must be a table")
+
+    for name in ("anchor_level", "jump", "boundary_repeats", "max_experiments_per_family", "generation_budget"):
+        value = c.get(name)
+        if not isinstance(value, int) or isinstance(value, bool) or value <= 0:
+            raise ValueError(f"capability_campaign.{name} must be a positive integer")
+
+    if not 0 <= c["anchor_level"] <= 10:
+        raise ValueError("capability_campaign.anchor_level must be between 0 and 10")
+    if not isinstance(c.get("thinking_mode"), bool):
+        raise ValueError("capability_campaign.thinking_mode must be bool")
+
+    reliable = c.get("reliable_threshold")
+    unstable = c.get("unstable_threshold")
+    if isinstance(reliable, bool) or not isinstance(reliable, (int, float)):
+        raise ValueError("capability_campaign.reliable_threshold must be numeric")
+    if isinstance(unstable, bool) or not isinstance(unstable, (int, float)):
+        raise ValueError("capability_campaign.unstable_threshold must be numeric")
+    if not 0.0 <= float(unstable) <= float(reliable) <= 1.0:
+        raise ValueError(
+            "capability_campaign thresholds must satisfy 0 <= unstable <= reliable <= 1"
+        )
+
+
 def load_config(
     path: str | Path | None = None,
     overrides: Mapping[str, Any] | None = None,
@@ -100,4 +137,5 @@ def load_config(
             config["cost"]["electricity_configured"] = True
 
     _validate_characterization(config)
+    _validate_capability_campaign(config)
     return config
