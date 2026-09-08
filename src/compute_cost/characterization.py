@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import copy
-import json
 from collections import Counter
 from typing import Any
 
@@ -168,7 +167,12 @@ def _spec(
     )
 
 
-def _run_with_progress(runner: Any, case: dict[str, Any], spec: ExperimentSpec, parent: ExperimentSpec | None) -> dict[str, Any]:
+def _run_with_progress(
+    runner: Any,
+    case: dict[str, Any],
+    spec: ExperimentSpec,
+    parent: ExperimentSpec | None,
+) -> dict[str, Any]:
     label = f"{case['id']} {'think on' if spec.thinking_mode else 'think off'} {spec.generation_budget}"
     if hasattr(runner, "_progress_begin"):
         runner._progress_begin(label)
@@ -195,7 +199,7 @@ def _add_adaptive_progress_task(runner: Any, label: str) -> None:
 
 
 def run_characterization(runner: Any, cases: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Run OFF/ON baselines then spend calls only around informative budget boundaries."""
+    """Run OFF/ON baselines then spend calls only around informative generation boundaries."""
     assert runner.store is not None
     cfg = runner.config["characterization"]
     all_rows: list[dict[str, Any]] = []
@@ -209,7 +213,7 @@ def run_characterization(runner: Any, cases: list[dict[str, Any]]) -> list[dict[
             case=case,
             parent=None,
             thinking=False,
-            budget=int(cfg["think_off_budget"]),
+            budget=int(cfg["think_off_generation_budget"]),
             hypothesis="establish thinking-off capability baseline",
             changed_variable="baseline",
         )
@@ -218,10 +222,10 @@ def run_characterization(runner: Any, cases: list[dict[str, Any]]) -> list[dict[
         all_rows.append(off_row)
 
         controller = AdaptiveBudgetController(
-            initial_budget=int(cfg["initial_think_budget"]),
-            min_budget=int(cfg["min_think_budget"]),
-            max_budget=int(cfg["max_think_budget"]),
-            granularity=int(cfg["budget_granularity"]),
+            initial_budget=int(cfg["initial_generation_budget"]),
+            min_budget=int(cfg["min_generation_budget"]),
+            max_budget=int(cfg["max_generation_budget"]),
+            granularity=int(cfg["generation_budget_granularity"]),
             boundary_repeats=int(cfg["boundary_repeats"]),
         )
         first = controller.next([])
@@ -256,9 +260,15 @@ def run_characterization(runner: Any, cases: list[dict[str, Any]]) -> list[dict[
                 break
             assert decision.budget is not None
             next_budget = int(decision.budget)
-            _add_adaptive_progress_task(runner, f"{case['id']} {decision.action.lower()} {next_budget}")
+            _add_adaptive_progress_task(
+                runner,
+                f"{case['id']} {decision.action.lower()} {next_budget}",
+            )
             previous_class = str(previous_row["classification"]["result_class"])
-            increased_after_truncation = previous_class in TRUNCATION and next_budget > previous_spec.generation_budget
+            increased_after_truncation = (
+                previous_class in TRUNCATION
+                and next_budget > previous_spec.generation_budget
+            )
             recovery_level = "R1" if increased_after_truncation else None
             if decision.action == "REPLICATE":
                 changed_variable = "replication"
@@ -309,14 +319,32 @@ def run_characterization(runner: Any, cases: list[dict[str, Any]]) -> list[dict[
     return all_rows
 
 
-def build_task_profile(task_id: str, rows: list[dict[str, Any]], *, boundary_repeats: int) -> dict[str, Any]:
-    selected = [row for row in rows if row.get("experiment", {}).get("task_id") == task_id]
-    think_off_row = next((row for row in selected if not row.get("experiment", {}).get("thinking_mode")), None)
-    on_rows = [row for row in selected if row.get("experiment", {}).get("thinking_mode")]
-    capability_rows = [row for row in selected if row.get("classification", {}).get("valid_for_capability") is True]
+def build_task_profile(
+    task_id: str,
+    rows: list[dict[str, Any]],
+    *,
+    boundary_repeats: int,
+) -> dict[str, Any]:
+    selected = [
+        row for row in rows
+        if row.get("experiment", {}).get("task_id") == task_id
+    ]
+    think_off_row = next(
+        (row for row in selected if not row.get("experiment", {}).get("thinking_mode")),
+        None,
+    )
+    on_rows = [
+        row for row in selected
+        if row.get("experiment", {}).get("thinking_mode")
+    ]
+    capability_rows = [
+        row for row in selected
+        if row.get("classification", {}).get("valid_for_capability") is True
+    ]
     usable_boundary_rows = [
         row for row in on_rows
-        if row.get("classification", {}).get("result_class") not in HARNESS_INVALID | RUNTIME_INVALID
+        if row.get("classification", {}).get("result_class")
+        not in HARNESS_INVALID | RUNTIME_INVALID
     ]
 
     correct_counts = Counter(
@@ -324,7 +352,10 @@ def build_task_profile(task_id: str, rows: list[dict[str, Any]], *, boundary_rep
         for row in usable_boundary_rows
         if row.get("classification", {}).get("result_class") == "ANSWER_CORRECT"
     )
-    reproduced = sorted(budget for budget, count in correct_counts.items() if count >= boundary_repeats)
+    reproduced = sorted(
+        budget for budget, count in correct_counts.items()
+        if count >= boundary_repeats
+    )
     minimum_budget = reproduced[0] if reproduced else None
     lower_fail = None
     if minimum_budget is not None:
@@ -369,10 +400,17 @@ def build_characterization_summary(
         "model": model,
         "measurement_policy": {
             "exposed_thinking": "observable behavioral trace",
-            "aggregate_eval_count": "MEASURED aggregate generation count; not an exact per-phase thinking-token count",
+            "aggregate_eval_count": (
+                "MEASURED aggregate generation count; not an exact per-phase "
+                "thinking-token count"
+            ),
         },
         "tasks": [
-            build_task_profile(str(case["id"]), rows, boundary_repeats=boundary_repeats)
+            build_task_profile(
+                str(case["id"]),
+                rows,
+                boundary_repeats=boundary_repeats,
+            )
             for case in cases
         ],
     }
@@ -385,7 +423,10 @@ def render_characterization_report(summary: dict[str, Any]) -> str:
         f"Model: `{summary.get('model')}`",
         "",
         "Exposed thinking is an observable behavioral trace, not hidden cognition.",
-        "Aggregate `eval_count` is MEASURED runtime evidence and is not split into fabricated per-phase token counts.",
+        (
+            "Aggregate `eval_count` is MEASURED runtime evidence and is not split "
+            "into fabricated per-phase token counts."
+        ),
         "",
         "## Task profiles",
         "",
@@ -393,13 +434,21 @@ def render_characterization_report(summary: dict[str, Any]) -> str:
     for task in summary.get("tasks", []):
         lines.append(f"### {task['task_id']}")
         off = task.get("think_off")
-        lines.append(f"- Think OFF: {None if off is None else off.get('result_class')} (MEASURED)")
+        lines.append(
+            f"- Think OFF: {None if off is None else off.get('result_class')} (MEASURED)"
+        )
         minimum = task.get("minimum_reproduced_pass_budget")
-        lines.append(f"- Minimum reproduced passing generation budget: {None if minimum is None else minimum.get('value')} (DERIVED)")
+        lines.append(
+            "- Minimum reproduced passing generation budget: "
+            f"{None if minimum is None else minimum.get('value')} (DERIVED)"
+        )
         bracket = task.get("transition_bracket")
         if bracket is None:
             lines.append("- Transition bracket: unavailable")
         else:
-            lines.append(f"- Transition bracket: {bracket['lower_fail']} fail/truncate -> {bracket['upper_pass']} reproduced pass (DERIVED)")
+            lines.append(
+                f"- Transition bracket: {bracket['lower_fail']} fail/truncate -> "
+                f"{bracket['upper_pass']} reproduced pass (DERIVED)"
+            )
         lines.append("")
     return "\n".join(lines).rstrip() + "\n"
