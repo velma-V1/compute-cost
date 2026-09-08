@@ -2,6 +2,7 @@ import base64
 import json
 from pathlib import Path
 
+from compute_cost.characterization import build_task_profile
 from compute_cost.config import load_config
 from compute_cost.evidence import EvidenceStore
 from compute_cost.runner import BenchmarkRunner
@@ -256,3 +257,33 @@ def test_test1_failure_shape_is_think_truncation_not_capability_failure(tmp_path
     assert replay["classification"]["result_class"] == "THINK_TRUNCATED"
     assert replay["generation"]["normalized"]["thinking"]
     assert replay["invocation"]["request_fields"] == {"think": True}
+
+
+def test_harness_invalid_rows_are_retained_but_cannot_move_capability_boundary():
+    def row(budget, result_class, *, valid, thinking=True):
+        return {
+            "experiment": {
+                "task_id": "char-if-001",
+                "thinking_mode": thinking,
+                "generation_budget": budget,
+            },
+            "classification": {
+                "result_class": result_class,
+                "valid_for_capability": valid,
+            },
+            "score": 1.0 if result_class == "ANSWER_CORRECT" else None,
+        }
+
+    rows = [
+        row(256, "ANSWER_WRONG", valid=True, thinking=False),
+        row(160, "THINK_TRUNCATED", valid=False),
+        row(176, "SCORER_DEFECT", valid=False),
+        row(192, "ANSWER_CORRECT", valid=True),
+        row(192, "ANSWER_CORRECT", valid=True),
+        row(192, "ANSWER_CORRECT", valid=True),
+    ]
+    profile = build_task_profile("char-if-001", rows, boundary_repeats=3)
+    assert profile["minimum_reproduced_pass_budget"] == {"value": 192, "kind": "DERIVED"}
+    assert profile["transition_bracket"] == {"lower_fail": 160, "upper_pass": 192, "kind": "DERIVED"}
+    assert any(r["classification"]["result_class"] == "SCORER_DEFECT" for r in profile["behavioral_observations"])
+    assert all(r["classification"]["result_class"] != "SCORER_DEFECT" for r in profile["capability_observations"])
