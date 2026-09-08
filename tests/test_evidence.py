@@ -61,7 +61,7 @@ def test_manifest_inventories_artifacts_and_verifies_integrity(tmp_path: Path):
     assert store.verify_manifest() == []
 
 
-def test_manifest_verification_detects_modified_and_missing_files(tmp_path: Path):
+def test_manifest_verification_detects_modified_missing_and_unexpected_files(tmp_path: Path):
     store = EvidenceStore(tmp_path, "run-1")
     store.write_raw("raw/a.bin", b"original")
     store.write_raw("raw/b.bin", b"keep")
@@ -69,10 +69,12 @@ def test_manifest_verification_detects_modified_and_missing_files(tmp_path: Path
 
     (store.run_dir / "raw/a.bin").write_bytes(b"changed")
     (store.run_dir / "raw/b.bin").unlink()
+    (store.run_dir / "raw/untracked.bin").write_bytes(b"late")
 
     problems = store.verify_manifest()
     assert any(p["path"] == "raw/a.bin" and p["problem"] == "sha256_mismatch" for p in problems)
     assert any(p["path"] == "raw/b.bin" and p["problem"] == "missing" for p in problems)
+    assert any(p["path"] == "raw/untracked.bin" and p["problem"] == "unexpected" for p in problems)
 
 
 def test_paths_cannot_escape_run_directory(tmp_path: Path):
