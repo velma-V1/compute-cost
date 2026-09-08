@@ -18,6 +18,7 @@ from .runtimes.ollama import OllamaAdapter
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_CONFIG_PATH = PROJECT_ROOT / "config" / "default.toml"
 DEFAULT_SUITE_PATH = PROJECT_ROOT / "benchmarks" / "base-v1.json"
+DEFAULT_CHARACTERIZATION_SUITE_PATH = PROJECT_ROOT / "benchmarks" / "qwen-characterization-v1.json"
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -42,6 +43,11 @@ def build_parser() -> argparse.ArgumentParser:
     benchmark = sub.add_parser("benchmark", help="Benchmark an already-local model.")
     benchmark.add_argument("--model", required=True)
     benchmark.add_argument("--suite", default=str(DEFAULT_SUITE_PATH))
+
+    characterize = sub.add_parser("characterize", help="Adaptively characterize one local model.")
+    characterize.add_argument("--model", required=True)
+    characterize.add_argument("--suite", default=str(DEFAULT_CHARACTERIZATION_SUITE_PATH))
+    characterize.add_argument("--pull", action="store_true", help="Pull the model if it is not already local.")
 
     compare = sub.add_parser("compare", help="Compare completed runs without model execution.")
     compare.add_argument("runs", nargs="+", help="Two or more run IDs or run directories.")
@@ -119,6 +125,11 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     if args.command in {"onboard", "benchmark"}:
         run_dir = runner.onboard(args.model, pull=bool(getattr(args, "pull", False)))
+        print(json.dumps({"run_id": run_dir.name, "run_dir": str(run_dir)}, indent=2))
+        return 0
+
+    if args.command == "characterize":
+        run_dir = runner.characterize(args.model, pull=bool(args.pull))
         print(json.dumps({"run_id": run_dir.name, "run_dir": str(run_dir)}, indent=2))
         return 0
 
