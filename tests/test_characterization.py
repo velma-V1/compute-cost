@@ -214,8 +214,16 @@ def test_characterize_brackets_reproduces_and_retains_exact_evidence(tmp_path: P
     assert runtime.calls[1]["request_fields"] == {"think": True}
     assert [call["options"]["num_predict"] for call in runtime.calls] == [256, 256, 128, 192, 160, 192, 192]
 
-    assert (run_dir / "characterization-summary.json").exists()
-    assert (run_dir / "characterization-report.md").exists()
+    summary = json.loads((run_dir / "characterization-summary.json").read_text())
+    profile = summary["tasks"][0]
+    assert profile["minimum_reproduced_pass_budget"] == {"value": 192, "kind": "DERIVED"}
+    assert profile["transition_bracket"] == {"lower_fail": 160, "upper_pass": 192, "kind": "DERIVED"}
+    assert profile["think_off"]["result_class"] == "ANSWER_WRONG"
+    report = (run_dir / "characterization-report.md").read_text()
+    assert "MEASURED" in report
+    assert "DERIVED" in report
+    assert "fabricated per-phase token counts" in report
+
     assert (run_dir / "replay").exists()
     assert EvidenceStore(tmp_path, run_dir.name).verify_manifest() == []
 
