@@ -37,6 +37,14 @@ For the first Qwen characterization target:
 .\.venv\Scripts\compute-cost.exe characterize --model "qwen3.5:27b-q4_K_M"
 ```
 
+To run the complete planned five-model set automatically, one model after another:
+
+```powershell
+.\.venv\Scripts\compute-cost.exe characterize-campaign
+```
+
+The campaign preserves one independent characterization run per model and verifies each completed run before starting the next. It stops immediately on a run failure, incomplete run, or manifest-integrity problem.
+
 The default characterization suite is `benchmarks/qwen-characterization-v1.json`. It deliberately does **not** hard-code output budgets. Generation budget is experiment metadata controlled by the adaptive search.
 
 Characterization preserves explicit `think: false` and `think: true` requests when Ollama supports them. Exposed thinking and final content are retained separately.
@@ -133,6 +141,9 @@ compute-cost benchmark --model <ollama-model-tag>
 # Adaptively characterize exactly one model
 compute-cost characterize --model <ollama-model-tag>
 
+# Run the planned five characterizations sequentially and fail fast on invalid evidence
+compute-cost characterize-campaign
+
 # Compare completed runs without running a model again
 compute-cost compare <run-a> <run-b> [<run-c> ...]
 
@@ -184,6 +195,16 @@ Every model call receives a unique experiment ID and evidence key. `experiments.
 A budget increase following `THINK_TRUNCATED` or `ANSWER_TRUNCATED` is retained as an `R1` recovery hypothesis rather than an anonymous retry.
 
 The run derives `characterization-summary.json` and `characterization-report.md` only after preserving the individual experiments. A derived minimum passing budget requires repeated success at that budget; unknown boundaries remain unknown rather than being guessed.
+
+The planned sequential campaign order is fixed:
+
+1. `qwen3.5:27b-q4_K_M`
+2. `qwen3.5:27b-q8_0`
+3. `qwen3.5:35b-a3b-q4_K_M`
+4. `qwen3.5:35b-a3b-q8_0`
+5. `devstral-small-2:24b-instruct-2512-q8_0`
+
+Each model receives a fresh `BenchmarkRunner` and its own run directory, progress stream, telemetry, experiment ledger, replay evidence, report, and manifest. The launcher verifies the completed run manifest and requires a `CHARACTERIZATION_COMPLETE` event with no `RUN_FAILED` event before proceeding to the next model.
 
 ## Context sweep
 
