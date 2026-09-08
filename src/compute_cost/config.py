@@ -37,6 +37,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "boundary_repeats": 5,
         "max_experiments_per_family": 24,
         "thinking_mode": True,
+        "reasoning_effort": "medium",
         "generation_budget": 256,
         "reliable_threshold": 0.90,
         "unstable_threshold": 0.40,
@@ -107,6 +108,11 @@ def _validate_capability_campaign(config: dict[str, Any]) -> None:
         raise ValueError("capability_campaign.anchor_level must be between 0 and 10")
     if not isinstance(c.get("thinking_mode"), bool):
         raise ValueError("capability_campaign.thinking_mode must be bool")
+    reasoning_effort = c.get("reasoning_effort")
+    if reasoning_effort not in {"low", "medium", "high"}:
+        raise ValueError(
+            "capability_campaign.reasoning_effort must be one of: low, medium, high"
+        )
 
     reliable = c.get("reliable_threshold")
     unstable = c.get("unstable_threshold")
