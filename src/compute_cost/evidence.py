@@ -157,6 +157,11 @@ class EvidenceStore:
 
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
         problems: list[dict[str, str]] = []
+        expected_paths = {
+            str(item["path"])
+            for item in manifest.get("artifacts", [])
+            if isinstance(item, dict) and "path" in item
+        }
         for expected in manifest.get("artifacts", []):
             path = self.run_dir / expected["path"]
             if not path.exists():
@@ -167,4 +172,12 @@ class EvidenceStore:
                 problems.append({"path": expected["path"], "problem": "sha256_mismatch"})
             elif actual["bytes"] != expected["bytes"]:
                 problems.append({"path": expected["path"], "problem": "size_mismatch"})
+
+        actual_paths = {
+            path.relative_to(self.run_dir).as_posix()
+            for path in self.run_dir.rglob("*")
+            if path.is_file() and not (path.name == self.MANIFEST_NAME and path.parent == self.run_dir)
+        }
+        for unexpected in sorted(actual_paths - expected_paths):
+            problems.append({"path": unexpected, "problem": "unexpected"})
         return problems
