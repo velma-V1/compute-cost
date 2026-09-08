@@ -3,10 +3,14 @@
 from __future__ import annotations
 
 import copy
+import traceback
+import uuid
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable
 
+from .characterization import build_characterization_summary, render_characterization_report, run_characterization
+from .evidence import EvidenceStore
 from .hardware import collect_hardware_snapshot
 from .progress import ProgressDisplay
 from .report import build_summary, render_report
@@ -46,14 +50,17 @@ class BenchmarkRunner(_CoreBenchmarkRunner):
     def _planned_progress_tasks(self) -> int:
         limits = self.config.get("limits", {})
         return (
-            1  # preflight
-            + 1  # cold start
-            + 1  # warmup
+            1
+            + 1
+            + 1
             + len(self.suite.get("cases", []) or [])
             + len(limits.get("context_schedule", []) or [])
             + max(0, int(limits.get("sustained_iterations", 0)))
-            + 1  # finalize
+            + 1
         )
+
+    def _planned_characterization_tasks(self) -> int:
+        return 1 + (2 * len(self.suite.get("cases", []) or [])) + 1
 
     def _progress_snapshot(self) -> dict[str, Any]:
         if self.progress is None:
@@ -149,6 +156,121 @@ class BenchmarkRunner(_CoreBenchmarkRunner):
         self.progress.start_live()
         try:
             return super().onboard(model, pull=pull)
+        finally:
+            if self.progress is not None and not self._progress_stopped:
+                self.progress.stop_live(newline=True)
+                self._progress_stopped = True
+
+    def characterize(self, model: str, *, pull: bool = False) -> Path:
+        """Run one independent adaptive characterization with no changes to onboarding core."""
+        self.progress = self._progress_factory(self._planned_characterization_tasks())
+        self._progress_preflight_complete = False
+        self._progress_stopped = False
+        self.progress.start("preflight")
+        self.progress.start_live()
+
+        self.model = model
+        run_id = f"{datetime.now().strftime('%Y%m%d-%H%M%S')}-{uuid.uuid4().hex[:8]}"
+        self.store = EvidenceStore(self.results_root, run_id)
+        store = self.store
+        store.write_json("resolved-config.json", self.config, producer="runner", stage="preflight")
+        store.write_json("benchmark-snapshot.json", self.suite, producer="runner", stage="preflight")
+        self._event("RUN_START", model=model, benchmark_version=self.suite.get("benchmark_version"), mode="characterize")
+        self._start_telemetry()
+
+        try:
+            hardware = self.hardware_collector()
+            store.write_json("hardware.json", hardware, producer="hardware", stage="preflight")
+
+            version = self.runtime.version()
+            version_refs = self._persist_control_exchange("runtime-version", version)
+            tags = self.runtime.list_models()
+            tags_refs = self._persist_control_exchange("model-list", tags)
+            available = (
+                self.runtime.model_available_in(tags, model)
+                if hasattr(self.runtime, "model_available_in")
+                else self.runtime.is_model_available(model)
+            )
+
+            pull_refs = None
+            if not available and pull:
+                pull_result = self.runtime.pull(model)
+                pull_refs = self._persist_control_exchange("model-pull", pull_result)
+                tags = self.runtime.list_models()
+                tags_refs = self._persist_control_exchange("model-list-after-pull", tags)
+                available = (
+                    self.runtime.model_available_in(tags, model)
+                    if hasattr(self.runtime, "model_available_in")
+                    else self.runtime.is_model_available(model)
+                )
+
+            if not available:
+                store.write_json(
+                    "runtime.json",
+                    {
+                        "model": model,
+                        "available": False,
+                        "version": version.get("parsed"),
+                        "model_size_bytes": None,
+                        "evidence_refs": {"version": version_refs, "tags": tags_refs, "pull": pull_refs},
+                    },
+                    producer="runner",
+                    stage="preflight",
+                )
+                self._event("RUN_FAILED", failure="MODEL_NOT_FOUND", model=model)
+                return self._finalize_run()
+
+            info = self.runtime.model_info(model)
+            info_refs = self._persist_control_exchange("model-info", info)
+            store.write_json(
+                "runtime.json",
+                {
+                    "model": model,
+                    "available": True,
+                    "version": version.get("parsed"),
+                    "model_size_bytes": self._find_model_size(tags, model),
+                    "model_info": info.get("parsed"),
+                    "evidence_refs": {"version": version_refs, "tags": tags_refs, "show": info_refs, "pull": pull_refs},
+                },
+                producer="runner",
+                stage="preflight",
+            )
+            self._event("PREFLIGHT_COMPLETE", model=model, mode="characterize")
+            self._progress_complete("preflight")
+            self._progress_preflight_complete = True
+
+            cases = self.suite.get("cases", []) or []
+            rows = run_characterization(self, cases)
+            characterization_summary = build_characterization_summary(
+                model,
+                cases,
+                rows,
+                boundary_repeats=int(self.config["characterization"]["boundary_repeats"]),
+            )
+            store.write_json(
+                "characterization-summary.json",
+                characterization_summary,
+                producer="characterization",
+                stage="report",
+            )
+            store.write_raw(
+                "characterization-report.md",
+                render_characterization_report(characterization_summary),
+                producer="characterization",
+                stage="report",
+                media_type="text/markdown",
+            )
+            self._event("CHARACTERIZATION_COMPLETE", model=model, experiments=len(rows))
+            return self._finalize_run()
+        except Exception as exc:
+            store.write_json(
+                "raw/runner-failure.json",
+                {"type": type(exc).__name__, "message": str(exc), "traceback": traceback.format_exc()},
+                producer="runner",
+                stage="fatal",
+            )
+            self._event("RUN_FAILED", failure="CHARACTERIZATION_ERROR", error_type=type(exc).__name__, error=str(exc))
+            return self._finalize_run()
         finally:
             if self.progress is not None and not self._progress_stopped:
                 self.progress.stop_live(newline=True)
