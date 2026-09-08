@@ -8,6 +8,7 @@ from dataclasses import asdict, dataclass
 CONTROLLED_FIELDS = (
     "difficulty_level",
     "thinking_mode",
+    "reasoning_effort",
     "generation_budget",
     "context_request",
     "temperature",
@@ -40,6 +41,7 @@ class ExperimentSpec:
     seed: int
     prompt_variant: str
     recovery_level: str | None
+    reasoning_effort: str | None = None
 
     def to_dict(self) -> dict[str, object]:
         return asdict(self)
