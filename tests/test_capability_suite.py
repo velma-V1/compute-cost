@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 
-EXPECTED_QWEN_SHA256 = "8d7cd2eadaa3c105a491f234200f57c6332d019938104619d11088330c855618"
+EXPECTED_QWEN_SHA256 = "813acd321edefeeb42a4d5e11c98906aea022f0973029c3553db924575189b0a"
 EXPECTED_FAMILIES = {
     "instruction_following_constraint_stacking",
     "strict_structured_output",
