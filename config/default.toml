@@ -1,0 +1,27 @@
+[runtime]
+endpoint = "http://127.0.0.1:11434"
+
+[generation]
+temperature = 0.0
+seed = 42
+max_tokens = 256
+
+[telemetry]
+interval_s = 0.25
+nvidia = true
+
+[limits]
+request_timeout_s = 120
+host_ram_percent = 95.0
+vram_percent = 98.0
+context_schedule = [4096, 8192, 16384, 32768]
+consecutive_context_failures = 2
+sustained_iterations = 8
+
+[cost]
+electricity_per_kwh = 0.0
+electricity_configured = false
+
+[evidence]
+retain_stream_chunks = true
+retain_raw_collectors = true
