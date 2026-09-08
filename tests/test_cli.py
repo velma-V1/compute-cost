@@ -178,6 +178,54 @@ def test_characterize_campaign_stops_before_next_model_when_manifest_fails(tmp_p
     assert out["failure"] == "MANIFEST_VERIFICATION_FAILED"
 
 
+def test_characterize_campaign_stops_before_next_model_when_run_failed(tmp_path: Path, capsys, monkeypatch):
+    calls = []
+
+    class FakeRuntime:
+        def __init__(self, endpoint, timeout_s):
+            pass
+
+    class FakeRunner:
+        def __init__(self, runtime, config, suite, *, results_root):
+            pass
+
+        def characterize(self, model, *, pull=False):
+            calls.append(model)
+            run = tmp_path / f"run-{len(calls)}"
+            run.mkdir()
+            event = "RUN_FAILED" if len(calls) == 2 else "CHARACTERIZATION_COMPLETE"
+            (run / "events.jsonl").write_text(
+                json.dumps({"event": event, "model": model}) + "\n",
+                encoding="utf-8",
+            )
+            return run
+
+    class FakeStore:
+        def __init__(self, results_root, run_id):
+            pass
+
+        def verify_manifest(self):
+            return []
+
+    suite = tmp_path / "suite.json"
+    suite.write_text(json.dumps({"benchmark_version": "x", "cases": [{"id": "x"}]}), encoding="utf-8")
+    monkeypatch.setattr(cli, "OllamaAdapter", FakeRuntime)
+    monkeypatch.setattr(cli, "BenchmarkRunner", FakeRunner)
+    monkeypatch.setattr(cli, "EvidenceStore", FakeStore)
+
+    code = main([
+        "--results-root", str(tmp_path),
+        "characterize-campaign", "--suite", str(suite),
+    ])
+    out = json.loads(capsys.readouterr().out)
+
+    assert code == 2
+    assert calls == PLANNED_MODELS[:2]
+    assert out["ok"] is False
+    assert out["failed_model"] == PLANNED_MODELS[1]
+    assert out["failure"] == "RUN_FAILED"
+
+
 def test_compare_command_reads_existing_runs_only(tmp_path: Path, capsys):
     for name, score in [("a", 1.0), ("b", 0.0)]:
         run = tmp_path / name
