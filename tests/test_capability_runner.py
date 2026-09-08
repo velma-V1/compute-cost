@@ -176,6 +176,7 @@ def config():
         "boundary_repeats": 2,
         "max_experiments_per_family": 12,
         "thinking_mode": True,
+        "reasoning_effort": "medium",
         "generation_budget": 256,
         "reliable_threshold": 0.90,
         "unstable_threshold": 0.40,
@@ -197,7 +198,7 @@ def test_capability_runner_executes_adaptive_levels_and_writes_frontier_artifact
     run_dir = runner.capability_characterize("fake")
 
     assert [call["level"] for call in runtime.calls] == [1, 4, 7, 5, 4, 5]
-    assert all(call["request_fields"] == {"think": True} for call in runtime.calls)
+    assert all(call["request_fields"] == {"think": "medium"} for call in runtime.calls)
     assert all(call["options"]["num_predict"] == 256 for call in runtime.calls)
 
     frontiers = json.loads((run_dir / "capability-frontiers.json").read_text())
