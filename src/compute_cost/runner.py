@@ -21,6 +21,78 @@ from .scoring import score_case
 from .telemetry import TelemetrySampler
 
 
+def _repeat_to_length(seed: str, length: int) -> str:
+    if length <= 0:
+        return ""
+    repeated = (seed * ((length // len(seed)) + 2))[:length]
+    return repeated
+
+
+def build_context_case(target_context: int, *, timeout_s: float) -> dict[str, Any]:
+    """Build a deterministic payload that materially scales with the requested context.
+
+    `target_context` is the runtime window requested through Ollama's `num_ctx`, not an
+    asserted token count. The generated text intentionally uses roughly 80% of that
+    window under common English tokenizers so there is headroom for instructions and
+    output. The runtime-reported prompt token count remains the authoritative measure.
+    """
+
+    target = max(256, int(target_context))
+    planted_keys = [
+        f"CTX-{target}-A-{(target * 7919 + 17) % 100000:05d}",
+        f"CTX-{target}-B-{(target * 1543 + 29) % 100000:05d}",
+        f"CTX-{target}-C-{(target * 3571 + 43) % 100000:05d}",
+    ]
+    expected = "|".join(planted_keys)
+
+    # Approximate only. We deliberately preserve the runtime's observed prompt token
+    # count in run evidence rather than pretending characters map exactly to tokens.
+    target_chars = max(1024, int(target * 3.2))
+    seed = " cedar orbit copper river maple engine violet stone amber circuit valley north "
+
+    instruction = (
+        f"CONTEXT_SWEEP target={target}. Three retrieval keys are hidden in the payload. "
+        f"Return them in A|B|C order with no other text. "
+    )
+    marker_templates = [
+        f"\nFACT_A={planted_keys[0]}\n",
+        f"\nFACT_B={planted_keys[1]}\n",
+        f"\nFACT_C={planted_keys[2]}\n",
+    ]
+    fixed = len(instruction) + sum(len(marker) for marker in marker_templates)
+    filler_budget = max(256, target_chars - fixed)
+    quarter = filler_budget // 4
+    segments = [
+        _repeat_to_length(seed, quarter),
+        _repeat_to_length(seed[::-1], quarter),
+        _repeat_to_length(seed, quarter),
+        _repeat_to_length(seed[::-1], filler_budget - (quarter * 3)),
+    ]
+    prompt = (
+        instruction
+        + segments[0]
+        + marker_templates[0]
+        + segments[1]
+        + marker_templates[1]
+        + segments[2]
+        + marker_templates[2]
+        + segments[3]
+    )
+
+    return {
+        "id": f"context-{target}",
+        "category": "long_context_retrieval",
+        "prompt": prompt,
+        "scorer": "context_retrieval",
+        "expected": expected,
+        "planted_keys": planted_keys,
+        "timeout_s": timeout_s,
+        "max_output_tokens": 48,
+        "approx_target_tokens": target,
+        "payload_chars": len(prompt),
+    }
+
+
 class BenchmarkRunner:
     def __init__(
         self,
@@ -447,18 +519,10 @@ class BenchmarkRunner:
         failures = 0
         records: list[dict[str, Any]] = []
         for target in schedule:
-            secret = f"CTXKEY-{target}-{target * 7919 % 100000:05d}"
-            filler_words = max(8, min(target, 8192))
-            filler = (" cedar orbit copper river maple engine violet stone" * ((filler_words // 8) + 1))[: max(64, filler_words * 6)]
-            case = {
-                "id": f"context-{target}",
-                "category": "long_context_retrieval",
-                "prompt": f"CONTEXT_SWEEP target={target} PLANTED_KEY={secret} Return only the planted key. {filler}",
-                "scorer": "context_retrieval",
-                "expected": secret,
-                "timeout_s": self.config.get("limits", {}).get("request_timeout_s", 120),
-                "max_output_tokens": 32,
-            }
+            case = build_context_case(
+                target,
+                timeout_s=float(self.config.get("limits", {}).get("request_timeout_s", 120)),
+            )
             record, invocation, generation, scoring = self._execute_case(
                 case,
                 stage="context",
