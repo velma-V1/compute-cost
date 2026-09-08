@@ -216,7 +216,7 @@ def test_capability_runner_executes_adaptive_levels_and_writes_frontier_artifact
     }
 
     events = [json.loads(line) for line in (run_dir / "events.jsonl").read_text().splitlines()]
-    assert any(row["event"] == "CAPABILITY_CHARACTERIZATION_COMPLETE" for row in events)
+    assert any(row["type"] == "CAPABILITY_CHARACTERIZATION_COMPLETE" for row in events)
     assert EvidenceStore(tmp_path, run_dir.name).verify_manifest() == []
 
     progress = [json.loads(line) for line in (run_dir / "progress.jsonl").read_text().splitlines()]
