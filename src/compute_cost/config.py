@@ -42,6 +42,10 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "reliable_threshold": 0.90,
         "unstable_threshold": 0.40,
     },
+    "reasoning_curves": {
+        "enabled": True,
+        "repeats": 3,
+    },
 }
 
 
@@ -126,6 +130,17 @@ def _validate_capability_campaign(config: dict[str, Any]) -> None:
         )
 
 
+def _validate_reasoning_curves(config: dict[str, Any]) -> None:
+    c = config.get("reasoning_curves")
+    if not isinstance(c, dict):
+        raise ValueError("reasoning_curves config must be a table")
+    if not isinstance(c.get("enabled"), bool):
+        raise ValueError("reasoning_curves.enabled must be bool")
+    repeats = c.get("repeats")
+    if not isinstance(repeats, int) or isinstance(repeats, bool) or repeats <= 0:
+        raise ValueError("reasoning_curves.repeats must be a positive integer")
+
+
 def load_config(
     path: str | Path | None = None,
     overrides: Mapping[str, Any] | None = None,
@@ -144,4 +159,5 @@ def load_config(
 
     _validate_characterization(config)
     _validate_capability_campaign(config)
+    _validate_reasoning_curves(config)
     return config
