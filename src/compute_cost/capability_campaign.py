@@ -8,6 +8,7 @@ from .adaptive import AdaptiveDifficultyController, DifficultyObservation
 from .capability_ladders import build_ladder_index, resolve_requested_level
 from .characterization import execute_experiment
 from .experiments import ExperimentSpec, make_experiment_id
+from .failure_atlas import build_failure_atlas
 from .frontier import build_capability_frontiers
 from .reasoning_curves import build_reasoning_curves, run_reasoning_curves
 
@@ -262,7 +263,7 @@ def run_capability_campaign(
     runner: Any,
     cases: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
-    """Run adaptive MEDIUM frontiers, then bounded frontier-local effort probes."""
+    """Run adaptive MEDIUM frontiers, bounded effort probes, and failure indexing."""
     ladders = build_ladder_index(cases)
     all_rows: list[dict[str, Any]] = []
     sequence = 0
@@ -306,4 +307,10 @@ def run_capability_campaign(
         )
         all_rows.extend(effort_rows)
 
+    runner.store.write_json(
+        "failure-atlas.json",
+        build_failure_atlas(str(runner.model), all_rows),
+        producer="failure-atlas",
+        stage="report",
+    )
     return all_rows
