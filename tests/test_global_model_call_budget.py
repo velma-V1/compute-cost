@@ -52,7 +52,7 @@ class Telemetry:
         }
 
 
-def test_third_generation_is_blocked_by_two_call_run_budget(tmp_path: Path):
+def test_calls_after_run_budget_are_blocked_with_one_exhaustion_event(tmp_path: Path):
     runtime = Runtime()
     config = load_config(overrides={"limits.max_model_calls_per_run": 2})
     config["telemetry"]["background"] = False
@@ -67,7 +67,7 @@ def test_third_generation_is_blocked_by_two_call_run_budget(tmp_path: Path):
     runner.store = EvidenceStore(tmp_path, "run")
 
     results = []
-    for index in range(3):
+    for index in range(4):
         generation, _, _ = runner._invoke_generation(
             stage="characterize",
             case_id=f"case-{index}",
@@ -80,10 +80,11 @@ def test_third_generation_is_blocked_by_two_call_run_budget(tmp_path: Path):
     assert runtime.calls == 2
     assert results[0]["ok"] is True
     assert results[1]["ok"] is True
-    assert results[2]["ok"] is False
-    assert results[2]["error"]["type"] == "MODEL_CALL_BUDGET_EXHAUSTED"
-    assert results[2]["error"]["limit"] == 2
-    assert results[2]["error"]["completed_calls"] == 2
+    for blocked in results[2:]:
+        assert blocked["ok"] is False
+        assert blocked["error"]["type"] == "MODEL_CALL_BUDGET_EXHAUSTED"
+        assert blocked["error"]["limit"] == 2
+        assert blocked["error"]["completed_calls"] == 2
 
     events_path = runner.store.run_dir / "events.jsonl"
     events = [json.loads(line) for line in events_path.read_text(encoding="utf-8").splitlines()]
