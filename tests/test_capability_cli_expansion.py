@@ -5,7 +5,7 @@ import compute_cost.cli as cli
 from compute_cost.cli import main
 
 
-def test_capability_cli_validates_expands_revalidates_normalizes_then_dispatches(
+def test_capability_cli_validates_materializes_revalidates_normalizes_then_dispatches(
     tmp_path: Path, capsys, monkeypatch
 ):
     events = []
@@ -19,7 +19,8 @@ def test_capability_cli_validates_expands_revalidates_normalizes_then_dispatches
     class FakeRunner:
         def __init__(self, runtime, config, suite, *, results_root):
             assert suite["normalized"] is True
-            assert suite["expanded"] is True
+            assert suite["materialized"] is True
+            assert suite["ladder_calibration_version"] == "test-calibration-v1"
             assert len(suite["cases"]) == 440
 
         def capability_characterize(self, model, *, pull=False):
@@ -30,10 +31,11 @@ def test_capability_cli_validates_expands_revalidates_normalizes_then_dispatches
 
     raw_suite = {"benchmark_version": "x", "cases": [{"id": "anchor"}]}
     taxonomy = {"taxonomy_version": "test-taxonomy", "families": []}
-    expanded = {
+    materialized = {
         "benchmark_version": "x",
         "cases": [{"id": f"case-{i}"} for i in range(440)],
-        "expanded": True,
+        "materialized": True,
+        "ladder_calibration_version": "test-calibration-v1",
     }
     suite_path = tmp_path / "suite.json"
     taxonomy_path = tmp_path / "taxonomy.json"
@@ -44,21 +46,21 @@ def test_capability_cli_validates_expands_revalidates_normalizes_then_dispatches
         assert taxonomy_arg == taxonomy
         events.append(("validate", suite))
 
-    def expand(suite, taxonomy_arg):
+    def materialize(suite, taxonomy_arg):
         assert suite == raw_suite
         assert taxonomy_arg == taxonomy
-        events.append(("expand", suite))
-        return expanded
+        events.append(("materialize", suite))
+        return materialized
 
     def normalize(suite):
-        assert suite is expanded
+        assert suite is materialized
         events.append(("normalize", suite))
         return {**suite, "normalized": True}
 
     monkeypatch.setattr(cli, "OllamaAdapter", FakeRuntime)
     monkeypatch.setattr(cli, "BenchmarkRunner", FakeRunner)
     monkeypatch.setattr(cli, "validate_capability_suite", validate)
-    monkeypatch.setattr(cli, "expand_gpt_oss_ladders", expand)
+    monkeypatch.setattr(cli, "materialize_gpt_oss_suite", materialize)
     monkeypatch.setattr(cli, "normalize_capability_suite", normalize)
 
     code = main([
@@ -71,8 +73,8 @@ def test_capability_cli_validates_expands_revalidates_normalizes_then_dispatches
     out = json.loads(capsys.readouterr().out)
 
     assert code == 0
-    assert [name for name, _ in events] == ["validate", "expand", "validate", "normalize"]
+    assert [name for name, _ in events] == ["validate", "materialize", "validate", "normalize"]
     assert events[0][1] == raw_suite
-    assert events[2][1] is expanded
+    assert events[2][1] is materialized
     assert calls == [("fake", False)]
     assert out["run_id"] == "cap-run"
