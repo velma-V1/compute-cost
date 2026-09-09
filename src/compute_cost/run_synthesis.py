@@ -12,6 +12,7 @@ import json
 from pathlib import Path
 from typing import Any, Iterable
 
+from .boundary_replay import materialize_boundary_replays
 from .capability_profile import (
     build_capability_profile,
     build_weakness_map,
@@ -118,6 +119,11 @@ def build_cost_value_outputs(
             render_characterization_report(profile, weakness_map, policy),
             encoding="utf-8",
         )
+
+    # Canonical boundary replays are reconstructed from already-retained exchange,
+    # scorer, telemetry, benchmark, and configuration evidence. This makes the
+    # boundary class reproducible and idempotent without any additional model call.
+    materialize_boundary_replays(model, frontiers, materialized_rows, root)
 
     replay_index_path = root / "replay" / "index.jsonl"
     if failure_atlas is not None and replay_index_path.is_file():
