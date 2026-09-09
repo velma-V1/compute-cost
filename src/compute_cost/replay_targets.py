@@ -47,6 +47,15 @@ def _reason_and_priority(
     return "MODEL_FAILURE_RETEST", 3
 
 
+def _boundary_reference(row: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "replay_id": row.get("replay_id"),
+        "path": row.get("path"),
+        "source_experiment_id": row.get("source_experiment_id"),
+        "difficulty_level": _integer(row.get("difficulty_level")),
+    }
+
+
 def build_replay_targets(
     model: str,
     frontiers: dict[str, Any],
@@ -63,6 +72,7 @@ def build_replay_targets(
     frontier_families = frontiers.get("families") or {}
 
     groups: dict[tuple[Any, ...], dict[str, Any]] = {}
+    boundary_entries: list[dict[str, Any]] = []
     matched_entries = 0
     unmatched_entries = 0
     seen_replay_ids: set[str] = set()
@@ -74,6 +84,17 @@ def build_replay_targets(
             unmatched_entries += 1
             continue
         seen_replay_ids.add(replay_id)
+
+        # Boundary aliases are companion evidence for a raw frontier retest, not
+        # independent failure-atlas targets. Keep them out of unmatched-failure
+        # accounting and attach complete lower/upper pairs after target grouping.
+        if index_row.get("category") == "boundaries":
+            if isinstance(path, str) and path:
+                boundary_entries.append(index_row)
+            else:
+                unmatched_entries += 1
+            continue
+
         failure = failures_by_id.get(replay_id)
         if not isinstance(failure, dict) or not isinstance(path, str) or not path:
             unmatched_entries += 1
@@ -142,6 +163,52 @@ def build_replay_targets(
         ),
     )
 
+    attached_boundary_ids: set[str] = set()
+    for target in targets:
+        if target.get("reason") != "RAW_BOUNDARY_RETEST":
+            continue
+        family_id = str(target.get("family_id") or "")
+        frontier = frontier_families.get(family_id)
+        if not isinstance(frontier, dict):
+            continue
+        bracket = frontier.get("transition_bracket")
+        if not isinstance(bracket, dict):
+            continue
+        lower_level = _integer(bracket.get("lower_level"))
+        upper_level = _integer(bracket.get("upper_level"))
+        if lower_level is None or upper_level is None:
+            continue
+
+        lower_rows = [
+            row
+            for row in boundary_entries
+            if row.get("family_id") == family_id
+            and row.get("boundary_role") == "lower_reliable"
+            and _integer(row.get("difficulty_level")) == lower_level
+        ]
+        upper_rows = [
+            row
+            for row in boundary_entries
+            if row.get("family_id") == family_id
+            and row.get("boundary_role") == "upper_transition"
+            and _integer(row.get("difficulty_level")) == upper_level
+        ]
+        if not lower_rows or not upper_rows:
+            continue
+
+        lower_rows.sort(key=lambda row: str(row.get("replay_id") or ""))
+        upper_rows.sort(key=lambda row: str(row.get("replay_id") or ""))
+        target["boundary_replays"] = {
+            "lower_reliable": [_boundary_reference(row) for row in lower_rows],
+            "upper_transition": [_boundary_reference(row) for row in upper_rows],
+        }
+        for row in [*lower_rows, *upper_rows]:
+            replay_id = row.get("replay_id")
+            if isinstance(replay_id, str) and replay_id:
+                attached_boundary_ids.add(replay_id)
+
+    matched_entries += len(attached_boundary_ids)
+
     counts = {
         "RAW_BOUNDARY_RETEST": 0,
         "RECOVERY_LIMIT_RETEST": 0,
@@ -150,6 +217,19 @@ def build_replay_targets(
     }
     for target in targets:
         counts[str(target["reason"])] += 1
+
+    summary = {
+        "registry_entries": len(registry),
+        "matched_entries": matched_entries,
+        "selected_groups": len(targets),
+        "raw_boundary_groups": counts["RAW_BOUNDARY_RETEST"],
+        "recovery_limit_groups": counts["RECOVERY_LIMIT_RETEST"],
+        "other_model_failure_groups": counts["MODEL_FAILURE_RETEST"],
+        "evidence_integrity_groups": counts["EVIDENCE_INTEGRITY_REPRODUCTION"],
+        "unmatched_registry_entries": unmatched_entries,
+    }
+    if boundary_entries:
+        summary["boundary_entries_attached"] = len(attached_boundary_ids)
 
     return {
         "schema_version": 1,
@@ -166,15 +246,6 @@ def build_replay_targets(
                 "EVIDENCE_INTEGRITY_REPRODUCTION",
             ],
         },
-        "summary": {
-            "registry_entries": len(registry),
-            "matched_entries": matched_entries,
-            "selected_groups": len(targets),
-            "raw_boundary_groups": counts["RAW_BOUNDARY_RETEST"],
-            "recovery_limit_groups": counts["RECOVERY_LIMIT_RETEST"],
-            "other_model_failure_groups": counts["MODEL_FAILURE_RETEST"],
-            "evidence_integrity_groups": counts["EVIDENCE_INTEGRITY_REPRODUCTION"],
-            "unmatched_registry_entries": unmatched_entries,
-        },
+        "summary": summary,
         "targets": targets,
     }
