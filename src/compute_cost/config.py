@@ -51,6 +51,12 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "repeats": 3,
         "max_level": "R7",
     },
+    "robustness_lab": {
+        "enabled": True,
+        "repeats": 2,
+        "max_perturbations_per_family": 2,
+        "max_attempts_per_perturbation": 4,
+    },
 }
 
 
@@ -160,6 +166,22 @@ def _validate_recovery_lab(config: dict[str, Any]) -> None:
         raise ValueError("recovery_lab.max_level must be one of R0 through R8")
 
 
+def _validate_robustness_lab(config: dict[str, Any]) -> None:
+    c = config.get("robustness_lab")
+    if not isinstance(c, dict):
+        raise ValueError("robustness_lab config must be a table")
+    if not isinstance(c.get("enabled"), bool):
+        raise ValueError("robustness_lab.enabled must be bool")
+    for name in ("repeats", "max_perturbations_per_family", "max_attempts_per_perturbation"):
+        value = c.get(name)
+        if not isinstance(value, int) or isinstance(value, bool) or value <= 0:
+            raise ValueError(f"robustness_lab.{name} must be a positive integer")
+    if c["max_attempts_per_perturbation"] < c["repeats"]:
+        raise ValueError(
+            "robustness_lab.max_attempts_per_perturbation must be >= robustness_lab.repeats"
+        )
+
+
 def load_config(
     path: str | Path | None = None,
     overrides: Mapping[str, Any] | None = None,
@@ -180,4 +202,5 @@ def load_config(
     _validate_capability_campaign(config)
     _validate_reasoning_curves(config)
     _validate_recovery_lab(config)
+    _validate_robustness_lab(config)
     return config
