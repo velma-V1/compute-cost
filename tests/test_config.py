@@ -22,6 +22,11 @@ def test_default_config_contains_safe_bounded_run_settings():
     assert characterization["max_experiments_per_task"] == 12
     assert characterization["think_off_generation_budget"] == 256
 
+    recovery = config["recovery_lab"]
+    assert recovery["enabled"] is True
+    assert recovery["repeats"] == 3
+    assert recovery["max_level"] == "R7"
+
 
 def test_user_toml_and_dotted_overrides_merge_without_erasing_other_defaults(tmp_path: Path):
     custom = tmp_path / "custom.toml"
@@ -52,3 +57,13 @@ def test_characterization_budget_order_is_validated(tmp_path: Path):
 def test_characterization_integer_controls_must_be_positive():
     with pytest.raises(ValueError, match="positive integer"):
         load_config(overrides={"characterization.boundary_repeats": 0})
+
+
+def test_recovery_lab_repeats_must_be_positive():
+    with pytest.raises(ValueError, match="recovery_lab.repeats must be a positive integer"):
+        load_config(overrides={"recovery_lab.repeats": 0})
+
+
+def test_recovery_lab_max_level_is_validated():
+    with pytest.raises(ValueError, match="recovery_lab.max_level"):
+        load_config(overrides={"recovery_lab.max_level": "R9"})
