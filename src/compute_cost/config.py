@@ -19,6 +19,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "context_schedule": [4096, 8192, 16384, 32768],
         "consecutive_context_failures": 2,
         "sustained_iterations": 8,
+        "max_model_calls_per_run": 3000,
     },
     "cost": {"electricity_per_kwh": 0.0, "electricity_configured": False},
     "evidence": {"retain_stream_chunks": True, "retain_raw_collectors": True},
@@ -86,6 +87,15 @@ def _apply_dotted(config: dict[str, Any], dotted_key: str, value: Any) -> None:
             cursor[part] = next_value
         cursor = next_value
     cursor[parts[-1]] = value
+
+
+def _validate_limits(config: dict[str, Any]) -> None:
+    limits = config.get("limits")
+    if not isinstance(limits, dict):
+        raise ValueError("limits config must be a table")
+    max_calls = limits.get("max_model_calls_per_run")
+    if not isinstance(max_calls, int) or isinstance(max_calls, bool) or max_calls <= 0:
+        raise ValueError("limits.max_model_calls_per_run must be a positive integer")
 
 
 def _validate_characterization(config: dict[str, Any]) -> None:
@@ -223,6 +233,7 @@ def load_config(
         if "cost.electricity_per_kwh" in overrides:
             config["cost"]["electricity_configured"] = True
 
+    _validate_limits(config)
     _validate_characterization(config)
     _validate_capability_campaign(config)
     _validate_reasoning_curves(config)

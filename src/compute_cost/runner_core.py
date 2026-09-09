@@ -117,6 +117,8 @@ class BenchmarkRunner:
         self._telemetry_thread: threading.Thread | None = None
         self._telemetry_seq = 0
         self._request_seq = 0
+        self._model_call_counts: dict[str, int] = {}
+        self._model_call_budget_exhausted_runs: set[str] = set()
         self._recent_telemetry: deque[dict[str, Any]] = deque(maxlen=32)
 
     @staticmethod
@@ -287,6 +289,7 @@ class BenchmarkRunner:
         request_fields: dict[str, Any] | None = None,
     ) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
         assert self.model is not None
+        assert self.store is not None
         invocation = {
             "model": self.model,
             "messages": copy.deepcopy(messages),
@@ -296,15 +299,27 @@ class BenchmarkRunner:
         }
         self._sample(stage, case_id)
         started_ns = time.monotonic_ns()
-        try:
-            generation = self.runtime.generate(
-                self.model,
-                messages,
-                options,
-                stream=True,
-                request_fields=request_fields,
-            )
-        except Exception as exc:
+        run_id = self.store.run_id
+        limit = int(self.config.get("limits", {}).get("max_model_calls_per_run", 3000))
+        with self._write_lock:
+            completed_calls = self._model_call_counts.get(run_id, 0)
+            budget_exhausted = completed_calls >= limit
+            emit_exhaustion = budget_exhausted and run_id not in self._model_call_budget_exhausted_runs
+            if budget_exhausted:
+                if emit_exhaustion:
+                    self._model_call_budget_exhausted_runs.add(run_id)
+            else:
+                completed_calls += 1
+                self._model_call_counts[run_id] = completed_calls
+        if budget_exhausted:
+            if emit_exhaustion:
+                self._event(
+                    "MODEL_CALL_BUDGET_EXHAUSTED",
+                    limit=limit,
+                    completed_calls=completed_calls,
+                    stage=stage,
+                    case_id=case_id,
+                )
             generation = {
                 "ok": False,
                 "http_status": 0,
@@ -312,14 +327,40 @@ class BenchmarkRunner:
                 "stream_events": [],
                 "raw_response_b64": "",
                 "error": {
-                    "type": type(exc).__name__,
-                    "message": str(exc),
-                    "traceback": traceback.format_exc(),
+                    "type": "MODEL_CALL_BUDGET_EXHAUSTED",
+                    "message": "per-run model call budget exhausted before runtime invocation",
+                    "limit": limit,
+                    "completed_calls": completed_calls,
                 },
                 "normalized": {"text": "", "thinking": "", "tool_calls": []},
                 "metrics": {},
                 "timing": {},
             }
+        else:
+            try:
+                generation = self.runtime.generate(
+                    self.model,
+                    messages,
+                    options,
+                    stream=True,
+                    request_fields=request_fields,
+                )
+            except Exception as exc:
+                generation = {
+                    "ok": False,
+                    "http_status": 0,
+                    "request": {},
+                    "stream_events": [],
+                    "raw_response_b64": "",
+                    "error": {
+                        "type": type(exc).__name__,
+                        "message": str(exc),
+                        "traceback": traceback.format_exc(),
+                    },
+                    "normalized": {"text": "", "thinking": "", "tool_calls": []},
+                    "metrics": {},
+                    "timing": {},
+                }
         ended_ns = time.monotonic_ns()
         generation = copy.deepcopy(generation)
         generation.setdefault("timing", {})["client_started_monotonic_ns"] = started_ns
