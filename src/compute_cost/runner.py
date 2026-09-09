@@ -17,6 +17,7 @@ from .frontier import build_capability_frontiers
 from .hardware import collect_hardware_snapshot
 from .progress import ProgressDisplay
 from .report import build_summary, render_report
+from .run_synthesis import build_cost_value_outputs as _build_cost_value_outputs
 from .runner_core import BenchmarkRunner as _CoreBenchmarkRunner
 from .runner_core import build_context_case
 
@@ -518,6 +519,35 @@ class BenchmarkRunner(_CoreBenchmarkRunner):
             self._progress_begin("finalize")
 
         self._stop_telemetry()
+
+        frontiers_path = self.store.run_dir / "capability-frontiers.json"
+        experiments_path = self.store.run_dir / "experiments.jsonl"
+        if frontiers_path.is_file() and experiments_path.is_file():
+            frontiers = json.loads(frontiers_path.read_text(encoding="utf-8"))
+            rows = [
+                json.loads(raw_line)
+                for raw_line in experiments_path.read_text(encoding="utf-8").splitlines()
+                if raw_line.strip()
+            ]
+            cost_map, value_map = _build_cost_value_outputs(
+                str(self.model),
+                rows,
+                frontiers,
+                self.store.run_dir,
+            )
+            self.store.write_json(
+                "cost-map.json",
+                cost_map,
+                producer="cost-value",
+                stage="report",
+            )
+            self.store.write_json(
+                "value-map.json",
+                value_map,
+                producer="cost-value",
+                stage="report",
+            )
+
         self._event("RUN_END", model=self.model)
         summary = build_summary(self.store.run_dir)
         self.store.write_json("summary.json", summary, producer="report", stage="report")
