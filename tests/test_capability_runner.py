@@ -246,6 +246,23 @@ def test_capability_runner_executes_adaptive_levels_and_writes_frontier_artifact
     assert policy["families"]["logic"]["coverage_state"] == "UNTESTED"
     assert policy["decision_order"][-1] == "ESCALATE"
 
+    capability_map = json.loads((run_dir / "capability-map.json").read_text())
+    assert capability_map["model"] == "fake"
+    assert set(capability_map["families"]) == {"logic", "math"}
+    assert capability_map["families"]["math"]["raw_reliable_through"] == 4
+    assert capability_map["families"]["logic"]["evidence_state"] == "UNTESTED"
+
+    weakness_map = json.loads((run_dir / "weakness-map.json").read_text())
+    assert weakness_map["families"]["logic"]["evidence_gap"] is True
+    assert "RAW_FRONTIER_BOUNDARY" in weakness_map["families"]["math"]["signals"]
+    assert weakness_map["measurement_policy"]["evidence_gap_is_model_weakness"] is False
+
+    characterization_report = (run_dir / "characterization-report.md").read_text(encoding="utf-8")
+    assert "# Capability Characterization: fake" in characterization_report
+    assert "## Capability Map" in characterization_report
+    assert "## Weakness Map" in characterization_report
+    assert "## Operating Policy" in characterization_report
+
     events = [json.loads(line) for line in (run_dir / "events.jsonl").read_text().splitlines()]
     assert any(row["type"] == "CAPABILITY_CHARACTERIZATION_COMPLETE" for row in events)
     assert EvidenceStore(tmp_path, run_dir.name).verify_manifest() == []
