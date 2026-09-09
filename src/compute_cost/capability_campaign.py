@@ -8,6 +8,8 @@ from .adaptive import AdaptiveDifficultyController, DifficultyObservation
 from .capability_ladders import build_ladder_index, resolve_requested_level
 from .characterization import execute_experiment
 from .experiments import ExperimentSpec, make_experiment_id
+from .frontier import build_capability_frontiers
+from .reasoning_curves import build_reasoning_curves, run_reasoning_curves
 
 
 def _spec(
@@ -220,11 +222,47 @@ def run_family_frontier(
     return rows, sequence
 
 
+def _baseline_frontiers(runner: Any, rows: list[dict[str, Any]]) -> dict[str, Any]:
+    """Derive the MEDIUM-effort frontier from base campaign rows only."""
+    family_observations: dict[str, list[dict[str, Any]]] = {}
+    for row in rows:
+        experiment = row.get("experiment") or {}
+        family_id = experiment.get("task_family") or experiment.get("task_id")
+        level = experiment.get("difficulty_level")
+        if not isinstance(family_id, str):
+            continue
+        if isinstance(level, bool) or not isinstance(level, int):
+            continue
+        classification = row.get("classification") or {}
+        valid = classification.get("valid_for_capability") is True
+        result_class = str(classification.get("result_class"))
+        family_observations.setdefault(family_id, []).append(
+            {
+                "family_id": family_id,
+                "level": level,
+                "passed": None if not valid else result_class == "ANSWER_CORRECT",
+                "valid_for_capability": valid,
+                "result_class": result_class,
+                "experiment_id": experiment.get("experiment_id"),
+            }
+        )
+
+    cfg = runner.config["capability_campaign"]
+    return build_capability_frontiers(
+        str(runner.suite.get("taxonomy_version") or "unknown"),
+        family_observations,
+        thresholds={
+            "reliable": float(cfg.get("reliable_threshold", 0.90)),
+            "unstable": float(cfg.get("unstable_threshold", 0.40)),
+        },
+    )
+
+
 def run_capability_campaign(
     runner: Any,
     cases: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
-    """Run adaptive difficulty search independently for every declared fixture family."""
+    """Run adaptive MEDIUM frontiers, then bounded frontier-local effort probes."""
     ladders = build_ladder_index(cases)
     all_rows: list[dict[str, Any]] = []
     sequence = 0
@@ -236,4 +274,36 @@ def run_capability_campaign(
             sequence_start=sequence,
         )
         all_rows.extend(family_rows)
+
+    curve_cfg = runner.config.get("reasoning_curves")
+    if isinstance(curve_cfg, dict) and curve_cfg.get("enabled") is True:
+        base_rows = list(all_rows)
+        frontiers = _baseline_frontiers(runner, base_rows)
+        effort_rows = run_reasoning_curves(
+            runner,
+            cases,
+            base_rows,
+            frontiers,
+            sequence_start=sequence,
+        )
+        repeats = int(curve_cfg["repeats"])
+        reliable_threshold = float(
+            runner.config["capability_campaign"].get("reliable_threshold", 0.90)
+        )
+        reasoning_summary = build_reasoning_curves(
+            str(runner.model),
+            frontiers,
+            base_rows,
+            effort_rows,
+            repeats=repeats,
+            reliable_threshold=reliable_threshold,
+        )
+        runner.store.write_json(
+            "reasoning-curves.json",
+            reasoning_summary,
+            producer="reasoning-curves",
+            stage="report",
+        )
+        all_rows.extend(effort_rows)
+
     return all_rows
