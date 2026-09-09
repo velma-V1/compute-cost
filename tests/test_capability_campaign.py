@@ -34,16 +34,23 @@ def case(level: int, family: str = "math") -> dict:
 class Store:
     def __init__(self):
         self.rows = {}
+        self.jsons = {}
 
     def append_jsonl(self, path, row):
         self.rows.setdefault(path, []).append(row)
+
+    def write_json(self, path, value, **kwargs):
+        self.jsons[path] = value
 
 
 class Runner:
     def __init__(self):
         self.store = Store()
         self.model = "fake"
-        self.suite = {"benchmark_version": "test"}
+        self.suite = {
+            "benchmark_version": "test",
+            "taxonomy_version": "capability-taxonomy-v1",
+        }
         self.config = {
             "capability_campaign": {
                 "anchor_level": 1,
@@ -52,6 +59,8 @@ class Runner:
                 "max_experiments_per_family": 12,
                 "thinking_mode": True,
                 "generation_budget": 256,
+                "reliable_threshold": 0.90,
+                "unstable_threshold": 0.40,
             }
         }
         self.progress = None
@@ -151,3 +160,21 @@ def test_sparse_ladder_records_missing_fixture_coverage_instead_of_inventing_lev
     assert events[-1]["reason"] == "MISSING_FIXTURE_COVERAGE"
     assert events[-1]["requested_level"] == 5
     assert len(rows) == 1
+
+
+def test_campaign_writes_failure_atlas_from_executed_experiments(monkeypatch):
+    module = _module()
+    calls = []
+    runner = Runner()
+    family = "formal_logic_deduction"
+    outcomes = {1: ("ANSWER_WRONG", True)}
+    monkeypatch.setattr(module, "execute_experiment", fake_executor(outcomes, calls))
+
+    rows = module.run_capability_campaign(runner, [case(1, family)])
+
+    assert len(rows) == 1
+    assert "failure-atlas.json" in runner.store.jsons
+    atlas = runner.store.jsons["failure-atlas.json"]
+    assert atlas["model"] == "fake"
+    assert atlas["summary"]["model_failures"] == 1
+    assert atlas["failures"][0]["failure_signature"]["subtype"] == "logic_error"
