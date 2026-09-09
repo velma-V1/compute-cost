@@ -11,6 +11,7 @@ def test_default_config_contains_safe_bounded_run_settings():
     assert config["limits"]["request_timeout_s"] > 0
     assert config["limits"]["context_schedule"]
     assert config["limits"]["sustained_iterations"] > 0
+    assert config["limits"]["max_model_calls_per_run"] == 3000
     assert config["cost"]["electricity_configured"] is False
 
     characterization = config["characterization"]
@@ -55,6 +56,12 @@ def test_user_toml_and_dotted_overrides_merge_without_erasing_other_defaults(tmp
     assert config["cost"]["electricity_per_kwh"] == 0.12
     assert config["cost"]["electricity_configured"] is True
     assert config["characterization"]["boundary_repeats"] == 3
+
+
+def test_global_model_call_budget_is_validated():
+    for value in (0, -1, True, 1.5):
+        with pytest.raises(ValueError, match="limits.max_model_calls_per_run must be a positive integer"):
+            load_config(overrides={"limits.max_model_calls_per_run": value})
 
 
 def test_characterization_budget_order_is_validated(tmp_path: Path):
