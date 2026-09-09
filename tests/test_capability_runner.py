@@ -239,6 +239,13 @@ def test_capability_runner_executes_adaptive_levels_and_writes_frontier_artifact
     }
     assert value_map["families"]["math"]["cheapest_proven_raw_config"]["reasoning_effort"] == "medium"
 
+    policy = json.loads((run_dir / "inverted-operating-policy.json").read_text())
+    assert policy["schema_version"] == 1
+    assert policy["model"] == "fake"
+    assert policy["families"]["math"]["coverage_state"] == "PROVEN"
+    assert policy["families"]["logic"]["coverage_state"] == "UNTESTED"
+    assert policy["decision_order"][-1] == "ESCALATE"
+
     events = [json.loads(line) for line in (run_dir / "events.jsonl").read_text().splitlines()]
     assert any(row["type"] == "CAPABILITY_CHARACTERIZATION_COMPLETE" for row in events)
     assert EvidenceStore(tmp_path, run_dir.name).verify_manifest() == []
