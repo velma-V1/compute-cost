@@ -178,3 +178,67 @@ def test_campaign_writes_failure_atlas_from_executed_experiments(monkeypatch):
     assert atlas["model"] == "fake"
     assert atlas["summary"]["model_failures"] == 1
     assert atlas["failures"][0]["failure_signature"]["subtype"] == "logic_error"
+
+
+def test_campaign_runs_recovery_after_reasoning_and_includes_recovery_in_final_atlas(monkeypatch):
+    module = _module()
+    calls = []
+    runner = Runner()
+    runner.config["reasoning_curves"] = {"enabled": False, "repeats": 3}
+    runner.config["recovery_lab"] = {"enabled": True, "repeats": 3, "max_level": "R7"}
+    family = "formal_logic_deduction"
+    outcomes = {1: ("ANSWER_WRONG", True)}
+    monkeypatch.setattr(module, "execute_experiment", fake_executor(outcomes, calls))
+
+    captured = {}
+    recovery_row = {
+        "experiment": {
+            "experiment_id": "recovery-exp",
+            "parent_experiment_id": "base-exp",
+            "task_id": family,
+            "task_family": family,
+            "difficulty_level": 1,
+            "hypothesis": "recovery",
+            "changed_variable": "prompt_variant",
+            "thinking_mode": True,
+            "reasoning_effort": "medium",
+            "generation_budget": 256,
+            "context_request": None,
+            "temperature": 0.0,
+            "seed": 42,
+            "prompt_variant": "recovery-r4",
+            "recovery_level": "R4",
+        },
+        "classification": {"result_class": "ANSWER_WRONG", "valid_for_capability": True},
+        "score": 0.0,
+        "status": "FAIL",
+    }
+
+    def fake_recovery(
+        runner_arg,
+        cases_arg,
+        base_rows,
+        reasoning_rows,
+        frontiers,
+        failure_atlas,
+        *,
+        sequence_start=0,
+    ):
+        captured["base_rows"] = list(base_rows)
+        captured["reasoning_rows"] = list(reasoning_rows)
+        captured["frontiers"] = frontiers
+        captured["failure_atlas"] = failure_atlas
+        captured["sequence_start"] = sequence_start
+        return [recovery_row], {"schema_version": 1, "families": {family: {}}}, sequence_start + 1
+
+    monkeypatch.setattr(module, "run_recovery_lab", fake_recovery, raising=False)
+
+    rows = module.run_capability_campaign(runner, [case(1, family)])
+
+    assert captured["base_rows"]
+    assert captured["reasoning_rows"] == []
+    assert captured["frontiers"]["families"][family]["first_failure_level"] == 1
+    assert captured["failure_atlas"]["summary"]["model_failures"] == 1
+    assert "recovery-map.json" in runner.store.jsons
+    assert rows[-1]["experiment"]["experiment_id"] == "recovery-exp"
+    assert runner.store.jsons["failure-atlas.json"]["summary"]["model_failures"] == 2
