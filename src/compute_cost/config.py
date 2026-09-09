@@ -46,6 +46,11 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "enabled": True,
         "repeats": 3,
     },
+    "recovery_lab": {
+        "enabled": True,
+        "repeats": 3,
+        "max_level": "R7",
+    },
 }
 
 
@@ -141,6 +146,20 @@ def _validate_reasoning_curves(config: dict[str, Any]) -> None:
         raise ValueError("reasoning_curves.repeats must be a positive integer")
 
 
+def _validate_recovery_lab(config: dict[str, Any]) -> None:
+    c = config.get("recovery_lab")
+    if not isinstance(c, dict):
+        raise ValueError("recovery_lab config must be a table")
+    if not isinstance(c.get("enabled"), bool):
+        raise ValueError("recovery_lab.enabled must be bool")
+    repeats = c.get("repeats")
+    if not isinstance(repeats, int) or isinstance(repeats, bool) or repeats <= 0:
+        raise ValueError("recovery_lab.repeats must be a positive integer")
+    max_level = c.get("max_level")
+    if max_level not in {f"R{index}" for index in range(9)}:
+        raise ValueError("recovery_lab.max_level must be one of R0 through R8")
+
+
 def load_config(
     path: str | Path | None = None,
     overrides: Mapping[str, Any] | None = None,
@@ -160,4 +179,5 @@ def load_config(
     _validate_characterization(config)
     _validate_capability_campaign(config)
     _validate_reasoning_curves(config)
+    _validate_recovery_lab(config)
     return config
