@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
-from typing import Any
+import copy
+import inspect
+import json
+from pathlib import Path
+from typing import Any, Callable
 
 from .adaptive import AdaptiveDifficultyController, DifficultyObservation
 from .capability_ladders import build_ladder_index, resolve_requested_level
@@ -14,6 +18,9 @@ from .frontier import build_capability_frontiers
 from .reasoning_curves import build_reasoning_curves, run_reasoning_curves
 from .recovery_lab import run_recovery_lab
 from .robustness_lab import run_robustness_lab
+
+
+SnapshotSink = Callable[[dict[str, Any]], None]
 
 
 def _spec(
@@ -87,21 +94,213 @@ def _add_adaptive_progress_task(runner: Any, label: str) -> None:
     )
 
 
+def _read_retained_json(path: Path) -> dict[str, Any] | None:
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    return value if isinstance(value, dict) else None
+
+
+def _retained_snapshot(
+    runner: Any,
+    fixture: dict[str, Any],
+    spec: ExperimentSpec,
+    row: dict[str, Any],
+) -> dict[str, Any] | None:
+    """Rehydrate the just-written exact exchange/scoring evidence for a successful probe.
+
+    Failure snapshots are already persisted by ``execute_experiment``.  Successful
+    probes are not, so boundary capture reads the exact raw exchange and scorer
+    artifacts immediately after execution rather than inventing model evidence.
+    """
+    store = getattr(runner, "store", None)
+    run_dir = getattr(store, "run_dir", None)
+    refs = row.get("evidence_refs") or {}
+    request_id = refs.get("request_id")
+    if run_dir is None or not isinstance(request_id, str) or not request_id:
+        return None
+
+    root = Path(run_dir)
+    generation = _read_retained_json(root / "raw" / "runtime" / "exchanges" / f"{request_id}.json")
+    safe = spec.experiment_id.replace("/", "-").replace("\\", "-")
+    scoring = _read_retained_json(root / "raw" / "scoring" / f"characterize-{safe}.json")
+    if generation is None or scoring is None:
+        return None
+
+    messages = [{"role": "user", "content": str(fixture["prompt"])}]
+    options = runner._generation_options(
+        fixture,
+        {
+            "num_predict": spec.generation_budget,
+            "temperature": spec.temperature,
+            "seed": spec.seed,
+        },
+    )
+    think_request = spec.reasoning_effort if spec.reasoning_effort is not None else spec.thinking_mode
+    invocation = {
+        "model": runner.model,
+        "messages": copy.deepcopy(messages),
+        "options": copy.deepcopy(options),
+        "stream": True,
+        "request_fields": {"think": think_request},
+    }
+    return {
+        "schema_version": 2,
+        "created_at_utc": runner._utc(),
+        "benchmark_version": runner.suite.get("benchmark_version"),
+        "stage": "characterize",
+        "model": runner.model,
+        "case": copy.deepcopy(fixture),
+        "experiment": spec.to_dict(),
+        "classification": copy.deepcopy(row.get("classification") or {}),
+        "evidence_key": spec.experiment_id,
+        "invocation": invocation,
+        "generation": generation,
+        "scoring": scoring,
+        "telemetry_before_failure": list(copy.deepcopy(getattr(runner, "_recent_telemetry", []))),
+        "resolved_config": copy.deepcopy(runner.config),
+    }
+
+
+def _execute_with_snapshot(
+    runner: Any,
+    fixture: dict[str, Any],
+    spec: ExperimentSpec,
+    parent: ExperimentSpec | None,
+    snapshot_sink: SnapshotSink,
+) -> dict[str, Any]:
+    """Execute once and retain an exact replay payload without changing model-call count."""
+    try:
+        supports_sink = "snapshot_sink" in inspect.signature(execute_experiment).parameters
+    except (TypeError, ValueError):
+        supports_sink = False
+
+    if supports_sink:
+        return execute_experiment(
+            runner,
+            fixture,
+            spec,
+            parent=parent,
+            snapshot_sink=snapshot_sink,
+        )
+
+    row = execute_experiment(runner, fixture, spec, parent=parent)
+    snapshot = _retained_snapshot(runner, fixture, spec, row)
+    if snapshot is not None:
+        snapshot_sink(snapshot)
+    return row
+
+
 def _run_with_progress(
     runner: Any,
     family_id: str,
     fixture: dict[str, Any],
     spec: ExperimentSpec,
     parent: ExperimentSpec | None,
+    *,
+    snapshot_sink: SnapshotSink,
 ) -> dict[str, Any]:
     label = f"{family_id} L{fixture['difficulty_level']}"
     if hasattr(runner, "_progress_begin"):
         runner._progress_begin(label)
     try:
-        return execute_experiment(runner, fixture, spec, parent=parent)
+        return _execute_with_snapshot(runner, fixture, spec, parent, snapshot_sink)
     finally:
         if hasattr(runner, "_progress_complete"):
             runner._progress_complete(label)
+
+
+def _persist_boundary_replays(
+    runner: Any,
+    family_id: str,
+    observations: list[dict[str, Any]],
+    snapshots: dict[str, dict[str, Any]],
+    *,
+    boundary_repeats: int,
+    reliable_threshold: float,
+    unstable_threshold: float,
+) -> None:
+    """Persist every valid observation in a fully reproduced transition pair."""
+    if not observations or not snapshots:
+        return
+    frontier = build_capability_frontiers(
+        str(runner.suite.get("taxonomy_version") or "unknown"),
+        {family_id: observations},
+        thresholds={
+            "reliable": reliable_threshold,
+            "unstable": unstable_threshold,
+        },
+    )["families"][family_id]
+    bracket = frontier.get("transition_bracket")
+    if not isinstance(bracket, dict):
+        return
+    lower = bracket.get("lower_level")
+    upper = bracket.get("upper_level")
+    if isinstance(lower, bool) or not isinstance(lower, int):
+        return
+    if isinstance(upper, bool) or not isinstance(upper, int):
+        return
+
+    valid_lower = [
+        row for row in observations
+        if row.get("level") == lower and row.get("valid_for_capability") is True
+    ]
+    valid_upper = [
+        row for row in observations
+        if row.get("level") == upper and row.get("valid_for_capability") is True
+    ]
+    if len(valid_lower) < boundary_repeats or len(valid_upper) < boundary_repeats:
+        return
+
+    for role, level, selected in (
+        ("lower_reliable", lower, valid_lower),
+        ("upper_transition", upper, valid_upper),
+    ):
+        for observation in selected:
+            source_id = observation.get("experiment_id")
+            if not isinstance(source_id, str) or not source_id:
+                continue
+            source = snapshots.get(source_id)
+            if not isinstance(source, dict):
+                continue
+            replay_id = f"{source_id}--boundary"
+            path = f"replay/boundaries/{replay_id}.json"
+            snapshot = copy.deepcopy(source)
+            snapshot["source_experiment_id"] = source_id
+            snapshot["boundary"] = {
+                "family_id": family_id,
+                "role": role,
+                "level": level,
+                "transition_bracket": copy.deepcopy(bracket),
+                "boundary_repeats": boundary_repeats,
+            }
+            record = runner.store.write_json(
+                path,
+                snapshot,
+                producer="capability-boundary-replay",
+                stage="characterize",
+                case_id=(snapshot.get("case") or {}).get("id"),
+            )
+            experiment = snapshot.get("experiment") or {}
+            runner.store.append_jsonl(
+                "replay/index.jsonl",
+                {
+                    "replay_id": replay_id,
+                    "category": "boundaries",
+                    "path": path,
+                    "canonical_sha256": record.get("sha256"),
+                    "source_experiment_id": source_id,
+                    "family_id": family_id,
+                    "task_id": experiment.get("task_id"),
+                    "difficulty_level": level,
+                    "result_class": observation.get("result_class"),
+                    "valid_for_capability": True,
+                    "recovery_level": experiment.get("recovery_level"),
+                    "parent_experiment_id": experiment.get("parent_experiment_id"),
+                    "boundary_role": role,
+                },
+            )
 
 
 def run_family_frontier(
@@ -114,10 +313,13 @@ def run_family_frontier(
     """Execute only controller-selected fixtures for one family frontier."""
     assert runner.store is not None
     cfg = runner.config["capability_campaign"]
+    boundary_repeats = int(cfg["boundary_repeats"])
+    reliable_threshold = float(cfg.get("reliable_threshold", 0.90))
+    unstable_threshold = float(cfg.get("unstable_threshold", 0.40))
     controller = AdaptiveDifficultyController(
         anchor_level=int(cfg["anchor_level"]),
         jump=int(cfg["jump"]),
-        boundary_repeats=int(cfg["boundary_repeats"]),
+        boundary_repeats=boundary_repeats,
     )
     thinking_mode = bool(cfg["thinking_mode"])
     reasoning_effort = str(cfg["reasoning_effort"]) if cfg.get("reasoning_effort") is not None else None
@@ -126,6 +328,8 @@ def run_family_frontier(
 
     rows: list[dict[str, Any]] = []
     observations: list[DifficultyObservation] = []
+    observation_rows: list[dict[str, Any]] = []
+    snapshots: dict[str, dict[str, Any]] = {}
     attempted_levels: set[int] = set()
     latest_spec_by_level: dict[int, ExperimentSpec] = {}
     previous_spec: ExperimentSpec | None = None
@@ -188,7 +392,18 @@ def run_family_frontier(
                 runner,
                 f"{family_id} {decision.action.lower()} L{level}",
             )
-        row = _run_with_progress(runner, family_id, fixture, spec, parent)
+
+        def capture(snapshot: dict[str, Any], *, experiment_id: str = spec.experiment_id) -> None:
+            snapshots[experiment_id] = copy.deepcopy(snapshot)
+
+        row = _run_with_progress(
+            runner,
+            family_id,
+            fixture,
+            spec,
+            parent,
+            snapshot_sink=capture,
+        )
         rows.append(row)
 
         classification = row.get("classification") or {}
@@ -205,6 +420,7 @@ def run_family_frontier(
             "fixture_id": str(fixture["id"]),
         }
         runner.store.append_jsonl("capability-observations.jsonl", observation)
+        observation_rows.append(observation)
         observations.append(
             DifficultyObservation(
                 level=level,
@@ -223,6 +439,15 @@ def run_family_frontier(
             experiments=len(rows),
         )
 
+    _persist_boundary_replays(
+        runner,
+        family_id,
+        observation_rows,
+        snapshots,
+        boundary_repeats=boundary_repeats,
+        reliable_threshold=reliable_threshold,
+        unstable_threshold=unstable_threshold,
+    )
     return rows, sequence
 
 
