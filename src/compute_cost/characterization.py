@@ -9,6 +9,7 @@ from typing import Any
 from .adaptive import AdaptiveBudgetController, BudgetObservation
 from .classification import classify_result
 from .experiments import ExperimentSpec, changed_fields, make_experiment_id
+from .replay_registry import replay_category
 from .scoring import score_case
 
 
@@ -49,9 +50,12 @@ def _write_replay_v2(
     scoring: dict[str, Any],
     classification: dict[str, Any],
 ) -> None:
+    """Persist a canonical categorized snapshot plus the historical root alias."""
     assert runner.store is not None
     result_class = str(classification.get("result_class"))
-    prefix = "replay/harness" if result_class in HARNESS_INVALID else "replay"
+    category = replay_category(result_class, recovery_level=spec.recovery_level)
+    canonical_path = f"replay/{category}/{spec.experiment_id}.json"
+    compatibility_path = f"replay/{spec.experiment_id}.json"
     snapshot = {
         "schema_version": 2,
         "created_at_utc": runner._utc(),
@@ -68,12 +72,36 @@ def _write_replay_v2(
         "telemetry_before_failure": list(copy.deepcopy(runner._recent_telemetry)),
         "resolved_config": copy.deepcopy(runner.config),
     }
-    runner.store.write_json(
-        f"{prefix}/{spec.experiment_id}.json",
+    canonical = runner.store.write_json(
+        canonical_path,
         snapshot,
         producer="characterization",
         stage="characterize",
         case_id=case.get("id"),
+    )
+    runner.store.write_json(
+        compatibility_path,
+        snapshot,
+        producer="characterization-compatibility-alias",
+        stage="characterize",
+        case_id=case.get("id"),
+    )
+    runner.store.append_jsonl(
+        "replay/index.jsonl",
+        {
+            "replay_id": spec.experiment_id,
+            "category": category,
+            "path": canonical_path,
+            "compatibility_path": compatibility_path,
+            "canonical_sha256": canonical.get("sha256"),
+            "family_id": spec.task_family,
+            "task_id": spec.task_id,
+            "difficulty_level": spec.difficulty_level,
+            "result_class": result_class,
+            "valid_for_capability": classification.get("valid_for_capability") is True,
+            "recovery_level": spec.recovery_level,
+            "parent_experiment_id": spec.parent_experiment_id,
+        },
     )
 
 
@@ -96,11 +124,7 @@ def execute_experiment(
             "seed": spec.seed,
         },
     )
-    think_request = (
-        spec.reasoning_effort
-        if spec.reasoning_effort is not None
-        else spec.thinking_mode
-    )
+    think_request = spec.reasoning_effort if spec.reasoning_effort is not None else spec.thinking_mode
     generation, invocation, refs = runner._invoke_generation(
         stage="characterize",
         case_id=spec.experiment_id,
