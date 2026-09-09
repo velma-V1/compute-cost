@@ -322,9 +322,7 @@ class BenchmarkRunner:
             }
         ended_ns = time.monotonic_ns()
         generation = copy.deepcopy(generation)
-        generation.setdefault("timing", {})["client_started_monotonic_ns"] = started_ns
-        generation["timing"]["client_ended_monotonic_ns"] = ended_ns
-        generation["timing"]["client_latency_ns"] = ended_ns - started_ns
+        generation.setdefault("timing", {})["client_latency_ns"] = ended_ns - started_ns
         request_id = self._next_request_id(stage, case_id)
         refs = self._persist_exchange(
             generation,
@@ -475,137 +473,227 @@ class BenchmarkRunner:
             option_overrides=option_overrides,
         )
         if append:
-            self.store.append_jsonl("cases.jsonl", record)
-        if scoring.get("score") != 1.0:
+            with self._write_lock:
+                self.store.append_jsonl("cases.jsonl", record)
+        if scoring.get("score") != 1.0 or scoring.get("status") == "SCORER_ERROR":
+            replay_name = str(case["id"])
+            if stage == "context" and target_context is not None:
+                replay_name = f"{case['id']}-ctx-{target_context}"
+            elif stage == "sustained" and iteration is not None:
+                replay_name = f"{case['id']}-iter-{iteration}"
             self._write_replay(
                 case=case,
                 invocation=invocation,
                 generation=generation,
                 scoring=scoring,
                 stage=stage,
+                replay_name=replay_name,
             )
         return record
 
-    # Remaining lifecycle methods are unchanged and retained below.
-    def _find_model_size(self, tags: dict[str, Any], model: str) -> int | None:
-        parsed = tags.get("parsed") or {}
-        for item in parsed.get("models", []) or []:
-            if item.get("name") == model:
-                value = item.get("size")
-                return int(value) if isinstance(value, (int, float)) else None
+    def _resource_stop_reason(self) -> str | None:
+        if not self._recent_telemetry:
+            return None
+        sample = self._recent_telemetry[-1]
+        limits = self.config.get("limits", {})
+        memory_percent = (sample.get("host") or {}).get("memory_percent")
+        host_limit = limits.get("host_ram_percent")
+        if isinstance(memory_percent, (int, float)) and isinstance(host_limit, (int, float)):
+            if float(memory_percent) >= float(host_limit):
+                return "HOST_RAM_LIMIT"
+        gpu = sample.get("gpu") or {}
+        if isinstance(gpu, dict) and gpu.get("availability") == "available":
+            for device in gpu.get("devices", []) or []:
+                total = device.get("memory_total_mib") if isinstance(device, dict) else None
+                used = device.get("memory_used_mib") if isinstance(device, dict) else None
+                vram_limit = limits.get("vram_percent")
+                if all(isinstance(v, (int, float)) for v in (total, used, vram_limit)) and float(total) > 0:
+                    if (float(used) / float(total)) * 100.0 >= float(vram_limit):
+                        return "VRAM_LIMIT"
         return None
 
-    def _preflight(self, model: str, pull: bool) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any] | None, dict[str, Any], bool]:
-        version = self.runtime.version()
-        version_refs = self._persist_control_exchange("runtime-version", version)
-        tags = self.runtime.list_models()
-        tags_refs = self._persist_control_exchange("model-list", tags)
-        available = (
-            self.runtime.model_available_in(tags, model)
-            if hasattr(self.runtime, "model_available_in")
-            else self.runtime.is_model_available(model)
-        )
-        pull_refs = None
-        if not available and pull:
-            pull_result = self.runtime.pull(model)
-            pull_refs = self._persist_control_exchange("model-pull", pull_result)
-            tags = self.runtime.list_models()
-            tags_refs = self._persist_control_exchange("model-list-after-pull", tags)
-            available = (
-                self.runtime.model_available_in(tags, model)
-                if hasattr(self.runtime, "model_available_in")
-                else self.runtime.is_model_available(model)
+    def run_context_sweep(self) -> list[dict[str, Any]]:
+        assert self.store is not None
+        schedule = [int(v) for v in self.config.get("limits", {}).get("context_schedule", [])]
+        threshold = max(1, int(self.config.get("limits", {}).get("consecutive_context_failures", 1)))
+        failures = 0
+        records: list[dict[str, Any]] = []
+        for target in schedule:
+            case = build_context_case(
+                target,
+                timeout_s=float(self.config.get("limits", {}).get("request_timeout_s", 120)),
             )
-        info = self.runtime.model_info(model) if available else {"parsed": None}
-        info_refs = self._persist_control_exchange("model-info", info) if available else None
-        runtime_data = {
-            "model": model,
-            "available": available,
-            "version": version.get("parsed"),
-            "model_size_bytes": self._find_model_size(tags, model),
-            "model_info": info.get("parsed"),
-            "evidence_refs": {"version": version_refs, "tags": tags_refs, "show": info_refs, "pull": pull_refs},
-        }
-        return version, tags, info, runtime_data, available
+            record, invocation, generation, scoring = self._execute_case(
+                case,
+                stage="context",
+                target_context=target,
+                option_overrides={"num_ctx": target},
+            )
+            failed = scoring.get("score") != 1.0 or not generation.get("ok", False)
+            failures = failures + 1 if failed else 0
+            stop_reason = self._resource_stop_reason()
+            if not generation.get("ok", False):
+                stop_reason = stop_reason or "RUNTIME_ERROR"
+            if failures >= threshold:
+                stop_reason = stop_reason or "CONSECUTIVE_CORRECTNESS_FAILURES"
+            if stop_reason:
+                record["stop_boundary"] = True
+                record["stop_reason"] = stop_reason
+            with self._write_lock:
+                self.store.append_jsonl("cases.jsonl", record)
+            if failed:
+                self._write_replay(
+                    case=case,
+                    invocation=invocation,
+                    generation=generation,
+                    scoring=scoring,
+                    stage="context",
+                    replay_name=f"{case['id']}-ctx-{target}",
+                )
+            records.append(record)
+            if stop_reason:
+                break
+        return records
+
+    def run_sustained_load(self) -> list[dict[str, Any]]:
+        assert self.store is not None
+        iterations = max(0, int(self.config.get("limits", {}).get("sustained_iterations", 0)))
+        records: list[dict[str, Any]] = []
+        for iteration in range(iterations):
+            case = {
+                "id": f"sustained-{iteration}",
+                "category": "sustained",
+                "prompt": "PING — reply exactly PING",
+                "scorer": "exact",
+                "expected": "PING",
+                "timeout_s": self.config.get("limits", {}).get("request_timeout_s", 120),
+                "max_output_tokens": 16,
+            }
+            record, invocation, generation, scoring = self._execute_case(
+                case,
+                stage="sustained",
+                iteration=iteration,
+            )
+            stop_reason = self._resource_stop_reason()
+            if not generation.get("ok", False):
+                stop_reason = stop_reason or "RUNTIME_ERROR"
+            if stop_reason:
+                record["stop_boundary"] = True
+                record["stop_reason"] = stop_reason
+            with self._write_lock:
+                self.store.append_jsonl("cases.jsonl", record)
+            if scoring.get("score") != 1.0:
+                self._write_replay(
+                    case=case,
+                    invocation=invocation,
+                    generation=generation,
+                    scoring=scoring,
+                    stage="sustained",
+                    replay_name=f"{case['id']}-iter-{iteration}",
+                )
+            records.append(record)
+            if stop_reason:
+                break
+        return records
+
+    @staticmethod
+    def _find_model_size(tags: dict[str, Any], model: str) -> int | None:
+        parsed = tags.get("parsed") or {}
+        if not isinstance(parsed, dict):
+            return None
+        for item in parsed.get("models", []) or []:
+            if isinstance(item, dict) and (item.get("name") == model or item.get("model") == model):
+                size = item.get("size")
+                return int(size) if isinstance(size, (int, float)) else None
+        return None
 
     def onboard(self, model: str, *, pull: bool = False) -> Path:
         self.model = model
         run_id = f"{datetime.now().strftime('%Y%m%d-%H%M%S')}-{uuid.uuid4().hex[:8]}"
         self.store = EvidenceStore(self.results_root, run_id)
-        self.store.write_json("resolved-config.json", self.config, producer="runner", stage="preflight")
-        self.store.write_json("benchmark-snapshot.json", self.suite, producer="runner", stage="preflight")
+        store = self.store
+        store.write_json("resolved-config.json", self.config, producer="runner", stage="preflight")
+        store.write_json("benchmark-snapshot.json", self.suite, producer="runner", stage="preflight")
         self._event("RUN_START", model=model, benchmark_version=self.suite.get("benchmark_version"))
         self._start_telemetry()
+
         try:
             hardware = self.hardware_collector()
-            self.store.write_json("hardware.json", hardware, producer="hardware", stage="preflight")
-            _, _, _, runtime_data, available = self._preflight(model, pull)
-            self.store.write_json("runtime.json", runtime_data, producer="runner", stage="preflight")
+            store.write_json("hardware.json", hardware, producer="hardware", stage="preflight")
+
+            version = self.runtime.version()
+            version_refs = self._persist_control_exchange("runtime-version", version)
+            tags = self.runtime.list_models()
+            tags_refs = self._persist_control_exchange("model-list", tags)
+            available = self.runtime.model_available_in(tags, model) if hasattr(self.runtime, "model_available_in") else self.runtime.is_model_available(model)
+
+            pull_refs = None
+            if not available and pull:
+                pull_result = self.runtime.pull(model)
+                pull_refs = self._persist_control_exchange("model-pull", pull_result)
+                tags = self.runtime.list_models()
+                tags_refs = self._persist_control_exchange("model-list-after-pull", tags)
+                available = self.runtime.model_available_in(tags, model) if hasattr(self.runtime, "model_available_in") else self.runtime.is_model_available(model)
+
             if not available:
+                runtime_snapshot = {
+                    "model": model,
+                    "available": False,
+                    "version": version.get("parsed"),
+                    "model_size_bytes": None,
+                    "evidence_refs": {"version": version_refs, "tags": tags_refs, "pull": pull_refs},
+                }
+                store.write_json("runtime.json", runtime_snapshot, producer="runner", stage="preflight")
                 self._event("RUN_FAILED", failure="MODEL_NOT_FOUND", model=model)
                 return self._finalize_run()
 
-            limits = self.config["limits"]
+            info = self.runtime.model_info(model)
+            info_refs = self._persist_control_exchange("model-info", info)
+            runtime_snapshot = {
+                "model": model,
+                "available": True,
+                "version": version.get("parsed"),
+                "model_size_bytes": self._find_model_size(tags, model),
+                "model_info": info.get("parsed"),
+                "evidence_refs": {"version": version_refs, "tags": tags_refs, "show": info_refs, "pull": pull_refs},
+            }
+            store.write_json("runtime.json", runtime_snapshot, producer="runner", stage="preflight")
+            self._event("PREFLIGHT_COMPLETE", model=model)
+
+            unload = self.runtime.unload(model)
+            self._persist_control_exchange("cold-unload", unload)
             cold_case = {
                 "id": "cold-start",
-                "category": "cold_start",
+                "category": "onboarding",
                 "prompt": "Reply exactly READY",
                 "scorer": "exact",
                 "expected": "READY",
-                "timeout_s": limits["request_timeout_s"],
-                "max_output_tokens": 8,
-            }
-            warmup_case = {
-                "id": "warmup",
-                "category": "warmup",
-                "prompt": "Reply exactly READY",
-                "scorer": "exact",
-                "expected": "READY",
-                "timeout_s": limits["request_timeout_s"],
-                "max_output_tokens": 8,
+                "timeout_s": self.config.get("limits", {}).get("request_timeout_s", 120),
+                "max_output_tokens": 16,
             }
             self.run_case(cold_case, stage="cold")
-            self.run_case(warmup_case, stage="warmup")
-            for case in self.suite.get("cases", []):
+
+            warm_case = {
+                **cold_case,
+                "id": "warmup",
+            }
+            self.run_case(warm_case, stage="warmup")
+
+            for case in self.suite.get("cases", []) or []:
                 self.run_case(case, stage="base")
 
-            consecutive_failures = 0
-            last_success = None
-            first_stop = None
-            for target in limits.get("context_schedule", []):
-                context_case = build_context_case(int(target), timeout_s=float(limits["request_timeout_s"]))
-                row = self.run_case(context_case, stage="context", target_context=int(target))
-                if row["score"] == 1.0:
-                    consecutive_failures = 0
-                    last_success = int(target)
-                else:
-                    consecutive_failures += 1
-                    if consecutive_failures >= int(limits["consecutive_context_failures"]):
-                        first_stop = int(target)
-                        break
-            self._event("CONTEXT_BOUNDARY", last_success=last_success, first_stop=first_stop)
-
-            for iteration in range(int(limits.get("sustained_iterations", 0))):
-                sustained_case = {
-                    "id": f"sustained-{iteration:03d}",
-                    "category": "sustained",
-                    "prompt": "Reply exactly PING",
-                    "scorer": "exact",
-                    "expected": "PING",
-                    "timeout_s": limits["request_timeout_s"],
-                    "max_output_tokens": 8,
-                }
-                self.run_case(sustained_case, stage="sustained", iteration=iteration)
-            self._event("RUN_COMPLETE", model=model)
+            self.run_context_sweep()
+            self.run_sustained_load()
+            self._event("BENCHMARK_COMPLETE", model=model)
             return self._finalize_run()
         except Exception as exc:
-            self.store.write_json(
+            store.write_json(
                 "raw/runner-failure.json",
                 {"type": type(exc).__name__, "message": str(exc), "traceback": traceback.format_exc()},
                 producer="runner",
                 stage="fatal",
             )
-            self._event("RUN_FAILED", failure="UNHANDLED_EXCEPTION", error_type=type(exc).__name__, error=str(exc))
+            self._event("RUN_FAILED", failure="BENCHMARK_ERROR", error_type=type(exc).__name__, error=str(exc))
             return self._finalize_run()
 
     def _finalize_run(self) -> Path:
@@ -614,6 +702,45 @@ class BenchmarkRunner:
         self._event("RUN_END", model=self.model)
         summary = build_summary(self.store.run_dir)
         self.store.write_json("summary.json", summary, producer="report", stage="report")
-        self.store.write_raw("report.md", render_report(summary), producer="report", stage="report", media_type="text/markdown")
-        self.store.finalize_manifest(metadata={"model": self.model, "benchmark_version": self.suite.get("benchmark_version")})
+        self.store.write_raw(
+            "report.md",
+            render_report(summary),
+            producer="report",
+            stage="report",
+            media_type="text/markdown",
+        )
+        self.store.finalize_manifest(
+            metadata={
+                "model": self.model,
+                "benchmark_version": self.suite.get("benchmark_version"),
+            }
+        )
         return self.store.run_dir
+
+    def replay_case(self, source_run_id: str, case_id: str) -> Path:
+        source = self.results_root / source_run_id / "replay" / f"{case_id}.json"
+        snapshot = json.loads(source.read_text(encoding="utf-8"))
+        model = str(snapshot["model"])
+        invocation = snapshot["invocation"]
+        replay_run_id = f"replay-{datetime.now().strftime('%Y%m%d-%H%M%S')}-{uuid.uuid4().hex[:8]}"
+        previous_store = self.store
+        previous_model = self.model
+        try:
+            self.store = EvidenceStore(self.results_root, replay_run_id)
+            self.model = model
+            self.store.write_json("source-replay.json", snapshot, producer="runner", stage="replay")
+            self._event("RUN_START", model=model, replay_of=f"{source_run_id}:{case_id}")
+            generation, _, _ = self._invoke_generation(
+                stage="replay",
+                case_id=case_id,
+                messages=invocation["messages"],
+                options=invocation["options"],
+                request_fields=invocation.get("request_fields") or None,
+            )
+            self.store.write_json("replay-result.json", generation, producer="runner", stage="replay")
+            self._event("RUN_END", model=model)
+            self.store.finalize_manifest(metadata={"replay_of": f"{source_run_id}:{case_id}", "model": model})
+            return self.store.run_dir
+        finally:
+            self.store = previous_store
+            self.model = previous_model
