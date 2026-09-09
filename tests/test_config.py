@@ -27,6 +27,12 @@ def test_default_config_contains_safe_bounded_run_settings():
     assert recovery["repeats"] == 3
     assert recovery["max_level"] == "R7"
 
+    robustness = config["robustness_lab"]
+    assert robustness["enabled"] is True
+    assert robustness["repeats"] == 2
+    assert robustness["max_perturbations_per_family"] == 2
+    assert robustness["max_attempts_per_perturbation"] == 4
+
 
 def test_user_toml_and_dotted_overrides_merge_without_erasing_other_defaults(tmp_path: Path):
     custom = tmp_path / "custom.toml"
@@ -67,3 +73,12 @@ def test_recovery_lab_repeats_must_be_positive():
 def test_recovery_lab_max_level_is_validated():
     with pytest.raises(ValueError, match="recovery_lab.max_level"):
         load_config(overrides={"recovery_lab.max_level": "R9"})
+
+
+def test_robustness_lab_integer_controls_are_validated():
+    with pytest.raises(ValueError, match="robustness_lab.repeats must be a positive integer"):
+        load_config(overrides={"robustness_lab.repeats": 0})
+    with pytest.raises(ValueError, match="robustness_lab.max_perturbations_per_family must be a positive integer"):
+        load_config(overrides={"robustness_lab.max_perturbations_per_family": 0})
+    with pytest.raises(ValueError, match="robustness_lab.max_attempts_per_perturbation must be"):
+        load_config(overrides={"robustness_lab.max_attempts_per_perturbation": 1, "robustness_lab.repeats": 2})
