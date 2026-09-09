@@ -26,6 +26,7 @@ def test_default_config_contains_safe_bounded_run_settings():
     assert recovery["enabled"] is True
     assert recovery["repeats"] == 3
     assert recovery["max_level"] == "R7"
+    assert recovery["max_attempts_per_candidate"] == 6
 
     robustness = config["robustness_lab"]
     assert robustness["enabled"] is True
@@ -80,6 +81,13 @@ def test_recovery_lab_repeats_must_be_positive():
 def test_recovery_lab_max_level_is_validated():
     with pytest.raises(ValueError, match="recovery_lab.max_level"):
         load_config(overrides={"recovery_lab.max_level": "R9"})
+
+
+def test_recovery_lab_attempt_budget_is_validated():
+    with pytest.raises(ValueError, match="recovery_lab.max_attempts_per_candidate must be a positive integer"):
+        load_config(overrides={"recovery_lab.max_attempts_per_candidate": 0})
+    with pytest.raises(ValueError, match="recovery_lab.max_attempts_per_candidate must be >= recovery_lab.repeats"):
+        load_config(overrides={"recovery_lab.max_attempts_per_candidate": 2, "recovery_lab.repeats": 3})
 
 
 def test_robustness_lab_integer_controls_are_validated():
