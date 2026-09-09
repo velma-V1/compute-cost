@@ -196,6 +196,67 @@ def build_capability_profile(
     }
 
 
+def build_weakness_map(profile: dict[str, Any]) -> dict[str, Any]:
+    """Project observed constraints and evidence gaps without inventing root causes."""
+    families: dict[str, Any] = {}
+    evidence_gaps = 0
+    observed_boundaries = 0
+    model_failure_families = 0
+    robustness_risks = 0
+    composition_risks = 0
+
+    for family_id, source in sorted((profile.get("families") or {}).items()):
+        if not isinstance(source, dict):
+            continue
+        state = str(source.get("evidence_state") or "UNTESTED")
+        signals = [str(value) for value in source.get("signals") or []]
+        signatures = [str(value) for value in source.get("observed_failure_signatures") or []]
+        if state != "PROVEN":
+            evidence_gaps += 1
+        if "RAW_FRONTIER_BOUNDARY" in signals:
+            observed_boundaries += 1
+        if int(source.get("valid_model_failure_count") or 0) > 0:
+            model_failure_families += 1
+        if "ROBUSTNESS_RISK" in signals:
+            robustness_risks += 1
+        if "COMPOSITION_SENSITIVE" in signals:
+            composition_risks += 1
+
+        families[str(family_id)] = {
+            "evidence_state": state,
+            "evidence_gap": state != "PROVEN",
+            "first_raw_failure": source.get("first_raw_failure"),
+            "high_effort_extension_to": source.get("high_effort_extension_to"),
+            "minimum_proven_recovery": source.get("minimum_proven_recovery"),
+            "robustness": source.get("robustness"),
+            "compound_risks": list(source.get("compound_risks") or []),
+            "signals": signals,
+            "observed_failure_signatures": signatures,
+            "valid_model_failure_count": int(source.get("valid_model_failure_count") or 0),
+        }
+
+    return {
+        "schema_version": 1,
+        "model": profile.get("model"),
+        "taxonomy_version": profile.get("taxonomy_version"),
+        "measurement_policy": {
+            "evidence_gap_is_model_weakness": False,
+            "failure_signatures_are_causal_diagnoses": False,
+            "invalid_or_non_model_failures_are_model_weaknesses": False,
+            "absence_of_signal_means_strength": False,
+        },
+        "summary": {
+            "families_total": len(families),
+            "evidence_gaps": evidence_gaps,
+            "observed_raw_boundaries": observed_boundaries,
+            "families_with_valid_model_failures": model_failure_families,
+            "robustness_risks": robustness_risks,
+            "composition_risks": composition_risks,
+        },
+        "families": families,
+    }
+
+
 def _level_text(value: Any) -> str:
     if isinstance(value, int) and not isinstance(value, bool):
         return f"L{value}"
@@ -253,4 +314,84 @@ def render_capability_profile(profile: dict[str, Any]) -> str:
             ]
         )
 
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def render_characterization_report(
+    profile: dict[str, Any],
+    weakness_map: dict[str, Any],
+    operating_policy: dict[str, Any],
+) -> str:
+    """Render the final evidence-backed characterization and routing handoff."""
+    summary = profile.get("summary") or {}
+    lines = [
+        f"# Capability Characterization: {profile.get('model')}",
+        "",
+        "Evidence-backed characterization only. Difficulty levels are family-local; evidence gaps are not "
+        "model weaknesses, and failure signatures are not causal diagnoses.",
+        "",
+        "## Capability Map",
+        f"- Families: {summary.get('families_total', 0)}",
+        f"- Proven: {summary.get('proven', 0)}",
+        f"- Partial: {summary.get('partial', 0)}",
+        f"- Uncertain: {summary.get('uncertain', 0)}",
+        f"- Untested: {summary.get('untested', 0)}",
+    ]
+    for family_id, family in sorted((profile.get("families") or {}).items()):
+        if not isinstance(family, dict):
+            continue
+        lines.extend(
+            [
+                "",
+                f"### {family_id}",
+                f"- Evidence state: {_text(family.get('evidence_state'))}",
+                f"- Raw reliable through: {_level_text(family.get('raw_reliable_through'))}",
+                f"- First raw failure: {_level_text(family.get('first_raw_failure'))}",
+                f"- Cheapest proven reasoning effort: {_text(family.get('cheapest_proven_reasoning_effort'))}",
+                f"- High-effort extension: {_level_text(family.get('high_effort_extension_to'))}",
+            ]
+        )
+
+    weakness_summary = weakness_map.get("summary") or {}
+    lines.extend(
+        [
+            "",
+            "## Weakness Map",
+            f"- Evidence gaps: {weakness_summary.get('evidence_gaps', 0)}",
+            f"- Observed raw boundaries: {weakness_summary.get('observed_raw_boundaries', 0)}",
+            f"- Families with valid model failures: {weakness_summary.get('families_with_valid_model_failures', 0)}",
+            f"- Robustness risks: {weakness_summary.get('robustness_risks', 0)}",
+            f"- Composition risks: {weakness_summary.get('composition_risks', 0)}",
+        ]
+    )
+    for family_id, family in sorted((weakness_map.get("families") or {}).items()):
+        if not isinstance(family, dict):
+            continue
+        signals = [str(value) for value in family.get("signals") or []]
+        signatures = [str(value) for value in family.get("observed_failure_signatures") or []]
+        if not signals and not signatures:
+            continue
+        lines.extend(
+            [
+                "",
+                f"### {family_id} signals",
+                f"- Signals: {', '.join(signals) if signals else 'none'}",
+                f"- Observed failure signatures: {', '.join(signatures) if signatures else 'none'}",
+            ]
+        )
+
+    guards = operating_policy.get("policy_guards") or {}
+    decision_order = [str(value) for value in operating_policy.get("decision_order") or []]
+    lines.extend(
+        [
+            "",
+            "## Operating Policy",
+            f"- Decision order: {' -> '.join(decision_order) if decision_order else 'unresolved'}",
+            f"- Partial or unresolved capability: {guards.get('partial_or_unresolved_capability', 'ESCALATE')}",
+            f"- Untested capability: {guards.get('untested_capability', 'ESCALATE')}",
+            f"- Unmeasured composition: {guards.get('unmeasured_composition', 'ESCALATE')}",
+            f"- Recovery extrapolation allowed: {guards.get('recovery_extrapolation', False)}",
+            f"- Component success implies compound success: {guards.get('component_success_implies_compound_success', False)}",
+        ]
+    )
     return "\n".join(lines).rstrip() + "\n"
