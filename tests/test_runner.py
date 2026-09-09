@@ -117,6 +117,16 @@ def test_onboarding_retains_raw_runtime_telemetry_cases_reports_and_integrity(tm
     assert summary["context_boundary"]["first_stop"] == 8192
     rows = [json.loads(line) for line in (run_dir / "cases.jsonl").read_text().splitlines()]
     assert len([r for r in rows if r.get("stage") == "sustained"]) == 2
+    generation_rows = [row for row in rows if row.get("timing", {}).get("client_latency_ns") is not None]
+    assert generation_rows
+    for row in generation_rows:
+        timing = row["timing"]
+        assert isinstance(timing["client_started_monotonic_ns"], int)
+        assert isinstance(timing["client_ended_monotonic_ns"], int)
+        assert timing["client_started_monotonic_ns"] <= timing["client_ended_monotonic_ns"]
+        assert timing["client_latency_ns"] == (
+            timing["client_ended_monotonic_ns"] - timing["client_started_monotonic_ns"]
+        )
 
 
 def test_failed_case_becomes_exact_replay_snapshot(tmp_path: Path):

@@ -3,6 +3,7 @@ from pathlib import Path
 
 import compute_cost.cli as cli
 from compute_cost.cli import build_parser, main
+from compute_cost.config import load_config
 
 
 PLANNED_MODELS = [
@@ -29,6 +30,32 @@ def test_parser_supports_single_model_characterization():
     assert args.model == "fake"
     assert args.pull is False
     assert args.suite.endswith("benchmarks\\qwen-characterization-v1.json") or args.suite.endswith("benchmarks/qwen-characterization-v1.json")
+
+
+def test_parser_supports_capability_characterization_defaults():
+    parser = build_parser()
+    args = parser.parse_args(["capability-characterize", "--model", "fake"])
+    assert args.command == "capability-characterize"
+    assert args.model == "fake"
+    assert args.pull is False
+    assert args.suite.endswith("benchmarks\\gpt-oss-20b-capability-v1.json") or args.suite.endswith("benchmarks/gpt-oss-20b-capability-v1.json")
+    assert args.taxonomy.endswith("benchmarks\\capability-taxonomy-v1.json") or args.taxonomy.endswith("benchmarks/capability-taxonomy-v1.json")
+
+
+def test_default_config_declares_bounded_capability_campaign_controls():
+    cfg = load_config()
+    campaign = cfg["capability_campaign"]
+    assert campaign == {
+        "anchor_level": 2,
+        "jump": 3,
+        "boundary_repeats": 5,
+        "max_experiments_per_family": 24,
+        "thinking_mode": True,
+        "reasoning_effort": "medium",
+        "generation_budget": 256,
+        "reliable_threshold": 0.90,
+        "unstable_threshold": 0.40,
+    }
 
 
 def test_parser_supports_sequential_characterization_campaign():
@@ -81,6 +108,71 @@ def test_characterize_dispatches_exactly_one_model(tmp_path: Path, capsys, monke
     assert out["run_id"] == "char-run"
 
 
+def test_capability_characterize_validates_materializes_normalizes_and_dispatches(tmp_path: Path, capsys, monkeypatch):
+    calls = []
+    validations = []
+
+    class FakeRuntime:
+        def __init__(self, endpoint, timeout_s):
+            self.endpoint = endpoint
+            self.timeout_s = timeout_s
+
+    class FakeRunner:
+        def __init__(self, runtime, config, suite, *, results_root):
+            assert suite["normalized"] is True
+            assert suite["materialized"] is True
+            assert "capability_campaign" in config
+
+        def capability_characterize(self, model, *, pull=False):
+            calls.append((model, pull))
+            run = tmp_path / "cap-run"
+            run.mkdir(exist_ok=True)
+            return run
+
+    raw_suite = {"benchmark_version": "x", "cases": [{"id": "x"}]}
+    materialized_suite = {**raw_suite, "materialized": True}
+    taxonomy_data = {"taxonomy_version": "test-taxonomy", "families": []}
+    suite_path = tmp_path / "suite.json"
+    taxonomy_path = tmp_path / "taxonomy.json"
+    suite_path.write_text(json.dumps(raw_suite), encoding="utf-8")
+    taxonomy_path.write_text(json.dumps(taxonomy_data), encoding="utf-8")
+
+    def validate(suite, taxonomy):
+        validations.append((suite, taxonomy))
+
+    def materialize(suite, taxonomy):
+        assert suite == raw_suite
+        assert taxonomy == taxonomy_data
+        return materialized_suite
+
+    def normalize(suite):
+        assert suite is materialized_suite
+        return {**suite, "normalized": True}
+
+    monkeypatch.setattr(cli, "OllamaAdapter", FakeRuntime)
+    monkeypatch.setattr(cli, "BenchmarkRunner", FakeRunner)
+    monkeypatch.setattr(cli, "validate_capability_suite", validate)
+    monkeypatch.setattr(cli, "materialize_gpt_oss_suite", materialize)
+    monkeypatch.setattr(cli, "normalize_capability_suite", normalize)
+
+    code = main([
+        "--results-root", str(tmp_path),
+        "capability-characterize",
+        "--model", "fake",
+        "--suite", str(suite_path),
+        "--taxonomy", str(taxonomy_path),
+    ])
+    out = json.loads(capsys.readouterr().out)
+
+    assert code == 0
+    assert validations == [
+        (raw_suite, taxonomy_data),
+        (materialized_suite, taxonomy_data),
+    ]
+    assert calls == [("fake", False)]
+    assert out["run_id"] == "cap-run"
+
+
 def test_characterize_campaign_runs_five_models_in_order_with_fresh_runners(tmp_path: Path, capsys, monkeypatch):
     calls = []
     runner_instances = []
@@ -99,7 +191,7 @@ def test_characterize_campaign_runs_five_models_in_order_with_fresh_runners(tmp_
             run = tmp_path / f"run-{len(calls)}"
             run.mkdir()
             (run / "events.jsonl").write_text(
-                json.dumps({"event": "CHARACTERIZATION_COMPLETE", "model": model}) + "\n",
+                json.dumps({"type": "CHARACTERIZATION_COMPLETE", "model": model}) + "\n",
                 encoding="utf-8",
             )
             return run
@@ -147,7 +239,7 @@ def test_characterize_campaign_stops_before_next_model_when_manifest_fails(tmp_p
             run = tmp_path / f"run-{len(calls)}"
             run.mkdir()
             (run / "events.jsonl").write_text(
-                json.dumps({"event": "CHARACTERIZATION_COMPLETE", "model": model}) + "\n",
+                json.dumps({"type": "CHARACTERIZATION_COMPLETE", "model": model}) + "\n",
                 encoding="utf-8",
             )
             return run
@@ -195,7 +287,7 @@ def test_characterize_campaign_stops_before_next_model_when_run_failed(tmp_path:
             run.mkdir()
             event = "RUN_FAILED" if len(calls) == 2 else "CHARACTERIZATION_COMPLETE"
             (run / "events.jsonl").write_text(
-                json.dumps({"event": event, "model": model}) + "\n",
+                json.dumps({"type": event, "model": model}) + "\n",
                 encoding="utf-8",
             )
             return run

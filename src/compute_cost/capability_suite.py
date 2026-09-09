@@ -25,6 +25,7 @@ LEGACY_FIELDS = (
     "scorer",
     "timeout_s",
 )
+ALL_DIFFICULTY_LEVELS = tuple(range(11))
 
 
 def normalize_capability_case(
@@ -126,6 +127,76 @@ def normalize_capability_suite(
         for case in suite.get("cases", [])
     ]
     return normalized
+
+
+def build_ladder_coverage(
+    suite: dict[str, Any],
+    taxonomy: dict[str, Any],
+) -> dict[str, Any]:
+    """Derive declared and missing L0-L10 fixtures for every taxonomy family.
+
+    This is intentionally descriptive rather than a completeness validator: sparse
+    ladders remain valid during staged fixture construction. Duplicate family/level
+    declarations are rejected because they make adaptive level resolution ambiguous.
+    """
+    families = taxonomy.get("families")
+    if not isinstance(families, list):
+        raise ValueError("taxonomy families must be a list")
+
+    family_ids: list[str] = []
+    for family in families:
+        if not isinstance(family, dict):
+            raise ValueError("taxonomy family must be an object")
+        family_id = family.get("id")
+        if not isinstance(family_id, str) or not family_id:
+            raise ValueError("taxonomy family id must be a non-empty string")
+        family_ids.append(family_id)
+    if len(family_ids) != len(set(family_ids)):
+        raise ValueError("taxonomy family ids must be unique")
+
+    declared: dict[str, set[int]] = {family_id: set() for family_id in family_ids}
+    for case in suite.get("cases", []) or []:
+        if not isinstance(case, dict):
+            raise ValueError("case must be an object")
+        meta = case.get("capability_map")
+        meta = meta if isinstance(meta, dict) else {}
+        family_id = case.get("family_id", meta.get("family_id", case.get("category")))
+        if family_id not in declared:
+            raise ValueError(f"case references unknown family: {family_id}")
+
+        level = case.get("difficulty_level")
+        if isinstance(level, bool) or not isinstance(level, int) or level not in ALL_DIFFICULTY_LEVELS:
+            raise ValueError(f"case {case.get('id')} difficulty_level must be integer 0..10")
+        if level in declared[str(family_id)]:
+            raise ValueError(f"duplicate fixture for family {family_id} level {level}")
+        declared[str(family_id)].add(level)
+
+    family_rows: dict[str, dict[str, Any]] = {}
+    complete_count = 0
+    all_levels = list(ALL_DIFFICULTY_LEVELS)
+    for family_id in sorted(family_ids):
+        declared_levels = sorted(declared[family_id])
+        missing_levels = [level for level in all_levels if level not in declared[family_id]]
+        complete = not missing_levels
+        if complete:
+            complete_count += 1
+        family_rows[family_id] = {
+            "family_id": family_id,
+            "declared_levels": declared_levels,
+            "missing_levels": missing_levels,
+            "declared_count": len(declared_levels),
+            "missing_count": len(missing_levels),
+            "complete": complete,
+        }
+
+    return {
+        "schema_version": 1,
+        "taxonomy_version": taxonomy.get("taxonomy_version"),
+        "family_count": len(family_rows),
+        "complete_family_count": complete_count,
+        "complete": complete_count == len(family_rows) and bool(family_rows),
+        "families": family_rows,
+    }
 
 
 def validate_capability_suite(

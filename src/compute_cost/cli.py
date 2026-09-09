@@ -7,8 +7,10 @@ import json
 from pathlib import Path
 from typing import Any, Sequence
 
+from .capability_suite import normalize_capability_suite, validate_capability_suite
 from .config import load_config
 from .evidence import EvidenceStore
+from .gpt_oss_calibration import materialize_gpt_oss_suite
 from .hardware import collect_hardware_snapshot
 from .report import compare_runs
 from .runner import BenchmarkRunner
@@ -19,6 +21,8 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_CONFIG_PATH = PROJECT_ROOT / "config" / "default.toml"
 DEFAULT_SUITE_PATH = PROJECT_ROOT / "benchmarks" / "base-v1.json"
 DEFAULT_CHARACTERIZATION_SUITE_PATH = PROJECT_ROOT / "benchmarks" / "qwen-characterization-v1.json"
+DEFAULT_CAPABILITY_SUITE_PATH = PROJECT_ROOT / "benchmarks" / "gpt-oss-20b-capability-v1.json"
+DEFAULT_CAPABILITY_TAXONOMY_PATH = PROJECT_ROOT / "benchmarks" / "capability-taxonomy-v1.json"
 PLANNED_CHARACTERIZATION_MODELS = (
     "qwen3.5:27b-q4_K_M",
     "qwen3.5:27b-q8_0",
@@ -56,6 +60,15 @@ def build_parser() -> argparse.ArgumentParser:
     characterize.add_argument("--suite", default=str(DEFAULT_CHARACTERIZATION_SUITE_PATH))
     characterize.add_argument("--pull", action="store_true", help="Pull the model if it is not already local.")
 
+    capability = sub.add_parser(
+        "capability-characterize",
+        help="Adaptively characterize family-local GPT-OSS capability frontiers.",
+    )
+    capability.add_argument("--model", required=True)
+    capability.add_argument("--suite", default=str(DEFAULT_CAPABILITY_SUITE_PATH))
+    capability.add_argument("--taxonomy", default=str(DEFAULT_CAPABILITY_TAXONOMY_PATH))
+    capability.add_argument("--pull", action="store_true", help="Pull the model if it is not already local.")
+
     campaign = sub.add_parser(
         "characterize-campaign",
         help="Characterize the planned five-model set sequentially with fail-fast verification.",
@@ -87,10 +100,24 @@ def _config_from_args(args: argparse.Namespace) -> dict[str, Any]:
     return load_config(config_path, overrides)
 
 
-def _load_suite(path: str | Path) -> dict[str, Any]:
+def _load_json_object(path: str | Path, *, label: str) -> dict[str, Any]:
     value = json.loads(Path(path).read_text(encoding="utf-8"))
-    if not isinstance(value, dict) or not isinstance(value.get("cases"), list):
+    if not isinstance(value, dict):
+        raise ValueError(f"invalid {label}: {path}")
+    return value
+
+
+def _load_suite(path: str | Path) -> dict[str, Any]:
+    value = _load_json_object(path, label="benchmark suite")
+    if not isinstance(value.get("cases"), list):
         raise ValueError(f"invalid benchmark suite: {path}")
+    return value
+
+
+def _load_taxonomy(path: str | Path) -> dict[str, Any]:
+    value = _load_json_object(path, label="capability taxonomy")
+    if not isinstance(value.get("families"), list):
+        raise ValueError(f"invalid capability taxonomy: {path}")
     return value
 
 
@@ -113,9 +140,9 @@ def _characterization_run_failure(run_dir: Path) -> str | None:
             event = json.loads(raw_line)
         except json.JSONDecodeError:
             return "RUN_INCOMPLETE"
-        if event.get("event") == "RUN_FAILED":
+        if event.get("type") == "RUN_FAILED":
             return "RUN_FAILED"
-        if event.get("event") == "CHARACTERIZATION_COMPLETE":
+        if event.get("type") == "CHARACTERIZATION_COMPLETE":
             complete = True
     return None if complete else "RUN_INCOMPLETE"
 
@@ -154,6 +181,17 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 0 if result["runtime"].get("ok", False) else 2
 
     suite = _load_suite(args.suite)
+
+    if args.command == "capability-characterize":
+        taxonomy = _load_taxonomy(args.taxonomy)
+        validate_capability_suite(suite, taxonomy)
+        suite = materialize_gpt_oss_suite(suite, taxonomy)
+        validate_capability_suite(suite, taxonomy)
+        suite = normalize_capability_suite(suite)
+        runner = BenchmarkRunner(runtime, config, suite, results_root=results_root)
+        run_dir = runner.capability_characterize(args.model, pull=bool(args.pull))
+        print(json.dumps({"run_id": run_dir.name, "run_dir": str(run_dir)}, indent=2))
+        return 0
 
     if args.command == "characterize-campaign":
         runs: list[dict[str, Any]] = []

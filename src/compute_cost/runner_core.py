@@ -322,7 +322,9 @@ class BenchmarkRunner:
             }
         ended_ns = time.monotonic_ns()
         generation = copy.deepcopy(generation)
-        generation.setdefault("timing", {})["client_latency_ns"] = ended_ns - started_ns
+        generation.setdefault("timing", {})["client_started_monotonic_ns"] = started_ns
+        generation["timing"]["client_ended_monotonic_ns"] = ended_ns
+        generation["timing"]["client_latency_ns"] = ended_ns - started_ns
         request_id = self._next_request_id(stage, case_id)
         refs = self._persist_exchange(
             generation,

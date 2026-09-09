@@ -37,3 +37,28 @@ def test_child_budget_probe_changes_exactly_one_controlled_field():
     )
     assert changed_fields(parent, child) == ["generation_budget"]
     assert child.to_dict()["parent_experiment_id"] == "exp-root"
+
+
+def test_child_difficulty_probe_changes_exactly_one_controlled_field():
+    parent = make_spec(difficulty_level=3)
+    child = make_spec(
+        experiment_id="exp-child",
+        parent_experiment_id="exp-root",
+        hypothesis="probe harder family-local fixture",
+        changed_variable="difficulty_level",
+        difficulty_level=6,
+    )
+    assert changed_fields(parent, child) == ["difficulty_level"]
+
+
+def test_gpt_oss_reasoning_effort_is_a_controlled_lineage_variable():
+    parent = make_spec(reasoning_effort="low")
+    child = make_spec(
+        experiment_id="exp-child",
+        parent_experiment_id="exp-root",
+        hypothesis="measure reasoning effort delta",
+        changed_variable="reasoning_effort",
+        reasoning_effort="medium",
+    )
+    assert changed_fields(parent, child) == ["reasoning_effort"]
+    assert child.to_dict()["reasoning_effort"] == "medium"
