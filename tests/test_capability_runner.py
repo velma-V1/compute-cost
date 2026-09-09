@@ -171,6 +171,7 @@ def config():
     cfg = load_config()
     cfg["telemetry"]["background"] = False
     cfg["reasoning_curves"]["enabled"] = False
+    cfg["recovery_lab"]["enabled"] = False
     cfg["capability_campaign"] = {
         "anchor_level": 1,
         "jump": 3,
