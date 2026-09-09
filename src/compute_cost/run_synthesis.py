@@ -2,7 +2,8 @@
 
 This layer is read-only with respect to model execution. It consumes completed
 experiment and telemetry evidence after telemetry collection has stopped, then
-derives cost, value, profile, and conservative routing policy without new model calls.
+derives cost, value, profile, replay targets, and conservative routing policy
+without new model calls.
 """
 
 from __future__ import annotations
@@ -19,6 +20,7 @@ from .capability_profile import (
 )
 from .cost_value import build_cost_map, build_value_map
 from .operating_policy import build_operating_policy
+from .replay_targets import build_replay_targets
 
 
 def _read_json(path: Path) -> dict[str, Any] | None:
@@ -116,5 +118,15 @@ def build_cost_value_outputs(
             render_characterization_report(profile, weakness_map, policy),
             encoding="utf-8",
         )
+
+    replay_index_path = root / "replay" / "index.jsonl"
+    if failure_atlas is not None and replay_index_path.is_file():
+        replay_targets = build_replay_targets(
+            model,
+            frontiers,
+            failure_atlas,
+            _read_jsonl(replay_index_path),
+        )
+        _write_json(root / "replay-targets.json", replay_targets)
 
     return cost_map, value_map
