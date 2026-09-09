@@ -230,8 +230,16 @@ def run_family_frontier(
 
 
 def _baseline_frontiers(runner: Any, rows: list[dict[str, Any]]) -> dict[str, Any]:
-    """Derive the MEDIUM-effort frontier from base campaign rows only."""
-    family_observations: dict[str, list[dict[str, Any]]] = {}
+    """Derive the MEDIUM-effort frontier while retaining every declared family."""
+    declared_families = set((runner.suite.get("coverage") or {}).keys())
+    declared_families.update(
+        str(case.get("family_id") or case.get("category"))
+        for case in (runner.suite.get("cases") or [])
+        if case.get("family_id") or case.get("category")
+    )
+    family_observations: dict[str, list[dict[str, Any]]] = {
+        str(family_id): [] for family_id in sorted(declared_families)
+    }
     for row in rows:
         experiment = row.get("experiment") or {}
         family_id = experiment.get("task_family") or experiment.get("task_id")
