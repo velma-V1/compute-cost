@@ -1,8 +1,8 @@
-"""Post-run synthesis of capability economics and operating policy.
+"""Post-run synthesis of capability economics, profile, and operating policy.
 
 This layer is read-only with respect to model execution. It consumes completed
 experiment and telemetry evidence after telemetry collection has stopped, then
-derives cost, value, and conservative routing policy without new model calls.
+derives cost, value, profile, and conservative routing policy without new model calls.
 """
 
 from __future__ import annotations
@@ -11,6 +11,7 @@ import json
 from pathlib import Path
 from typing import Any, Iterable
 
+from .capability_profile import build_capability_profile, render_capability_profile
 from .cost_value import build_cost_map, build_value_map
 from .operating_policy import build_operating_policy
 
@@ -59,7 +60,7 @@ def build_cost_value_outputs(
     frontiers: dict[str, Any],
     run_dir: str | Path,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
-    """Build finalized run economics and persist the evidence-gated operating policy."""
+    """Build finalized economics and persist evidence-gated decision artifacts."""
     root = Path(run_dir)
     materialized_rows = list(rows)
     telemetry = _read_jsonl(root / "telemetry.jsonl")
@@ -83,4 +84,22 @@ def build_cost_value_outputs(
         boundary_repeats=_boundary_repeats(root),
     )
     _write_json(root / "inverted-operating-policy.json", policy)
+
+    coverage = _read_json(root / "coverage-ledger.json")
+    failure_atlas = _read_json(root / "failure-atlas.json")
+    if coverage is not None and failure_atlas is not None:
+        profile = build_capability_profile(
+            model,
+            frontiers,
+            coverage,
+            value_map,
+            failure_atlas,
+            policy,
+        )
+        _write_json(root / "capability-profile.json", profile)
+        (root / "capability-profile.md").write_text(
+            render_capability_profile(profile),
+            encoding="utf-8",
+        )
+
     return cost_map, value_map
