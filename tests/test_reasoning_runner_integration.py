@@ -153,6 +153,7 @@ def config():
     })
     cfg["reasoning_curves"] = {"enabled": True, "repeats": 2}
     cfg["recovery_lab"]["enabled"] = False
+    cfg["robustness_lab"]["enabled"] = False
     return cfg
 
 
