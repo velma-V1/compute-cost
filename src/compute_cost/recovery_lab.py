@@ -411,6 +411,9 @@ def run_recovery_lab(
     repeats = int(cfg.get("repeats", 3))
     if repeats <= 0:
         raise ValueError("recovery_lab.repeats must be positive")
+    max_attempts_per_candidate = int(cfg.get("max_attempts_per_candidate", max(repeats, 6)))
+    if max_attempts_per_candidate <= 0:
+        raise ValueError("recovery_lab.max_attempts_per_candidate must be positive")
     max_level = str(cfg.get("max_level", "R7")).upper()
     if max_level not in RECOVERY_LEVELS:
         raise ValueError(f"recovery_lab.max_level must be one of {RECOVERY_LEVELS}")
@@ -561,7 +564,10 @@ def run_recovery_lab(
 
                 if valid and passed:
                     latest = candidate
-                    while len([row for row in candidate_rows if _valid_result(row)[0]]) < repeats:
+                    while (
+                        len([row for row in candidate_rows if _valid_result(row)[0]]) < repeats
+                        and len(candidate_rows) < max_attempts_per_candidate
+                    ):
                         valid_rows = [row for row in candidate_rows if _valid_result(row)[0]]
                         passes = sum(1 for row in valid_rows if _valid_result(row)[1])
                         if not _can_still_reach_threshold(
@@ -593,9 +599,29 @@ def run_recovery_lab(
                 )
                 step["intervention"] = copy.deepcopy(intervention)
                 step["failure_signature"] = copy.deepcopy(signature)
+
+                valid_rows = [row for row in candidate_rows if _valid_result(row)[0]]
+                passes = sum(1 for row in valid_rows if _valid_result(row)[1])
+                inconclusive_at_cap = (
+                    len(candidate_rows) >= max_attempts_per_candidate
+                    and len(valid_rows) < repeats
+                    and _can_still_reach_threshold(
+                        passes,
+                        len(valid_rows),
+                        repeats=repeats,
+                        threshold=reliable_threshold,
+                    )
+                )
+                if inconclusive_at_cap:
+                    step["status"] = "UNCERTAIN"
+                    step["reason"] = "MAX_ATTEMPTS_WITH_INSUFFICIENT_VALID_EVIDENCE"
+                    step["max_attempts_per_candidate"] = max_attempts_per_candidate
+
                 steps.append(step)
                 if step["status"] == "SUCCESS":
                     minimum_success = recovery_level
+                    break
+                if step["status"] == "UNCERTAIN":
                     break
 
         families[family_id] = {
@@ -613,6 +639,8 @@ def run_recovery_lab(
         "measurement_policy": {
             "candidate_isolation": "EACH_INITIAL_R2_R7_BRANCHES_FROM_REPRODUCED_BASELINE_FAILURE",
             "successful_candidate_replication": repeats,
+            "max_attempts_per_candidate": max_attempts_per_candidate,
+            "inconclusive_candidate_policy": "STOP_AND_MARK_UNCERTAIN",
             "existing_r0_evidence_reused": True,
             "existing_reasoning_curve_r2_evidence_reused": True,
             "oracle_material_in_interventions": False,
