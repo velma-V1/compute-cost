@@ -15,7 +15,7 @@ def _level(level: int, label: str, *, passed: bool) -> dict:
     }
 
 
-def test_post_run_synthesis_persists_capability_profile_from_finalized_evidence(tmp_path: Path):
+def test_post_run_synthesis_persists_capability_profile_and_required_outputs(tmp_path: Path):
     from compute_cost.run_synthesis import build_cost_value_outputs
 
     frontiers = {
@@ -94,9 +94,18 @@ def test_post_run_synthesis_persists_capability_profile_from_finalized_evidence(
     build_cost_value_outputs("gpt-oss:20b", [], frontiers, tmp_path)
 
     profile_path = tmp_path / "capability-profile.json"
-    report_path = tmp_path / "capability-profile.md"
-    assert profile_path.is_file()
-    assert report_path.is_file()
+    profile_report_path = tmp_path / "capability-profile.md"
+    capability_map_path = tmp_path / "capability-map.json"
+    weakness_map_path = tmp_path / "weakness-map.json"
+    characterization_report_path = tmp_path / "characterization-report.md"
+    for path in (
+        profile_path,
+        profile_report_path,
+        capability_map_path,
+        weakness_map_path,
+        characterization_report_path,
+    ):
+        assert path.is_file(), path.name
 
     profile = json.loads(profile_path.read_text(encoding="utf-8"))
     assert profile["model"] == "gpt-oss:20b"
@@ -113,11 +122,33 @@ def test_post_run_synthesis_persists_capability_profile_from_finalized_evidence(
     assert family["observed_failure_signatures"] == ["arithmetic_error"]
     assert "RAW_FRONTIER_BOUNDARY" in family["signals"]
 
-    report = report_path.read_text(encoding="utf-8")
-    assert "# Capability Profile: gpt-oss:20b" in report
-    assert "## math" in report
-    assert "Evidence state: PROVEN" in report
-    assert "Raw reliable through: L4" in report
-    assert "First raw failure: L5" in report
-    assert "arithmetic_error" in report
-    assert "overall score" not in report.lower()
+    capability_map = json.loads(capability_map_path.read_text(encoding="utf-8"))
+    assert capability_map == profile
+
+    weakness_map = json.loads(weakness_map_path.read_text(encoding="utf-8"))
+    assert weakness_map["model"] == "gpt-oss:20b"
+    assert weakness_map["measurement_policy"]["evidence_gap_is_model_weakness"] is False
+    weakness = weakness_map["families"]["math"]
+    assert weakness["evidence_state"] == "PROVEN"
+    assert weakness["first_raw_failure"] == 5
+    assert "RAW_FRONTIER_BOUNDARY" in weakness["signals"]
+    assert weakness["observed_failure_signatures"] == ["arithmetic_error"]
+
+    profile_report = profile_report_path.read_text(encoding="utf-8")
+    assert "# Capability Profile: gpt-oss:20b" in profile_report
+    assert "## math" in profile_report
+    assert "Evidence state: PROVEN" in profile_report
+    assert "Raw reliable through: L4" in profile_report
+    assert "First raw failure: L5" in profile_report
+    assert "arithmetic_error" in profile_report
+    assert "overall score" not in profile_report.lower()
+
+    characterization_report = characterization_report_path.read_text(encoding="utf-8")
+    assert "# Capability Characterization: gpt-oss:20b" in characterization_report
+    assert "## Capability Map" in characterization_report
+    assert "## Weakness Map" in characterization_report
+    assert "## Operating Policy" in characterization_report
+    assert "RAW_FRONTIER_BOUNDARY" in characterization_report
+    assert "arithmetic_error" in characterization_report
+    assert "ESCALATE" in characterization_report
+    assert "overall score" not in characterization_report.lower()
