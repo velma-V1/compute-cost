@@ -34,3 +34,17 @@ def test_each_base_category_has_multiple_cases_to_reduce_single_prompt_noise():
     for case in suite["cases"]:
         counts[case["category"]] = counts.get(case["category"], 0) + 1
     assert all(count >= 2 for count in counts.values())
+
+
+def test_qwen_characterization_v1_is_small_deterministic_and_budget_free():
+    suite = json.loads(Path("benchmarks/qwen-characterization-v1.json").read_text(encoding="utf-8"))
+    assert suite["benchmark_version"] == "qwen-characterization-v1"
+    cases = suite["cases"]
+    assert [case["id"] for case in cases] == [
+        "char-if-001",
+        "char-json-001",
+        "char-math-001",
+    ]
+    assert [case["difficulty_level"] for case in cases] == [1, 2, 3]
+    assert all("max_output_tokens" not in case for case in cases)
+    assert all(case["timeout_s"] == 120 for case in cases)
