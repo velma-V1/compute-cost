@@ -749,3 +749,31 @@ class BenchmarkRunner:
             }
         )
         return self.store.run_dir
+
+    def replay_case(self, source_run_id: str, case_id: str) -> Path:
+        source = self.results_root / source_run_id / "replay" / f"{case_id}.json"
+        snapshot = json.loads(source.read_text(encoding="utf-8"))
+        model = str(snapshot["model"])
+        invocation = snapshot["invocation"]
+        replay_run_id = f"replay-{datetime.now().strftime('%Y%m%d-%H%M%S')}-{uuid.uuid4().hex[:8]}"
+        previous_store = self.store
+        previous_model = self.model
+        try:
+            self.store = EvidenceStore(self.results_root, replay_run_id)
+            self.model = model
+            self.store.write_json("source-replay.json", snapshot, producer="runner", stage="replay")
+            self._event("RUN_START", model=model, replay_of=f"{source_run_id}:{case_id}")
+            generation, _, _ = self._invoke_generation(
+                stage="replay",
+                case_id=case_id,
+                messages=invocation["messages"],
+                options=invocation["options"],
+                request_fields=invocation.get("request_fields") or None,
+            )
+            self.store.write_json("replay-result.json", generation, producer="runner", stage="replay")
+            self._event("RUN_END", model=model)
+            self.store.finalize_manifest(metadata={"replay_of": f"{source_run_id}:{case_id}", "model": model})
+            return self.store.run_dir
+        finally:
+            self.store = previous_store
+            self.model = previous_model
