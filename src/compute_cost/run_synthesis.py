@@ -11,7 +11,12 @@ import json
 from pathlib import Path
 from typing import Any, Iterable
 
-from .capability_profile import build_capability_profile, render_capability_profile
+from .capability_profile import (
+    build_capability_profile,
+    build_weakness_map,
+    render_capability_profile,
+    render_characterization_report,
+)
 from .cost_value import build_cost_map, build_value_map
 from .operating_policy import build_operating_policy
 
@@ -96,9 +101,19 @@ def build_cost_value_outputs(
             failure_atlas,
             policy,
         )
+        weakness_map = build_weakness_map(profile)
+
+        # Keep the profile artifacts for direct inspection while also emitting the
+        # approved campaign filenames from the exact same evidence representation.
         _write_json(root / "capability-profile.json", profile)
+        _write_json(root / "capability-map.json", profile)
+        _write_json(root / "weakness-map.json", weakness_map)
         (root / "capability-profile.md").write_text(
             render_capability_profile(profile),
+            encoding="utf-8",
+        )
+        (root / "characterization-report.md").write_text(
+            render_characterization_report(profile, weakness_map, policy),
             encoding="utf-8",
         )
 
