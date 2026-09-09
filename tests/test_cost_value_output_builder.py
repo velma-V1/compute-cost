@@ -3,7 +3,7 @@ from pathlib import Path
 
 
 def test_build_cost_value_outputs_uses_complete_run_telemetry_and_phase_maps(tmp_path: Path):
-    from compute_cost.runner import _build_cost_value_outputs
+    from compute_cost.capability_campaign import _build_cost_value_outputs
 
     telemetry = [
         {
