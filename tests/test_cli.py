@@ -108,7 +108,7 @@ def test_characterize_dispatches_exactly_one_model(tmp_path: Path, capsys, monke
     assert out["run_id"] == "char-run"
 
 
-def test_capability_characterize_validates_normalizes_and_dispatches(tmp_path: Path, capsys, monkeypatch):
+def test_capability_characterize_validates_materializes_normalizes_and_dispatches(tmp_path: Path, capsys, monkeypatch):
     calls = []
     validations = []
 
@@ -120,7 +120,7 @@ def test_capability_characterize_validates_normalizes_and_dispatches(tmp_path: P
     class FakeRunner:
         def __init__(self, runtime, config, suite, *, results_root):
             assert suite["normalized"] is True
-            assert suite["expanded"] is True
+            assert suite["materialized"] is True
             assert "capability_campaign" in config
 
         def capability_characterize(self, model, *, pull=False):
@@ -130,7 +130,7 @@ def test_capability_characterize_validates_normalizes_and_dispatches(tmp_path: P
             return run
 
     raw_suite = {"benchmark_version": "x", "cases": [{"id": "x"}]}
-    expanded_suite = {**raw_suite, "expanded": True}
+    materialized_suite = {**raw_suite, "materialized": True}
     taxonomy_data = {"taxonomy_version": "test-taxonomy", "families": []}
     suite_path = tmp_path / "suite.json"
     taxonomy_path = tmp_path / "taxonomy.json"
@@ -140,19 +140,19 @@ def test_capability_characterize_validates_normalizes_and_dispatches(tmp_path: P
     def validate(suite, taxonomy):
         validations.append((suite, taxonomy))
 
-    def expand(suite, taxonomy):
+    def materialize(suite, taxonomy):
         assert suite == raw_suite
         assert taxonomy == taxonomy_data
-        return expanded_suite
+        return materialized_suite
 
     def normalize(suite):
-        assert suite is expanded_suite
+        assert suite is materialized_suite
         return {**suite, "normalized": True}
 
     monkeypatch.setattr(cli, "OllamaAdapter", FakeRuntime)
     monkeypatch.setattr(cli, "BenchmarkRunner", FakeRunner)
     monkeypatch.setattr(cli, "validate_capability_suite", validate)
-    monkeypatch.setattr(cli, "expand_gpt_oss_ladders", expand)
+    monkeypatch.setattr(cli, "materialize_gpt_oss_suite", materialize)
     monkeypatch.setattr(cli, "normalize_capability_suite", normalize)
 
     code = main([
@@ -167,7 +167,7 @@ def test_capability_characterize_validates_normalizes_and_dispatches(tmp_path: P
     assert code == 0
     assert validations == [
         (raw_suite, taxonomy_data),
-        (expanded_suite, taxonomy_data),
+        (materialized_suite, taxonomy_data),
     ]
     assert calls == [("fake", False)]
     assert out["run_id"] == "cap-run"
