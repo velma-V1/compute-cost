@@ -50,6 +50,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "enabled": True,
         "repeats": 3,
         "max_level": "R7",
+        "max_attempts_per_candidate": 6,
     },
     "robustness_lab": {
         "enabled": True,
@@ -168,6 +169,11 @@ def _validate_recovery_lab(config: dict[str, Any]) -> None:
     repeats = c.get("repeats")
     if not isinstance(repeats, int) or isinstance(repeats, bool) or repeats <= 0:
         raise ValueError("recovery_lab.repeats must be a positive integer")
+    max_attempts = c.get("max_attempts_per_candidate")
+    if not isinstance(max_attempts, int) or isinstance(max_attempts, bool) or max_attempts <= 0:
+        raise ValueError("recovery_lab.max_attempts_per_candidate must be a positive integer")
+    if max_attempts < repeats:
+        raise ValueError("recovery_lab.max_attempts_per_candidate must be >= recovery_lab.repeats")
     max_level = c.get("max_level")
     if max_level not in {f"R{index}" for index in range(9)}:
         raise ValueError("recovery_lab.max_level must be one of R0 through R8")
