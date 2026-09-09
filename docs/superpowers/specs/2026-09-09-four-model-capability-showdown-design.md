@@ -82,13 +82,14 @@ The showdown assumes the 80B server is already started for the first implementat
 
 ## Execution model
 
-Models run sequentially. Only one contender should be active as the tested model at a time.
+Before any benchmark model call, campaign preflight validates all four exact contenders and both runtime endpoints. If any required contender is missing or the 80B endpoint is unreachable, the campaign fails before spending benchmark calls. It never silently substitutes another tag, quant, runtime, or model.
+
+After campaign preflight succeeds, models run sequentially. Only one contender is the active tested model at a time.
 
 For each model:
 
 ```text
 preflight
-  -> verify model/runtime availability
   -> warmup
   -> execute every fixed capability case once
   -> score each case
@@ -145,7 +146,9 @@ Record the cost of obtaining that capability separately, including when observab
 - timeout-budget overruns
 - runtime/backend type
 
-The existing 120-second fixture timeout is treated as a utility threshold for cross-model comparison, not automatically as semantic incapability for a model known to run more slowly. The showdown runner therefore needs a larger hard safety ceiling configurable independently from the benchmark's utility timeout. If a model exceeds the fixture timeout but finishes before the hard ceiling, score the answer semantically and mark `UTILITY_TIMEOUT_EXCEEDED=true`.
+The existing 120-second fixture timeout is treated as a utility threshold for cross-model comparison, not automatically as semantic incapability for a model known to run more slowly. The showdown runner therefore uses a separate hard safety ceiling, defaulting to 600 seconds per case and configurable with `--hard-timeout-s`.
+
+If a model exceeds the fixture timeout but finishes before the hard ceiling, score the answer semantically and mark `UTILITY_TIMEOUT_EXCEEDED=true`.
 
 If the hard safety ceiling is reached, classify the model call as a runtime/time-budget failure; do not infer that the model lacked the underlying capability.
 
@@ -209,7 +212,7 @@ compute-cost capability-showdown
 
 Initial defaults use the four-model roster above and the existing capability suite.
 
-Useful overrides should be narrow and explicit, for example:
+Useful overrides are narrow and explicit:
 
 ```text
 --suite PATH
@@ -242,10 +245,10 @@ results/showdowns/<showdown-id>/
 
 ## Failure behavior
 
-- Missing Ollama model: stop before model execution and report exact missing tag.
-- Unreachable 80B endpoint: stop that contender with runtime-unavailable evidence; do not substitute Ollama.
+- Campaign preflight validates every exact Ollama tag and the 80B server endpoint before benchmark execution.
+- Any missing required contender or unreachable required runtime fails the campaign before benchmark model calls begin.
 - Scorer defect: exclude from capability denominator and preserve evidence.
-- Runtime error: preserve first attempt; optionally create a replay/recovery run, never replace history.
+- Runtime error after campaign start: preserve first attempt; optionally create a replay/recovery run, never replace history.
 - Hard timeout: record runtime/time-budget failure distinct from semantic fail.
 - Manifest failure: campaign comparison must mark the contender invalid until evidence integrity is restored.
 
@@ -257,16 +260,18 @@ Required deterministic tests include:
 
 1. exact four-model default roster, including `devstral-small-2:24b-instruct-2512-q8_0`
 2. runtime selection routes three models to Ollama and the 80B contender to `OversizedMoEAdapter`
-3. showdown uses the existing capability suite without mutating case content
-4. all contenders receive identical case order and prompt content
-5. a correct response exceeding 120 seconds remains a semantic PASS while recording utility timeout overrun
-6. hard safety timeout does not become semantic FAIL
-7. missing contender fails visibly with exact requested model identity
-8. one contender's runtime failure cannot overwrite another contender's run
-9. only manifest-verified runs enter final comparison
-10. separation-map classifications are deterministic
-11. comparison keeps invalid/scorer/runtime results out of semantic capability denominators
-12. fake adapters allow the full four-model orchestration to run in CI without Ollama, CUDA, or the 80B model
+3. campaign preflight validates all four contenders before the first benchmark model call
+4. showdown uses the existing capability suite without mutating case content
+5. all contenders receive identical case order and prompt content
+6. a correct response exceeding 120 seconds remains a semantic PASS while recording utility timeout overrun
+7. the default hard safety ceiling is 600 seconds per case and is independently configurable
+8. hard safety timeout does not become semantic FAIL
+9. missing contender fails visibly with exact requested model identity and no substitution
+10. one contender's runtime failure cannot overwrite another contender's run
+11. only manifest-verified runs enter final comparison
+12. separation-map classifications are deterministic
+13. comparison keeps invalid/scorer/runtime results out of semantic capability denominators
+14. fake adapters allow the full four-model orchestration to run in CI without Ollama, CUDA, or the 80B model
 
 ## Non-goals
 
