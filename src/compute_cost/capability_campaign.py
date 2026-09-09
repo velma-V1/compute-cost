@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
 from typing import Any
 
 from .adaptive import AdaptiveDifficultyController, DifficultyObservation
 from .capability_ladders import build_ladder_index, resolve_requested_level
 from .characterization import execute_experiment
 from .compound_lab import run_compound_lab
+from .cost_value import build_cost_map, build_value_map
 from .experiments import ExperimentSpec, make_experiment_id
 from .failure_atlas import build_failure_atlas
 from .frontier import build_capability_frontiers
@@ -262,6 +265,53 @@ def _baseline_frontiers(runner: Any, rows: list[dict[str, Any]]) -> dict[str, An
     )
 
 
+def _read_jsonl(path: Path) -> list[dict[str, Any]]:
+    if not path.is_file():
+        return []
+    rows: list[dict[str, Any]] = []
+    for raw_line in path.read_text(encoding="utf-8").splitlines():
+        if not raw_line.strip():
+            continue
+        value = json.loads(raw_line)
+        if isinstance(value, dict):
+            rows.append(value)
+    return rows
+
+
+def _read_json(path: Path, default: dict[str, Any]) -> dict[str, Any]:
+    if not path.is_file():
+        return default
+    value = json.loads(path.read_text(encoding="utf-8"))
+    return value if isinstance(value, dict) else default
+
+
+def _build_cost_value_outputs(
+    model: str,
+    rows: list[dict[str, Any]],
+    frontiers: dict[str, Any],
+    run_dir: str | Path,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Synthesize per-experiment compute cost and routing value from retained evidence."""
+    run_path = Path(run_dir)
+    telemetry = _read_jsonl(run_path / "telemetry.jsonl")
+    reasoning_curves = _read_json(run_path / "reasoning-curves.json", {"families": {}})
+    recovery_map = _read_json(run_path / "recovery-map.json", {"families": {}})
+    robustness_map = _read_json(run_path / "robustness-map.json", {"families": {}})
+    compound_map = _read_json(run_path / "compound-map.json", {"compounds": {}})
+
+    cost_map = build_cost_map(model, rows, telemetry)
+    value_map = build_value_map(
+        model,
+        frontiers,
+        cost_map,
+        reasoning_curves=reasoning_curves,
+        recovery_map=recovery_map,
+        robustness_map=robustness_map,
+        compound_map=compound_map,
+    )
+    return cost_map, value_map
+
+
 def run_capability_campaign(
     runner: Any,
     cases: list[dict[str, Any]],
@@ -384,4 +434,25 @@ def run_capability_campaign(
         producer="failure-atlas",
         stage="report",
     )
+
+    run_dir = getattr(runner.store, "run_dir", None)
+    if run_dir is not None:
+        cost_map, value_map = _build_cost_value_outputs(
+            str(runner.model),
+            all_rows,
+            frontiers,
+            run_dir,
+        )
+        runner.store.write_json(
+            "cost-map.json",
+            cost_map,
+            producer="cost-value",
+            stage="report",
+        )
+        runner.store.write_json(
+            "value-map.json",
+            value_map,
+            producer="cost-value",
+            stage="report",
+        )
     return all_rows
