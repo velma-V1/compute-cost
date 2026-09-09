@@ -10,7 +10,7 @@ from typing import Any, Sequence
 from .capability_suite import normalize_capability_suite, validate_capability_suite
 from .config import load_config
 from .evidence import EvidenceStore
-from .gpt_oss_ladders import expand_gpt_oss_ladders
+from .gpt_oss_calibration import materialize_gpt_oss_suite
 from .hardware import collect_hardware_snapshot
 from .report import compare_runs
 from .runner import BenchmarkRunner
@@ -185,7 +185,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.command == "capability-characterize":
         taxonomy = _load_taxonomy(args.taxonomy)
         validate_capability_suite(suite, taxonomy)
-        suite = expand_gpt_oss_ladders(suite, taxonomy)
+        suite = materialize_gpt_oss_suite(suite, taxonomy)
         validate_capability_suite(suite, taxonomy)
         suite = normalize_capability_suite(suite)
         runner = BenchmarkRunner(runtime, config, suite, results_root=results_root)
