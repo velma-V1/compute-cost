@@ -12,6 +12,7 @@ from .failure_atlas import build_failure_atlas
 from .frontier import build_capability_frontiers
 from .reasoning_curves import build_reasoning_curves, run_reasoning_curves
 from .recovery_lab import run_recovery_lab
+from .robustness_lab import run_robustness_lab
 
 
 def _spec(
@@ -264,7 +265,7 @@ def run_capability_campaign(
     runner: Any,
     cases: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
-    """Run frontiers, effort probes, recovery, then build the final failure atlas."""
+    """Run frontiers, effort probes, recovery, robustness, then final autopsy."""
     ladders = build_ladder_index(cases)
     all_rows: list[dict[str, Any]] = []
     sequence = 0
@@ -277,8 +278,8 @@ def run_capability_campaign(
         )
         all_rows.extend(family_rows)
 
-    # Freeze the MEDIUM frontier before any reasoning or recovery intervention.
-    # Later phases may add evidence but must not retroactively move this baseline.
+    # Freeze the MEDIUM frontier before any reasoning, recovery, or robustness
+    # intervention. Later phases can add evidence but cannot move this baseline.
     base_rows = list(all_rows)
     frontiers = _baseline_frontiers(runner, base_rows)
     effort_rows: list[dict[str, Any]] = []
@@ -313,9 +314,11 @@ def run_capability_campaign(
         )
         all_rows.extend(effort_rows)
 
-    # Recovery uses only evidence that existed before recovery began.  This prevents
+    # Recovery uses only evidence that existed before recovery began. This prevents
     # the recovery atlas from becoming self-referential and allows R0/R2 reuse.
     pre_recovery_atlas = build_failure_atlas(str(runner.model), all_rows)
+    recovery_rows: list[dict[str, Any]] = []
+    recovery_map: dict[str, Any] = {"schema_version": 1, "families": {}}
     recovery_cfg = runner.config.get("recovery_lab")
     if isinstance(recovery_cfg, dict):
         recovery_rows, recovery_map, sequence = run_recovery_lab(
@@ -334,6 +337,28 @@ def run_capability_campaign(
             stage="report",
         )
         all_rows.extend(recovery_rows)
+
+    # Robustness consumes the frozen frontier and the recovery result. It tests the
+    # useful operating point but cannot retroactively redefine either one.
+    robustness_cfg = runner.config.get("robustness_lab")
+    if isinstance(robustness_cfg, dict):
+        robustness_rows, robustness_map, sequence = run_robustness_lab(
+            runner,
+            cases,
+            base_rows,
+            effort_rows,
+            recovery_rows,
+            frontiers,
+            recovery_map,
+            sequence_start=sequence,
+        )
+        runner.store.write_json(
+            "robustness-map.json",
+            robustness_map,
+            producer="robustness-lab",
+            stage="report",
+        )
+        all_rows.extend(robustness_rows)
 
     runner.store.write_json(
         "failure-atlas.json",
