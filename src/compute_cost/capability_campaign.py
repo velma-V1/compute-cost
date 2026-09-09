@@ -7,6 +7,7 @@ from typing import Any
 from .adaptive import AdaptiveDifficultyController, DifficultyObservation
 from .capability_ladders import build_ladder_index, resolve_requested_level
 from .characterization import execute_experiment
+from .compound_lab import run_compound_lab
 from .experiments import ExperimentSpec, make_experiment_id
 from .failure_atlas import build_failure_atlas
 from .frontier import build_capability_frontiers
@@ -265,7 +266,7 @@ def run_capability_campaign(
     runner: Any,
     cases: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
-    """Run frontiers, effort probes, recovery, robustness, then final autopsy."""
+    """Run frontiers, effort, recovery, robustness, compounds, then final autopsy."""
     ladders = build_ladder_index(cases)
     all_rows: list[dict[str, Any]] = []
     sequence = 0
@@ -278,8 +279,8 @@ def run_capability_campaign(
         )
         all_rows.extend(family_rows)
 
-    # Freeze the MEDIUM frontier before any reasoning, recovery, or robustness
-    # intervention. Later phases can add evidence but cannot move this baseline.
+    # Freeze the MEDIUM frontier before any reasoning, recovery, robustness, or
+    # compound intervention. Later phases can add evidence but cannot move it.
     base_rows = list(all_rows)
     frontiers = _baseline_frontiers(runner, base_rows)
     effort_rows: list[dict[str, Any]] = []
@@ -338,7 +339,7 @@ def run_capability_campaign(
         )
         all_rows.extend(recovery_rows)
 
-    # Robustness consumes the frozen frontier and the recovery result. It tests the
+    # Robustness consumes the frozen frontier and recovery result. It tests the
     # useful operating point but cannot retroactively redefine either one.
     robustness_cfg = runner.config.get("robustness_lab")
     if isinstance(robustness_cfg, dict):
@@ -359,6 +360,23 @@ def run_capability_campaign(
             stage="report",
         )
         all_rows.extend(robustness_rows)
+
+    # Compounds are measured against the same frozen MEDIUM component frontiers.
+    # This keeps the composition penalty comparable instead of mixing interventions.
+    compound_cfg = runner.config.get("compound_lab")
+    if isinstance(compound_cfg, dict):
+        compound_rows, compound_map, sequence = run_compound_lab(
+            runner,
+            frontiers,
+            sequence_start=sequence,
+        )
+        runner.store.write_json(
+            "compound-map.json",
+            compound_map,
+            producer="compound-lab",
+            stage="report",
+        )
+        all_rows.extend(compound_rows)
 
     runner.store.write_json(
         "failure-atlas.json",
