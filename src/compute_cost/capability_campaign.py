@@ -11,6 +11,7 @@ from .experiments import ExperimentSpec, make_experiment_id
 from .failure_atlas import build_failure_atlas
 from .frontier import build_capability_frontiers
 from .reasoning_curves import build_reasoning_curves, run_reasoning_curves
+from .recovery_lab import run_recovery_lab
 
 
 def _spec(
@@ -263,7 +264,7 @@ def run_capability_campaign(
     runner: Any,
     cases: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
-    """Run adaptive MEDIUM frontiers, bounded effort probes, and failure indexing."""
+    """Run frontiers, effort probes, recovery, then build the final failure atlas."""
     ladders = build_ladder_index(cases)
     all_rows: list[dict[str, Any]] = []
     sequence = 0
@@ -276,10 +277,14 @@ def run_capability_campaign(
         )
         all_rows.extend(family_rows)
 
+    # Freeze the MEDIUM frontier before any reasoning or recovery intervention.
+    # Later phases may add evidence but must not retroactively move this baseline.
+    base_rows = list(all_rows)
+    frontiers = _baseline_frontiers(runner, base_rows)
+    effort_rows: list[dict[str, Any]] = []
+
     curve_cfg = runner.config.get("reasoning_curves")
     if isinstance(curve_cfg, dict) and curve_cfg.get("enabled") is True:
-        base_rows = list(all_rows)
-        frontiers = _baseline_frontiers(runner, base_rows)
         effort_rows = run_reasoning_curves(
             runner,
             cases,
@@ -287,6 +292,7 @@ def run_capability_campaign(
             frontiers,
             sequence_start=sequence,
         )
+        sequence += len(effort_rows)
         repeats = int(curve_cfg["repeats"])
         reliable_threshold = float(
             runner.config["capability_campaign"].get("reliable_threshold", 0.90)
@@ -306,6 +312,28 @@ def run_capability_campaign(
             stage="report",
         )
         all_rows.extend(effort_rows)
+
+    # Recovery uses only evidence that existed before recovery began.  This prevents
+    # the recovery atlas from becoming self-referential and allows R0/R2 reuse.
+    pre_recovery_atlas = build_failure_atlas(str(runner.model), all_rows)
+    recovery_cfg = runner.config.get("recovery_lab")
+    if isinstance(recovery_cfg, dict):
+        recovery_rows, recovery_map, sequence = run_recovery_lab(
+            runner,
+            cases,
+            base_rows,
+            effort_rows,
+            frontiers,
+            pre_recovery_atlas,
+            sequence_start=sequence,
+        )
+        runner.store.write_json(
+            "recovery-map.json",
+            recovery_map,
+            producer="recovery-lab",
+            stage="report",
+        )
+        all_rows.extend(recovery_rows)
 
     runner.store.write_json(
         "failure-atlas.json",
