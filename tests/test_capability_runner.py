@@ -219,6 +219,26 @@ def test_capability_runner_executes_adaptive_levels_and_writes_frontier_artifact
         "PROVEN", "PARTIAL", "UNCERTAIN", "UNTESTED"
     }
 
+    cost_map = json.loads((run_dir / "cost-map.json").read_text())
+    assert cost_map["schema_version"] == 1
+    assert cost_map["model"] == "fake"
+    assert len(cost_map["experiments"]) == 6
+    assert cost_map["rollup"]["model_calls"] == 6
+    assert all(
+        row["metrics"]["ram_average_bytes"]["measurement_kind"] == "UNAVAILABLE"
+        for row in cost_map["experiments"].values()
+    )
+
+    value_map = json.loads((run_dir / "value-map.json").read_text())
+    assert value_map["schema_version"] == 1
+    assert value_map["model"] == "fake"
+    assert set(value_map["families"]) == {"logic", "math"}
+    assert value_map["families"]["math"]["baseline_medium_frontier"] == {
+        "reliable_floor": 4,
+        "first_failure_level": 5,
+    }
+    assert value_map["families"]["math"]["cheapest_proven_raw_config"]["reasoning_effort"] == "medium"
+
     events = [json.loads(line) for line in (run_dir / "events.jsonl").read_text().splitlines()]
     assert any(row["type"] == "CAPABILITY_CHARACTERIZATION_COMPLETE" for row in events)
     assert EvidenceStore(tmp_path, run_dir.name).verify_manifest() == []
