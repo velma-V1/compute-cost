@@ -15,6 +15,7 @@ from .hardware import collect_hardware_snapshot
 from .report import compare_runs
 from .runner import BenchmarkRunner
 from .runtimes.ollama import OllamaAdapter
+from .runtimes.oversized_moe import OversizedMoEAdapter
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -29,6 +30,12 @@ PLANNED_CHARACTERIZATION_MODELS = (
     "qwen3.5:35b-a3b-q4_K_M",
     "qwen3.5:35b-a3b-q8_0",
     "devstral-small-2:24b-instruct-2512-q8_0",
+)
+SHOWDOWN_MODELS = (
+    ("gpt-oss:20b", "ollama"),
+    ("qwen3.5:35b-a3b-q4_K_M", "ollama"),
+    ("devstral-small-2:24b-instruct-2512-q8_0", "ollama"),
+    ("qwen3-next-80b-a3b-instruct-q4_k_m", "oversized"),
 )
 
 
@@ -68,6 +75,15 @@ def build_parser() -> argparse.ArgumentParser:
     capability.add_argument("--suite", default=str(DEFAULT_CAPABILITY_SUITE_PATH))
     capability.add_argument("--taxonomy", default=str(DEFAULT_CAPABILITY_TAXONOMY_PATH))
     capability.add_argument("--pull", action="store_true", help="Pull the model if it is not already local.")
+
+    showdown = sub.add_parser(
+        "capability-showdown",
+        help="Run the same capability campaign across the fixed four-model showdown roster.",
+    )
+    showdown.add_argument("--suite", default=str(DEFAULT_CAPABILITY_SUITE_PATH))
+    showdown.add_argument("--taxonomy", default=str(DEFAULT_CAPABILITY_TAXONOMY_PATH))
+    showdown.add_argument("--oversized-endpoint", default="http://127.0.0.1:8080")
+    showdown.add_argument("--hard-timeout-s", type=float, default=600.0)
 
     campaign = sub.add_parser(
         "characterize-campaign",
@@ -128,7 +144,7 @@ def _resolve_run(results_root: Path, value: str) -> Path:
     return results_root / value
 
 
-def _characterization_run_failure(run_dir: Path) -> str | None:
+def _run_failure(run_dir: Path, complete_event: str) -> str | None:
     events_path = run_dir / "events.jsonl"
     if not events_path.is_file():
         return "RUN_INCOMPLETE"
@@ -142,9 +158,17 @@ def _characterization_run_failure(run_dir: Path) -> str | None:
             return "RUN_INCOMPLETE"
         if event.get("type") == "RUN_FAILED":
             return "RUN_FAILED"
-        if event.get("type") == "CHARACTERIZATION_COMPLETE":
+        if event.get("type") == complete_event:
             complete = True
     return None if complete else "RUN_INCOMPLETE"
+
+
+def _characterization_run_failure(run_dir: Path) -> str | None:
+    return _run_failure(run_dir, "CHARACTERIZATION_COMPLETE")
+
+
+def _capability_run_failure(run_dir: Path) -> str | None:
+    return _run_failure(run_dir, "CAPABILITY_CHARACTERIZATION_COMPLETE")
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -191,6 +215,60 @@ def main(argv: Sequence[str] | None = None) -> int:
         runner = BenchmarkRunner(runtime, config, suite, results_root=results_root)
         run_dir = runner.capability_characterize(args.model, pull=bool(args.pull))
         print(json.dumps({"run_id": run_dir.name, "run_dir": str(run_dir)}, indent=2))
+        return 0
+
+    if args.command == "capability-showdown":
+        taxonomy = _load_taxonomy(args.taxonomy)
+        validate_capability_suite(suite, taxonomy)
+        suite = materialize_gpt_oss_suite(suite, taxonomy)
+        validate_capability_suite(suite, taxonomy)
+        suite = normalize_capability_suite(suite)
+
+        runs: list[dict[str, Any]] = []
+        for model, backend in SHOWDOWN_MODELS:
+            if backend == "ollama":
+                contender_runtime = OllamaAdapter(endpoint, timeout_s=float(args.hard_timeout_s))
+            else:
+                contender_runtime = OversizedMoEAdapter(
+                    args.oversized_endpoint,
+                    timeout_s=float(args.hard_timeout_s),
+                    served_model=model,
+                )
+
+            runner = BenchmarkRunner(contender_runtime, config, suite, results_root=results_root)
+            run_dir = runner.capability_characterize(model, pull=False)
+            run_failure = _capability_run_failure(run_dir)
+            problems = EvidenceStore(results_root, run_dir.name).verify_manifest()
+            row = {
+                "model": model,
+                "backend": backend,
+                "run_id": run_dir.name,
+                "run_dir": str(run_dir),
+                "manifest_ok": not problems,
+                "manifest_problems": problems,
+            }
+            runs.append(row)
+
+            if run_failure is not None:
+                print(json.dumps({
+                    "ok": False,
+                    "failed_model": model,
+                    "backend": backend,
+                    "failure": run_failure,
+                    "runs": runs,
+                }, indent=2, sort_keys=True, default=str))
+                return 2
+            if problems:
+                print(json.dumps({
+                    "ok": False,
+                    "failed_model": model,
+                    "backend": backend,
+                    "failure": "MANIFEST_VERIFICATION_FAILED",
+                    "runs": runs,
+                }, indent=2, sort_keys=True, default=str))
+                return 2
+
+        print(json.dumps({"ok": True, "runs": runs}, indent=2, sort_keys=True, default=str))
         return 0
 
     if args.command == "characterize-campaign":
