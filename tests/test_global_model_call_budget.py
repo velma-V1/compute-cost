@@ -2,6 +2,7 @@ import base64
 import json
 from pathlib import Path
 
+from compute_cost.classification import classify_result
 from compute_cost.config import load_config
 from compute_cost.evidence import EvidenceStore
 from compute_cost.runner import BenchmarkRunner
@@ -52,6 +53,17 @@ class Telemetry:
         }
 
 
+def _invoke(runner: BenchmarkRunner, case_id: str):
+    generation, _, _ = runner._invoke_generation(
+        stage="characterize",
+        case_id=case_id,
+        messages=[{"role": "user", "content": "return OK"}],
+        options={"num_predict": 8},
+        request_fields={"think": "medium"},
+    )
+    return generation
+
+
 def test_calls_after_run_budget_are_blocked_with_one_exhaustion_event(tmp_path: Path):
     runtime = Runtime()
     config = load_config(overrides={"limits.max_model_calls_per_run": 2})
@@ -66,16 +78,7 @@ def test_calls_after_run_budget_are_blocked_with_one_exhaustion_event(tmp_path: 
     runner.model = "fake"
     runner.store = EvidenceStore(tmp_path, "run")
 
-    results = []
-    for index in range(4):
-        generation, _, _ = runner._invoke_generation(
-            stage="characterize",
-            case_id=f"case-{index}",
-            messages=[{"role": "user", "content": "return OK"}],
-            options={"num_predict": 8},
-            request_fields={"think": "medium"},
-        )
-        results.append(generation)
+    results = [_invoke(runner, f"case-{index}") for index in range(4)]
 
     assert runtime.calls == 2
     assert results[0]["ok"] is True
@@ -85,6 +88,13 @@ def test_calls_after_run_budget_are_blocked_with_one_exhaustion_event(tmp_path: 
         assert blocked["error"]["type"] == "MODEL_CALL_BUDGET_EXHAUSTED"
         assert blocked["error"]["limit"] == 2
         assert blocked["error"]["completed_calls"] == 2
+        classification = classify_result(
+            {"scorer": "exact"},
+            blocked,
+            {"score": 0.0, "status": "RUNTIME_ERROR", "checks": []},
+        )
+        assert classification["result_class"] == "RUNTIME_FAILURE"
+        assert classification["valid_for_capability"] is False
 
     events_path = runner.store.run_dir / "events.jsonl"
     events = [json.loads(line) for line in events_path.read_text(encoding="utf-8").splitlines()]
@@ -92,3 +102,25 @@ def test_calls_after_run_budget_are_blocked_with_one_exhaustion_event(tmp_path: 
     assert len(exhausted) == 1
     assert exhausted[0]["limit"] == 2
     assert exhausted[0]["completed_calls"] == 2
+
+
+def test_model_call_budget_resets_when_run_id_changes(tmp_path: Path):
+    runtime = Runtime()
+    config = load_config(overrides={"limits.max_model_calls_per_run": 1})
+    config["telemetry"]["background"] = False
+    runner = BenchmarkRunner(
+        runtime,
+        config,
+        {"benchmark_version": "budget-test", "cases": []},
+        results_root=tmp_path,
+        telemetry=Telemetry(),
+    )
+    runner.model = "fake"
+
+    runner.store = EvidenceStore(tmp_path, "run-one")
+    assert _invoke(runner, "one-a")["ok"] is True
+    assert _invoke(runner, "one-b")["error"]["type"] == "MODEL_CALL_BUDGET_EXHAUSTED"
+
+    runner.store = EvidenceStore(tmp_path, "run-two")
+    assert _invoke(runner, "two-a")["ok"] is True
+    assert runtime.calls == 2
