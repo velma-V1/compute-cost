@@ -1,5 +1,7 @@
 from pathlib import Path
 
+import pytest
+
 from compute_cost.config import load_config
 
 
@@ -9,7 +11,36 @@ def test_default_config_contains_safe_bounded_run_settings():
     assert config["limits"]["request_timeout_s"] > 0
     assert config["limits"]["context_schedule"]
     assert config["limits"]["sustained_iterations"] > 0
+    assert config["limits"]["max_model_calls_per_run"] == 3000
     assert config["cost"]["electricity_configured"] is False
+
+    characterization = config["characterization"]
+    assert characterization["initial_generation_budget"] == 256
+    assert characterization["min_generation_budget"] == 32
+    assert characterization["max_generation_budget"] == 2048
+    assert characterization["generation_budget_granularity"] == 32
+    assert characterization["boundary_repeats"] == 3
+    assert characterization["max_experiments_per_task"] == 12
+    assert characterization["think_off_generation_budget"] == 256
+
+    recovery = config["recovery_lab"]
+    assert recovery["enabled"] is True
+    assert recovery["repeats"] == 3
+    assert recovery["max_level"] == "R7"
+    assert recovery["max_attempts_per_candidate"] == 6
+
+    robustness = config["robustness_lab"]
+    assert robustness["enabled"] is True
+    assert robustness["repeats"] == 2
+    assert robustness["max_perturbations_per_family"] == 2
+    assert robustness["max_attempts_per_perturbation"] == 4
+
+    compound = config["compound_lab"]
+    assert compound["enabled"] is True
+    assert compound["jump"] == 2
+    assert compound["boundary_repeats"] == 3
+    assert compound["max_experiments_per_compound"] == 16
+    assert compound["max_compounds"] == 6
 
 
 def test_user_toml_and_dotted_overrides_merge_without_erasing_other_defaults(tmp_path: Path):
@@ -24,3 +55,58 @@ def test_user_toml_and_dotted_overrides_merge_without_erasing_other_defaults(tmp
     assert config["limits"]["context_schedule"]
     assert config["cost"]["electricity_per_kwh"] == 0.12
     assert config["cost"]["electricity_configured"] is True
+    assert config["characterization"]["boundary_repeats"] == 3
+
+
+def test_global_model_call_budget_is_validated():
+    for value in (0, -1, True, 1.5):
+        with pytest.raises(ValueError, match="limits.max_model_calls_per_run must be a positive integer"):
+            load_config(overrides={"limits.max_model_calls_per_run": value})
+
+
+def test_characterization_budget_order_is_validated(tmp_path: Path):
+    custom = tmp_path / "bad.toml"
+    custom.write_text(
+        '[characterization]\nmin_generation_budget = 512\ninitial_generation_budget = 256\nmax_generation_budget = 2048\n',
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="min <= initial <= max"):
+        load_config(custom)
+
+
+def test_characterization_integer_controls_must_be_positive():
+    with pytest.raises(ValueError, match="positive integer"):
+        load_config(overrides={"characterization.boundary_repeats": 0})
+
+
+def test_recovery_lab_repeats_must_be_positive():
+    with pytest.raises(ValueError, match="recovery_lab.repeats must be a positive integer"):
+        load_config(overrides={"recovery_lab.repeats": 0})
+
+
+def test_recovery_lab_max_level_is_validated():
+    with pytest.raises(ValueError, match="recovery_lab.max_level"):
+        load_config(overrides={"recovery_lab.max_level": "R9"})
+
+
+def test_recovery_lab_attempt_budget_is_validated():
+    with pytest.raises(ValueError, match="recovery_lab.max_attempts_per_candidate must be a positive integer"):
+        load_config(overrides={"recovery_lab.max_attempts_per_candidate": 0})
+    with pytest.raises(ValueError, match="recovery_lab.max_attempts_per_candidate must be >= recovery_lab.repeats"):
+        load_config(overrides={"recovery_lab.max_attempts_per_candidate": 2, "recovery_lab.repeats": 3})
+
+
+def test_robustness_lab_integer_controls_are_validated():
+    with pytest.raises(ValueError, match="robustness_lab.repeats must be a positive integer"):
+        load_config(overrides={"robustness_lab.repeats": 0})
+    with pytest.raises(ValueError, match="robustness_lab.max_perturbations_per_family must be a positive integer"):
+        load_config(overrides={"robustness_lab.max_perturbations_per_family": 0})
+    with pytest.raises(ValueError, match="robustness_lab.max_attempts_per_perturbation must be"):
+        load_config(overrides={"robustness_lab.max_attempts_per_perturbation": 1, "robustness_lab.repeats": 2})
+
+
+def test_compound_lab_integer_controls_are_validated():
+    for field in ("jump", "boundary_repeats", "max_experiments_per_compound", "max_compounds"):
+        with pytest.raises(ValueError, match=fr"compound_lab\.{field} must be a positive integer"):
+            load_config(overrides={f"compound_lab.{field}": 0})

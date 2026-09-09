@@ -10,7 +10,7 @@ from __future__ import annotations
 import base64
 import json
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, Callable
 from urllib.error import HTTPError, URLError
@@ -34,8 +34,7 @@ class UrllibTransport:
                 response_headers = {str(k).lower(): str(v) for k, v in response.headers.items()}
                 chunks: list[dict[str, Any]] = []
                 if stream:
-                    iterator = response
-                    for raw in iterator:
+                    for raw in response:
                         chunks.append(self._chunk(raw))
                 else:
                     chunks.append(self._chunk(response.read()))
@@ -45,12 +44,7 @@ class UrllibTransport:
             response_headers = {str(k).lower(): str(v) for k, v in exc.headers.items()} if exc.headers else {}
             return HttpExchange(int(exc.code), response_headers, [self._chunk(raw)])
         except (URLError, OSError) as exc:
-            return HttpExchange(
-                0,
-                {},
-                [],
-                error={"type": type(exc).__name__, "message": str(exc)},
-            )
+            return HttpExchange(0, {}, [], error={"type": type(exc).__name__, "message": str(exc)})
 
     @staticmethod
     def _chunk(raw: bytes) -> dict[str, Any]:
@@ -172,6 +166,43 @@ class OllamaAdapter:
             return None
         return parsed[-1]
 
+    @staticmethod
+    def _phase_metrics(stream_events: list[dict[str, Any]], started_ns: int) -> dict[str, Any]:
+        thinking_events: list[tuple[int, str]] = []
+        answer_events: list[tuple[int, str]] = []
+        for event in stream_events:
+            received = event.get("received_monotonic_ns")
+            parsed = event.get("parsed")
+            if not isinstance(received, int) or not isinstance(parsed, dict):
+                continue
+            message = parsed.get("message")
+            if not isinstance(message, dict):
+                continue
+            thinking = message.get("thinking")
+            content = message.get("content")
+            if isinstance(thinking, str) and thinking:
+                thinking_events.append((received, thinking))
+            if isinstance(content, str) and content:
+                answer_events.append((received, content))
+
+        def latency(items: list[tuple[int, str]]) -> int | None:
+            return None if not items else items[0][0] - started_ns
+
+        def span(items: list[tuple[int, str]]) -> int | None:
+            return None if not items else items[-1][0] - items[0][0]
+
+        return {
+            "measurement_kind": "MEASURED",
+            "thinking_chunks": len(thinking_events),
+            "answer_chunks": len(answer_events),
+            "thinking_chars": sum(len(text) for _, text in thinking_events),
+            "answer_chars": sum(len(text) for _, text in answer_events),
+            "time_to_first_thinking_ns": latency(thinking_events),
+            "time_to_first_answer_ns": latency(answer_events),
+            "thinking_span_ns": span(thinking_events),
+            "answer_span_ns": span(answer_events),
+        }
+
     def health(self) -> dict[str, Any]:
         evidence = self.version()
         return {"ok": evidence.get("ok", False), "evidence": evidence}
@@ -259,6 +290,10 @@ class OllamaAdapter:
             "eval_count": final.get("eval_count"),
             "eval_duration_ns": final.get("eval_duration"),
         }
+        envelope["phase_metrics"] = self._phase_metrics(
+            envelope["stream_events"],
+            int(envelope["request"]["started_monotonic_ns"]),
+        )
         return envelope
 
     def unload(self, model: str) -> dict[str, Any]:

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import ast
-import base64
 import hashlib
 import json
 import re
@@ -23,6 +22,22 @@ def _sha(text: str) -> str:
 def _extract_code(text: str) -> str:
     match = re.search(r"```(?:python)?\s*\n(.*?)```", text, flags=re.DOTALL | re.IGNORECASE)
     return (match.group(1) if match else text).strip() + "\n"
+
+
+def _parse_json_response(response: str) -> tuple[Any | None, dict[str, str] | None]:
+    try:
+        return json.loads(response), None
+    except json.JSONDecodeError as exc:
+        return None, {"type": "JSONDecodeError", "message": str(exc)}
+
+
+def _invalid_json_result(response: str, error: dict[str, str]) -> dict[str, Any]:
+    return {
+        "score": 0.0,
+        "status": "SCORED",
+        "checks": [{"name": "valid_json", "pass": False}],
+        "evidence": {"raw_response": response, "parsed": None, "parse_error": error},
+    }
 
 
 def _validate_candidate(source: str, function_name: str) -> str | None:
@@ -104,7 +119,9 @@ def score_case(case: dict[str, Any], response: str, workspace: Path | None = Non
             return {"score": float(passed), "status": "SCORED", "checks": [{"name": "numeric_match", "pass": passed, "expected": expected, "actual": actual, "tolerance": tolerance}], "evidence": base_evidence}
 
         if scorer == "json":
-            parsed = json.loads(response)
+            parsed, parse_error = _parse_json_response(response)
+            if parse_error is not None:
+                return _invalid_json_result(response, parse_error)
             expected = case.get("expected", {})
             required = case.get("required", list(expected.keys()) if isinstance(expected, dict) else [])
             checks = [{"name": "valid_json", "pass": True}]
@@ -117,14 +134,18 @@ def score_case(case: dict[str, Any], response: str, workspace: Path | None = Non
             return {"score": float(passed), "status": "SCORED", "checks": checks, "evidence": {**base_evidence, "parsed": parsed}}
 
         if scorer == "extraction_set":
-            parsed = json.loads(response)
+            parsed, parse_error = _parse_json_response(response)
+            if parse_error is not None:
+                return _invalid_json_result(response, parse_error)
             actual = set(parsed) if isinstance(parsed, list) and all(isinstance(v, str) for v in parsed) else set()
             expected = set(str(v) for v in case.get("expected", []))
             passed = actual == expected
             return {"score": float(passed), "status": "SCORED", "checks": [{"name": "exact_set", "pass": passed, "expected": sorted(expected), "actual": sorted(actual)}], "evidence": {**base_evidence, "parsed": parsed}}
 
         if scorer == "tool_call":
-            parsed = json.loads(response)
+            parsed, parse_error = _parse_json_response(response)
+            if parse_error is not None:
+                return _invalid_json_result(response, parse_error)
             expected = case.get("expected")
             passed = parsed == expected
             return {"score": float(passed), "status": "SCORED", "checks": [{"name": "tool_call_exact", "pass": passed, "expected": expected, "actual": parsed}], "evidence": {**base_evidence, "parsed": parsed}}
@@ -150,7 +171,7 @@ def score_case(case: dict[str, Any], response: str, workspace: Path | None = Non
             "evidence": base_evidence,
             "error": {"type": "UnknownScorer", "message": f"unknown scorer: {scorer}"},
         }
-    except Exception as exc:  # scorer defects are benchmark errors, never model failures
+    except Exception as exc:
         return {
             "score": None,
             "status": "SCORER_ERROR",

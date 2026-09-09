@@ -7,8 +7,10 @@ import json
 from pathlib import Path
 from typing import Any, Sequence
 
+from .capability_suite import normalize_capability_suite, validate_capability_suite
 from .config import load_config
 from .evidence import EvidenceStore
+from .gpt_oss_calibration import materialize_gpt_oss_suite
 from .hardware import collect_hardware_snapshot
 from .report import compare_runs
 from .runner import BenchmarkRunner
@@ -18,6 +20,16 @@ from .runtimes.ollama import OllamaAdapter
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_CONFIG_PATH = PROJECT_ROOT / "config" / "default.toml"
 DEFAULT_SUITE_PATH = PROJECT_ROOT / "benchmarks" / "base-v1.json"
+DEFAULT_CHARACTERIZATION_SUITE_PATH = PROJECT_ROOT / "benchmarks" / "qwen-characterization-v1.json"
+DEFAULT_CAPABILITY_SUITE_PATH = PROJECT_ROOT / "benchmarks" / "gpt-oss-20b-capability-v1.json"
+DEFAULT_CAPABILITY_TAXONOMY_PATH = PROJECT_ROOT / "benchmarks" / "capability-taxonomy-v1.json"
+PLANNED_CHARACTERIZATION_MODELS = (
+    "qwen3.5:27b-q4_K_M",
+    "qwen3.5:27b-q8_0",
+    "qwen3.5:35b-a3b-q4_K_M",
+    "qwen3.5:35b-a3b-q8_0",
+    "devstral-small-2:24b-instruct-2512-q8_0",
+)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -43,6 +55,27 @@ def build_parser() -> argparse.ArgumentParser:
     benchmark.add_argument("--model", required=True)
     benchmark.add_argument("--suite", default=str(DEFAULT_SUITE_PATH))
 
+    characterize = sub.add_parser("characterize", help="Adaptively characterize one local model.")
+    characterize.add_argument("--model", required=True)
+    characterize.add_argument("--suite", default=str(DEFAULT_CHARACTERIZATION_SUITE_PATH))
+    characterize.add_argument("--pull", action="store_true", help="Pull the model if it is not already local.")
+
+    capability = sub.add_parser(
+        "capability-characterize",
+        help="Adaptively characterize family-local GPT-OSS capability frontiers.",
+    )
+    capability.add_argument("--model", required=True)
+    capability.add_argument("--suite", default=str(DEFAULT_CAPABILITY_SUITE_PATH))
+    capability.add_argument("--taxonomy", default=str(DEFAULT_CAPABILITY_TAXONOMY_PATH))
+    capability.add_argument("--pull", action="store_true", help="Pull the model if it is not already local.")
+
+    campaign = sub.add_parser(
+        "characterize-campaign",
+        help="Characterize the planned five-model set sequentially with fail-fast verification.",
+    )
+    campaign.add_argument("--suite", default=str(DEFAULT_CHARACTERIZATION_SUITE_PATH))
+    campaign.add_argument("--pull", action="store_true", help="Pull a planned model if it is not already local.")
+
     compare = sub.add_parser("compare", help="Compare completed runs without model execution.")
     compare.add_argument("runs", nargs="+", help="Two or more run IDs or run directories.")
 
@@ -67,10 +100,24 @@ def _config_from_args(args: argparse.Namespace) -> dict[str, Any]:
     return load_config(config_path, overrides)
 
 
-def _load_suite(path: str | Path) -> dict[str, Any]:
+def _load_json_object(path: str | Path, *, label: str) -> dict[str, Any]:
     value = json.loads(Path(path).read_text(encoding="utf-8"))
-    if not isinstance(value, dict) or not isinstance(value.get("cases"), list):
+    if not isinstance(value, dict):
+        raise ValueError(f"invalid {label}: {path}")
+    return value
+
+
+def _load_suite(path: str | Path) -> dict[str, Any]:
+    value = _load_json_object(path, label="benchmark suite")
+    if not isinstance(value.get("cases"), list):
         raise ValueError(f"invalid benchmark suite: {path}")
+    return value
+
+
+def _load_taxonomy(path: str | Path) -> dict[str, Any]:
+    value = _load_json_object(path, label="capability taxonomy")
+    if not isinstance(value.get("families"), list):
+        raise ValueError(f"invalid capability taxonomy: {path}")
     return value
 
 
@@ -79,6 +126,25 @@ def _resolve_run(results_root: Path, value: str) -> Path:
     if candidate.is_dir():
         return candidate
     return results_root / value
+
+
+def _characterization_run_failure(run_dir: Path) -> str | None:
+    events_path = run_dir / "events.jsonl"
+    if not events_path.is_file():
+        return "RUN_INCOMPLETE"
+    complete = False
+    for raw_line in events_path.read_text(encoding="utf-8").splitlines():
+        if not raw_line.strip():
+            continue
+        try:
+            event = json.loads(raw_line)
+        except json.JSONDecodeError:
+            return "RUN_INCOMPLETE"
+        if event.get("type") == "RUN_FAILED":
+            return "RUN_FAILED"
+        if event.get("type") == "CHARACTERIZATION_COMPLETE":
+            complete = True
+    return None if complete else "RUN_INCOMPLETE"
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -115,10 +181,63 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 0 if result["runtime"].get("ok", False) else 2
 
     suite = _load_suite(args.suite)
+
+    if args.command == "capability-characterize":
+        taxonomy = _load_taxonomy(args.taxonomy)
+        validate_capability_suite(suite, taxonomy)
+        suite = materialize_gpt_oss_suite(suite, taxonomy)
+        validate_capability_suite(suite, taxonomy)
+        suite = normalize_capability_suite(suite)
+        runner = BenchmarkRunner(runtime, config, suite, results_root=results_root)
+        run_dir = runner.capability_characterize(args.model, pull=bool(args.pull))
+        print(json.dumps({"run_id": run_dir.name, "run_dir": str(run_dir)}, indent=2))
+        return 0
+
+    if args.command == "characterize-campaign":
+        runs: list[dict[str, Any]] = []
+        for model in PLANNED_CHARACTERIZATION_MODELS:
+            runner = BenchmarkRunner(runtime, config, suite, results_root=results_root)
+            run_dir = runner.characterize(model, pull=bool(args.pull))
+            run_failure = _characterization_run_failure(run_dir)
+            problems = EvidenceStore(results_root, run_dir.name).verify_manifest()
+            row = {
+                "model": model,
+                "run_id": run_dir.name,
+                "run_dir": str(run_dir),
+                "manifest_ok": not problems,
+                "manifest_problems": problems,
+            }
+            runs.append(row)
+
+            if run_failure is not None:
+                print(json.dumps({
+                    "ok": False,
+                    "failed_model": model,
+                    "failure": run_failure,
+                    "runs": runs,
+                }, indent=2, sort_keys=True, default=str))
+                return 2
+            if problems:
+                print(json.dumps({
+                    "ok": False,
+                    "failed_model": model,
+                    "failure": "MANIFEST_VERIFICATION_FAILED",
+                    "runs": runs,
+                }, indent=2, sort_keys=True, default=str))
+                return 2
+
+        print(json.dumps({"ok": True, "runs": runs}, indent=2, sort_keys=True, default=str))
+        return 0
+
     runner = BenchmarkRunner(runtime, config, suite, results_root=results_root)
 
     if args.command in {"onboard", "benchmark"}:
         run_dir = runner.onboard(args.model, pull=bool(getattr(args, "pull", False)))
+        print(json.dumps({"run_id": run_dir.name, "run_dir": str(run_dir)}, indent=2))
+        return 0
+
+    if args.command == "characterize":
+        run_dir = runner.characterize(args.model, pull=bool(args.pull))
         print(json.dumps({"run_id": run_dir.name, "run_dir": str(run_dir)}, indent=2))
         return 0
 
