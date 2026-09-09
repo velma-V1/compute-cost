@@ -1,0 +1,70 @@
+[runtime]
+endpoint = "http://127.0.0.1:11434"
+
+[generation]
+temperature = 0.0
+seed = 42
+max_tokens = 256
+
+[telemetry]
+interval_s = 0.25
+nvidia = true
+
+[limits]
+request_timeout_s = 120
+host_ram_percent = 95.0
+vram_percent = 98.0
+context_schedule = [4096, 8192, 16384, 32768]
+consecutive_context_failures = 2
+sustained_iterations = 8
+
+[cost]
+electricity_per_kwh = 0.0
+electricity_configured = false
+
+[evidence]
+retain_stream_chunks = true
+retain_raw_collectors = true
+
+[characterization]
+initial_generation_budget = 256
+min_generation_budget = 32
+max_generation_budget = 2048
+generation_budget_granularity = 32
+boundary_repeats = 3
+max_experiments_per_task = 12
+think_off_generation_budget = 256
+
+[capability_campaign]
+anchor_level = 2
+jump = 3
+boundary_repeats = 5
+max_experiments_per_family = 24
+thinking_mode = true
+reasoning_effort = "medium"
+generation_budget = 256
+reliable_threshold = 0.90
+unstable_threshold = 0.40
+
+[reasoning_curves]
+enabled = true
+repeats = 3
+
+[recovery_lab]
+enabled = true
+repeats = 3
+max_level = "R7"
+max_attempts_per_candidate = 6
+
+[robustness_lab]
+enabled = true
+repeats = 2
+max_perturbations_per_family = 2
+max_attempts_per_perturbation = 4
+
+[compound_lab]
+enabled = true
+jump = 2
+boundary_repeats = 3
+max_experiments_per_compound = 16
+max_compounds = 6

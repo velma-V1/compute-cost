@@ -1,0 +1,320 @@
+"""Validation and normalization for versioned capability-map benchmark suites."""
+
+from __future__ import annotations
+
+import copy
+from typing import Any
+
+
+ALLOWED_COVERAGE = {"PROVEN", "PARTIAL", "UNCERTAIN", "UNTESTED"}
+ALLOWED_SCORERS = {
+    "exact",
+    "numeric",
+    "json",
+    "extraction_set",
+    "tool_call",
+    "ambiguity",
+    "context_retrieval",
+    "python_function",
+}
+LEGACY_FIELDS = (
+    "id",
+    "category",
+    "difficulty_level",
+    "prompt",
+    "scorer",
+    "timeout_s",
+)
+ALL_DIFFICULTY_LEVELS = tuple(range(11))
+
+
+def normalize_capability_case(
+    case: dict[str, Any],
+    *,
+    suite_version: str,
+    taxonomy_version: str | None = None,
+) -> dict[str, Any]:
+    """Return one canonical capability case without mutating source evidence."""
+    normalized = copy.deepcopy(case)
+    meta = case.get("capability_map")
+    extended = isinstance(meta, dict)
+    meta = meta if extended else {}
+
+    family_id = case.get("family_id", meta.get("family_id", case.get("category")))
+    source_taxonomy = case.get(
+        "taxonomy_version",
+        meta.get("taxonomy_version", taxonomy_version),
+    )
+
+    structured = case.get("difficulty")
+    if not isinstance(structured, dict):
+        structured = meta.get("difficulty")
+    if not isinstance(structured, dict):
+        structured = {}
+
+    level = structured.get("level", case.get("difficulty_level", 0))
+    rubric_version = structured.get("rubric_version")
+    if rubric_version is None:
+        rubric_version = meta.get("rubric_version")
+    if rubric_version is None:
+        rubric_version = "legacy"
+
+    dimensions = structured.get("dimensions", {})
+    if not isinstance(dimensions, dict):
+        dimensions = {}
+
+    if extended or case.get("family_id") is not None:
+        scorer_version = str(case.get("scorer_version", "1"))
+        capabilities_required = case.get(
+            "capabilities_required",
+            meta.get("capabilities_required", [family_id]),
+        )
+        recovery_eligible = case.get(
+            "recovery_eligible",
+            meta.get("recovery_eligible", True),
+        )
+        robustness_eligible = case.get(
+            "robustness_eligible",
+            meta.get("robustness_eligible", True),
+        )
+        compound = bool(case.get("compound", meta.get("compound", False)))
+        tags = copy.deepcopy(case.get("tags", meta.get("tags", [])))
+    else:
+        scorer_version = "legacy"
+        capabilities_required = [family_id]
+        recovery_eligible = True
+        robustness_eligible = True
+        compound = False
+        tags = []
+
+    normalized.update(
+        {
+            "suite_version": suite_version,
+            "family_id": family_id,
+            "taxonomy_version": source_taxonomy,
+            "difficulty": {
+                "level": level,
+                "rubric_version": rubric_version,
+                "dimensions": copy.deepcopy(dimensions),
+            },
+            "scorer_version": scorer_version,
+            "capabilities_required": copy.deepcopy(capabilities_required),
+            "recovery_eligible": bool(recovery_eligible),
+            "robustness_eligible": bool(robustness_eligible),
+            "compound": compound,
+            "tags": tags,
+        }
+    )
+    return normalized
+
+
+def normalize_capability_suite(
+    suite: dict[str, Any],
+    taxonomy: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Normalize a legacy or extended suite into canonical in-memory cases."""
+    if taxonomy is not None:
+        validate_capability_suite(suite, taxonomy)
+    normalized = copy.deepcopy(suite)
+    suite_version = str(suite.get("benchmark_version", "unknown"))
+    taxonomy_version = suite.get("taxonomy_version")
+    normalized["cases"] = [
+        normalize_capability_case(
+            case,
+            suite_version=suite_version,
+            taxonomy_version=taxonomy_version,
+        )
+        for case in suite.get("cases", [])
+    ]
+    return normalized
+
+
+def build_ladder_coverage(
+    suite: dict[str, Any],
+    taxonomy: dict[str, Any],
+) -> dict[str, Any]:
+    """Derive declared and missing L0-L10 fixtures for every taxonomy family.
+
+    This is intentionally descriptive rather than a completeness validator: sparse
+    ladders remain valid during staged fixture construction. Duplicate family/level
+    declarations are rejected because they make adaptive level resolution ambiguous.
+    """
+    families = taxonomy.get("families")
+    if not isinstance(families, list):
+        raise ValueError("taxonomy families must be a list")
+
+    family_ids: list[str] = []
+    for family in families:
+        if not isinstance(family, dict):
+            raise ValueError("taxonomy family must be an object")
+        family_id = family.get("id")
+        if not isinstance(family_id, str) or not family_id:
+            raise ValueError("taxonomy family id must be a non-empty string")
+        family_ids.append(family_id)
+    if len(family_ids) != len(set(family_ids)):
+        raise ValueError("taxonomy family ids must be unique")
+
+    declared: dict[str, set[int]] = {family_id: set() for family_id in family_ids}
+    for case in suite.get("cases", []) or []:
+        if not isinstance(case, dict):
+            raise ValueError("case must be an object")
+        meta = case.get("capability_map")
+        meta = meta if isinstance(meta, dict) else {}
+        family_id = case.get("family_id", meta.get("family_id", case.get("category")))
+        if family_id not in declared:
+            raise ValueError(f"case references unknown family: {family_id}")
+
+        level = case.get("difficulty_level")
+        if isinstance(level, bool) or not isinstance(level, int) or level not in ALL_DIFFICULTY_LEVELS:
+            raise ValueError(f"case {case.get('id')} difficulty_level must be integer 0..10")
+        if level in declared[str(family_id)]:
+            raise ValueError(f"duplicate fixture for family {family_id} level {level}")
+        declared[str(family_id)].add(level)
+
+    family_rows: dict[str, dict[str, Any]] = {}
+    complete_count = 0
+    all_levels = list(ALL_DIFFICULTY_LEVELS)
+    for family_id in sorted(family_ids):
+        declared_levels = sorted(declared[family_id])
+        missing_levels = [level for level in all_levels if level not in declared[family_id]]
+        complete = not missing_levels
+        if complete:
+            complete_count += 1
+        family_rows[family_id] = {
+            "family_id": family_id,
+            "declared_levels": declared_levels,
+            "missing_levels": missing_levels,
+            "declared_count": len(declared_levels),
+            "missing_count": len(missing_levels),
+            "complete": complete,
+        }
+
+    return {
+        "schema_version": 1,
+        "taxonomy_version": taxonomy.get("taxonomy_version"),
+        "family_count": len(family_rows),
+        "complete_family_count": complete_count,
+        "complete": complete_count == len(family_rows) and bool(family_rows),
+        "families": family_rows,
+    }
+
+
+def validate_capability_suite(
+    suite: dict[str, Any],
+    taxonomy: dict[str, Any],
+) -> None:
+    """Raise ``ValueError`` when a capability suite violates the v1 contract."""
+    taxonomy_version = taxonomy.get("taxonomy_version")
+    if taxonomy_version != "capability-taxonomy-v1":
+        raise ValueError("unsupported taxonomy version")
+
+    families = taxonomy.get("families")
+    if not isinstance(families, list) or len(families) != 40:
+        raise ValueError("taxonomy must contain exactly 40 families")
+
+    family_ids: list[str] = []
+    rubric_by_family: dict[str, str] = {}
+    for family in families:
+        if not isinstance(family, dict):
+            raise ValueError("taxonomy family must be an object")
+        family_id = family.get("id")
+        rubric_version = family.get("rubric_version")
+        dimensions = family.get("difficulty_dimensions")
+        if not isinstance(family_id, str) or not family_id:
+            raise ValueError("taxonomy family id must be a non-empty string")
+        if not isinstance(rubric_version, str) or not rubric_version:
+            raise ValueError(f"family {family_id} missing rubric version")
+        if not isinstance(dimensions, list) or not dimensions:
+            raise ValueError(f"family {family_id} missing difficulty dimensions")
+        if not all(isinstance(item, str) and item for item in dimensions):
+            raise ValueError(f"family {family_id} has invalid difficulty dimensions")
+        family_ids.append(family_id)
+        rubric_by_family[family_id] = rubric_version
+
+    if len(set(family_ids)) != 40:
+        raise ValueError("taxonomy family ids must be unique")
+    known_families = set(family_ids)
+
+    if suite.get("schema_version") != "capability-suite-v1":
+        raise ValueError("unsupported capability suite schema version")
+    if suite.get("taxonomy_version") != taxonomy_version:
+        raise ValueError("suite taxonomy version mismatch")
+
+    coverage = suite.get("coverage")
+    if not isinstance(coverage, dict) or set(coverage) != known_families:
+        raise ValueError("coverage ledger must exactly match taxonomy families")
+    if any(state not in ALLOWED_COVERAGE for state in coverage.values()):
+        raise ValueError("invalid coverage state")
+
+    cases = suite.get("cases")
+    if not isinstance(cases, list) or not cases:
+        raise ValueError("suite cases must be a non-empty list")
+
+    seen_case_ids: set[str] = set()
+    covered_families: set[str] = set()
+    for case in cases:
+        if not isinstance(case, dict):
+            raise ValueError("case must be an object")
+        for field in LEGACY_FIELDS:
+            if field not in case:
+                raise ValueError(f"case missing legacy field: {field}")
+
+        case_id = case["id"]
+        if not isinstance(case_id, str) or not case_id:
+            raise ValueError("case id must be a non-empty string")
+        if case_id in seen_case_ids:
+            raise ValueError(f"duplicate case id: {case_id}")
+        seen_case_ids.add(case_id)
+
+        if not isinstance(case["category"], str) or not case["category"]:
+            raise ValueError(f"case {case_id} category must be a non-empty string")
+        if not isinstance(case["prompt"], str) or not case["prompt"]:
+            raise ValueError(f"case {case_id} prompt must be a non-empty string")
+        if case["scorer"] not in ALLOWED_SCORERS:
+            raise ValueError(f"case {case_id} uses unknown scorer: {case['scorer']}")
+
+        level = case["difficulty_level"]
+        if isinstance(level, bool) or not isinstance(level, int) or not 0 <= level <= 10:
+            raise ValueError(f"case {case_id} difficulty_level must be integer 0..10")
+        timeout = case["timeout_s"]
+        if isinstance(timeout, bool) or not isinstance(timeout, (int, float)) or timeout <= 0:
+            raise ValueError(f"case {case_id} timeout_s must be positive")
+
+        meta = case.get("capability_map")
+        if not isinstance(meta, dict):
+            raise ValueError(f"case {case_id} missing capability_map")
+        if meta.get("taxonomy_version") != taxonomy_version:
+            raise ValueError(f"case {case_id} taxonomy version mismatch")
+
+        family_id = meta.get("family_id")
+        if family_id not in known_families:
+            raise ValueError(f"case {case_id} references unknown family: {family_id}")
+        covered_families.add(str(family_id))
+
+        if meta.get("rubric_version") != rubric_by_family[family_id]:
+            raise ValueError(f"case {case_id} rubric version mismatch")
+
+        difficulty = meta.get("difficulty")
+        if not isinstance(difficulty, dict) or difficulty.get("level") != level:
+            raise ValueError(f"case {case_id} difficulty level mismatch")
+        dimensions = difficulty.get("dimensions")
+        if not isinstance(dimensions, dict) or not dimensions:
+            raise ValueError(f"case {case_id} difficulty dimensions must be non-empty")
+
+        required = meta.get("capabilities_required")
+        if not isinstance(required, list) or not required:
+            raise ValueError(f"case {case_id} capabilities_required must be non-empty")
+        unknown_required = set(required) - known_families
+        if unknown_required:
+            raise ValueError(
+                f"case {case_id} has unknown required capabilities: {sorted(unknown_required)}"
+            )
+
+        if not isinstance(meta.get("recovery_eligible"), bool):
+            raise ValueError(f"case {case_id} recovery_eligible must be bool")
+        if not isinstance(meta.get("robustness_eligible"), bool):
+            raise ValueError(f"case {case_id} robustness_eligible must be bool")
+
+    missing = known_families - covered_families
+    if missing:
+        raise ValueError(f"families missing anchor cases: {sorted(missing)}")
