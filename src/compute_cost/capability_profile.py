@@ -194,3 +194,63 @@ def build_capability_profile(
         },
         "families": families,
     }
+
+
+def _level_text(value: Any) -> str:
+    if isinstance(value, int) and not isinstance(value, bool):
+        return f"L{value}"
+    return "unresolved"
+
+
+def _text(value: Any) -> str:
+    return "unresolved" if value is None else str(value)
+
+
+def render_capability_profile(profile: dict[str, Any]) -> str:
+    """Render the evidence profile without introducing new interpretations."""
+    summary = profile.get("summary") or {}
+    lines = [
+        f"# Capability Profile: {profile.get('model')}",
+        "",
+        "Evidence-only characterization. Family difficulty levels are local to each rubric; "
+        "failure signatures are descriptive rather than causal diagnoses.",
+        "",
+        "## Summary",
+        f"- Families: {summary.get('families_total', 0)}",
+        f"- Proven: {summary.get('proven', 0)}",
+        f"- Partial: {summary.get('partial', 0)}",
+        f"- Uncertain: {summary.get('uncertain', 0)}",
+        f"- Untested: {summary.get('untested', 0)}",
+    ]
+
+    for family_id, family in sorted((profile.get("families") or {}).items()):
+        if not isinstance(family, dict):
+            continue
+        recovery = family.get("minimum_proven_recovery")
+        if isinstance(recovery, dict):
+            recovery_text = (
+                f"{_text(recovery.get('level'))} at "
+                f"{_level_text(recovery.get('difficulty_level'))}"
+            )
+        else:
+            recovery_text = "none demonstrated"
+        signals = [str(value) for value in family.get("signals") or []]
+        signatures = [str(value) for value in family.get("observed_failure_signatures") or []]
+        lines.extend(
+            [
+                "",
+                f"## {family_id}",
+                f"- Evidence state: {_text(family.get('evidence_state'))}",
+                f"- Raw reliable through: {_level_text(family.get('raw_reliable_through'))}",
+                f"- First raw failure: {_level_text(family.get('first_raw_failure'))}",
+                f"- Cheapest proven reasoning effort: {_text(family.get('cheapest_proven_reasoning_effort'))}",
+                f"- High-effort extension: {_level_text(family.get('high_effort_extension_to'))}",
+                f"- Minimum proven recovery: {recovery_text}",
+                f"- Robustness: {_text(family.get('robustness'))}",
+                f"- Signals: {', '.join(signals) if signals else 'none'}",
+                "- Observed failure signatures: "
+                f"{', '.join(signatures) if signatures else 'none'}",
+            ]
+        )
+
+    return "\n".join(lines).rstrip() + "\n"
