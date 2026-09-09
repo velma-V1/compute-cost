@@ -57,6 +57,13 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "max_perturbations_per_family": 2,
         "max_attempts_per_perturbation": 4,
     },
+    "compound_lab": {
+        "enabled": True,
+        "jump": 2,
+        "boundary_repeats": 3,
+        "max_experiments_per_compound": 16,
+        "max_compounds": 6,
+    },
 }
 
 
@@ -182,6 +189,18 @@ def _validate_robustness_lab(config: dict[str, Any]) -> None:
         )
 
 
+def _validate_compound_lab(config: dict[str, Any]) -> None:
+    c = config.get("compound_lab")
+    if not isinstance(c, dict):
+        raise ValueError("compound_lab config must be a table")
+    if not isinstance(c.get("enabled"), bool):
+        raise ValueError("compound_lab.enabled must be bool")
+    for name in ("jump", "boundary_repeats", "max_experiments_per_compound", "max_compounds"):
+        value = c.get(name)
+        if not isinstance(value, int) or isinstance(value, bool) or value <= 0:
+            raise ValueError(f"compound_lab.{name} must be a positive integer")
+
+
 def load_config(
     path: str | Path | None = None,
     overrides: Mapping[str, Any] | None = None,
@@ -203,4 +222,5 @@ def load_config(
     _validate_reasoning_curves(config)
     _validate_recovery_lab(config)
     _validate_robustness_lab(config)
+    _validate_compound_lab(config)
     return config
