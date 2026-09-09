@@ -117,6 +117,8 @@ class BenchmarkRunner:
         self._telemetry_thread: threading.Thread | None = None
         self._telemetry_seq = 0
         self._request_seq = 0
+        self._model_call_count = 0
+        self._model_call_budget_exhausted_emitted = False
         self._recent_telemetry: deque[dict[str, Any]] = deque(maxlen=32)
 
     @staticmethod
@@ -296,15 +298,17 @@ class BenchmarkRunner:
         }
         self._sample(stage, case_id)
         started_ns = time.monotonic_ns()
-        try:
-            generation = self.runtime.generate(
-                self.model,
-                messages,
-                options,
-                stream=True,
-                request_fields=request_fields,
-            )
-        except Exception as exc:
+        limit = int(self.config.get("limits", {}).get("max_model_calls_per_run", 3000))
+        if self._model_call_count >= limit:
+            if not self._model_call_budget_exhausted_emitted:
+                self._event(
+                    "MODEL_CALL_BUDGET_EXHAUSTED",
+                    limit=limit,
+                    completed_calls=self._model_call_count,
+                    stage=stage,
+                    case_id=case_id,
+                )
+                self._model_call_budget_exhausted_emitted = True
             generation = {
                 "ok": False,
                 "http_status": 0,
@@ -312,14 +316,41 @@ class BenchmarkRunner:
                 "stream_events": [],
                 "raw_response_b64": "",
                 "error": {
-                    "type": type(exc).__name__,
-                    "message": str(exc),
-                    "traceback": traceback.format_exc(),
+                    "type": "MODEL_CALL_BUDGET_EXHAUSTED",
+                    "message": "per-run model call budget exhausted before runtime invocation",
+                    "limit": limit,
+                    "completed_calls": self._model_call_count,
                 },
                 "normalized": {"text": "", "thinking": "", "tool_calls": []},
                 "metrics": {},
                 "timing": {},
             }
+        else:
+            self._model_call_count += 1
+            try:
+                generation = self.runtime.generate(
+                    self.model,
+                    messages,
+                    options,
+                    stream=True,
+                    request_fields=request_fields,
+                )
+            except Exception as exc:
+                generation = {
+                    "ok": False,
+                    "http_status": 0,
+                    "request": {},
+                    "stream_events": [],
+                    "raw_response_b64": "",
+                    "error": {
+                        "type": type(exc).__name__,
+                        "message": str(exc),
+                        "traceback": traceback.format_exc(),
+                    },
+                    "normalized": {"text": "", "thinking": "", "tool_calls": []},
+                    "metrics": {},
+                    "timing": {},
+                }
         ended_ns = time.monotonic_ns()
         generation = copy.deepcopy(generation)
         generation.setdefault("timing", {})["client_started_monotonic_ns"] = started_ns
@@ -718,31 +749,3 @@ class BenchmarkRunner:
             }
         )
         return self.store.run_dir
-
-    def replay_case(self, source_run_id: str, case_id: str) -> Path:
-        source = self.results_root / source_run_id / "replay" / f"{case_id}.json"
-        snapshot = json.loads(source.read_text(encoding="utf-8"))
-        model = str(snapshot["model"])
-        invocation = snapshot["invocation"]
-        replay_run_id = f"replay-{datetime.now().strftime('%Y%m%d-%H%M%S')}-{uuid.uuid4().hex[:8]}"
-        previous_store = self.store
-        previous_model = self.model
-        try:
-            self.store = EvidenceStore(self.results_root, replay_run_id)
-            self.model = model
-            self.store.write_json("source-replay.json", snapshot, producer="runner", stage="replay")
-            self._event("RUN_START", model=model, replay_of=f"{source_run_id}:{case_id}")
-            generation, _, _ = self._invoke_generation(
-                stage="replay",
-                case_id=case_id,
-                messages=invocation["messages"],
-                options=invocation["options"],
-                request_fields=invocation.get("request_fields") or None,
-            )
-            self.store.write_json("replay-result.json", generation, producer="runner", stage="replay")
-            self._event("RUN_END", model=model)
-            self.store.finalize_manifest(metadata={"replay_of": f"{source_run_id}:{case_id}", "model": model})
-            return self.store.run_dir
-        finally:
-            self.store = previous_store
-            self.model = previous_model
