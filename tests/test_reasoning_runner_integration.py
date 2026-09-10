@@ -184,7 +184,9 @@ def test_capability_runner_writes_frontier_local_reasoning_curves_without_mutati
         (1, "low"), (4, "low"), (7, "low"),
         (5, "low"), (4, "low"), (5, "low"),
     ]
-    assert runtime.calls[6:] == [(4, "low"), (4, "low"), (5, "high"), (5, "high")]
+    # LOW is already the baseline, so do not waste calls re-proving LOW at the floor.
+    # The optional curve only probes HIGH at the first failing level.
+    assert runtime.calls[6:] == [(5, "high"), (5, "high")]
 
     frontiers = json.loads((run_dir / "capability-frontiers.json").read_text())
     assert frontiers["families"]["math"]["reliable_floor"] == 4
@@ -201,6 +203,6 @@ def test_capability_runner_writes_frontier_local_reasoning_curves_without_mutati
         for line in (run_dir / "reasoning-observations.jsonl").read_text().splitlines()
     ]
     assert [(row["level"], row["effort"]) for row in observations] == [
-        (4, "low"), (4, "low"), (5, "high"), (5, "high")
+        (5, "high"), (5, "high")
     ]
     assert EvidenceStore(tmp_path, run_dir.name).verify_manifest() == []
