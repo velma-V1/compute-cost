@@ -170,6 +170,7 @@ def suite():
 def config():
     cfg = load_config()
     cfg["telemetry"]["background"] = False
+    cfg["autonomous_simulation"]["enabled"] = False
     cfg["reasoning_curves"]["enabled"] = False
     cfg["recovery_lab"]["enabled"] = False
     cfg["robustness_lab"]["enabled"] = False
