@@ -15,3 +15,10 @@ from .attempt_dossier import install_execution_hooks as _install_attempt_dossier
 
 _install_attempt_dossier_hooks()
 del _install_attempt_dossier_hooks
+
+# Autonomous simulation uses growing multi-turn transcripts, so install its
+# post-run forensic reconstruction hook after the compact phase is registered.
+from .autonomous_dossier import install_autonomous_dossier_hook as _install_autonomous_dossier_hook
+
+_install_autonomous_dossier_hook()
+del _install_autonomous_dossier_hook
