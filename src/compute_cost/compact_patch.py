@@ -1,11 +1,13 @@
 """Small compatibility patch for the existing capability campaign.
 
 The patch deliberately reuses the original fixtures, controller, evidence paths,
-scorers and synthesis. It changes only four behaviors:
+scorers and synthesis. It changes only the behavior that made the campaign
+expensive or uninformative:
 1. token-limit truncation escalates the same fixture one budget step at a time;
-2. the budget resets to the configured base for the next fixture/family;
+2. the budget resets to the configured base for the next independent probe;
 3. reasoning control is resolved per known model family;
-4. disabled secondary labs do not execute.
+4. disabled secondary labs do not execute;
+5. the existing evidence is rendered as a numeric scorecard without model calls.
 """
 
 from __future__ import annotations
@@ -50,7 +52,14 @@ def run_family_frontier_compact(
     *,
     sequence_start: int = 0,
 ) -> tuple[list[dict[str, Any]], int]:
-    """Run the existing adaptive frontier with bounded truncation-only retries."""
+    """Run the existing adaptive frontier with bounded truncation-only retries.
+
+    ``max_experiments_per_family`` is treated as a cap on semantic/difficulty
+    probes. Token-ceiling retries do not consume that semantic-probe allowance;
+    they are separately bounded by ``max_generation_budget`` and the global
+    model-call budget. This guarantees a truncated task is given progressively
+    larger headroom instead of repeating the same exhausted limit.
+    """
     import compute_cost.capability_campaign as campaign
 
     assert runner.store is not None
@@ -76,7 +85,7 @@ def run_family_frontier_compact(
         )
     )
     ceiling = max(base_budget, ceiling)
-    max_experiments = int(cfg["max_experiments_per_family"])
+    max_logical_probes = int(cfg["max_experiments_per_family"])
 
     rows: list[dict[str, Any]] = []
     controller_observations: list[Any] = []
@@ -87,9 +96,10 @@ def run_family_frontier_compact(
     previous_spec: Any | None = None
     invalid_retries_by_level: dict[int, int] = {}
     sequence = sequence_start
+    logical_probes = 0
     forced_stop = False
 
-    while len(rows) < max_experiments and not forced_stop:
+    while logical_probes < max_logical_probes and not forced_stop:
         decision = controller.next(controller_observations)
         if decision.action == "STOP":
             campaign._record_family_stop(
@@ -127,18 +137,31 @@ def run_family_frontier_compact(
                     f"cannot replicate family {family_id} level {level} without prior experiment"
                 )
             changed_variable = "replication"
+            # Replication repeats the already established configuration; it does not
+            # throw away a known required token budget and rediscover truncation.
+            current_budget = int(parent.generation_budget)
         else:
-            parent = previous_spec
-            changed_variable = "baseline" if parent is None else "difficulty_level"
+            # Every new task/difficulty probe begins at the family base budget. If
+            # the previous probe required escalation, start a fresh lineage so the
+            # reset does not masquerade as a second controlled-variable change.
+            if (
+                previous_spec is not None
+                and int(previous_spec.generation_budget) == base_budget
+            ):
+                parent = previous_spec
+                changed_variable = "difficulty_level"
+            else:
+                parent = None
+                changed_variable = "baseline"
+            current_budget = base_budget
 
-        current_budget = base_budget
         first_attempt = True
         final_spec = None
         final_result_class = None
         final_valid = False
         final_passed: bool | None = None
 
-        while len(rows) < max_experiments:
+        while True:
             sequence += 1
             spec = campaign._spec(
                 sequence=sequence,
@@ -218,10 +241,9 @@ def run_family_frontier_compact(
                 )
                 forced_stop = True
                 break
-            if len(rows) >= max_experiments:
-                break
 
-            # Same exact fixture; only generation budget changes.
+            # Same exact fixture; only generation budget changes. Wrong answers,
+            # tool/format failures and runtime/scorer failures never enter this path.
             parent = spec
             current_budget = next_budget
             first_attempt = False
@@ -230,17 +252,8 @@ def run_family_frontier_compact(
             break
         if forced_stop:
             break
-        if final_result_class in TRUNCATION:
-            # Family budget ended before a non-truncated result was obtained.
-            campaign._record_family_stop(
-                runner,
-                family_id,
-                reason="MAX_EXPERIMENTS_PER_FAMILY_DURING_TOKEN_RECOVERY",
-                experiments=len(rows),
-                requested_level=level,
-            )
-            break
 
+        logical_probes += 1
         controller_observations.append(
             campaign.DifficultyObservation(
                 level=level,
@@ -270,7 +283,7 @@ def run_family_frontier_compact(
             campaign._record_family_stop(
                 runner,
                 family_id,
-                reason="MAX_EXPERIMENTS_PER_FAMILY",
+                reason="MAX_LOGICAL_PROBES_PER_FAMILY",
                 experiments=len(rows),
             )
 
@@ -408,7 +421,26 @@ def run_capability_campaign_compact(
 def install() -> None:
     """Install the compact behavior without replacing the benchmark architecture."""
     import compute_cost.capability_campaign as campaign
+    import compute_cost.config as config
     import compute_cost.run_synthesis as synthesis
+
+    # Compact defaults: two semantic probes per family, with token-ceiling retries
+    # separately bounded and a hard global call budget. Expensive secondary phases
+    # are opt-in rather than silently multiplying every baseline run.
+    config.DEFAULT_CONFIG["limits"]["max_model_calls_per_run"] = 120
+    config.DEFAULT_CONFIG["capability_campaign"].update(
+        {
+            "boundary_repeats": 2,
+            "max_experiments_per_family": 2,
+            "thinking_mode": False,
+            "reasoning_effort": None,
+            "generation_budget": 256,
+        }
+    )
+    config.DEFAULT_CONFIG["reasoning_curves"]["enabled"] = False
+    config.DEFAULT_CONFIG["recovery_lab"]["enabled"] = False
+    config.DEFAULT_CONFIG["robustness_lab"]["enabled"] = False
+    config.DEFAULT_CONFIG["compound_lab"]["enabled"] = False
 
     campaign.resolve_model_reasoning_control = resolve_model_reasoning_control
     campaign.run_family_frontier = run_family_frontier_compact
