@@ -1,48 +1,30 @@
-"""Small compatibility patch for the existing capability campaign.
-
-The patch deliberately reuses the original fixtures, controller, evidence paths,
-scorers and synthesis. It changes only the behavior that made the campaign
-expensive or uninformative:
-1. token-limit truncation escalates the same fixture one budget step at a time;
-2. the budget resets to the configured base for the next independent probe;
-3. reasoning control is resolved per known model family;
-4. disabled secondary labs do not execute;
-5. the existing evidence is rendered as a numeric scorecard without model calls.
-"""
+"""Minimal compatibility repair for the existing capability campaign."""
 
 from __future__ import annotations
 
 import copy
 from typing import Any
 
-
 TRUNCATION = {"THINK_TRUNCATED", "ANSWER_TRUNCATED"}
 
 
 def resolve_model_reasoning_control(
-    model: str,
-    campaign_config: dict[str, Any],
+    model: str, campaign_config: dict[str, Any]
 ) -> tuple[bool, str | None]:
-    """Resolve the lowest valid baseline control for known local model families."""
+    """Return the lowest valid baseline control for known local model families."""
     name = model.lower()
     if name.startswith("gpt-oss"):
-        # GPT-OSS exposes reasoning effort rather than a dependable literal OFF
-        # baseline in the local behavior observed by this project.
         return True, "low"
-    if name.startswith("qwen3.5"):
+    if name.startswith("qwen3.5") or name.startswith("devstral"):
         return False, None
-    if name.startswith("devstral"):
-        return False, None
-
-    thinking = bool(campaign_config.get("thinking_mode", False))
     effort = campaign_config.get("reasoning_effort")
-    return thinking, str(effort) if effort is not None else None
+    return bool(campaign_config.get("thinking_mode", False)), (
+        str(effort) if effort is not None else None
+    )
 
 
 def _next_budget(current: int, ceiling: int) -> int | None:
-    if current >= ceiling:
-        return None
-    return min(ceiling, current * 2)
+    return None if current >= ceiling else min(ceiling, current * 2)
 
 
 def run_family_frontier_compact(
@@ -52,29 +34,26 @@ def run_family_frontier_compact(
     *,
     sequence_start: int = 0,
 ) -> tuple[list[dict[str, Any]], int]:
-    """Run the existing adaptive frontier with bounded truncation-only retries.
+    """Run adaptive probes; escalate tokens only after proven truncation.
 
-    ``max_experiments_per_family`` is treated as a cap on semantic/difficulty
-    probes. Token-ceiling retries do not consume that semantic-probe allowance;
-    they are separately bounded by ``max_generation_budget`` and the global
-    model-call budget. This guarantees a truncated task is given progressively
-    larger headroom instead of repeating the same exhausted limit.
+    ``max_experiments_per_family`` limits semantic/difficulty probes. Truncation
+    retries are separately bounded by the generation ceiling and global call cap.
+    Every new probe starts at the base token budget; exact replications retain the
+    configuration they are replicating.
     """
     import compute_cost.capability_campaign as campaign
 
     assert runner.store is not None
     cfg = runner.config["capability_campaign"]
-    boundary_repeats = int(cfg["boundary_repeats"])
-    reliable_threshold = float(cfg.get("reliable_threshold", 0.90))
-    unstable_threshold = float(cfg.get("unstable_threshold", 0.40))
+    repeats = int(cfg["boundary_repeats"])
+    reliable = float(cfg.get("reliable_threshold", 0.90))
+    unstable = float(cfg.get("unstable_threshold", 0.40))
     controller = campaign.AdaptiveDifficultyController(
         anchor_level=int(cfg["anchor_level"]),
         jump=int(cfg["jump"]),
-        boundary_repeats=boundary_repeats,
+        boundary_repeats=repeats,
     )
-    thinking_mode, reasoning_effort = resolve_model_reasoning_control(
-        str(runner.model), cfg
-    )
+    thinking, effort = resolve_model_reasoning_control(str(runner.model), cfg)
     base_budget = int(cfg["generation_budget"])
     ceiling = int(
         cfg.get(
@@ -85,47 +64,41 @@ def run_family_frontier_compact(
         )
     )
     ceiling = max(base_budget, ceiling)
-    max_logical_probes = int(cfg["max_experiments_per_family"])
+    max_probes = int(cfg["max_experiments_per_family"])
 
     rows: list[dict[str, Any]] = []
-    controller_observations: list[Any] = []
-    observation_rows: list[dict[str, Any]] = []
+    controller_obs: list[Any] = []
+    retained_obs: list[dict[str, Any]] = []
     snapshots: dict[str, dict[str, Any]] = {}
     attempted_levels: set[int] = set()
     latest_spec_by_level: dict[int, Any] = {}
     previous_spec: Any | None = None
-    invalid_retries_by_level: dict[int, int] = {}
+    invalid_retries: dict[int, int] = {}
     sequence = sequence_start
     logical_probes = 0
     forced_stop = False
 
-    while logical_probes < max_logical_probes and not forced_stop:
-        decision = controller.next(controller_observations)
+    while logical_probes < max_probes and not forced_stop:
+        decision = controller.next(controller_obs)
         if decision.action == "STOP":
             campaign._record_family_stop(
-                runner,
-                family_id,
-                reason=decision.reason,
-                experiments=len(rows),
+                runner, family_id, reason=decision.reason, experiments=len(rows)
             )
             break
         assert decision.level is not None
-        requested_level = int(decision.level)
-
-        if decision.action == "REPLICATE":
-            level = requested_level if requested_level in ladder else None
-        else:
-            level = campaign.resolve_requested_level(
-                ladder, requested_level, attempted_levels
-            )
-
+        requested = int(decision.level)
+        level = (
+            requested
+            if decision.action == "REPLICATE" and requested in ladder
+            else campaign.resolve_requested_level(ladder, requested, attempted_levels)
+        )
         if level is None:
             campaign._record_family_stop(
                 runner,
                 family_id,
                 reason="MISSING_FIXTURE_COVERAGE",
                 experiments=len(rows),
-                requested_level=requested_level,
+                requested_level=requested,
             )
             break
 
@@ -137,17 +110,12 @@ def run_family_frontier_compact(
                     f"cannot replicate family {family_id} level {level} without prior experiment"
                 )
             changed_variable = "replication"
-            # Replication repeats the already established configuration; it does not
-            # throw away a known required token budget and rediscover truncation.
             current_budget = int(parent.generation_budget)
         else:
-            # Every new task/difficulty probe begins at the family base budget. If
-            # the previous probe required escalation, start a fresh lineage so the
-            # reset does not masquerade as a second controlled-variable change.
-            if (
-                previous_spec is not None
-                and int(previous_spec.generation_budget) == base_budget
-            ):
+            # Reset to base for a new task/difficulty probe. If resetting would
+            # change both difficulty and budget relative to the prior attempt,
+            # begin a new baseline lineage instead of falsifying one-variable lineage.
+            if previous_spec is not None and int(previous_spec.generation_budget) == base_budget:
                 parent = previous_spec
                 changed_variable = "difficulty_level"
             else:
@@ -157,7 +125,7 @@ def run_family_frontier_compact(
 
         first_attempt = True
         final_spec = None
-        final_result_class = None
+        final_class = None
         final_valid = False
         final_passed: bool | None = None
 
@@ -174,8 +142,8 @@ def run_family_frontier_compact(
                     if first_attempt
                     else "token ceiling exhausted; retry identical fixture at next budget"
                 ),
-                thinking_mode=thinking_mode,
-                reasoning_effort=reasoning_effort,
+                thinking_mode=thinking,
+                reasoning_effort=effort,
                 generation_budget=current_budget,
             )
             if rows:
@@ -184,12 +152,8 @@ def run_family_frontier_compact(
                     f"{family_id} {decision.action.lower()} L{level} budget {current_budget}",
                 )
 
-            def capture(
-                snapshot: dict[str, Any],
-                *,
-                experiment_id: str = spec.experiment_id,
-            ) -> None:
-                snapshots[experiment_id] = copy.deepcopy(snapshot)
+            def capture(snapshot: dict[str, Any], *, eid: str = spec.experiment_id) -> None:
+                snapshots[eid] = copy.deepcopy(snapshot)
 
             row = campaign._run_with_progress(
                 runner,
@@ -200,13 +164,10 @@ def run_family_frontier_compact(
                 snapshot_sink=capture,
             )
             rows.append(row)
-
             classification = row.get("classification") or {}
             result_class = str(classification.get("result_class"))
             valid = classification.get("valid_for_capability") is True
-            passed: bool | None = (
-                None if not valid else result_class == "ANSWER_CORRECT"
-            )
+            passed = None if not valid else result_class == "ANSWER_CORRECT"
             observation = {
                 "family_id": family_id,
                 "level": level,
@@ -217,19 +178,17 @@ def run_family_frontier_compact(
                 "fixture_id": str(fixture["id"]),
                 "generation_budget": current_budget,
             }
-            runner.store.append_jsonl(
-                "capability-observations.jsonl", observation
+            runner.store.append_jsonl("capability-observations.jsonl", observation)
+            retained_obs.append(observation)
+            final_spec, final_class, final_valid, final_passed = (
+                spec,
+                result_class,
+                valid,
+                passed,
             )
-            observation_rows.append(observation)
-
-            final_spec = spec
-            final_result_class = result_class
-            final_valid = valid
-            final_passed = passed
 
             if result_class not in TRUNCATION:
                 break
-
             next_budget = _next_budget(current_budget, ceiling)
             if next_budget is None:
                 campaign._record_family_stop(
@@ -242,19 +201,17 @@ def run_family_frontier_compact(
                 forced_stop = True
                 break
 
-            # Same exact fixture; only generation budget changes. Wrong answers,
-            # tool/format failures and runtime/scorer failures never enter this path.
+            # Only truncation reaches this branch. The exact fixture and all other
+            # controls stay fixed; only generation_budget changes.
             parent = spec
             current_budget = next_budget
             first_attempt = False
 
-        if final_spec is None:
-            break
-        if forced_stop:
+        if final_spec is None or forced_stop:
             break
 
         logical_probes += 1
-        controller_observations.append(
+        controller_obs.append(
             campaign.DifficultyObservation(
                 level=level,
                 passed=final_passed,
@@ -262,14 +219,16 @@ def run_family_frontier_compact(
             )
         )
 
+        # Preserve the most recent non-truncated attempt even when invalid. The
+        # controller may request an exact retry of a runtime-invalid observation.
+        latest_spec_by_level[level] = final_spec
+        previous_spec = final_spec
         if final_valid:
             attempted_levels.add(level)
-            latest_spec_by_level[level] = final_spec
-            previous_spec = final_spec
-            invalid_retries_by_level.pop(level, None)
+            invalid_retries.pop(level, None)
         else:
-            invalid_retries_by_level[level] = invalid_retries_by_level.get(level, 0) + 1
-            if invalid_retries_by_level[level] >= 2:
+            invalid_retries[level] = invalid_retries.get(level, 0) + 1
+            if invalid_retries[level] >= 2:
                 campaign._record_family_stop(
                     runner,
                     family_id,
@@ -290,20 +249,19 @@ def run_family_frontier_compact(
     campaign._persist_boundary_replays(
         runner,
         family_id,
-        observation_rows,
+        retained_obs,
         snapshots,
-        boundary_repeats=boundary_repeats,
-        reliable_threshold=reliable_threshold,
-        unstable_threshold=unstable_threshold,
+        boundary_repeats=repeats,
+        reliable_threshold=reliable,
+        unstable_threshold=unstable,
     )
     return rows, sequence
 
 
 def run_capability_campaign_compact(
-    runner: Any,
-    cases: list[dict[str, Any]],
+    runner: Any, cases: list[dict[str, Any]]
 ) -> list[dict[str, Any]]:
-    """Use the original phases, but execute secondary labs only when enabled."""
+    """Run the existing phases but honor every secondary lab's enabled flag."""
     import compute_cost.capability_campaign as campaign
 
     ladders = campaign.build_ladder_index(cases)
@@ -311,42 +269,31 @@ def run_capability_campaign_compact(
     sequence = 0
     for family_id, ladder in ladders.items():
         family_rows, sequence = campaign.run_family_frontier(
-            runner,
-            family_id,
-            ladder,
-            sequence_start=sequence,
+            runner, family_id, ladder, sequence_start=sequence
         )
         all_rows.extend(family_rows)
 
     base_rows = list(all_rows)
     frontiers = campaign._baseline_frontiers(runner, base_rows)
     effort_rows: list[dict[str, Any]] = []
-
     curve_cfg = runner.config.get("reasoning_curves")
     if isinstance(curve_cfg, dict) and curve_cfg.get("enabled") is True:
         effort_rows = campaign.run_reasoning_curves(
-            runner,
-            cases,
-            base_rows,
-            frontiers,
-            sequence_start=sequence,
+            runner, cases, base_rows, frontiers, sequence_start=sequence
         )
         sequence += len(effort_rows)
-        reasoning_summary = campaign.build_reasoning_curves(
-            str(runner.model),
-            frontiers,
-            base_rows,
-            effort_rows,
-            repeats=int(curve_cfg["repeats"]),
-            reliable_threshold=float(
-                runner.config["capability_campaign"].get(
-                    "reliable_threshold", 0.90
-                )
-            ),
-        )
         runner.store.write_json(
             "reasoning-curves.json",
-            reasoning_summary,
+            campaign.build_reasoning_curves(
+                str(runner.model),
+                frontiers,
+                base_rows,
+                effort_rows,
+                repeats=int(curve_cfg["repeats"]),
+                reliable_threshold=float(
+                    runner.config["capability_campaign"].get("reliable_threshold", 0.90)
+                ),
+            ),
             producer="reasoning-curves",
             stage="report",
         )
@@ -367,10 +314,7 @@ def run_capability_campaign_compact(
             sequence_start=sequence,
         )
         runner.store.write_json(
-            "recovery-map.json",
-            recovery_map,
-            producer="recovery-lab",
-            stage="report",
+            "recovery-map.json", recovery_map, producer="recovery-lab", stage="report"
         )
         all_rows.extend(recovery_rows)
 
@@ -387,25 +331,17 @@ def run_capability_campaign_compact(
             sequence_start=sequence,
         )
         runner.store.write_json(
-            "robustness-map.json",
-            robustness_map,
-            producer="robustness-lab",
-            stage="report",
+            "robustness-map.json", robustness_map, producer="robustness-lab", stage="report"
         )
         all_rows.extend(robustness_rows)
 
     compound_cfg = runner.config.get("compound_lab")
     if isinstance(compound_cfg, dict) and compound_cfg.get("enabled") is True:
         compound_rows, compound_map, sequence = campaign.run_compound_lab(
-            runner,
-            frontiers,
-            sequence_start=sequence,
+            runner, frontiers, sequence_start=sequence
         )
         runner.store.write_json(
-            "compound-map.json",
-            compound_map,
-            producer="compound-lab",
-            stage="report",
+            "compound-map.json", compound_map, producer="compound-lab", stage="report"
         )
         all_rows.extend(compound_rows)
 
@@ -419,14 +355,11 @@ def run_capability_campaign_compact(
 
 
 def install() -> None:
-    """Install the compact behavior without replacing the benchmark architecture."""
+    """Install compact behavior without replacing the benchmark architecture."""
     import compute_cost.capability_campaign as campaign
     import compute_cost.config as config
     import compute_cost.run_synthesis as synthesis
 
-    # Compact defaults: two semantic probes per family, with token-ceiling retries
-    # separately bounded and a hard global call budget. Expensive secondary phases
-    # are opt-in rather than silently multiplying every baseline run.
     config.DEFAULT_CONFIG["limits"]["max_model_calls_per_run"] = 120
     config.DEFAULT_CONFIG["capability_campaign"].update(
         {
@@ -448,7 +381,6 @@ def install() -> None:
 
     if getattr(synthesis.build_cost_value_outputs, "_compact_scorecard_patch", False):
         return
-
     original = synthesis.build_cost_value_outputs
 
     def with_scorecard(model, rows, frontiers, run_dir):
@@ -466,8 +398,7 @@ def install() -> None:
             encoding="utf-8",
         )
         (root / "scorecard.md").write_text(
-            render_compact_scorecard(scorecard),
-            encoding="utf-8",
+            render_compact_scorecard(scorecard), encoding="utf-8"
         )
         return cost_map, value_map
 
