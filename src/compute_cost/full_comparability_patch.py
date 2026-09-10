@@ -92,9 +92,6 @@ def _install_call_ledger() -> None:
         try:
             ordinal = ledger.authorize(category, family=family, scenario=scenario)
         except CallBudgetExceeded:
-            # Ask the legacy guard to create its normal retained exhaustion evidence
-            # without sending a runtime inference. The rejected call is deliberately
-            # absent from model-call-request-index.jsonl.
             self._model_call_counts[run_id] = max(
                 int(self._model_call_counts.get(run_id, 0)), limit
             )
@@ -241,7 +238,28 @@ def _install_full_campaign_and_reports() -> None:
     from .full_run import run_full_comparability_campaign
     from .run_integrity import reconcile_run_integrity
 
-    campaign.run_capability_campaign = run_full_comparability_campaign
+    legacy_campaign = campaign.run_capability_campaign
+
+    def dispatch_campaign(runner, cases):
+        full_cfg = runner.config.get("full_comparability") or {}
+        autonomy = runner.config.get("autonomous_simulation") or {}
+        secondary = (
+            runner.config.get("reasoning_curves") or {},
+            runner.config.get("recovery_lab") or {},
+            runner.config.get("robustness_lab") or {},
+            runner.config.get("compound_lab") or {},
+        )
+        full_mode = (
+            full_cfg.get("enabled") is True
+            and autonomy.get("enabled") is True
+            and not any(block.get("enabled") is True for block in secondary)
+        )
+        if full_mode:
+            return run_full_comparability_campaign(runner, cases)
+        return legacy_campaign(runner, cases)
+
+    dispatch_campaign._full_comparability_dispatch = True
+    campaign.run_capability_campaign = dispatch_campaign
 
     current = synthesis.build_cost_value_outputs
     if getattr(current, "_full_comparability_reports", False):
@@ -251,9 +269,11 @@ def _install_full_campaign_and_reports() -> None:
     def with_full_reports(model, rows, frontiers, run_dir):
         cost_map, value_map = original(model, rows, frontiers, run_dir)
         root = Path(run_dir)
-        fixed_rows = _join_dossier_vectors(
-            root, _read_jsonl(root / "fixed-capability-observations.jsonl")
-        )
+        fixed_path = root / "fixed-capability-observations.jsonl"
+        if not fixed_path.is_file():
+            return cost_map, value_map
+
+        fixed_rows = _join_dossier_vectors(root, _read_jsonl(fixed_path))
         cell_payload = _read_json(root / "comparison-cells.json")
         cells = cell_payload.get("cells") if isinstance(cell_payload.get("cells"), list) else []
         report = build_comparability_report(model, fixed_rows, comparison_cells=cells)
