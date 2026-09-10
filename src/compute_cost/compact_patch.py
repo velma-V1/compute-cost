@@ -125,7 +125,6 @@ def run_family_frontier_compact(
 
         first_attempt = True
         final_spec = None
-        final_class = None
         final_valid = False
         final_passed: bool | None = None
 
@@ -180,12 +179,7 @@ def run_family_frontier_compact(
             }
             runner.store.append_jsonl("capability-observations.jsonl", observation)
             retained_obs.append(observation)
-            final_spec, final_class, final_valid, final_passed = (
-                spec,
-                result_class,
-                valid,
-                passed,
-            )
+            final_spec, final_valid, final_passed = spec, valid, passed
 
             if result_class not in TRUNCATION:
                 break
@@ -261,7 +255,7 @@ def run_family_frontier_compact(
 def run_capability_campaign_compact(
     runner: Any, cases: list[dict[str, Any]]
 ) -> list[dict[str, Any]]:
-    """Run the existing phases but honor every secondary lab's enabled flag."""
+    """Run the existing phases with bounded depth and long-horizon simulation."""
     import compute_cost.capability_campaign as campaign
 
     ladders = campaign.build_ladder_index(cases)
@@ -275,6 +269,36 @@ def run_capability_campaign_compact(
 
     base_rows = list(all_rows)
     frontiers = campaign._baseline_frontiers(runner, base_rows)
+
+    # Keep autonomy inside the same campaign/run and use the same call ceiling,
+    # runtime evidence, telemetry, raw exchanges, scoring, and failure replays.
+    autonomous_cfg = runner.config.get("autonomous_simulation")
+    if isinstance(autonomous_cfg, dict) and autonomous_cfg.get("enabled") is True:
+        from .autonomous_simulation import render_autonomous_summary, run_autonomous_simulation
+
+        thinking, effort = resolve_model_reasoning_control(
+            str(runner.model), runner.config["capability_campaign"]
+        )
+        autonomous_rows, autonomous_summary, sequence = run_autonomous_simulation(
+            runner,
+            sequence_start=sequence,
+            thinking_mode=thinking,
+            reasoning_effort=effort,
+        )
+        runner.store.write_json(
+            "autonomous-simulation.json",
+            autonomous_summary,
+            producer="autonomous-simulation",
+            stage="report",
+        )
+        runner.store.write_raw(
+            "autonomous-simulation.md",
+            render_autonomous_summary(autonomous_summary).encode("utf-8"),
+            producer="autonomous-simulation",
+            stage="report",
+        )
+        all_rows.extend(autonomous_rows)
+
     effort_rows: list[dict[str, Any]] = []
     curve_cfg = runner.config.get("reasoning_curves")
     if isinstance(curve_cfg, dict) and curve_cfg.get("enabled") is True:
@@ -360,16 +384,23 @@ def install() -> None:
     import compute_cost.config as config
     import compute_cost.run_synthesis as synthesis
 
-    config.DEFAULT_CONFIG["limits"]["max_model_calls_per_run"] = 120
+    config.DEFAULT_CONFIG["limits"]["max_model_calls_per_run"] = 360
     config.DEFAULT_CONFIG["capability_campaign"].update(
         {
             "boundary_repeats": 2,
-            "max_experiments_per_family": 2,
+            "max_experiments_per_family": 6,
             "thinking_mode": False,
             "reasoning_effort": None,
             "generation_budget": 256,
         }
     )
+    config.DEFAULT_CONFIG["autonomous_simulation"] = {
+        "enabled": True,
+        "scenario_count": 6,
+        "steps_per_scenario": 8,
+        "generation_budget": 512,
+        "max_generation_budget": 2048,
+    }
     config.DEFAULT_CONFIG["reasoning_curves"]["enabled"] = False
     config.DEFAULT_CONFIG["recovery_lab"]["enabled"] = False
     config.DEFAULT_CONFIG["robustness_lab"]["enabled"] = False
@@ -392,14 +423,23 @@ def install() -> None:
         materialized = list(rows)
         cost_map, value_map = original(model, materialized, frontiers, run_dir)
         root = Path(run_dir)
-        scorecard = build_compact_scorecard(model, materialized, frontiers)
+        capability_rows = [
+            row for row in materialized
+            if (row.get("experiment") or {}).get("task_family") != "autonomous_simulation"
+        ]
+        scorecard = build_compact_scorecard(model, capability_rows, frontiers)
         (root / "scorecard.json").write_text(
             json.dumps(scorecard, ensure_ascii=False, sort_keys=True, indent=2) + "\n",
             encoding="utf-8",
         )
-        (root / "scorecard.md").write_text(
-            render_compact_scorecard(scorecard), encoding="utf-8"
-        )
+        rendered = render_compact_scorecard(scorecard)
+        autonomous_path = root / "autonomous-simulation.json"
+        if autonomous_path.is_file():
+            from .autonomous_simulation import render_autonomous_summary
+
+            autonomous = json.loads(autonomous_path.read_text(encoding="utf-8"))
+            rendered = rendered.rstrip() + "\n\n" + render_autonomous_summary(autonomous)
+        (root / "scorecard.md").write_text(rendered, encoding="utf-8")
         return cost_map, value_map
 
     with_scorecard._compact_scorecard_patch = True
