@@ -1,0 +1,44 @@
+{
+  "checks": [
+    {
+      "name": "valid_json",
+      "pass": true
+    },
+    {
+      "name": "required:action",
+      "pass": true
+    },
+    {
+      "name": "required:checkpoint",
+      "pass": true
+    },
+    {
+      "actual": "OBSERVE",
+      "expected": "OBSERVE",
+      "name": "value:action",
+      "pass": true
+    },
+    {
+      "actual": "DIAG-A",
+      "expected": "DIAG-A",
+      "name": "value:checkpoint",
+      "pass": true
+    }
+  ],
+  "evidence": {
+    "parsed": {
+      "action": "OBSERVE",
+      "checkpoint": "DIAG-A",
+      "rationale": "The scenario states only symptoms are known. Before forming or testing hypotheses, I must gather specific observational data (e.g., pressure drop rates, load conditions, temperature) to narrow the scope of potential causes.",
+      "state": {
+        "current_phase": "data_collection",
+        "eliminated_hypotheses": [],
+        "hypotheses": [],
+        "known_symptoms": "intermittent pressure loss under load"
+      }
+    },
+    "raw_response": "{\n\"action\": \"OBSERVE\",\n\"checkpoint\": \"DIAG-A\",\n\"rationale\": \"The scenario states only symptoms are known. Before forming or testing hypotheses, I must gather specific observational data (e.g., pressure drop rates, load conditions, temperature) to narrow the scope of potential causes.\",\n\"state\": {\"current_phase\": \"data_collection\", \"known_symptoms\": \"intermittent pressure loss under load\", \"hypotheses\": [], \"eliminated_hypotheses\": []}\n}"
+  },
+  "score": 1.0,
+  "status": "SCORED"
+}

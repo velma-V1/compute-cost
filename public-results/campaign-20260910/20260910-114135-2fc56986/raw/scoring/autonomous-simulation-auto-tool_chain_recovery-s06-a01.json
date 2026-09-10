@@ -1,0 +1,43 @@
+{
+  "checks": [
+    {
+      "name": "valid_json",
+      "pass": true
+    },
+    {
+      "name": "required:action",
+      "pass": true
+    },
+    {
+      "name": "required:checkpoint",
+      "pass": true
+    },
+    {
+      "actual": "CROSSCHECK",
+      "expected": "CROSSCHECK",
+      "name": "value:action",
+      "pass": true
+    },
+    {
+      "actual": "TOOL-B",
+      "expected": "TOOL-B",
+      "name": "value:checkpoint",
+      "pass": true
+    }
+  ],
+  "evidence": {
+    "parsed": {
+      "action": "CROSSCHECK",
+      "checkpoint": "TOOL-B",
+      "rationale": "The environment explicitly states a second source is available for verification before synthesis. CROSSCHECK is the designated action to validate data against an external or secondary source.",
+      "state": {
+        "identifier": "42",
+        "status": "verifying_with_source",
+        "target": "Mira"
+      }
+    },
+    "raw_response": "{\n  \"action\": \"CROSSCHECK\",\n  \"checkpoint\": \"TOOL-B\",\n  \"rationale\": \"The environment explicitly states a second source is available for verification before synthesis. CROSSCHECK is the designated action to validate data against an external or secondary source.\",\n  \"state\": {\"target\": \"Mira\", \"identifier\": \"42\", \"status\": \"verifying_with_source\"}\n}"
+  },
+  "score": 1.0,
+  "status": "SCORED"
+}

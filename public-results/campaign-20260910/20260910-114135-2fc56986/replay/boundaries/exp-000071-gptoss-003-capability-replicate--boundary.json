@@ -1,0 +1,832 @@
+{
+  "benchmark_version": "gpt-oss-20b-capability-v1",
+  "boundary": {
+    "boundary_repeats": 2,
+    "family_id": "extraction_transformation",
+    "level": 2,
+    "role": "lower_reliable",
+    "transition_bracket": {
+      "lower_label": "reliable",
+      "lower_level": 2,
+      "upper_label": "failure",
+      "upper_level": 3
+    }
+  },
+  "case": {
+    "capabilities_required": [
+      "extraction_transformation"
+    ],
+    "capability_map": {
+      "capabilities_required": [
+        "extraction_transformation"
+      ],
+      "difficulty": {
+        "dimensions": {
+          "distractor_density": 1,
+          "fact_count": 3,
+          "source_length": 3,
+          "transformation_steps": 2
+        },
+        "level": 2
+      },
+      "family_id": "extraction_transformation",
+      "recovery_eligible": true,
+      "robustness_eligible": true,
+      "rubric_version": "extraction-v1",
+      "taxonomy_version": "capability-taxonomy-v1"
+    },
+    "category": "extraction_transformation",
+    "compound": false,
+    "difficulty": {
+      "dimensions": {
+        "distractor_density": 1,
+        "fact_count": 3,
+        "source_length": 3,
+        "transformation_steps": 2
+      },
+      "level": 2,
+      "rubric_version": "extraction-v1"
+    },
+    "difficulty_level": 2,
+    "expected": [
+      "bike",
+      "tent"
+    ],
+    "family_id": "extraction_transformation",
+    "id": "gptoss-003",
+    "prompt": "Text: \"Mira owns a red bike. Jo owns a blue kayak. Mira also owns a green tent.\" Return a JSON array containing exactly Mira’s possessions, alphabetically, with no extra items.",
+    "recovery_eligible": true,
+    "robustness_eligible": true,
+    "scorer": "extraction_set",
+    "scorer_version": "1",
+    "suite_version": "gpt-oss-20b-capability-v1",
+    "tags": [],
+    "taxonomy_version": "capability-taxonomy-v1",
+    "timeout_s": 120
+  },
+  "classification": {
+    "basis": "deterministic scorer passed",
+    "measurement_kind": "DERIVED",
+    "result_class": "ANSWER_CORRECT",
+    "valid_for_capability": true
+  },
+  "evidence_key": "exp-000071-gptoss-003-capability-replicate",
+  "evidence_refs": {
+    "request": {
+      "bytes": 342,
+      "case_id": "exp-000071-gptoss-003-capability-replicate",
+      "path": "raw/runtime/requests/000074-characterize-exp-000071-gptoss-003-capability-replicate.bin",
+      "producer": "runtime-adapter",
+      "sha256": "8edb26850791bfa40109e92dbeac60782d5cc394c32744e0ecafa743eb2f7e81",
+      "stage": "characterize"
+    },
+    "request_id": "000074-characterize-exp-000071-gptoss-003-capability-replicate",
+    "response": {
+      "bytes": 1168,
+      "case_id": "exp-000071-gptoss-003-capability-replicate",
+      "path": "raw/runtime/responses/000074-characterize-exp-000071-gptoss-003-capability-replicate.bin",
+      "producer": "runtime-adapter",
+      "sha256": "2b19054858a8dfa448a961f396e90f4d1cc08ce5b000bc3d2dd6fa15765646fb",
+      "stage": "characterize"
+    },
+    "streams": [
+      {
+        "bytes": 139,
+        "case_id": "exp-000071-gptoss-003-capability-replicate",
+        "path": "raw/runtime/streams/000074-characterize-exp-000071-gptoss-003-capability-replicate/000000.bin",
+        "producer": "runtime-stream",
+        "sha256": "be5fd2156dc568f4aaa8453f661a926eeffbec71ca4990c3f6f12192aaca48ac",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 139,
+        "case_id": "exp-000071-gptoss-003-capability-replicate",
+        "path": "raw/runtime/streams/000074-characterize-exp-000071-gptoss-003-capability-replicate/000001.bin",
+        "producer": "runtime-stream",
+        "sha256": "fa3f20734e9b29e79e2b87ed74940262a4e19262a0e847716d4284664ce1c269",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 139,
+        "case_id": "exp-000071-gptoss-003-capability-replicate",
+        "path": "raw/runtime/streams/000074-characterize-exp-000071-gptoss-003-capability-replicate/000002.bin",
+        "producer": "runtime-stream",
+        "sha256": "4875580a424c2e1da277169cd1fe3aa956242028248b658ba674194f94c6a01d",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 139,
+        "case_id": "exp-000071-gptoss-003-capability-replicate",
+        "path": "raw/runtime/streams/000074-characterize-exp-000071-gptoss-003-capability-replicate/000003.bin",
+        "producer": "runtime-stream",
+        "sha256": "4dc51566470ca9131bcb532c5148e4e2f2c2703b2785df852c83ca156f8f1cf0",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 140,
+        "case_id": "exp-000071-gptoss-003-capability-replicate",
+        "path": "raw/runtime/streams/000074-characterize-exp-000071-gptoss-003-capability-replicate/000004.bin",
+        "producer": "runtime-stream",
+        "sha256": "f8dd4cd1d1cd36fb46e7dc2899da1108e70eee27b013eb961a8a4e630fd02956",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 139,
+        "case_id": "exp-000071-gptoss-003-capability-replicate",
+        "path": "raw/runtime/streams/000074-characterize-exp-000071-gptoss-003-capability-replicate/000005.bin",
+        "producer": "runtime-stream",
+        "sha256": "d6bbc76b339b70e951229996b317c46a0e28e51f882b82164879cc0284f25be9",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 333,
+        "case_id": "exp-000071-gptoss-003-capability-replicate",
+        "path": "raw/runtime/streams/000074-characterize-exp-000071-gptoss-003-capability-replicate/000006.bin",
+        "producer": "runtime-stream",
+        "sha256": "2344e3eb1dd74a1e0ac9ac22680d460e03524afa6f2afeafe1e13a591c52285c",
+        "stage": "characterize"
+      }
+    ]
+  },
+  "experiment": {
+    "changed_variable": "replication",
+    "context_request": null,
+    "difficulty_level": 2,
+    "experiment_id": "exp-000071-gptoss-003-capability-replicate",
+    "generation_budget": 256,
+    "hypothesis": "reproduce passing side of difficulty boundary",
+    "parent_experiment_id": "exp-000068-gptoss-003-capability-probe",
+    "prompt_variant": "base",
+    "reasoning_effort": null,
+    "recovery_level": null,
+    "seed": 42,
+    "task_family": "extraction_transformation",
+    "task_id": "extraction_transformation",
+    "temperature": 0.0,
+    "thinking_mode": false
+  },
+  "generation": {
+    "http_status": 200,
+    "metrics": {
+      "eval_count": 7,
+      "eval_duration_ns": 122577000,
+      "load_duration_ns": 3798900,
+      "prompt_eval_count": 53,
+      "prompt_eval_duration_ns": 87922000,
+      "total_duration_ns": 259622100
+    },
+    "normalized": {
+      "done": true,
+      "done_reason": "stop",
+      "text": "[\"bike\", \"tent\"]",
+      "thinking": "",
+      "tool_calls": []
+    },
+    "ok": true,
+    "phase_metrics": {
+      "answer_chars": 16,
+      "answer_chunks": 6,
+      "answer_span_ns": 104181800,
+      "measurement_kind": "MEASURED",
+      "thinking_chars": 0,
+      "thinking_chunks": 0,
+      "thinking_span_ns": null,
+      "time_to_first_answer_ns": 162315300,
+      "time_to_first_thinking_ns": null
+    },
+    "raw_response_b64": "eyJtb2RlbCI6InF3ZW4zLjU6MzViLWEzYi1xNF9LX00iLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTo0MzoxNy4wODY3Nzc3WiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiJbXCIifSwiZG9uZSI6ZmFsc2V9CnsibW9kZWwiOiJxd2VuMy41OjM1Yi1hM2ItcTRfS19NIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6NDM6MTcuMTEyNjg1WiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiJiaWtlIn0sImRvbmUiOmZhbHNlfQp7Im1vZGVsIjoicXdlbjMuNTozNWItYTNiLXE0X0tfTSIsImNyZWF0ZWRfYXQiOiIyMDI2LTA5LTEwVDE1OjQzOjE3LjEzNTA5MzFaIiwibWVzc2FnZSI6eyJyb2xlIjoiYXNzaXN0YW50IiwiY29udGVudCI6IlwiLCJ9LCJkb25lIjpmYWxzZX0KeyJtb2RlbCI6InF3ZW4zLjU6MzViLWEzYi1xNF9LX00iLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTo0MzoxNy4xNTM0OTY5WiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiIgXCIifSwiZG9uZSI6ZmFsc2V9CnsibW9kZWwiOiJxd2VuMy41OjM1Yi1hM2ItcTRfS19NIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6NDM6MTcuMTcxOTk1N1oiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoidGVudCJ9LCJkb25lIjpmYWxzZX0KeyJtb2RlbCI6InF3ZW4zLjU6MzViLWEzYi1xNF9LX00iLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTo0MzoxNy4xOTEwMzA3WiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiJcIl0ifSwiZG9uZSI6ZmFsc2V9CnsibW9kZWwiOiJxd2VuMy41OjM1Yi1hM2ItcTRfS19NIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6NDM6MTcuMjA5MjcwOFoiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiIn0sImRvbmUiOnRydWUsImRvbmVfcmVhc29uIjoic3RvcCIsInRvdGFsX2R1cmF0aW9uIjoyNTk2MjIxMDAsImxvYWRfZHVyYXRpb24iOjM3OTg5MDAsInByb21wdF9ldmFsX2NvdW50Ijo1MywicHJvbXB0X2V2YWxfY2FjaGVkX2NvdW50Ijo0OSwicHJvbXB0X2V2YWxfZHVyYXRpb24iOjg3OTIyMDAwLCJldmFsX2NvdW50Ijo3LCJldmFsX2R1cmF0aW9uIjoxMjI1NzcwMDB9Cg==",
+    "request": {
+      "body_b64": "eyJtb2RlbCI6InF3ZW4zLjU6MzViLWEzYi1xNF9LX00iLCJtZXNzYWdlcyI6W3sicm9sZSI6InVzZXIiLCJjb250ZW50IjoiVGV4dDogXCJNaXJhIG93bnMgYSByZWQgYmlrZS4gSm8gb3ducyBhIGJsdWUga2F5YWsuIE1pcmEgYWxzbyBvd25zIGEgZ3JlZW4gdGVudC5cIiBSZXR1cm4gYSBKU09OIGFycmF5IGNvbnRhaW5pbmcgZXhhY3RseSBNaXJh4oCZcyBwb3NzZXNzaW9ucywgYWxwaGFiZXRpY2FsbHksIHdpdGggbm8gZXh0cmEgaXRlbXMuIn1dLCJzdHJlYW0iOnRydWUsIm9wdGlvbnMiOnsidGVtcGVyYXR1cmUiOjAuMCwic2VlZCI6NDIsIm51bV9wcmVkaWN0IjoyNTZ9LCJ0aGluayI6ZmFsc2V9",
+      "body_text": "{\"model\":\"qwen3.5:35b-a3b-q4_K_M\",\"messages\":[{\"role\":\"user\",\"content\":\"Text: \\\"Mira owns a red bike. Jo owns a blue kayak. Mira also owns a green tent.\\\" Return a JSON array containing exactly Mira’s possessions, alphabetically, with no extra items.\"}],\"stream\":true,\"options\":{\"temperature\":0.0,\"seed\":42,\"num_predict\":256},\"think\":false}",
+      "method": "POST",
+      "started_at_utc": "2026-09-10T15:43:16.924740+00:00",
+      "started_monotonic_ns": 53673642493800,
+      "stream": true,
+      "timeout_s": 120.0,
+      "url": "http://127.0.0.1:11434/api/chat"
+    },
+    "response_headers": {
+      "connection": "close",
+      "content-type": "application/x-ndjson",
+      "date": "Thu, 10 Sep 2026 15:43:17 GMT",
+      "transfer-encoding": "chunked"
+    },
+    "stream_events": [
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:43:17.0867777Z",
+          "done": false,
+          "message": {
+            "content": "[\"",
+            "role": "assistant"
+          },
+          "model": "qwen3.5:35b-a3b-q4_K_M"
+        },
+        "raw_b64": "eyJtb2RlbCI6InF3ZW4zLjU6MzViLWEzYi1xNF9LX00iLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTo0MzoxNy4wODY3Nzc3WiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiJbXCIifSwiZG9uZSI6ZmFsc2V9Cg==",
+        "raw_text": "{\"model\":\"qwen3.5:35b-a3b-q4_K_M\",\"created_at\":\"2026-09-10T15:43:17.0867777Z\",\"message\":{\"role\":\"assistant\",\"content\":\"[\\\"\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:43:17.087057+00:00",
+        "received_monotonic_ns": 53673804809100,
+        "sequence": 0
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:43:17.112685Z",
+          "done": false,
+          "message": {
+            "content": "bike",
+            "role": "assistant"
+          },
+          "model": "qwen3.5:35b-a3b-q4_K_M"
+        },
+        "raw_b64": "eyJtb2RlbCI6InF3ZW4zLjU6MzViLWEzYi1xNF9LX00iLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTo0MzoxNy4xMTI2ODVaIiwibWVzc2FnZSI6eyJyb2xlIjoiYXNzaXN0YW50IiwiY29udGVudCI6ImJpa2UifSwiZG9uZSI6ZmFsc2V9Cg==",
+        "raw_text": "{\"model\":\"qwen3.5:35b-a3b-q4_K_M\",\"created_at\":\"2026-09-10T15:43:17.112685Z\",\"message\":{\"role\":\"assistant\",\"content\":\"bike\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:43:17.112945+00:00",
+        "received_monotonic_ns": 53673830696700,
+        "sequence": 1
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:43:17.1350931Z",
+          "done": false,
+          "message": {
+            "content": "\",",
+            "role": "assistant"
+          },
+          "model": "qwen3.5:35b-a3b-q4_K_M"
+        },
+        "raw_b64": "eyJtb2RlbCI6InF3ZW4zLjU6MzViLWEzYi1xNF9LX00iLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTo0MzoxNy4xMzUwOTMxWiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiJcIiwifSwiZG9uZSI6ZmFsc2V9Cg==",
+        "raw_text": "{\"model\":\"qwen3.5:35b-a3b-q4_K_M\",\"created_at\":\"2026-09-10T15:43:17.1350931Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\\\",\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:43:17.135302+00:00",
+        "received_monotonic_ns": 53673853054800,
+        "sequence": 2
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:43:17.1534969Z",
+          "done": false,
+          "message": {
+            "content": " \"",
+            "role": "assistant"
+          },
+          "model": "qwen3.5:35b-a3b-q4_K_M"
+        },
+        "raw_b64": "eyJtb2RlbCI6InF3ZW4zLjU6MzViLWEzYi1xNF9LX00iLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTo0MzoxNy4xNTM0OTY5WiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiIgXCIifSwiZG9uZSI6ZmFsc2V9Cg==",
+        "raw_text": "{\"model\":\"qwen3.5:35b-a3b-q4_K_M\",\"created_at\":\"2026-09-10T15:43:17.1534969Z\",\"message\":{\"role\":\"assistant\",\"content\":\" \\\"\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:43:17.153703+00:00",
+        "received_monotonic_ns": 53673871455600,
+        "sequence": 3
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:43:17.1719957Z",
+          "done": false,
+          "message": {
+            "content": "tent",
+            "role": "assistant"
+          },
+          "model": "qwen3.5:35b-a3b-q4_K_M"
+        },
+        "raw_b64": "eyJtb2RlbCI6InF3ZW4zLjU6MzViLWEzYi1xNF9LX00iLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTo0MzoxNy4xNzE5OTU3WiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiJ0ZW50In0sImRvbmUiOmZhbHNlfQo=",
+        "raw_text": "{\"model\":\"qwen3.5:35b-a3b-q4_K_M\",\"created_at\":\"2026-09-10T15:43:17.1719957Z\",\"message\":{\"role\":\"assistant\",\"content\":\"tent\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:43:17.172202+00:00",
+        "received_monotonic_ns": 53673889950900,
+        "sequence": 4
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:43:17.1910307Z",
+          "done": false,
+          "message": {
+            "content": "\"]",
+            "role": "assistant"
+          },
+          "model": "qwen3.5:35b-a3b-q4_K_M"
+        },
+        "raw_b64": "eyJtb2RlbCI6InF3ZW4zLjU6MzViLWEzYi1xNF9LX00iLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTo0MzoxNy4xOTEwMzA3WiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiJcIl0ifSwiZG9uZSI6ZmFsc2V9Cg==",
+        "raw_text": "{\"model\":\"qwen3.5:35b-a3b-q4_K_M\",\"created_at\":\"2026-09-10T15:43:17.1910307Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\\\"]\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:43:17.191242+00:00",
+        "received_monotonic_ns": 53673908990900,
+        "sequence": 5
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:43:17.2092708Z",
+          "done": true,
+          "done_reason": "stop",
+          "eval_count": 7,
+          "eval_duration": 122577000,
+          "load_duration": 3798900,
+          "message": {
+            "content": "",
+            "role": "assistant"
+          },
+          "model": "qwen3.5:35b-a3b-q4_K_M",
+          "prompt_eval_cached_count": 49,
+          "prompt_eval_count": 53,
+          "prompt_eval_duration": 87922000,
+          "total_duration": 259622100
+        },
+        "raw_b64": "eyJtb2RlbCI6InF3ZW4zLjU6MzViLWEzYi1xNF9LX00iLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTo0MzoxNy4yMDkyNzA4WiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiIifSwiZG9uZSI6dHJ1ZSwiZG9uZV9yZWFzb24iOiJzdG9wIiwidG90YWxfZHVyYXRpb24iOjI1OTYyMjEwMCwibG9hZF9kdXJhdGlvbiI6Mzc5ODkwMCwicHJvbXB0X2V2YWxfY291bnQiOjUzLCJwcm9tcHRfZXZhbF9jYWNoZWRfY291bnQiOjQ5LCJwcm9tcHRfZXZhbF9kdXJhdGlvbiI6ODc5MjIwMDAsImV2YWxfY291bnQiOjcsImV2YWxfZHVyYXRpb24iOjEyMjU3NzAwMH0K",
+        "raw_text": "{\"model\":\"qwen3.5:35b-a3b-q4_K_M\",\"created_at\":\"2026-09-10T15:43:17.2092708Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\"},\"done\":true,\"done_reason\":\"stop\",\"total_duration\":259622100,\"load_duration\":3798900,\"prompt_eval_count\":53,\"prompt_eval_cached_count\":49,\"prompt_eval_duration\":87922000,\"eval_count\":7,\"eval_duration\":122577000}\n",
+        "received_at_utc": "2026-09-10T15:43:17.209565+00:00",
+        "received_monotonic_ns": 53673927316500,
+        "sequence": 6
+      }
+    ],
+    "timing": {
+      "client_ended_monotonic_ns": 53673927603700,
+      "client_latency_ns": 285139300,
+      "client_started_monotonic_ns": 53673642464400,
+      "first_event_latency_ns": 162315300,
+      "last_event_latency_ns": 284822700
+    }
+  },
+  "invocation": {
+    "messages": [
+      {
+        "content": "Text: \"Mira owns a red bike. Jo owns a blue kayak. Mira also owns a green tent.\" Return a JSON array containing exactly Mira’s possessions, alphabetically, with no extra items.",
+        "role": "user"
+      }
+    ],
+    "model": "qwen3.5:35b-a3b-q4_K_M",
+    "options": {
+      "num_predict": 256,
+      "seed": 42,
+      "temperature": 0.0
+    },
+    "request_fields": {
+      "think": false
+    },
+    "stream": true
+  },
+  "model": "qwen3.5:35b-a3b-q4_K_M",
+  "resolved_config": {
+    "autonomous_simulation": {
+      "enabled": true,
+      "generation_budget": 512,
+      "max_generation_budget": 2048,
+      "scenario_count": 6,
+      "steps_per_scenario": 8
+    },
+    "capability_campaign": {
+      "anchor_level": 2,
+      "boundary_repeats": 2,
+      "generation_budget": 256,
+      "jump": 3,
+      "max_experiments_per_family": 6,
+      "reasoning_effort": null,
+      "reliable_threshold": 0.9,
+      "thinking_mode": false,
+      "unstable_threshold": 0.4
+    },
+    "characterization": {
+      "boundary_repeats": 3,
+      "generation_budget_granularity": 32,
+      "initial_generation_budget": 256,
+      "max_experiments_per_task": 12,
+      "max_generation_budget": 2048,
+      "min_generation_budget": 32,
+      "think_off_generation_budget": 256
+    },
+    "compound_lab": {
+      "boundary_repeats": 3,
+      "enabled": false,
+      "jump": 2,
+      "max_compounds": 6,
+      "max_experiments_per_compound": 16
+    },
+    "cost": {
+      "electricity_configured": false,
+      "electricity_per_kwh": 0.0
+    },
+    "evidence": {
+      "retain_raw_collectors": true,
+      "retain_stream_chunks": true
+    },
+    "generation": {
+      "max_tokens": 256,
+      "seed": 42,
+      "temperature": 0.0
+    },
+    "limits": {
+      "consecutive_context_failures": 2,
+      "context_schedule": [
+        4096,
+        8192,
+        16384,
+        32768
+      ],
+      "host_ram_percent": 95.0,
+      "max_model_calls_per_run": 360,
+      "request_timeout_s": 120,
+      "sustained_iterations": 8,
+      "vram_percent": 98.0
+    },
+    "reasoning_curves": {
+      "enabled": false,
+      "repeats": 3
+    },
+    "recovery_lab": {
+      "enabled": false,
+      "max_attempts_per_candidate": 6,
+      "max_level": "R7",
+      "repeats": 3
+    },
+    "robustness_lab": {
+      "enabled": false,
+      "max_attempts_per_perturbation": 4,
+      "max_perturbations_per_family": 2,
+      "repeats": 2
+    },
+    "runtime": {
+      "endpoint": "http://127.0.0.1:11434"
+    },
+    "telemetry": {
+      "interval_s": 0.25,
+      "nvidia": true
+    }
+  },
+  "schema_version": 2,
+  "scoring": {
+    "checks": [
+      {
+        "actual": [
+          "bike",
+          "tent"
+        ],
+        "expected": [
+          "bike",
+          "tent"
+        ],
+        "name": "exact_set",
+        "pass": true
+      }
+    ],
+    "evidence": {
+      "parsed": [
+        "bike",
+        "tent"
+      ],
+      "raw_response": "[\"bike\", \"tent\"]"
+    },
+    "score": 1.0,
+    "status": "SCORED"
+  },
+  "source_experiment_id": "exp-000071-gptoss-003-capability-replicate",
+  "stage": "characterize",
+  "telemetry_for_experiment": [
+    {
+      "case_id": "exp-000071-gptoss-003-capability-replicate",
+      "gpu": {
+        "availability": "available",
+        "devices": [
+          {
+            "driver_version": "610.62",
+            "extra_columns": [],
+            "fan_percent": 0.0,
+            "graphics_clock_mhz": 2745.0,
+            "index": 0,
+            "memory_clock_mhz": 10251.0,
+            "memory_free_mib": 393.0,
+            "memory_total_mib": 12282.0,
+            "memory_used_mib": 11605.0,
+            "name": "NVIDIA GeForce RTX 4070 SUPER",
+            "power_draw_w": 65.71,
+            "power_limit_w": 220.0,
+            "pstate": "P2",
+            "raw_columns": [
+              "0",
+              "GPU-e3df9a98-2412-6865-26e5-b5a284aa9138",
+              "NVIDIA GeForce RTX 4070 SUPER",
+              "610.62",
+              "33",
+              "12282",
+              "11605",
+              "393",
+              "46",
+              "65.71",
+              "220.00",
+              "2745",
+              "2745",
+              "10251",
+              "P2",
+              "0"
+            ],
+            "raw_line": "0, GPU-e3df9a98-2412-6865-26e5-b5a284aa9138, NVIDIA GeForce RTX 4070 SUPER, 610.62, 33, 12282, 11605, 393, 46, 65.71, 220.00, 2745, 2745, 10251, P2, 0",
+            "sm_clock_mhz": 2745.0,
+            "temperature_c": 46.0,
+            "utilization_gpu_percent": 33.0,
+            "uuid": "GPU-e3df9a98-2412-6865-26e5-b5a284aa9138"
+          }
+        ]
+      },
+      "host": {
+        "cpu_frequency_mhz": 4201.0,
+        "cpu_percent": 24.1,
+        "cpu_percent_per_core": [
+          12.5,
+          37.5,
+          50.0,
+          14.3,
+          14.3,
+          28.6,
+          14.3,
+          14.3,
+          42.9,
+          0.0,
+          50.0,
+          28.6,
+          14.3,
+          0.0,
+          14.3,
+          42.9
+        ],
+        "disk_io": {
+          "read_bytes": 244166513152,
+          "read_count": 1688296,
+          "read_time_ms": 1566,
+          "write_bytes": 104010372608,
+          "write_count": 959532,
+          "write_time_ms": 1278
+        },
+        "memory_available_bytes": 2248933376,
+        "memory_percent": 93.3,
+        "memory_total_bytes": 33462239232,
+        "memory_used_bytes": 31213305856
+      },
+      "monotonic_ns": 53673587711200,
+      "nvidia_collector": {
+        "command": [
+          "nvidia-smi",
+          "--query-gpu=index,uuid,name,driver_version,utilization.gpu,memory.total,memory.used,memory.free,temperature.gpu,power.draw,power.limit,clocks.gr,clocks.sm,clocks.mem,pstate,fan.speed",
+          "--format=csv,noheader,nounits"
+        ],
+        "duration_ns": 37819700,
+        "error": null,
+        "returncode": 0,
+        "started_at_utc": "2026-09-10T15:43:16.870100+00:00",
+        "stderr_b64": "",
+        "stderr_text": "",
+        "stdout_b64": "MCwgR1BVLWUzZGY5YTk4LTI0MTItNjg2NS0yNmU1LWI1YTI4NGFhOTEzOCwgTlZJRElBIEdlRm9yY2UgUlRYIDQwNzAgU1VQRVIsIDYxMC42MiwgMzMsIDEyMjgyLCAxMTYwNSwgMzkzLCA0NiwgNjUuNzEsIDIyMC4wMCwgMjc0NSwgMjc0NSwgMTAyNTEsIFAyLCAwDQo=",
+        "stdout_text": "0, GPU-e3df9a98-2412-6865-26e5-b5a284aa9138, NVIDIA GeForce RTX 4070 SUPER, 610.62, 33, 12282, 11605, 393, 46, 65.71, 220.00, 2745, 2745, 10251, P2, 0\r\n"
+      },
+      "process": {
+        "cpu_percent": 25.6,
+        "pid": 17976,
+        "rss_bytes": 142757888,
+        "vms_bytes": 126550016
+      },
+      "runtime_processes": [
+        {
+          "cpu_percent": 268.6,
+          "cpu_times": {
+            "system_s": 95.359375,
+            "user_s": 345.078125
+          },
+          "exe": "C:\\Users\\Matt\\AppData\\Local\\Programs\\Ollama\\lib\\ollama\\llama-server.exe",
+          "io": {
+            "other_bytes": 439970,
+            "other_count": 19101,
+            "read_bytes": 23771872617,
+            "read_count": 45591,
+            "write_bytes": 525486,
+            "write_count": 5130
+          },
+          "name": "llama-server.exe",
+          "num_handles": 282,
+          "num_threads": 30,
+          "pid": 8880,
+          "rss_bytes": 22850404352,
+          "vms_bytes": 34684198912
+        },
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 3.640625,
+            "user_s": 3.4375
+          },
+          "exe": "C:\\Users\\Matt\\AppData\\Local\\Programs\\Ollama\\ollama app.exe",
+          "io": {
+            "other_bytes": 1290829790,
+            "other_count": 71122,
+            "read_bytes": 783228744,
+            "read_count": 1691,
+            "write_bytes": 1574405889,
+            "write_count": 36
+          },
+          "name": "ollama app.exe",
+          "num_handles": 421,
+          "num_threads": 19,
+          "pid": 20892,
+          "rss_bytes": 52727808,
+          "vms_bytes": 63012864
+        },
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 116.265625,
+            "user_s": 105.140625
+          },
+          "exe": "C:\\Users\\Matt\\AppData\\Local\\Programs\\Ollama\\ollama.exe",
+          "io": {
+            "other_bytes": 41036611964,
+            "other_count": 5759711,
+            "read_bytes": 66056590671,
+            "read_count": 2155153,
+            "write_bytes": 74290844292,
+            "write_count": 4615232
+          },
+          "name": "ollama.exe",
+          "num_handles": 523,
+          "num_threads": 26,
+          "pid": 21316,
+          "rss_bytes": 213041152,
+          "vms_bytes": 248074240
+        }
+      ],
+      "stage": "characterize",
+      "timestamp_utc": "2026-09-10T15:43:16.869951+00:00",
+      "total_gpu_power_w": 65.71
+    },
+    {
+      "case_id": "exp-000071-gptoss-003-capability-replicate",
+      "gpu": {
+        "availability": "available",
+        "devices": [
+          {
+            "driver_version": "610.62",
+            "extra_columns": [],
+            "fan_percent": 0.0,
+            "graphics_clock_mhz": 2745.0,
+            "index": 0,
+            "memory_clock_mhz": 10251.0,
+            "memory_free_mib": 393.0,
+            "memory_total_mib": 12282.0,
+            "memory_used_mib": 11605.0,
+            "name": "NVIDIA GeForce RTX 4070 SUPER",
+            "power_draw_w": 63.17,
+            "power_limit_w": 220.0,
+            "pstate": "P2",
+            "raw_columns": [
+              "0",
+              "GPU-e3df9a98-2412-6865-26e5-b5a284aa9138",
+              "NVIDIA GeForce RTX 4070 SUPER",
+              "610.62",
+              "18",
+              "12282",
+              "11605",
+              "393",
+              "45",
+              "63.17",
+              "220.00",
+              "2745",
+              "2745",
+              "10251",
+              "P2",
+              "0"
+            ],
+            "raw_line": "0, GPU-e3df9a98-2412-6865-26e5-b5a284aa9138, NVIDIA GeForce RTX 4070 SUPER, 610.62, 18, 12282, 11605, 393, 45, 63.17, 220.00, 2745, 2745, 10251, P2, 0",
+            "sm_clock_mhz": 2745.0,
+            "temperature_c": 45.0,
+            "utilization_gpu_percent": 18.0,
+            "uuid": "GPU-e3df9a98-2412-6865-26e5-b5a284aa9138"
+          }
+        ]
+      },
+      "host": {
+        "cpu_frequency_mhz": 4201.0,
+        "cpu_percent": 43.7,
+        "cpu_percent_per_core": [
+          89.3,
+          68.0,
+          80.8,
+          32.0,
+          50.0,
+          42.3,
+          53.8,
+          24.0,
+          48.0,
+          26.9,
+          64.0,
+          28.0,
+          20.0,
+          19.2,
+          28.0,
+          19.2
+        ],
+        "disk_io": {
+          "read_bytes": 244166513152,
+          "read_count": 1688296,
+          "read_time_ms": 1566,
+          "write_bytes": 104012641792,
+          "write_count": 959575,
+          "write_time_ms": 1278
+        },
+        "memory_available_bytes": 2181849088,
+        "memory_percent": 93.5,
+        "memory_total_bytes": 33462239232,
+        "memory_used_bytes": 31280390144
+      },
+      "monotonic_ns": 53673971402600,
+      "nvidia_collector": {
+        "command": [
+          "nvidia-smi",
+          "--query-gpu=index,uuid,name,driver_version,utilization.gpu,memory.total,memory.used,memory.free,temperature.gpu,power.draw,power.limit,clocks.gr,clocks.sm,clocks.mem,pstate,fan.speed",
+          "--format=csv,noheader,nounits"
+        ],
+        "duration_ns": 45105500,
+        "error": null,
+        "returncode": 0,
+        "started_at_utc": "2026-09-10T15:43:17.253864+00:00",
+        "stderr_b64": "",
+        "stderr_text": "",
+        "stdout_b64": "MCwgR1BVLWUzZGY5YTk4LTI0MTItNjg2NS0yNmU1LWI1YTI4NGFhOTEzOCwgTlZJRElBIEdlRm9yY2UgUlRYIDQwNzAgU1VQRVIsIDYxMC42MiwgMTgsIDEyMjgyLCAxMTYwNSwgMzkzLCA0NSwgNjMuMTcsIDIyMC4wMCwgMjc0NSwgMjc0NSwgMTAyNTEsIFAyLCAwDQo=",
+        "stdout_text": "0, GPU-e3df9a98-2412-6865-26e5-b5a284aa9138, NVIDIA GeForce RTX 4070 SUPER, 610.62, 18, 12282, 11605, 393, 45, 63.17, 220.00, 2745, 2745, 10251, P2, 0\r\n"
+      },
+      "process": {
+        "cpu_percent": 6.7,
+        "pid": 17976,
+        "rss_bytes": 142807040,
+        "vms_bytes": 126590976
+      },
+      "runtime_processes": [
+        {
+          "cpu_percent": 733.7,
+          "cpu_times": {
+            "system_s": 95.96875,
+            "user_s": 346.625
+          },
+          "exe": "C:\\Users\\Matt\\AppData\\Local\\Programs\\Ollama\\lib\\ollama\\llama-server.exe",
+          "io": {
+            "other_bytes": 442002,
+            "other_count": 19212,
+            "read_bytes": 23771872617,
+            "read_count": 45591,
+            "write_bytes": 538147,
+            "write_count": 5257
+          },
+          "name": "llama-server.exe",
+          "num_handles": 282,
+          "num_threads": 30,
+          "pid": 8880,
+          "rss_bytes": 22917132288,
+          "vms_bytes": 34751062016
+        },
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 3.640625,
+            "user_s": 3.4375
+          },
+          "exe": "C:\\Users\\Matt\\AppData\\Local\\Programs\\Ollama\\ollama app.exe",
+          "io": {
+            "other_bytes": 1290829790,
+            "other_count": 71122,
+            "read_bytes": 783228744,
+            "read_count": 1691,
+            "write_bytes": 1574405889,
+            "write_count": 36
+          },
+          "name": "ollama app.exe",
+          "num_handles": 421,
+          "num_threads": 19,
+          "pid": 20892,
+          "rss_bytes": 52727808,
+          "vms_bytes": 63012864
+        },
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 116.265625,
+            "user_s": 105.171875
+          },
+          "exe": "C:\\Users\\Matt\\AppData\\Local\\Programs\\Ollama\\ollama.exe",
+          "io": {
+            "other_bytes": 41036627810,
+            "other_count": 5760101,
+            "read_bytes": 66056620968,
+            "read_count": 2155211,
+            "write_bytes": 74290857044,
+            "write_count": 4615247
+          },
+          "name": "ollama.exe",
+          "num_handles": 523,
+          "num_threads": 26,
+          "pid": 21316,
+          "rss_bytes": 213041152,
+          "vms_bytes": 248074240
+        }
+      ],
+      "stage": "characterize",
+      "timestamp_utc": "2026-09-10T15:43:17.253641+00:00",
+      "total_gpu_power_w": 63.17
+    }
+  ]
+}

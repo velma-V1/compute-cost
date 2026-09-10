@@ -1,0 +1,43 @@
+{
+  "checks": [
+    {
+      "name": "valid_json",
+      "pass": true
+    },
+    {
+      "name": "required:action",
+      "pass": true
+    },
+    {
+      "name": "required:checkpoint",
+      "pass": true
+    },
+    {
+      "actual": "PRIORITIZE",
+      "expected": "PRIORITIZE",
+      "name": "value:action",
+      "pass": true
+    },
+    {
+      "actual": "PLAN-A",
+      "expected": "PLAN-A",
+      "name": "value:checkpoint",
+      "pass": true
+    }
+  ],
+  "evidence": {
+    "parsed": {
+      "action": "PRIORITIZE",
+      "checkpoint": "PLAN-A",
+      "rationale": "With dependencies now known, the immediate need is to determine the sequence of work. Identifying the critical path or the tasks that unlock the most downstream progress is the definition of prioritization in a dependency-driven context.",
+      "state": {
+        "current_phase": "prioritization",
+        "dependencies_known": true,
+        "execution_order": "determining"
+      }
+    },
+    "raw_response": "{\n  \"action\": \"PRIORITIZE\",\n  \"checkpoint\": \"PLAN-A\",\n  \"rationale\": \"With dependencies now known, the immediate need is to determine the sequence of work. Identifying the critical path or the tasks that unlock the most downstream progress is the definition of prioritization in a dependency-driven context.\",\n  \"state\": {\"current_phase\": \"prioritization\", \"dependencies_known\": true, \"execution_order\": \"determining\"}\n}"
+  },
+  "score": 1.0,
+  "status": "SCORED"
+}

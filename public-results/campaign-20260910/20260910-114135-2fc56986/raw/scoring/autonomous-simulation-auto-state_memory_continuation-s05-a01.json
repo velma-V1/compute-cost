@@ -1,0 +1,39 @@
+{
+  "checks": [
+    {
+      "name": "valid_json",
+      "pass": true
+    },
+    {
+      "name": "required:action",
+      "pass": true
+    },
+    {
+      "name": "required:checkpoint",
+      "pass": true
+    },
+    {
+      "actual": "RESTORE",
+      "expected": "RESTORE",
+      "name": "value:action",
+      "pass": true
+    },
+    {
+      "actual": "STATE-B",
+      "expected": "STATE-B",
+      "name": "value:checkpoint",
+      "pass": true
+    }
+  ],
+  "evidence": {
+    "parsed": {
+      "action": "RESTORE",
+      "checkpoint": "STATE-B",
+      "rationale": "The environment requires resuming from the current compact record (STATE-B) while explicitly avoiding the resurrection of obsolete state (STATE-A). RESTORE is the action to load the valid current state for continuation.",
+      "state": "Restored STATE-B. Obsolete STATE-A excluded."
+    },
+    "raw_response": "{\n  \"action\": \"RESTORE\",\n  \"checkpoint\": \"STATE-B\",\n  \"rationale\": \"The environment requires resuming from the current compact record (STATE-B) while explicitly avoiding the resurrection of obsolete state (STATE-A). RESTORE is the action to load the valid current state for continuation.\",\n  \"state\": \"Restored STATE-B. Obsolete STATE-A excluded.\"\n}"
+  },
+  "score": 1.0,
+  "status": "SCORED"
+}

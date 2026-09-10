@@ -1,0 +1,43 @@
+{
+  "checks": [
+    {
+      "name": "valid_json",
+      "pass": true
+    },
+    {
+      "name": "required:action",
+      "pass": true
+    },
+    {
+      "name": "required:checkpoint",
+      "pass": true
+    },
+    {
+      "actual": "FETCH",
+      "expected": "FETCH",
+      "name": "value:action",
+      "pass": true
+    },
+    {
+      "actual": "TOOL-A",
+      "expected": "TOOL-A",
+      "name": "value:checkpoint",
+      "pass": true
+    }
+  ],
+  "evidence": {
+    "parsed": {
+      "action": "FETCH",
+      "checkpoint": "TOOL-A",
+      "rationale": "The search provided the identifier (id=42). The scenario explicitly requires retrieving the record before performing any calculations. FETCH is the correct action to retrieve data using the known identifier.",
+      "state": {
+        "identifier": "42",
+        "status": "fetching_record",
+        "target": "Mira"
+      }
+    },
+    "raw_response": "{\n  \"action\": \"FETCH\",\n  \"checkpoint\": \"TOOL-A\",\n  \"rationale\": \"The search provided the identifier (id=42). The scenario explicitly requires retrieving the record before performing any calculations. FETCH is the correct action to retrieve data using the known identifier.\",\n  \"state\": {\"target\": \"Mira\", \"identifier\": \"42\", \"status\": \"fetching_record\"}\n}"
+  },
+  "score": 1.0,
+  "status": "SCORED"
+}

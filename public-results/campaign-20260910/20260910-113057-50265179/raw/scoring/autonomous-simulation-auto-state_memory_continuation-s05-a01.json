@@ -1,0 +1,39 @@
+{
+  "checks": [
+    {
+      "name": "valid_json",
+      "pass": true
+    },
+    {
+      "name": "required:action",
+      "pass": true
+    },
+    {
+      "name": "required:checkpoint",
+      "pass": true
+    },
+    {
+      "actual": "RESTORE",
+      "expected": "RESTORE",
+      "name": "value:action",
+      "pass": true
+    },
+    {
+      "actual": "STATE-B",
+      "expected": "STATE-B",
+      "name": "value:checkpoint",
+      "pass": true
+    }
+  ],
+  "evidence": {
+    "parsed": {
+      "action": "RESTORE",
+      "checkpoint": "STATE-B",
+      "rationale": "Restore current state from compact record",
+      "state": "{\"goals\":[\"Maintain compact state\"],\"constraints\":[\"Preserve decision relevance\"],\"completed_work\":[\"CAPTURE\",\"COMPRESS\"],\"pending_work\":[]}"
+    },
+    "raw_response": "{\"action\":\"RESTORE\",\"checkpoint\":\"STATE-B\",\"rationale\":\"Restore current state from compact record\",\"state\":\"{\\\"goals\\\":[\\\"Maintain compact state\\\"],\\\"constraints\\\":[\\\"Preserve decision relevance\\\"],\\\"completed_work\\\":[\\\"CAPTURE\\\",\\\"COMPRESS\\\"],\\\"pending_work\\\":[]}\" }"
+  },
+  "score": 1.0,
+  "status": "SCORED"
+}

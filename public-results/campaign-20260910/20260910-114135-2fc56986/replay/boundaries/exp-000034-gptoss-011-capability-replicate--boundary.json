@@ -1,0 +1,1315 @@
+{
+  "benchmark_version": "gpt-oss-20b-capability-v1",
+  "boundary": {
+    "boundary_repeats": 2,
+    "family_id": "coding_generation",
+    "level": 3,
+    "role": "lower_reliable",
+    "transition_bracket": {
+      "lower_label": "reliable",
+      "lower_level": 3,
+      "upper_label": "failure",
+      "upper_level": 4
+    }
+  },
+  "case": {
+    "capabilities_required": [
+      "coding_generation"
+    ],
+    "capability_map": {
+      "capabilities_required": [
+        "coding_generation"
+      ],
+      "difficulty": {
+        "dimensions": {
+          "algorithmic_depth": 1,
+          "api_constraints": 1,
+          "edge_cases": 2,
+          "test_count": 3
+        },
+        "level": 3
+      },
+      "family_id": "coding_generation",
+      "recovery_eligible": true,
+      "robustness_eligible": true,
+      "rubric_version": "coding-generation-v1",
+      "taxonomy_version": "capability-taxonomy-v1"
+    },
+    "category": "coding_generation",
+    "compound": false,
+    "difficulty": {
+      "dimensions": {
+        "algorithmic_depth": 1,
+        "api_constraints": 1,
+        "edge_cases": 2,
+        "test_count": 3
+      },
+      "level": 3,
+      "rubric_version": "coding-generation-v1"
+    },
+    "difficulty_level": 3,
+    "family_id": "coding_generation",
+    "function_name": "clamp",
+    "id": "gptoss-011",
+    "prompt": "Write only Python code defining function clamp(value, low, high) that returns low if value < low, high if value > high, otherwise value. No imports.",
+    "recovery_eligible": true,
+    "robustness_eligible": true,
+    "scorer": "python_function",
+    "scorer_version": "1",
+    "suite_version": "gpt-oss-20b-capability-v1",
+    "tags": [],
+    "taxonomy_version": "capability-taxonomy-v1",
+    "tests": "assert clamp(2, 0, 5) == 2\nassert clamp(-1, 0, 5) == 0\nassert clamp(9, 0, 5) == 5",
+    "timeout_s": 120
+  },
+  "classification": {
+    "basis": "deterministic scorer passed",
+    "measurement_kind": "DERIVED",
+    "result_class": "ANSWER_CORRECT",
+    "valid_for_capability": true
+  },
+  "evidence_key": "exp-000034-gptoss-011-capability-replicate",
+  "evidence_refs": {
+    "request": {
+      "bytes": 310,
+      "case_id": "exp-000034-gptoss-011-capability-replicate",
+      "path": "raw/runtime/requests/000037-characterize-exp-000034-gptoss-011-capability-replicate.bin",
+      "producer": "runtime-adapter",
+      "sha256": "0d1a32c074b936f49f9231ac340d625fe55e7d2ad0655f39f288964529e717e7",
+      "stage": "characterize"
+    },
+    "request_id": "000037-characterize-exp-000034-gptoss-011-capability-replicate",
+    "response": {
+      "bytes": 3887,
+      "case_id": "exp-000034-gptoss-011-capability-replicate",
+      "path": "raw/runtime/responses/000037-characterize-exp-000034-gptoss-011-capability-replicate.bin",
+      "producer": "runtime-adapter",
+      "sha256": "a5159bc41ee73e7eaac1c10fcc2b79d85084ce0753a3b9731a306b125e1befca",
+      "stage": "characterize"
+    },
+    "streams": [
+      {
+        "bytes": 139,
+        "case_id": "exp-000034-gptoss-011-capability-replicate",
+        "path": "raw/runtime/streams/000037-characterize-exp-000034-gptoss-011-capability-replicate/000000.bin",
+        "producer": "runtime-stream",
+        "sha256": "b017fd52e0aaf6ea9e38882ff2960883e5bf9fdd97969c5389a4bd0b5175b4ed",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 142,
+        "case_id": "exp-000034-gptoss-011-capability-replicate",
+        "path": "raw/runtime/streams/000037-characterize-exp-000034-gptoss-011-capability-replicate/000001.bin",
+        "producer": "runtime-stream",
+        "sha256": "fac7f850659c15385dfc025d1b8416672c11c4eb9f00fa81bfbd0f7ff9665ac1",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 142,
+        "case_id": "exp-000034-gptoss-011-capability-replicate",
+        "path": "raw/runtime/streams/000037-characterize-exp-000034-gptoss-011-capability-replicate/000002.bin",
+        "producer": "runtime-stream",
+        "sha256": "a06a509f943a86ea6900f91e5eb7095e2278a9d23937079c868738e627326470",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 137,
+        "case_id": "exp-000034-gptoss-011-capability-replicate",
+        "path": "raw/runtime/streams/000037-characterize-exp-000034-gptoss-011-capability-replicate/000003.bin",
+        "producer": "runtime-stream",
+        "sha256": "fc3b1622bbbe01085d6b767edea023b37f57baea42bf3106f7199b20c58ee94d",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 140,
+        "case_id": "exp-000034-gptoss-011-capability-replicate",
+        "path": "raw/runtime/streams/000037-characterize-exp-000034-gptoss-011-capability-replicate/000004.bin",
+        "producer": "runtime-stream",
+        "sha256": "c17dc2503f4007014022bf1d97bd283151dfe92a6198eb07484ba69c3c46a617",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 137,
+        "case_id": "exp-000034-gptoss-011-capability-replicate",
+        "path": "raw/runtime/streams/000037-characterize-exp-000034-gptoss-011-capability-replicate/000005.bin",
+        "producer": "runtime-stream",
+        "sha256": "89a6d90d120c1e74c6f94891f74b5db4c55b11f557defb7298bf0a7c31c30e68",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 139,
+        "case_id": "exp-000034-gptoss-011-capability-replicate",
+        "path": "raw/runtime/streams/000037-characterize-exp-000034-gptoss-011-capability-replicate/000006.bin",
+        "producer": "runtime-stream",
+        "sha256": "933e7853ca8abf09cd192e8c36456714ad5d7674953814a17511d0613b54012b",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 138,
+        "case_id": "exp-000034-gptoss-011-capability-replicate",
+        "path": "raw/runtime/streams/000037-characterize-exp-000034-gptoss-011-capability-replicate/000007.bin",
+        "producer": "runtime-stream",
+        "sha256": "8d795c633a31613565bfe0e081fd207ac61a3136f899db1a8df10acc49bee463",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 144,
+        "case_id": "exp-000034-gptoss-011-capability-replicate",
+        "path": "raw/runtime/streams/000037-characterize-exp-000034-gptoss-011-capability-replicate/000008.bin",
+        "producer": "runtime-stream",
+        "sha256": "666d2918ae956da759d09d862a89b4b4129215efd86590ca38755785e5037ae4",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 142,
+        "case_id": "exp-000034-gptoss-011-capability-replicate",
+        "path": "raw/runtime/streams/000037-characterize-exp-000034-gptoss-011-capability-replicate/000009.bin",
+        "producer": "runtime-stream",
+        "sha256": "8ee0409da2293dcc2b261f8cef58434d9080b4898c880c2b535690b74e6bc9e9",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 147,
+        "case_id": "exp-000034-gptoss-011-capability-replicate",
+        "path": "raw/runtime/streams/000037-characterize-exp-000034-gptoss-011-capability-replicate/000010.bin",
+        "producer": "runtime-stream",
+        "sha256": "169553393c675ba2fd92f4c356bc365346cf5c491d59bd5a676d00e37b4511e5",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 137,
+        "case_id": "exp-000034-gptoss-011-capability-replicate",
+        "path": "raw/runtime/streams/000037-characterize-exp-000034-gptoss-011-capability-replicate/000011.bin",
+        "producer": "runtime-stream",
+        "sha256": "6f1cf96eb0d98a507a481c25e2cba1b9cf8c513340061d294f425d7241ef0bfb",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 152,
+        "case_id": "exp-000034-gptoss-011-capability-replicate",
+        "path": "raw/runtime/streams/000037-characterize-exp-000034-gptoss-011-capability-replicate/000012.bin",
+        "producer": "runtime-stream",
+        "sha256": "a38f31e43d8921cf58e98ccb07b87ce6e8dd71f7037a7558c45d228ce8a759ec",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 140,
+        "case_id": "exp-000034-gptoss-011-capability-replicate",
+        "path": "raw/runtime/streams/000037-characterize-exp-000034-gptoss-011-capability-replicate/000013.bin",
+        "producer": "runtime-stream",
+        "sha256": "5ca2daf7311fc916bb98aa40bcfc47f88c31cf9bc1b4f642c19e34894db175d7",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 146,
+        "case_id": "exp-000034-gptoss-011-capability-replicate",
+        "path": "raw/runtime/streams/000037-characterize-exp-000034-gptoss-011-capability-replicate/000014.bin",
+        "producer": "runtime-stream",
+        "sha256": "8b3fad27a25e5cd3093b03639bab0a12cb9e950e1342a76cc9ef68266b39302a",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 142,
+        "case_id": "exp-000034-gptoss-011-capability-replicate",
+        "path": "raw/runtime/streams/000037-characterize-exp-000034-gptoss-011-capability-replicate/000015.bin",
+        "producer": "runtime-stream",
+        "sha256": "b35d9a5dced26378ddadb68231241d35e38760e6bc60b14b6bbdf767423dc619",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 143,
+        "case_id": "exp-000034-gptoss-011-capability-replicate",
+        "path": "raw/runtime/streams/000037-characterize-exp-000034-gptoss-011-capability-replicate/000016.bin",
+        "producer": "runtime-stream",
+        "sha256": "782f6658bd7ce22aa997afb2301b2451b2417d1274731f0bddb40d9306439d32",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 140,
+        "case_id": "exp-000034-gptoss-011-capability-replicate",
+        "path": "raw/runtime/streams/000037-characterize-exp-000034-gptoss-011-capability-replicate/000017.bin",
+        "producer": "runtime-stream",
+        "sha256": "2c7b8139148e9a3db404e3fe5549fa855f3bffb0fc8985c6e2407731d9479a2f",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 136,
+        "case_id": "exp-000034-gptoss-011-capability-replicate",
+        "path": "raw/runtime/streams/000037-characterize-exp-000034-gptoss-011-capability-replicate/000018.bin",
+        "producer": "runtime-stream",
+        "sha256": "0dc2717ceb6a6a99b4a9f6e98ad5981493b3d6bf7b5342552f0fe3ba3a93663e",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 152,
+        "case_id": "exp-000034-gptoss-011-capability-replicate",
+        "path": "raw/runtime/streams/000037-characterize-exp-000034-gptoss-011-capability-replicate/000019.bin",
+        "producer": "runtime-stream",
+        "sha256": "7af907c68d5382e7ce5c2b28bc1cbc5caebddf13402af10cae2e154c2b8a19c9",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 141,
+        "case_id": "exp-000034-gptoss-011-capability-replicate",
+        "path": "raw/runtime/streams/000037-characterize-exp-000034-gptoss-011-capability-replicate/000020.bin",
+        "producer": "runtime-stream",
+        "sha256": "9c3bcd19da8ccb092c0fa36ab734c3ec20320a8584e26e20a7a75dbec7b2030b",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 146,
+        "case_id": "exp-000034-gptoss-011-capability-replicate",
+        "path": "raw/runtime/streams/000037-characterize-exp-000034-gptoss-011-capability-replicate/000021.bin",
+        "producer": "runtime-stream",
+        "sha256": "e1afd7e068023aa86495fff422391cbc12229fd0c428e3525858c424a9bb7a52",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 137,
+        "case_id": "exp-000034-gptoss-011-capability-replicate",
+        "path": "raw/runtime/streams/000037-characterize-exp-000034-gptoss-011-capability-replicate/000022.bin",
+        "producer": "runtime-stream",
+        "sha256": "f83d9a379e423d605048e515e1a515b03f65edc7cbf9d81d7917a5e4e0dbd8c6",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 152,
+        "case_id": "exp-000034-gptoss-011-capability-replicate",
+        "path": "raw/runtime/streams/000037-characterize-exp-000034-gptoss-011-capability-replicate/000023.bin",
+        "producer": "runtime-stream",
+        "sha256": "4473cee5dc4a2f96bda0c0c9cd265f0f6beb9ca939e7a9dc7666278bff8f6c47",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 142,
+        "case_id": "exp-000034-gptoss-011-capability-replicate",
+        "path": "raw/runtime/streams/000037-characterize-exp-000034-gptoss-011-capability-replicate/000024.bin",
+        "producer": "runtime-stream",
+        "sha256": "00971530c9a6464d36e723cf67aa947aa4d14d33782735846b1b6dc9b2f7004a",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 334,
+        "case_id": "exp-000034-gptoss-011-capability-replicate",
+        "path": "raw/runtime/streams/000037-characterize-exp-000034-gptoss-011-capability-replicate/000025.bin",
+        "producer": "runtime-stream",
+        "sha256": "48a147434de72d8269150621e00b679b9ce024720e8ec7b33376736a515974af",
+        "stage": "characterize"
+      }
+    ]
+  },
+  "experiment": {
+    "changed_variable": "replication",
+    "context_request": null,
+    "difficulty_level": 3,
+    "experiment_id": "exp-000034-gptoss-011-capability-replicate",
+    "generation_budget": 256,
+    "hypothesis": "reproduce passing side of difficulty boundary",
+    "parent_experiment_id": "exp-000032-gptoss-011-capability-probe",
+    "prompt_variant": "base",
+    "reasoning_effort": null,
+    "recovery_level": null,
+    "seed": 42,
+    "task_family": "coding_generation",
+    "task_id": "coding_generation",
+    "temperature": 0.0,
+    "thinking_mode": false
+  },
+  "generation": {
+    "http_status": 200,
+    "metrics": {
+      "eval_count": 39,
+      "eval_duration_ns": 741040000,
+      "load_duration_ns": 3732500,
+      "prompt_eval_count": 45,
+      "prompt_eval_duration_ns": 65221999,
+      "total_duration_ns": 847873300
+    },
+    "normalized": {
+      "done": true,
+      "done_reason": "stop",
+      "text": "def clamp(value, low, high):\n    if value < low:\n        return low\n    elif value > high:\n        return high\n    else:\n        return value",
+      "thinking": "",
+      "tool_calls": []
+    },
+    "ok": true,
+    "phase_metrics": {
+      "answer_chars": 141,
+      "answer_chunks": 25,
+      "answer_span_ns": 718019600,
+      "measurement_kind": "MEASURED",
+      "thinking_chars": 0,
+      "thinking_chunks": 0,
+      "thinking_span_ns": null,
+      "time_to_first_answer_ns": 126872400,
+      "time_to_first_thinking_ns": null
+    },
+    "raw_response_b64": "eyJtb2RlbCI6InF3ZW4zLjU6MzViLWEzYi1xNF9LX00iLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTo0MjoyOC4yMDAwNTg2WiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiJkZWYifSwiZG9uZSI6ZmFsc2V9CnsibW9kZWwiOiJxd2VuMy41OjM1Yi1hM2ItcTRfS19NIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6NDI6MjguMjI4OTgwN1oiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiIGNsYW1wIn0sImRvbmUiOmZhbHNlfQp7Im1vZGVsIjoicXdlbjMuNTozNWItYTNiLXE0X0tfTSIsImNyZWF0ZWRfYXQiOiIyMDI2LTA5LTEwVDE1OjQyOjI4LjI1MjE5OTFaIiwibWVzc2FnZSI6eyJyb2xlIjoiYXNzaXN0YW50IiwiY29udGVudCI6Iih2YWx1ZSJ9LCJkb25lIjpmYWxzZX0KeyJtb2RlbCI6InF3ZW4zLjU6MzViLWEzYi1xNF9LX00iLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTo0MjoyOC4yNzA3OTczWiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiIsIn0sImRvbmUiOmZhbHNlfQp7Im1vZGVsIjoicXdlbjMuNTozNWItYTNiLXE0X0tfTSIsImNyZWF0ZWRfYXQiOiIyMDI2LTA5LTEwVDE1OjQyOjI4LjI4OTQwMTZaIiwibWVzc2FnZSI6eyJyb2xlIjoiYXNzaXN0YW50IiwiY29udGVudCI6IiBsb3cifSwiZG9uZSI6ZmFsc2V9CnsibW9kZWwiOiJxd2VuMy41OjM1Yi1hM2ItcTRfS19NIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6NDI6MjguMzAwOTg5NVoiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiLCJ9LCJkb25lIjpmYWxzZX0KeyJtb2RlbCI6InF3ZW4zLjU6MzViLWEzYi1xNF9LX00iLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTo0MjoyOC4zMjQ1N1oiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiIGhpZ2gifSwiZG9uZSI6ZmFsc2V9CnsibW9kZWwiOiJxd2VuMy41OjM1Yi1hM2ItcTRfS19NIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6NDI6MjguMzQyMzYwMVoiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiKToifSwiZG9uZSI6ZmFsc2V9CnsibW9kZWwiOiJxd2VuMy41OjM1Yi1hM2ItcTRfS19NIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6NDI6MjguMzk1ODMyMloiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiXG4gICAgaWYifSwiZG9uZSI6ZmFsc2V9CnsibW9kZWwiOiJxd2VuMy41OjM1Yi1hM2ItcTRfS19NIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6NDI6MjguNDE2NDQ1NFoiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiIHZhbHVlIn0sImRvbmUiOmZhbHNlfQp7Im1vZGVsIjoicXdlbjMuNTozNWItYTNiLXE0X0tfTSIsImNyZWF0ZWRfYXQiOiIyMDI2LTA5LTEwVDE1OjQyOjI4LjQ1MjY2MDZaIiwibWVzc2FnZSI6eyJyb2xlIjoiYXNzaXN0YW50IiwiY29udGVudCI6IiBcdTAwM2MgbG93In0sImRvbmUiOmZhbHNlfQp7Im1vZGVsIjoicXdlbjMuNTozNWItYTNiLXE0X0tfTSIsImNyZWF0ZWRfYXQiOiIyMDI2LTA5LTEwVDE1OjQyOjI4LjQ3MDYwNTNaIiwibWVzc2FnZSI6eyJyb2xlIjoiYXNzaXN0YW50IiwiY29udGVudCI6IjoifSwiZG9uZSI6ZmFsc2V9CnsibW9kZWwiOiJxd2VuMy41OjM1Yi1hM2ItcTRfS19NIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6NDI6MjguNTI5MDk5OFoiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiXG4gICAgICAgIHJldHVybiJ9LCJkb25lIjpmYWxzZX0KeyJtb2RlbCI6InF3ZW4zLjU6MzViLWEzYi1xNF9LX00iLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTo0MjoyOC41NDc2ODM3WiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiIgbG93In0sImRvbmUiOmZhbHNlfQp7Im1vZGVsIjoicXdlbjMuNTozNWItYTNiLXE0X0tfTSIsImNyZWF0ZWRfYXQiOiIyMDI2LTA5LTEwVDE1OjQyOjI4LjYwNDg3NTdaIiwibWVzc2FnZSI6eyJyb2xlIjoiYXNzaXN0YW50IiwiY29udGVudCI6IlxuICAgIGVsaWYifSwiZG9uZSI6ZmFsc2V9CnsibW9kZWwiOiJxd2VuMy41OjM1Yi1hM2ItcTRfS19NIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6NDI6MjguNjIzMDQ1MVoiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiIHZhbHVlIn0sImRvbmUiOmZhbHNlfQp7Im1vZGVsIjoicXdlbjMuNTozNWItYTNiLXE0X0tfTSIsImNyZWF0ZWRfYXQiOiIyMDI2LTA5LTEwVDE1OjQyOjI4LjY0MTc3MTlaIiwibWVzc2FnZSI6eyJyb2xlIjoiYXNzaXN0YW50IiwiY29udGVudCI6IiBcdTAwM2UifSwiZG9uZSI6ZmFsc2V9CnsibW9kZWwiOiJxd2VuMy41OjM1Yi1hM2ItcTRfS19NIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6NDI6MjguNjU5OTY1WiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiIgaGlnaCJ9LCJkb25lIjpmYWxzZX0KeyJtb2RlbCI6InF3ZW4zLjU6MzViLWEzYi1xNF9LX00iLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTo0MjoyOC42Nzc5NzNaIiwibWVzc2FnZSI6eyJyb2xlIjoiYXNzaXN0YW50IiwiY29udGVudCI6IjoifSwiZG9uZSI6ZmFsc2V9CnsibW9kZWwiOiJxd2VuMy41OjM1Yi1hM2ItcTRfS19NIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6NDI6MjguNzM3NDc1OVoiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiXG4gICAgICAgIHJldHVybiJ9LCJkb25lIjpmYWxzZX0KeyJtb2RlbCI6InF3ZW4zLjU6MzViLWEzYi1xNF9LX00iLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTo0MjoyOC43NTU4NjQ0WiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiIgaGlnaCJ9LCJkb25lIjpmYWxzZX0KeyJtb2RlbCI6InF3ZW4zLjU6MzViLWEzYi1xNF9LX00iLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTo0MjoyOC44MTM0Nzk5WiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiJcbiAgICBlbHNlIn0sImRvbmUiOmZhbHNlfQp7Im1vZGVsIjoicXdlbjMuNTozNWItYTNiLXE0X0tfTSIsImNyZWF0ZWRfYXQiOiIyMDI2LTA5LTEwVDE1OjQyOjI4LjgzMTcwNDNaIiwibWVzc2FnZSI6eyJyb2xlIjoiYXNzaXN0YW50IiwiY29udGVudCI6IjoifSwiZG9uZSI6ZmFsc2V9CnsibW9kZWwiOiJxd2VuMy41OjM1Yi1hM2ItcTRfS19NIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6NDI6MjguODkyODY4NloiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiXG4gICAgICAgIHJldHVybiJ9LCJkb25lIjpmYWxzZX0KeyJtb2RlbCI6InF3ZW4zLjU6MzViLWEzYi1xNF9LX00iLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTo0MjoyOC45MTgyMzc0WiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiIgdmFsdWUifSwiZG9uZSI6ZmFsc2V9CnsibW9kZWwiOiJxd2VuMy41OjM1Yi1hM2ItcTRfS19NIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6NDI6MjguOTQwOTUzMVoiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiIn0sImRvbmUiOnRydWUsImRvbmVfcmVhc29uIjoic3RvcCIsInRvdGFsX2R1cmF0aW9uIjo4NDc4NzMzMDAsImxvYWRfZHVyYXRpb24iOjM3MzI1MDAsInByb21wdF9ldmFsX2NvdW50Ijo0NSwicHJvbXB0X2V2YWxfY2FjaGVkX2NvdW50Ijo0MSwicHJvbXB0X2V2YWxfZHVyYXRpb24iOjY1MjIxOTk5LCJldmFsX2NvdW50IjozOSwiZXZhbF9kdXJhdGlvbiI6NzQxMDQwMDAwfQo=",
+    "request": {
+      "body_b64": "eyJtb2RlbCI6InF3ZW4zLjU6MzViLWEzYi1xNF9LX00iLCJtZXNzYWdlcyI6W3sicm9sZSI6InVzZXIiLCJjb250ZW50IjoiV3JpdGUgb25seSBQeXRob24gY29kZSBkZWZpbmluZyBmdW5jdGlvbiBjbGFtcCh2YWx1ZSwgbG93LCBoaWdoKSB0aGF0IHJldHVybnMgbG93IGlmIHZhbHVlIDwgbG93LCBoaWdoIGlmIHZhbHVlID4gaGlnaCwgb3RoZXJ3aXNlIHZhbHVlLiBObyBpbXBvcnRzLiJ9XSwic3RyZWFtIjp0cnVlLCJvcHRpb25zIjp7InRlbXBlcmF0dXJlIjowLjAsInNlZWQiOjQyLCJudW1fcHJlZGljdCI6MjU2fSwidGhpbmsiOmZhbHNlfQ==",
+      "body_text": "{\"model\":\"qwen3.5:35b-a3b-q4_K_M\",\"messages\":[{\"role\":\"user\",\"content\":\"Write only Python code defining function clamp(value, low, high) that returns low if value < low, high if value > high, otherwise value. No imports.\"}],\"stream\":true,\"options\":{\"temperature\":0.0,\"seed\":42,\"num_predict\":256},\"think\":false}",
+      "method": "POST",
+      "started_at_utc": "2026-09-10T15:42:28.073494+00:00",
+      "started_monotonic_ns": 53624791247400,
+      "stream": true,
+      "timeout_s": 120.0,
+      "url": "http://127.0.0.1:11434/api/chat"
+    },
+    "response_headers": {
+      "connection": "close",
+      "content-type": "application/x-ndjson",
+      "date": "Thu, 10 Sep 2026 15:42:28 GMT",
+      "transfer-encoding": "chunked"
+    },
+    "stream_events": [
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:42:28.2000586Z",
+          "done": false,
+          "message": {
+            "content": "def",
+            "role": "assistant"
+          },
+          "model": "qwen3.5:35b-a3b-q4_K_M"
+        },
+        "raw_b64": "eyJtb2RlbCI6InF3ZW4zLjU6MzViLWEzYi1xNF9LX00iLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTo0MjoyOC4yMDAwNTg2WiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiJkZWYifSwiZG9uZSI6ZmFsc2V9Cg==",
+        "raw_text": "{\"model\":\"qwen3.5:35b-a3b-q4_K_M\",\"created_at\":\"2026-09-10T15:42:28.2000586Z\",\"message\":{\"role\":\"assistant\",\"content\":\"def\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:42:28.200368+00:00",
+        "received_monotonic_ns": 53624918119800,
+        "sequence": 0
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:42:28.2289807Z",
+          "done": false,
+          "message": {
+            "content": " clamp",
+            "role": "assistant"
+          },
+          "model": "qwen3.5:35b-a3b-q4_K_M"
+        },
+        "raw_b64": "eyJtb2RlbCI6InF3ZW4zLjU6MzViLWEzYi1xNF9LX00iLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTo0MjoyOC4yMjg5ODA3WiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiIgY2xhbXAifSwiZG9uZSI6ZmFsc2V9Cg==",
+        "raw_text": "{\"model\":\"qwen3.5:35b-a3b-q4_K_M\",\"created_at\":\"2026-09-10T15:42:28.2289807Z\",\"message\":{\"role\":\"assistant\",\"content\":\" clamp\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:42:28.229454+00:00",
+        "received_monotonic_ns": 53624947206200,
+        "sequence": 1
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:42:28.2521991Z",
+          "done": false,
+          "message": {
+            "content": "(value",
+            "role": "assistant"
+          },
+          "model": "qwen3.5:35b-a3b-q4_K_M"
+        },
+        "raw_b64": "eyJtb2RlbCI6InF3ZW4zLjU6MzViLWEzYi1xNF9LX00iLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTo0MjoyOC4yNTIxOTkxWiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiIodmFsdWUifSwiZG9uZSI6ZmFsc2V9Cg==",
+        "raw_text": "{\"model\":\"qwen3.5:35b-a3b-q4_K_M\",\"created_at\":\"2026-09-10T15:42:28.2521991Z\",\"message\":{\"role\":\"assistant\",\"content\":\"(value\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:42:28.252457+00:00",
+        "received_monotonic_ns": 53624970208100,
+        "sequence": 2
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:42:28.2707973Z",
+          "done": false,
+          "message": {
+            "content": ",",
+            "role": "assistant"
+          },
+          "model": "qwen3.5:35b-a3b-q4_K_M"
+        },
+        "raw_b64": "eyJtb2RlbCI6InF3ZW4zLjU6MzViLWEzYi1xNF9LX00iLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTo0MjoyOC4yNzA3OTczWiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiIsIn0sImRvbmUiOmZhbHNlfQo=",
+        "raw_text": "{\"model\":\"qwen3.5:35b-a3b-q4_K_M\",\"created_at\":\"2026-09-10T15:42:28.2707973Z\",\"message\":{\"role\":\"assistant\",\"content\":\",\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:42:28.270960+00:00",
+        "received_monotonic_ns": 53624988711800,
+        "sequence": 3
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:42:28.2894016Z",
+          "done": false,
+          "message": {
+            "content": " low",
+            "role": "assistant"
+          },
+          "model": "qwen3.5:35b-a3b-q4_K_M"
+        },
+        "raw_b64": "eyJtb2RlbCI6InF3ZW4zLjU6MzViLWEzYi1xNF9LX00iLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTo0MjoyOC4yODk0MDE2WiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiIgbG93In0sImRvbmUiOmZhbHNlfQo=",
+        "raw_text": "{\"model\":\"qwen3.5:35b-a3b-q4_K_M\",\"created_at\":\"2026-09-10T15:42:28.2894016Z\",\"message\":{\"role\":\"assistant\",\"content\":\" low\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:42:28.289555+00:00",
+        "received_monotonic_ns": 53625007306700,
+        "sequence": 4
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:42:28.3009895Z",
+          "done": false,
+          "message": {
+            "content": ",",
+            "role": "assistant"
+          },
+          "model": "qwen3.5:35b-a3b-q4_K_M"
+        },
+        "raw_b64": "eyJtb2RlbCI6InF3ZW4zLjU6MzViLWEzYi1xNF9LX00iLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTo0MjoyOC4zMDA5ODk1WiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiIsIn0sImRvbmUiOmZhbHNlfQo=",
+        "raw_text": "{\"model\":\"qwen3.5:35b-a3b-q4_K_M\",\"created_at\":\"2026-09-10T15:42:28.3009895Z\",\"message\":{\"role\":\"assistant\",\"content\":\",\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:42:28.306828+00:00",
+        "received_monotonic_ns": 53625024579100,
+        "sequence": 5
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:42:28.32457Z",
+          "done": false,
+          "message": {
+            "content": " high",
+            "role": "assistant"
+          },
+          "model": "qwen3.5:35b-a3b-q4_K_M"
+        },
+        "raw_b64": "eyJtb2RlbCI6InF3ZW4zLjU6MzViLWEzYi1xNF9LX00iLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTo0MjoyOC4zMjQ1N1oiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiIGhpZ2gifSwiZG9uZSI6ZmFsc2V9Cg==",
+        "raw_text": "{\"model\":\"qwen3.5:35b-a3b-q4_K_M\",\"created_at\":\"2026-09-10T15:42:28.32457Z\",\"message\":{\"role\":\"assistant\",\"content\":\" high\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:42:28.324705+00:00",
+        "received_monotonic_ns": 53625042457100,
+        "sequence": 6
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:42:28.3423601Z",
+          "done": false,
+          "message": {
+            "content": "):",
+            "role": "assistant"
+          },
+          "model": "qwen3.5:35b-a3b-q4_K_M"
+        },
+        "raw_b64": "eyJtb2RlbCI6InF3ZW4zLjU6MzViLWEzYi1xNF9LX00iLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTo0MjoyOC4zNDIzNjAxWiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiIpOiJ9LCJkb25lIjpmYWxzZX0K",
+        "raw_text": "{\"model\":\"qwen3.5:35b-a3b-q4_K_M\",\"created_at\":\"2026-09-10T15:42:28.3423601Z\",\"message\":{\"role\":\"assistant\",\"content\":\"):\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:42:28.342529+00:00",
+        "received_monotonic_ns": 53625060279300,
+        "sequence": 7
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:42:28.3958322Z",
+          "done": false,
+          "message": {
+            "content": "\n    if",
+            "role": "assistant"
+          },
+          "model": "qwen3.5:35b-a3b-q4_K_M"
+        },
+        "raw_b64": "eyJtb2RlbCI6InF3ZW4zLjU6MzViLWEzYi1xNF9LX00iLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTo0MjoyOC4zOTU4MzIyWiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiJcbiAgICBpZiJ9LCJkb25lIjpmYWxzZX0K",
+        "raw_text": "{\"model\":\"qwen3.5:35b-a3b-q4_K_M\",\"created_at\":\"2026-09-10T15:42:28.3958322Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\\n    if\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:42:28.396049+00:00",
+        "received_monotonic_ns": 53625113798800,
+        "sequence": 8
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:42:28.4164454Z",
+          "done": false,
+          "message": {
+            "content": " value",
+            "role": "assistant"
+          },
+          "model": "qwen3.5:35b-a3b-q4_K_M"
+        },
+        "raw_b64": "eyJtb2RlbCI6InF3ZW4zLjU6MzViLWEzYi1xNF9LX00iLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTo0MjoyOC40MTY0NDU0WiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiIgdmFsdWUifSwiZG9uZSI6ZmFsc2V9Cg==",
+        "raw_text": "{\"model\":\"qwen3.5:35b-a3b-q4_K_M\",\"created_at\":\"2026-09-10T15:42:28.4164454Z\",\"message\":{\"role\":\"assistant\",\"content\":\" value\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:42:28.416666+00:00",
+        "received_monotonic_ns": 53625134414300,
+        "sequence": 9
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:42:28.4526606Z",
+          "done": false,
+          "message": {
+            "content": " < low",
+            "role": "assistant"
+          },
+          "model": "qwen3.5:35b-a3b-q4_K_M"
+        },
+        "raw_b64": "eyJtb2RlbCI6InF3ZW4zLjU6MzViLWEzYi1xNF9LX00iLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTo0MjoyOC40NTI2NjA2WiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiIgXHUwMDNjIGxvdyJ9LCJkb25lIjpmYWxzZX0K",
+        "raw_text": "{\"model\":\"qwen3.5:35b-a3b-q4_K_M\",\"created_at\":\"2026-09-10T15:42:28.4526606Z\",\"message\":{\"role\":\"assistant\",\"content\":\" \\u003c low\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:42:28.452860+00:00",
+        "received_monotonic_ns": 53625170610900,
+        "sequence": 10
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:42:28.4706053Z",
+          "done": false,
+          "message": {
+            "content": ":",
+            "role": "assistant"
+          },
+          "model": "qwen3.5:35b-a3b-q4_K_M"
+        },
+        "raw_b64": "eyJtb2RlbCI6InF3ZW4zLjU6MzViLWEzYi1xNF9LX00iLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTo0MjoyOC40NzA2MDUzWiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiI6In0sImRvbmUiOmZhbHNlfQo=",
+        "raw_text": "{\"model\":\"qwen3.5:35b-a3b-q4_K_M\",\"created_at\":\"2026-09-10T15:42:28.4706053Z\",\"message\":{\"role\":\"assistant\",\"content\":\":\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:42:28.470789+00:00",
+        "received_monotonic_ns": 53625188541100,
+        "sequence": 11
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:42:28.5290998Z",
+          "done": false,
+          "message": {
+            "content": "\n        return",
+            "role": "assistant"
+          },
+          "model": "qwen3.5:35b-a3b-q4_K_M"
+        },
+        "raw_b64": "eyJtb2RlbCI6InF3ZW4zLjU6MzViLWEzYi1xNF9LX00iLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTo0MjoyOC41MjkwOTk4WiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiJcbiAgICAgICAgcmV0dXJuIn0sImRvbmUiOmZhbHNlfQo=",
+        "raw_text": "{\"model\":\"qwen3.5:35b-a3b-q4_K_M\",\"created_at\":\"2026-09-10T15:42:28.5290998Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\\n        return\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:42:28.529339+00:00",
+        "received_monotonic_ns": 53625247088400,
+        "sequence": 12
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:42:28.5476837Z",
+          "done": false,
+          "message": {
+            "content": " low",
+            "role": "assistant"
+          },
+          "model": "qwen3.5:35b-a3b-q4_K_M"
+        },
+        "raw_b64": "eyJtb2RlbCI6InF3ZW4zLjU6MzViLWEzYi1xNF9LX00iLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTo0MjoyOC41NDc2ODM3WiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiIgbG93In0sImRvbmUiOmZhbHNlfQo=",
+        "raw_text": "{\"model\":\"qwen3.5:35b-a3b-q4_K_M\",\"created_at\":\"2026-09-10T15:42:28.5476837Z\",\"message\":{\"role\":\"assistant\",\"content\":\" low\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:42:28.550089+00:00",
+        "received_monotonic_ns": 53625267841900,
+        "sequence": 13
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:42:28.6048757Z",
+          "done": false,
+          "message": {
+            "content": "\n    elif",
+            "role": "assistant"
+          },
+          "model": "qwen3.5:35b-a3b-q4_K_M"
+        },
+        "raw_b64": "eyJtb2RlbCI6InF3ZW4zLjU6MzViLWEzYi1xNF9LX00iLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTo0MjoyOC42MDQ4NzU3WiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiJcbiAgICBlbGlmIn0sImRvbmUiOmZhbHNlfQo=",
+        "raw_text": "{\"model\":\"qwen3.5:35b-a3b-q4_K_M\",\"created_at\":\"2026-09-10T15:42:28.6048757Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\\n    elif\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:42:28.605071+00:00",
+        "received_monotonic_ns": 53625322820800,
+        "sequence": 14
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:42:28.6230451Z",
+          "done": false,
+          "message": {
+            "content": " value",
+            "role": "assistant"
+          },
+          "model": "qwen3.5:35b-a3b-q4_K_M"
+        },
+        "raw_b64": "eyJtb2RlbCI6InF3ZW4zLjU6MzViLWEzYi1xNF9LX00iLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTo0MjoyOC42MjMwNDUxWiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiIgdmFsdWUifSwiZG9uZSI6ZmFsc2V9Cg==",
+        "raw_text": "{\"model\":\"qwen3.5:35b-a3b-q4_K_M\",\"created_at\":\"2026-09-10T15:42:28.6230451Z\",\"message\":{\"role\":\"assistant\",\"content\":\" value\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:42:28.623254+00:00",
+        "received_monotonic_ns": 53625341003200,
+        "sequence": 15
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:42:28.6417719Z",
+          "done": false,
+          "message": {
+            "content": " >",
+            "role": "assistant"
+          },
+          "model": "qwen3.5:35b-a3b-q4_K_M"
+        },
+        "raw_b64": "eyJtb2RlbCI6InF3ZW4zLjU6MzViLWEzYi1xNF9LX00iLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTo0MjoyOC42NDE3NzE5WiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiIgXHUwMDNlIn0sImRvbmUiOmZhbHNlfQo=",
+        "raw_text": "{\"model\":\"qwen3.5:35b-a3b-q4_K_M\",\"created_at\":\"2026-09-10T15:42:28.6417719Z\",\"message\":{\"role\":\"assistant\",\"content\":\" \\u003e\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:42:28.641910+00:00",
+        "received_monotonic_ns": 53625359662900,
+        "sequence": 16
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:42:28.659965Z",
+          "done": false,
+          "message": {
+            "content": " high",
+            "role": "assistant"
+          },
+          "model": "qwen3.5:35b-a3b-q4_K_M"
+        },
+        "raw_b64": "eyJtb2RlbCI6InF3ZW4zLjU6MzViLWEzYi1xNF9LX00iLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTo0MjoyOC42NTk5NjVaIiwibWVzc2FnZSI6eyJyb2xlIjoiYXNzaXN0YW50IiwiY29udGVudCI6IiBoaWdoIn0sImRvbmUiOmZhbHNlfQo=",
+        "raw_text": "{\"model\":\"qwen3.5:35b-a3b-q4_K_M\",\"created_at\":\"2026-09-10T15:42:28.659965Z\",\"message\":{\"role\":\"assistant\",\"content\":\" high\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:42:28.660113+00:00",
+        "received_monotonic_ns": 53625377865300,
+        "sequence": 17
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:42:28.677973Z",
+          "done": false,
+          "message": {
+            "content": ":",
+            "role": "assistant"
+          },
+          "model": "qwen3.5:35b-a3b-q4_K_M"
+        },
+        "raw_b64": "eyJtb2RlbCI6InF3ZW4zLjU6MzViLWEzYi1xNF9LX00iLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTo0MjoyOC42Nzc5NzNaIiwibWVzc2FnZSI6eyJyb2xlIjoiYXNzaXN0YW50IiwiY29udGVudCI6IjoifSwiZG9uZSI6ZmFsc2V9Cg==",
+        "raw_text": "{\"model\":\"qwen3.5:35b-a3b-q4_K_M\",\"created_at\":\"2026-09-10T15:42:28.677973Z\",\"message\":{\"role\":\"assistant\",\"content\":\":\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:42:28.678151+00:00",
+        "received_monotonic_ns": 53625395899200,
+        "sequence": 18
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:42:28.7374759Z",
+          "done": false,
+          "message": {
+            "content": "\n        return",
+            "role": "assistant"
+          },
+          "model": "qwen3.5:35b-a3b-q4_K_M"
+        },
+        "raw_b64": "eyJtb2RlbCI6InF3ZW4zLjU6MzViLWEzYi1xNF9LX00iLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTo0MjoyOC43Mzc0NzU5WiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiJcbiAgICAgICAgcmV0dXJuIn0sImRvbmUiOmZhbHNlfQo=",
+        "raw_text": "{\"model\":\"qwen3.5:35b-a3b-q4_K_M\",\"created_at\":\"2026-09-10T15:42:28.7374759Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\\n        return\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:42:28.737833+00:00",
+        "received_monotonic_ns": 53625455583800,
+        "sequence": 19
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:42:28.7558644Z",
+          "done": false,
+          "message": {
+            "content": " high",
+            "role": "assistant"
+          },
+          "model": "qwen3.5:35b-a3b-q4_K_M"
+        },
+        "raw_b64": "eyJtb2RlbCI6InF3ZW4zLjU6MzViLWEzYi1xNF9LX00iLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTo0MjoyOC43NTU4NjQ0WiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiIgaGlnaCJ9LCJkb25lIjpmYWxzZX0K",
+        "raw_text": "{\"model\":\"qwen3.5:35b-a3b-q4_K_M\",\"created_at\":\"2026-09-10T15:42:28.7558644Z\",\"message\":{\"role\":\"assistant\",\"content\":\" high\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:42:28.756152+00:00",
+        "received_monotonic_ns": 53625473900000,
+        "sequence": 20
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:42:28.8134799Z",
+          "done": false,
+          "message": {
+            "content": "\n    else",
+            "role": "assistant"
+          },
+          "model": "qwen3.5:35b-a3b-q4_K_M"
+        },
+        "raw_b64": "eyJtb2RlbCI6InF3ZW4zLjU6MzViLWEzYi1xNF9LX00iLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTo0MjoyOC44MTM0Nzk5WiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiJcbiAgICBlbHNlIn0sImRvbmUiOmZhbHNlfQo=",
+        "raw_text": "{\"model\":\"qwen3.5:35b-a3b-q4_K_M\",\"created_at\":\"2026-09-10T15:42:28.8134799Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\\n    else\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:42:28.813682+00:00",
+        "received_monotonic_ns": 53625531431900,
+        "sequence": 21
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:42:28.8317043Z",
+          "done": false,
+          "message": {
+            "content": ":",
+            "role": "assistant"
+          },
+          "model": "qwen3.5:35b-a3b-q4_K_M"
+        },
+        "raw_b64": "eyJtb2RlbCI6InF3ZW4zLjU6MzViLWEzYi1xNF9LX00iLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTo0MjoyOC44MzE3MDQzWiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiI6In0sImRvbmUiOmZhbHNlfQo=",
+        "raw_text": "{\"model\":\"qwen3.5:35b-a3b-q4_K_M\",\"created_at\":\"2026-09-10T15:42:28.8317043Z\",\"message\":{\"role\":\"assistant\",\"content\":\":\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:42:28.831908+00:00",
+        "received_monotonic_ns": 53625549659600,
+        "sequence": 22
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:42:28.8928686Z",
+          "done": false,
+          "message": {
+            "content": "\n        return",
+            "role": "assistant"
+          },
+          "model": "qwen3.5:35b-a3b-q4_K_M"
+        },
+        "raw_b64": "eyJtb2RlbCI6InF3ZW4zLjU6MzViLWEzYi1xNF9LX00iLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTo0MjoyOC44OTI4Njg2WiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiJcbiAgICAgICAgcmV0dXJuIn0sImRvbmUiOmZhbHNlfQo=",
+        "raw_text": "{\"model\":\"qwen3.5:35b-a3b-q4_K_M\",\"created_at\":\"2026-09-10T15:42:28.8928686Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\\n        return\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:42:28.896129+00:00",
+        "received_monotonic_ns": 53625613882300,
+        "sequence": 23
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:42:28.9182374Z",
+          "done": false,
+          "message": {
+            "content": " value",
+            "role": "assistant"
+          },
+          "model": "qwen3.5:35b-a3b-q4_K_M"
+        },
+        "raw_b64": "eyJtb2RlbCI6InF3ZW4zLjU6MzViLWEzYi1xNF9LX00iLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTo0MjoyOC45MTgyMzc0WiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiIgdmFsdWUifSwiZG9uZSI6ZmFsc2V9Cg==",
+        "raw_text": "{\"model\":\"qwen3.5:35b-a3b-q4_K_M\",\"created_at\":\"2026-09-10T15:42:28.9182374Z\",\"message\":{\"role\":\"assistant\",\"content\":\" value\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:42:28.918387+00:00",
+        "received_monotonic_ns": 53625636139400,
+        "sequence": 24
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:42:28.9409531Z",
+          "done": true,
+          "done_reason": "stop",
+          "eval_count": 39,
+          "eval_duration": 741040000,
+          "load_duration": 3732500,
+          "message": {
+            "content": "",
+            "role": "assistant"
+          },
+          "model": "qwen3.5:35b-a3b-q4_K_M",
+          "prompt_eval_cached_count": 41,
+          "prompt_eval_count": 45,
+          "prompt_eval_duration": 65221999,
+          "total_duration": 847873300
+        },
+        "raw_b64": "eyJtb2RlbCI6InF3ZW4zLjU6MzViLWEzYi1xNF9LX00iLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTo0MjoyOC45NDA5NTMxWiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiIifSwiZG9uZSI6dHJ1ZSwiZG9uZV9yZWFzb24iOiJzdG9wIiwidG90YWxfZHVyYXRpb24iOjg0Nzg3MzMwMCwibG9hZF9kdXJhdGlvbiI6MzczMjUwMCwicHJvbXB0X2V2YWxfY291bnQiOjQ1LCJwcm9tcHRfZXZhbF9jYWNoZWRfY291bnQiOjQxLCJwcm9tcHRfZXZhbF9kdXJhdGlvbiI6NjUyMjE5OTksImV2YWxfY291bnQiOjM5LCJldmFsX2R1cmF0aW9uIjo3NDEwNDAwMDB9Cg==",
+        "raw_text": "{\"model\":\"qwen3.5:35b-a3b-q4_K_M\",\"created_at\":\"2026-09-10T15:42:28.9409531Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\"},\"done\":true,\"done_reason\":\"stop\",\"total_duration\":847873300,\"load_duration\":3732500,\"prompt_eval_count\":45,\"prompt_eval_cached_count\":41,\"prompt_eval_duration\":65221999,\"eval_count\":39,\"eval_duration\":741040000}\n",
+        "received_at_utc": "2026-09-10T15:42:28.941287+00:00",
+        "received_monotonic_ns": 53625659039800,
+        "sequence": 25
+      }
+    ],
+    "timing": {
+      "client_ended_monotonic_ns": 53625659335500,
+      "client_latency_ns": 868107700,
+      "client_started_monotonic_ns": 53624791227800,
+      "first_event_latency_ns": 126872400,
+      "last_event_latency_ns": 867792400
+    }
+  },
+  "invocation": {
+    "messages": [
+      {
+        "content": "Write only Python code defining function clamp(value, low, high) that returns low if value < low, high if value > high, otherwise value. No imports.",
+        "role": "user"
+      }
+    ],
+    "model": "qwen3.5:35b-a3b-q4_K_M",
+    "options": {
+      "num_predict": 256,
+      "seed": 42,
+      "temperature": 0.0
+    },
+    "request_fields": {
+      "think": false
+    },
+    "stream": true
+  },
+  "model": "qwen3.5:35b-a3b-q4_K_M",
+  "resolved_config": {
+    "autonomous_simulation": {
+      "enabled": true,
+      "generation_budget": 512,
+      "max_generation_budget": 2048,
+      "scenario_count": 6,
+      "steps_per_scenario": 8
+    },
+    "capability_campaign": {
+      "anchor_level": 2,
+      "boundary_repeats": 2,
+      "generation_budget": 256,
+      "jump": 3,
+      "max_experiments_per_family": 6,
+      "reasoning_effort": null,
+      "reliable_threshold": 0.9,
+      "thinking_mode": false,
+      "unstable_threshold": 0.4
+    },
+    "characterization": {
+      "boundary_repeats": 3,
+      "generation_budget_granularity": 32,
+      "initial_generation_budget": 256,
+      "max_experiments_per_task": 12,
+      "max_generation_budget": 2048,
+      "min_generation_budget": 32,
+      "think_off_generation_budget": 256
+    },
+    "compound_lab": {
+      "boundary_repeats": 3,
+      "enabled": false,
+      "jump": 2,
+      "max_compounds": 6,
+      "max_experiments_per_compound": 16
+    },
+    "cost": {
+      "electricity_configured": false,
+      "electricity_per_kwh": 0.0
+    },
+    "evidence": {
+      "retain_raw_collectors": true,
+      "retain_stream_chunks": true
+    },
+    "generation": {
+      "max_tokens": 256,
+      "seed": 42,
+      "temperature": 0.0
+    },
+    "limits": {
+      "consecutive_context_failures": 2,
+      "context_schedule": [
+        4096,
+        8192,
+        16384,
+        32768
+      ],
+      "host_ram_percent": 95.0,
+      "max_model_calls_per_run": 360,
+      "request_timeout_s": 120,
+      "sustained_iterations": 8,
+      "vram_percent": 98.0
+    },
+    "reasoning_curves": {
+      "enabled": false,
+      "repeats": 3
+    },
+    "recovery_lab": {
+      "enabled": false,
+      "max_attempts_per_candidate": 6,
+      "max_level": "R7",
+      "repeats": 3
+    },
+    "robustness_lab": {
+      "enabled": false,
+      "max_attempts_per_perturbation": 4,
+      "max_perturbations_per_family": 2,
+      "repeats": 2
+    },
+    "runtime": {
+      "endpoint": "http://127.0.0.1:11434"
+    },
+    "telemetry": {
+      "interval_s": 0.25,
+      "nvidia": true
+    }
+  },
+  "schema_version": 2,
+  "scoring": {
+    "checks": [
+      {
+        "name": "executable_tests",
+        "pass": true
+      }
+    ],
+    "evidence": {
+      "executed_source_sha256": "bf20b4fa107a462a264fb55902f71a1dd1c75f746d76499804fb8811c112453f",
+      "extracted_source": "def clamp(value, low, high):\n    if value < low:\n        return low\n    elif value > high:\n        return high\n    else:\n        return value\n",
+      "invocation_sha256": "22622882f705bf09b736191268336a9cb3425b1f5bce5f1a6bf3af024bdd904b",
+      "raw_response": "def clamp(value, low, high):\n    if value < low:\n        return low\n    elif value > high:\n        return high\n    else:\n        return value",
+      "safety_rejection": null,
+      "subprocess": {
+        "command": [
+          "C:\\Users\\Matt\\compute-cost\\.venv\\Scripts\\python.exe",
+          "-I",
+          "-S",
+          "C:\\Users\\Matt\\AppData\\Local\\Temp\\compute-cost-case-3p3lqlsp\\case.py"
+        ],
+        "duration_ns": 28657900,
+        "error": null,
+        "returncode": 0,
+        "started_at_utc": "2026-09-10T15:42:29.118496+00:00",
+        "stderr_b64": "",
+        "stderr_text": "",
+        "stdout_b64": "",
+        "stdout_text": ""
+      },
+      "test_source": "assert clamp(2, 0, 5) == 2\nassert clamp(-1, 0, 5) == 0\nassert clamp(9, 0, 5) == 5",
+      "test_source_sha256": "fa5dc6866095c343ff989721471ca6d972ab173ec8351f23243e024f06451b62"
+    },
+    "score": 1.0,
+    "status": "SCORED"
+  },
+  "source_experiment_id": "exp-000034-gptoss-011-capability-replicate",
+  "stage": "characterize",
+  "telemetry_for_experiment": [
+    {
+      "case_id": "exp-000034-gptoss-011-capability-replicate",
+      "gpu": {
+        "availability": "available",
+        "devices": [
+          {
+            "driver_version": "610.62",
+            "extra_columns": [],
+            "fan_percent": 0.0,
+            "graphics_clock_mhz": 2745.0,
+            "index": 0,
+            "memory_clock_mhz": 10251.0,
+            "memory_free_mib": 392.0,
+            "memory_total_mib": 12282.0,
+            "memory_used_mib": 11606.0,
+            "name": "NVIDIA GeForce RTX 4070 SUPER",
+            "power_draw_w": 76.19,
+            "power_limit_w": 220.0,
+            "pstate": "P2",
+            "raw_columns": [
+              "0",
+              "GPU-e3df9a98-2412-6865-26e5-b5a284aa9138",
+              "NVIDIA GeForce RTX 4070 SUPER",
+              "610.62",
+              "32",
+              "12282",
+              "11606",
+              "392",
+              "43",
+              "76.19",
+              "220.00",
+              "2745",
+              "2745",
+              "10251",
+              "P2",
+              "0"
+            ],
+            "raw_line": "0, GPU-e3df9a98-2412-6865-26e5-b5a284aa9138, NVIDIA GeForce RTX 4070 SUPER, 610.62, 32, 12282, 11606, 392, 43, 76.19, 220.00, 2745, 2745, 10251, P2, 0",
+            "sm_clock_mhz": 2745.0,
+            "temperature_c": 43.0,
+            "utilization_gpu_percent": 32.0,
+            "uuid": "GPU-e3df9a98-2412-6865-26e5-b5a284aa9138"
+          }
+        ]
+      },
+      "host": {
+        "cpu_frequency_mhz": 4201.0,
+        "cpu_percent": 12.2,
+        "cpu_percent_per_core": [
+          53.8,
+          0.0,
+          50.0,
+          16.7,
+          0.0,
+          18.2,
+          0.0,
+          10.0,
+          8.3,
+          8.3,
+          8.3,
+          8.3,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "disk_io": {
+          "read_bytes": 244161736704,
+          "read_count": 1688228,
+          "read_time_ms": 1566,
+          "write_bytes": 103475688960,
+          "write_count": 957867,
+          "write_time_ms": 1278
+        },
+        "memory_available_bytes": 6321000448,
+        "memory_percent": 81.1,
+        "memory_total_bytes": 33462239232,
+        "memory_used_bytes": 27141238784
+      },
+      "monotonic_ns": 53624737165500,
+      "nvidia_collector": {
+        "command": [
+          "nvidia-smi",
+          "--query-gpu=index,uuid,name,driver_version,utilization.gpu,memory.total,memory.used,memory.free,temperature.gpu,power.draw,power.limit,clocks.gr,clocks.sm,clocks.mem,pstate,fan.speed",
+          "--format=csv,noheader,nounits"
+        ],
+        "duration_ns": 33798600,
+        "error": null,
+        "returncode": 0,
+        "started_at_utc": "2026-09-10T15:42:28.019581+00:00",
+        "stderr_b64": "",
+        "stderr_text": "",
+        "stdout_b64": "MCwgR1BVLWUzZGY5YTk4LTI0MTItNjg2NS0yNmU1LWI1YTI4NGFhOTEzOCwgTlZJRElBIEdlRm9yY2UgUlRYIDQwNzAgU1VQRVIsIDYxMC42MiwgMzIsIDEyMjgyLCAxMTYwNiwgMzkyLCA0MywgNzYuMTksIDIyMC4wMCwgMjc0NSwgMjc0NSwgMTAyNTEsIFAyLCAwDQo=",
+        "stdout_text": "0, GPU-e3df9a98-2412-6865-26e5-b5a284aa9138, NVIDIA GeForce RTX 4070 SUPER, 610.62, 32, 12282, 11606, 392, 43, 76.19, 220.00, 2745, 2745, 10251, P2, 0\r\n"
+      },
+      "process": {
+        "cpu_percent": 24.6,
+        "pid": 17976,
+        "rss_bytes": 142311424,
+        "vms_bytes": 127086592
+      },
+      "runtime_processes": [
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 39.109375,
+            "user_s": 118.171875
+          },
+          "exe": "C:\\Users\\Matt\\AppData\\Local\\Programs\\Ollama\\lib\\ollama\\llama-server.exe",
+          "io": {
+            "other_bytes": 256846,
+            "other_count": 9663,
+            "read_bytes": 23771872617,
+            "read_count": 45591,
+            "write_bytes": 194598,
+            "write_count": 1905
+          },
+          "name": "llama-server.exe",
+          "num_handles": 282,
+          "num_threads": 33,
+          "pid": 8880,
+          "rss_bytes": 18174836736,
+          "vms_bytes": 29987508224
+        },
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 3.640625,
+            "user_s": 3.4375
+          },
+          "exe": "C:\\Users\\Matt\\AppData\\Local\\Programs\\Ollama\\ollama app.exe",
+          "io": {
+            "other_bytes": 1290829790,
+            "other_count": 71122,
+            "read_bytes": 783228744,
+            "read_count": 1691,
+            "write_bytes": 1574405889,
+            "write_count": 36
+          },
+          "name": "ollama app.exe",
+          "num_handles": 421,
+          "num_threads": 19,
+          "pid": 20892,
+          "rss_bytes": 52658176,
+          "vms_bytes": 62947328
+        },
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 115.984375,
+            "user_s": 104.765625
+          },
+          "exe": "C:\\Users\\Matt\\AppData\\Local\\Programs\\Ollama\\ollama.exe",
+          "io": {
+            "other_bytes": 41035789269,
+            "other_count": 5744505,
+            "read_bytes": 66055607251,
+            "read_count": 2153014,
+            "write_bytes": 74290510037,
+            "write_count": 4614684
+          },
+          "name": "ollama.exe",
+          "num_handles": 523,
+          "num_threads": 26,
+          "pid": 21316,
+          "rss_bytes": 212762624,
+          "vms_bytes": 248074240
+        }
+      ],
+      "stage": "characterize",
+      "timestamp_utc": "2026-09-10T15:42:28.019406+00:00",
+      "total_gpu_power_w": 76.19
+    },
+    {
+      "case_id": "exp-000034-gptoss-011-capability-replicate",
+      "gpu": {
+        "availability": "available",
+        "devices": [
+          {
+            "driver_version": "610.62",
+            "extra_columns": [],
+            "fan_percent": 0.0,
+            "graphics_clock_mhz": 2235.0,
+            "index": 0,
+            "memory_clock_mhz": 5001.0,
+            "memory_free_mib": 392.0,
+            "memory_total_mib": 12282.0,
+            "memory_used_mib": 11606.0,
+            "name": "NVIDIA GeForce RTX 4070 SUPER",
+            "power_draw_w": 59.72,
+            "power_limit_w": 220.0,
+            "pstate": "P3",
+            "raw_columns": [
+              "0",
+              "GPU-e3df9a98-2412-6865-26e5-b5a284aa9138",
+              "NVIDIA GeForce RTX 4070 SUPER",
+              "610.62",
+              "2",
+              "12282",
+              "11606",
+              "392",
+              "40",
+              "59.72",
+              "220.00",
+              "2235",
+              "2235",
+              "5001",
+              "P3",
+              "0"
+            ],
+            "raw_line": "0, GPU-e3df9a98-2412-6865-26e5-b5a284aa9138, NVIDIA GeForce RTX 4070 SUPER, 610.62, 2, 12282, 11606, 392, 40, 59.72, 220.00, 2235, 2235, 5001, P3, 0",
+            "sm_clock_mhz": 2235.0,
+            "temperature_c": 40.0,
+            "utilization_gpu_percent": 2.0,
+            "uuid": "GPU-e3df9a98-2412-6865-26e5-b5a284aa9138"
+          }
+        ]
+      },
+      "host": {
+        "cpu_frequency_mhz": 4201.0,
+        "cpu_percent": 52.3,
+        "cpu_percent_per_core": [
+          47.2,
+          85.1,
+          79.1,
+          79.1,
+          43.3,
+          59.7,
+          42.0,
+          55.9,
+          39.4,
+          64.2,
+          59.1,
+          61.2,
+          18.8,
+          25.0,
+          36.2,
+          44.1
+        ],
+        "disk_io": {
+          "read_bytes": 244161740800,
+          "read_count": 1688229,
+          "read_time_ms": 1566,
+          "write_bytes": 103475762688,
+          "write_count": 957870,
+          "write_time_ms": 1278
+        },
+        "memory_available_bytes": 6268661760,
+        "memory_percent": 81.3,
+        "memory_total_bytes": 33462239232,
+        "memory_used_bytes": 27193577472
+      },
+      "monotonic_ns": 53625776924700,
+      "nvidia_collector": {
+        "command": [
+          "nvidia-smi",
+          "--query-gpu=index,uuid,name,driver_version,utilization.gpu,memory.total,memory.used,memory.free,temperature.gpu,power.draw,power.limit,clocks.gr,clocks.sm,clocks.mem,pstate,fan.speed",
+          "--format=csv,noheader,nounits"
+        ],
+        "duration_ns": 35900800,
+        "error": null,
+        "returncode": 0,
+        "started_at_utc": "2026-09-10T15:42:29.059490+00:00",
+        "stderr_b64": "",
+        "stderr_text": "",
+        "stdout_b64": "MCwgR1BVLWUzZGY5YTk4LTI0MTItNjg2NS0yNmU1LWI1YTI4NGFhOTEzOCwgTlZJRElBIEdlRm9yY2UgUlRYIDQwNzAgU1VQRVIsIDYxMC42MiwgMiwgMTIyODIsIDExNjA2LCAzOTIsIDQwLCA1OS43MiwgMjIwLjAwLCAyMjM1LCAyMjM1LCA1MDAxLCBQMywgMA0K",
+        "stdout_text": "0, GPU-e3df9a98-2412-6865-26e5-b5a284aa9138, NVIDIA GeForce RTX 4070 SUPER, 610.62, 2, 12282, 11606, 392, 40, 59.72, 220.00, 2235, 2235, 5001, P3, 0\r\n"
+      },
+      "process": {
+        "cpu_percent": 28.9,
+        "pid": 17976,
+        "rss_bytes": 141029376,
+        "vms_bytes": 126058496
+      },
+      "runtime_processes": [
+        {
+          "cpu_percent": 739.7,
+          "cpu_times": {
+            "system_s": 40.484375,
+            "user_s": 124.296875
+          },
+          "exe": "C:\\Users\\Matt\\AppData\\Local\\Programs\\Ollama\\lib\\ollama\\llama-server.exe",
+          "io": {
+            "other_bytes": 262734,
+            "other_count": 9951,
+            "read_bytes": 23771872617,
+            "read_count": 45591,
+            "write_bytes": 201981,
+            "write_count": 1978
+          },
+          "name": "llama-server.exe",
+          "num_handles": 282,
+          "num_threads": 33,
+          "pid": 8880,
+          "rss_bytes": 18241544192,
+          "vms_bytes": 30054350848
+        },
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 3.640625,
+            "user_s": 3.4375
+          },
+          "exe": "C:\\Users\\Matt\\AppData\\Local\\Programs\\Ollama\\ollama app.exe",
+          "io": {
+            "other_bytes": 1290829790,
+            "other_count": 71122,
+            "read_bytes": 783228744,
+            "read_count": 1691,
+            "write_bytes": 1574405889,
+            "write_count": 36
+          },
+          "name": "ollama app.exe",
+          "num_handles": 421,
+          "num_threads": 19,
+          "pid": 20892,
+          "rss_bytes": 52658176,
+          "vms_bytes": 62947328
+        },
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 115.984375,
+            "user_s": 104.796875
+          },
+          "exe": "C:\\Users\\Matt\\AppData\\Local\\Programs\\Ollama\\ollama.exe",
+          "io": {
+            "other_bytes": 41035809102,
+            "other_count": 5744927,
+            "read_bytes": 66055632270,
+            "read_count": 2153071,
+            "write_bytes": 74290517511,
+            "write_count": 4614698
+          },
+          "name": "ollama.exe",
+          "num_handles": 523,
+          "num_threads": 26,
+          "pid": 21316,
+          "rss_bytes": 212774912,
+          "vms_bytes": 248074240
+        }
+      ],
+      "stage": "characterize",
+      "timestamp_utc": "2026-09-10T15:42:29.059160+00:00",
+      "total_gpu_power_w": 59.72
+    }
+  ]
+}

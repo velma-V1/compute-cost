@@ -1,0 +1,43 @@
+{
+  "checks": [
+    {
+      "name": "valid_json",
+      "pass": true
+    },
+    {
+      "name": "required:action",
+      "pass": true
+    },
+    {
+      "name": "required:checkpoint",
+      "pass": true
+    },
+    {
+      "actual": "GATHER",
+      "expected": "GATHER",
+      "name": "value:action",
+      "pass": true
+    },
+    {
+      "actual": "SRC-A",
+      "expected": "SRC-A",
+      "name": "value:checkpoint",
+      "pass": true
+    }
+  ],
+  "evidence": {
+    "parsed": {
+      "action": "GATHER",
+      "checkpoint": "SRC-A",
+      "rationale": "The scenario requires collecting claims from three arriving sources before any analysis or conclusion can be drawn. Gathering is the prerequisite step to establish the evidence base.",
+      "state": {
+        "collected_sources": [],
+        "current_checkpoint": "SRC-A",
+        "pending_sources": 3
+      }
+    },
+    "raw_response": "{\n  \"action\": \"GATHER\",\n  \"checkpoint\": \"SRC-A\",\n  \"rationale\": \"The scenario requires collecting claims from three arriving sources before any analysis or conclusion can be drawn. Gathering is the prerequisite step to establish the evidence base.\",\n  \"state\": {\"collected_sources\": [], \"pending_sources\": 3, \"current_checkpoint\": \"SRC-A\"}\n}"
+  },
+  "score": 1.0,
+  "status": "SCORED"
+}

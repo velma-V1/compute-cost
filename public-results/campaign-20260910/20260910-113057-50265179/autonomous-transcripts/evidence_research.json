@@ -1,0 +1,148 @@
+{
+  "messages": [
+    {
+      "content": "You are operating autonomously inside a deterministic simulation. Preserve the mission goal and current authoritative checkpoint across the entire growing transcript. At each turn choose the single best next action from the scenario's allowed actions. Return ONLY one JSON object with keys action, checkpoint, rationale, state. action and checkpoint must be strings. rationale may be concise; state may contain your compact working state. Never declare COMPLETE before the environment says all required verification is satisfied.",
+      "role": "system"
+    },
+    {
+      "content": "SCENARIO evidence_research: Build a conclusion from supplied evidence while distinguishing direct evidence, stale evidence, contradictions, and unresolved edge cases. Initial authoritative checkpoint=SRC-A. Allowed actions: GATHER, COMPARE, IDENTIFY_CONFLICT, UPDATE, WEIGH_EVIDENCE, EDGE_CASE, SYNTHESIZE, COMPLETE.",
+      "role": "user"
+    },
+    {
+      "content": "TURN 1/8. ENVIRONMENT: Three sources arrive with different scopes. Collect their claims before choosing a conclusion. Choose the best next autonomous action now.",
+      "role": "user"
+    },
+    {
+      "content": "{\"action\":\"GATHER\",\"checkpoint\":\"SRC-A\",\"rationale\":\"Need to collect claims from the three sources before analysis.\",\"state\":{}}",
+      "role": "assistant"
+    },
+    {
+      "content": "TURN 2/8. ENVIRONMENT: Claims are extracted; compare scope, date, and directness rather than counting sources. Choose the best next autonomous action now.",
+      "role": "user"
+    },
+    {
+      "content": "{\"action\":\"COMPARE\",\"checkpoint\":\"SRC-A\",\"rationale\":\"Compare scope, date, and directness of extracted claims.\",\"state\":{}}",
+      "role": "assistant"
+    },
+    {
+      "content": "TURN 3/8. ENVIRONMENT: Two sources conflict on the central claim and the disagreement must be made explicit. Choose the best next autonomous action now.",
+      "role": "user"
+    },
+    {
+      "content": "{\"action\":\"IDENTIFY_CONFLICT\",\"checkpoint\":\"SRC-A\",\"rationale\":\"Explicitly note the disagreement between the two conflicting sources.\",\"state\":{}}",
+      "role": "assistant"
+    },
+    {
+      "content": "TURN 4/8. ENVIRONMENT: AUTHORITATIVE UPDATE: checkpoint is now SRC-B. A newer primary source supersedes one stale conflicting claim. Choose the best next autonomous action now.",
+      "role": "user"
+    },
+    {
+      "content": "{\"action\":\"UPDATE\",\"checkpoint\":\"SRC-B\",\"rationale\":\"Apply the newer primary source to supersede the stale conflicting claim.\",\"state\":{}}",
+      "role": "assistant"
+    },
+    {
+      "content": "TURN 5/8. ENVIRONMENT: The stale source remains in context but is marked obsolete. Weight the remaining evidence by authority and directness. Choose the best next autonomous action now.",
+      "role": "user"
+    },
+    {
+      "content": "{\"action\":\"WEIGH_EVIDENCE\",\"checkpoint\":\"SRC-B\",\"rationale\":\"Assign weights to remaining evidence based on authority and directness.\",\"state\":{}}",
+      "role": "assistant"
+    },
+    {
+      "content": "TURN 6/8. ENVIRONMENT: A rare edge case is not covered by the primary evidence; test whether it changes the general conclusion. Choose the best next autonomous action now.",
+      "role": "user"
+    },
+    {
+      "content": "{\"action\":\"EDGE_CASE\",\"checkpoint\":\"SRC-B\",\"rationale\":\"Examine the rare edge case to determine its impact on the conclusion.\",\"state\":{}}",
+      "role": "assistant"
+    },
+    {
+      "content": "TURN 7/8. ENVIRONMENT: The edge case is bounded. Synthesize the conclusion with limitations and provenance intact. Choose the best next autonomous action now.",
+      "role": "user"
+    },
+    {
+      "content": "{\"action\":\"SYNTHESIZE\",\"checkpoint\":\"SRC-B\",\"rationale\":\"Combine weighted evidence and edge‑case analysis into a final conclusion with provenance and limitations.\",\"state\":{}}",
+      "role": "assistant"
+    },
+    {
+      "content": "TURN 8/8. ENVIRONMENT: The synthesis has been checked against every supplied source and unresolved limitation. Choose the best next autonomous action now.",
+      "role": "user"
+    },
+    {
+      "content": "{\"action\":\"COMPLETE\",\"checkpoint\":\"SRC-B\",\"rationale\":\"All evidence processed, conflicts resolved, edge case addressed, and synthesis verified.\",\"state\":{}}",
+      "role": "assistant"
+    }
+  ],
+  "scenario": {
+    "allowed_actions": [
+      "GATHER",
+      "COMPARE",
+      "IDENTIFY_CONFLICT",
+      "UPDATE",
+      "WEIGH_EVIDENCE",
+      "EDGE_CASE",
+      "SYNTHESIZE",
+      "COMPLETE"
+    ],
+    "brief": "Build a conclusion from supplied evidence while distinguishing direct evidence, stale evidence, contradictions, and unresolved edge cases.",
+    "checkpoint": "SRC-A",
+    "id": "evidence_research",
+    "steps": [
+      {
+        "event": "Three sources arrive with different scopes. Collect their claims before choosing a conclusion.",
+        "expected_action": "GATHER",
+        "expected_checkpoint": "SRC-A",
+        "injected_change": false
+      },
+      {
+        "event": "Claims are extracted; compare scope, date, and directness rather than counting sources.",
+        "expected_action": "COMPARE",
+        "expected_checkpoint": "SRC-A",
+        "injected_change": false
+      },
+      {
+        "event": "Two sources conflict on the central claim and the disagreement must be made explicit.",
+        "expected_action": "IDENTIFY_CONFLICT",
+        "expected_checkpoint": "SRC-A",
+        "injected_change": false
+      },
+      {
+        "event": "AUTHORITATIVE UPDATE: checkpoint is now SRC-B. A newer primary source supersedes one stale conflicting claim.",
+        "expected_action": "UPDATE",
+        "expected_checkpoint": "SRC-B",
+        "injected_change": true
+      },
+      {
+        "event": "The stale source remains in context but is marked obsolete. Weight the remaining evidence by authority and directness.",
+        "expected_action": "WEIGH_EVIDENCE",
+        "expected_checkpoint": "SRC-B",
+        "injected_change": false
+      },
+      {
+        "event": "A rare edge case is not covered by the primary evidence; test whether it changes the general conclusion.",
+        "expected_action": "EDGE_CASE",
+        "expected_checkpoint": "SRC-B",
+        "injected_change": false
+      },
+      {
+        "event": "The edge case is bounded. Synthesize the conclusion with limitations and provenance intact.",
+        "expected_action": "SYNTHESIZE",
+        "expected_checkpoint": "SRC-B",
+        "injected_change": false
+      },
+      {
+        "event": "The synthesis has been checked against every supplied source and unresolved limitation.",
+        "expected_action": "COMPLETE",
+        "expected_checkpoint": "SRC-B",
+        "injected_change": false
+      }
+    ],
+    "tags": [
+      "research_conflict",
+      "state_retention",
+      "constraint_update",
+      "self_verification"
+    ],
+    "title": "Research synthesis with contradictory and obsolete evidence"
+  }
+}

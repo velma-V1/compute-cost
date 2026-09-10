@@ -1,0 +1,56 @@
+{
+  "checks": [
+    {
+      "name": "valid_json",
+      "pass": true
+    },
+    {
+      "name": "required:steps",
+      "pass": true
+    },
+    {
+      "actual": [
+        {
+          "dependency": "raw input",
+          "subproblem": "Produce artifact A1 from raw input"
+        },
+        {
+          "dependency": "A1",
+          "subproblem": "Produce artifact A2 using completed A1"
+        },
+        {
+          "dependency": "A2",
+          "subproblem": "Produce artifact A3 using completed A2"
+        }
+      ],
+      "expected": [
+        "A1",
+        "A2",
+        "A3"
+      ],
+      "name": "value:steps",
+      "pass": false
+    }
+  ],
+  "evidence": {
+    "parsed": {
+      "steps": [
+        {
+          "dependency": "raw input",
+          "subproblem": "Produce artifact A1 from raw input"
+        },
+        {
+          "dependency": "A1",
+          "subproblem": "Produce artifact A2 using completed A1"
+        },
+        {
+          "dependency": "A2",
+          "subproblem": "Produce artifact A3 using completed A2"
+        }
+      ]
+    },
+    "raw_response": "{\n  \"steps\": [\n    {\n      \"subproblem\": \"Produce artifact A1 from raw input\",\n      \"dependency\": \"raw input\"\n    },\n    {\n      \"subproblem\": \"Produce artifact A2 using completed A1\",\n      \"dependency\": \"A1\"\n    },\n    {\n      \"subproblem\": \"Produce artifact A3 using completed A2\",\n      \"dependency\": \"A2\"\n    }\n  ]\n}"
+  },
+  "score": 0.0,
+  "status": "SCORED"
+}

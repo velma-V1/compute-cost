@@ -1,0 +1,696 @@
+{
+  "benchmark_version": "gpt-oss-20b-capability-v1",
+  "boundary": {
+    "boundary_repeats": 2,
+    "family_id": "algebra_quantitative_reasoning",
+    "level": 3,
+    "role": "lower_reliable",
+    "transition_bracket": {
+      "lower_label": "reliable",
+      "lower_level": 3,
+      "upper_label": "failure",
+      "upper_level": 4
+    }
+  },
+  "case": {
+    "capabilities_required": [
+      "algebra_quantitative_reasoning"
+    ],
+    "capability_map": {
+      "capabilities_required": [
+        "algebra_quantitative_reasoning"
+      ],
+      "difficulty": {
+        "dimensions": {
+          "constraint_count": 1,
+          "equation_depth": 2,
+          "symbolic_steps": 2,
+          "unknown_count": 1
+        },
+        "level": 3
+      },
+      "family_id": "algebra_quantitative_reasoning",
+      "recovery_eligible": true,
+      "robustness_eligible": true,
+      "rubric_version": "algebra-v1",
+      "taxonomy_version": "capability-taxonomy-v1"
+    },
+    "category": "algebra_quantitative_reasoning",
+    "compound": false,
+    "difficulty": {
+      "dimensions": {
+        "constraint_count": 1,
+        "equation_depth": 2,
+        "symbolic_steps": 2,
+        "unknown_count": 1
+      },
+      "level": 3,
+      "rubric_version": "algebra-v1"
+    },
+    "difficulty_level": 3,
+    "expected": 6,
+    "family_id": "algebra_quantitative_reasoning",
+    "id": "gptoss-005",
+    "prompt": "Solve for x: 3x + 7 = 25. Give only the numeric value of x.",
+    "recovery_eligible": true,
+    "robustness_eligible": true,
+    "scorer": "numeric",
+    "scorer_version": "1",
+    "suite_version": "gpt-oss-20b-capability-v1",
+    "tags": [],
+    "taxonomy_version": "capability-taxonomy-v1",
+    "timeout_s": 120,
+    "tolerance": 0
+  },
+  "classification": {
+    "basis": "deterministic scorer passed",
+    "measurement_kind": "DERIVED",
+    "result_class": "ANSWER_CORRECT",
+    "valid_for_capability": true
+  },
+  "evidence_key": "exp-000008-gptoss-005-capability-probe",
+  "evidence_refs": {
+    "request": {
+      "bytes": 221,
+      "case_id": "exp-000008-gptoss-005-capability-probe",
+      "path": "raw/runtime/requests/000011-characterize-exp-000008-gptoss-005-capability-probe.bin",
+      "producer": "runtime-adapter",
+      "sha256": "7e28a1ab02f6215892dc015c5ec5f4531e4d15908d97aa58d1f22184abb2b116",
+      "stage": "characterize"
+    },
+    "request_id": "000011-characterize-exp-000008-gptoss-005-capability-probe",
+    "response": {
+      "bytes": 468,
+      "case_id": "exp-000008-gptoss-005-capability-probe",
+      "path": "raw/runtime/responses/000011-characterize-exp-000008-gptoss-005-capability-probe.bin",
+      "producer": "runtime-adapter",
+      "sha256": "1b8027b0db728e9ca43e88298b03906264c4e63e1bcff01f790d5c12f79b11d6",
+      "stage": "characterize"
+    },
+    "streams": [
+      {
+        "bytes": 136,
+        "case_id": "exp-000008-gptoss-005-capability-probe",
+        "path": "raw/runtime/streams/000011-characterize-exp-000008-gptoss-005-capability-probe/000000.bin",
+        "producer": "runtime-stream",
+        "sha256": "efad32ebf2dacde503c261ecfa863355e1250d93296ac2239542fac525133f1c",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 332,
+        "case_id": "exp-000008-gptoss-005-capability-probe",
+        "path": "raw/runtime/streams/000011-characterize-exp-000008-gptoss-005-capability-probe/000001.bin",
+        "producer": "runtime-stream",
+        "sha256": "e6c90eae541375f5abfe54a2e003289e7320e460d6783dcf1e33ee9f6b4c7bc3",
+        "stage": "characterize"
+      }
+    ]
+  },
+  "experiment": {
+    "changed_variable": "difficulty_level",
+    "context_request": null,
+    "difficulty_level": 3,
+    "experiment_id": "exp-000008-gptoss-005-capability-probe",
+    "generation_budget": 256,
+    "hypothesis": "bisect difficulty pass/fail bracket",
+    "parent_experiment_id": "exp-000007-gptoss-algebra_quantitative_reasoning-L5-generated-capability-probe",
+    "prompt_variant": "base",
+    "reasoning_effort": null,
+    "recovery_level": null,
+    "seed": 42,
+    "task_family": "algebra_quantitative_reasoning",
+    "task_id": "algebra_quantitative_reasoning",
+    "temperature": 0.0,
+    "thinking_mode": false
+  },
+  "generation": {
+    "http_status": 200,
+    "metrics": {
+      "eval_count": 2,
+      "eval_duration_ns": 31228000,
+      "load_duration_ns": 3760900,
+      "prompt_eval_count": 36,
+      "prompt_eval_duration_ns": 279685000,
+      "total_duration_ns": 339553900
+    },
+    "normalized": {
+      "done": true,
+      "done_reason": "stop",
+      "text": "6",
+      "thinking": "",
+      "tool_calls": []
+    },
+    "ok": true,
+    "phase_metrics": {
+      "answer_chars": 1,
+      "answer_chunks": 1,
+      "answer_span_ns": 0,
+      "measurement_kind": "MEASURED",
+      "thinking_chars": 0,
+      "thinking_chunks": 0,
+      "thinking_span_ns": null,
+      "time_to_first_answer_ns": 318657500,
+      "time_to_first_thinking_ns": null
+    },
+    "raw_response_b64": "eyJtb2RlbCI6InF3ZW4zLjU6MzViLWEzYi1xNF9LX00iLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTo0MjowOS4zMjMyNzdaIiwibWVzc2FnZSI6eyJyb2xlIjoiYXNzaXN0YW50IiwiY29udGVudCI6IjYifSwiZG9uZSI6ZmFsc2V9CnsibW9kZWwiOiJxd2VuMy41OjM1Yi1hM2ItcTRfS19NIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6NDI6MDkuMzU0NDEwMVoiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiIn0sImRvbmUiOnRydWUsImRvbmVfcmVhc29uIjoic3RvcCIsInRvdGFsX2R1cmF0aW9uIjozMzk1NTM5MDAsImxvYWRfZHVyYXRpb24iOjM3NjA5MDAsInByb21wdF9ldmFsX2NvdW50IjozNiwicHJvbXB0X2V2YWxfY2FjaGVkX2NvdW50IjowLCJwcm9tcHRfZXZhbF9kdXJhdGlvbiI6Mjc5Njg1MDAwLCJldmFsX2NvdW50IjoyLCJldmFsX2R1cmF0aW9uIjozMTIyODAwMH0K",
+    "request": {
+      "body_b64": "eyJtb2RlbCI6InF3ZW4zLjU6MzViLWEzYi1xNF9LX00iLCJtZXNzYWdlcyI6W3sicm9sZSI6InVzZXIiLCJjb250ZW50IjoiU29sdmUgZm9yIHg6IDN4ICsgNyA9IDI1LiBHaXZlIG9ubHkgdGhlIG51bWVyaWMgdmFsdWUgb2YgeC4ifV0sInN0cmVhbSI6dHJ1ZSwib3B0aW9ucyI6eyJ0ZW1wZXJhdHVyZSI6MC4wLCJzZWVkIjo0MiwibnVtX3ByZWRpY3QiOjI1Nn0sInRoaW5rIjpmYWxzZX0=",
+      "body_text": "{\"model\":\"qwen3.5:35b-a3b-q4_K_M\",\"messages\":[{\"role\":\"user\",\"content\":\"Solve for x: 3x + 7 = 25. Give only the numeric value of x.\"}],\"stream\":true,\"options\":{\"temperature\":0.0,\"seed\":42,\"num_predict\":256},\"think\":false}",
+      "method": "POST",
+      "started_at_utc": "2026-09-10T15:42:09.004895+00:00",
+      "started_monotonic_ns": 53605722648700,
+      "stream": true,
+      "timeout_s": 120.0,
+      "url": "http://127.0.0.1:11434/api/chat"
+    },
+    "response_headers": {
+      "connection": "close",
+      "content-type": "application/x-ndjson",
+      "date": "Thu, 10 Sep 2026 15:42:09 GMT",
+      "transfer-encoding": "chunked"
+    },
+    "stream_events": [
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:42:09.323277Z",
+          "done": false,
+          "message": {
+            "content": "6",
+            "role": "assistant"
+          },
+          "model": "qwen3.5:35b-a3b-q4_K_M"
+        },
+        "raw_b64": "eyJtb2RlbCI6InF3ZW4zLjU6MzViLWEzYi1xNF9LX00iLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTo0MjowOS4zMjMyNzdaIiwibWVzc2FnZSI6eyJyb2xlIjoiYXNzaXN0YW50IiwiY29udGVudCI6IjYifSwiZG9uZSI6ZmFsc2V9Cg==",
+        "raw_text": "{\"model\":\"qwen3.5:35b-a3b-q4_K_M\",\"created_at\":\"2026-09-10T15:42:09.323277Z\",\"message\":{\"role\":\"assistant\",\"content\":\"6\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:42:09.323554+00:00",
+        "received_monotonic_ns": 53606041306200,
+        "sequence": 0
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:42:09.3544101Z",
+          "done": true,
+          "done_reason": "stop",
+          "eval_count": 2,
+          "eval_duration": 31228000,
+          "load_duration": 3760900,
+          "message": {
+            "content": "",
+            "role": "assistant"
+          },
+          "model": "qwen3.5:35b-a3b-q4_K_M",
+          "prompt_eval_cached_count": 0,
+          "prompt_eval_count": 36,
+          "prompt_eval_duration": 279685000,
+          "total_duration": 339553900
+        },
+        "raw_b64": "eyJtb2RlbCI6InF3ZW4zLjU6MzViLWEzYi1xNF9LX00iLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTo0MjowOS4zNTQ0MTAxWiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiIifSwiZG9uZSI6dHJ1ZSwiZG9uZV9yZWFzb24iOiJzdG9wIiwidG90YWxfZHVyYXRpb24iOjMzOTU1MzkwMCwibG9hZF9kdXJhdGlvbiI6Mzc2MDkwMCwicHJvbXB0X2V2YWxfY291bnQiOjM2LCJwcm9tcHRfZXZhbF9jYWNoZWRfY291bnQiOjAsInByb21wdF9ldmFsX2R1cmF0aW9uIjoyNzk2ODUwMDAsImV2YWxfY291bnQiOjIsImV2YWxfZHVyYXRpb24iOjMxMjI4MDAwfQo=",
+        "raw_text": "{\"model\":\"qwen3.5:35b-a3b-q4_K_M\",\"created_at\":\"2026-09-10T15:42:09.3544101Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\"},\"done\":true,\"done_reason\":\"stop\",\"total_duration\":339553900,\"load_duration\":3760900,\"prompt_eval_count\":36,\"prompt_eval_cached_count\":0,\"prompt_eval_duration\":279685000,\"eval_count\":2,\"eval_duration\":31228000}\n",
+        "received_at_utc": "2026-09-10T15:42:09.354746+00:00",
+        "received_monotonic_ns": 53606072499200,
+        "sequence": 1
+      }
+    ],
+    "timing": {
+      "client_ended_monotonic_ns": 53606072681200,
+      "client_latency_ns": 360639800,
+      "client_started_monotonic_ns": 53605712041400,
+      "first_event_latency_ns": 318657500,
+      "last_event_latency_ns": 349850500
+    }
+  },
+  "invocation": {
+    "messages": [
+      {
+        "content": "Solve for x: 3x + 7 = 25. Give only the numeric value of x.",
+        "role": "user"
+      }
+    ],
+    "model": "qwen3.5:35b-a3b-q4_K_M",
+    "options": {
+      "num_predict": 256,
+      "seed": 42,
+      "temperature": 0.0
+    },
+    "request_fields": {
+      "think": false
+    },
+    "stream": true
+  },
+  "model": "qwen3.5:35b-a3b-q4_K_M",
+  "resolved_config": {
+    "autonomous_simulation": {
+      "enabled": true,
+      "generation_budget": 512,
+      "max_generation_budget": 2048,
+      "scenario_count": 6,
+      "steps_per_scenario": 8
+    },
+    "capability_campaign": {
+      "anchor_level": 2,
+      "boundary_repeats": 2,
+      "generation_budget": 256,
+      "jump": 3,
+      "max_experiments_per_family": 6,
+      "reasoning_effort": null,
+      "reliable_threshold": 0.9,
+      "thinking_mode": false,
+      "unstable_threshold": 0.4
+    },
+    "characterization": {
+      "boundary_repeats": 3,
+      "generation_budget_granularity": 32,
+      "initial_generation_budget": 256,
+      "max_experiments_per_task": 12,
+      "max_generation_budget": 2048,
+      "min_generation_budget": 32,
+      "think_off_generation_budget": 256
+    },
+    "compound_lab": {
+      "boundary_repeats": 3,
+      "enabled": false,
+      "jump": 2,
+      "max_compounds": 6,
+      "max_experiments_per_compound": 16
+    },
+    "cost": {
+      "electricity_configured": false,
+      "electricity_per_kwh": 0.0
+    },
+    "evidence": {
+      "retain_raw_collectors": true,
+      "retain_stream_chunks": true
+    },
+    "generation": {
+      "max_tokens": 256,
+      "seed": 42,
+      "temperature": 0.0
+    },
+    "limits": {
+      "consecutive_context_failures": 2,
+      "context_schedule": [
+        4096,
+        8192,
+        16384,
+        32768
+      ],
+      "host_ram_percent": 95.0,
+      "max_model_calls_per_run": 360,
+      "request_timeout_s": 120,
+      "sustained_iterations": 8,
+      "vram_percent": 98.0
+    },
+    "reasoning_curves": {
+      "enabled": false,
+      "repeats": 3
+    },
+    "recovery_lab": {
+      "enabled": false,
+      "max_attempts_per_candidate": 6,
+      "max_level": "R7",
+      "repeats": 3
+    },
+    "robustness_lab": {
+      "enabled": false,
+      "max_attempts_per_perturbation": 4,
+      "max_perturbations_per_family": 2,
+      "repeats": 2
+    },
+    "runtime": {
+      "endpoint": "http://127.0.0.1:11434"
+    },
+    "telemetry": {
+      "interval_s": 0.25,
+      "nvidia": true
+    }
+  },
+  "schema_version": 2,
+  "scoring": {
+    "checks": [
+      {
+        "actual": 6.0,
+        "expected": 6.0,
+        "name": "numeric_match",
+        "pass": true,
+        "tolerance": 0.0
+      }
+    ],
+    "evidence": {
+      "raw_response": "6"
+    },
+    "score": 1.0,
+    "status": "SCORED"
+  },
+  "source_experiment_id": "exp-000008-gptoss-005-capability-probe",
+  "stage": "characterize",
+  "telemetry_for_experiment": [
+    {
+      "case_id": "exp-000008-gptoss-005-capability-probe",
+      "gpu": {
+        "availability": "available",
+        "devices": [
+          {
+            "driver_version": "610.62",
+            "extra_columns": [],
+            "fan_percent": 0.0,
+            "graphics_clock_mhz": 2745.0,
+            "index": 0,
+            "memory_clock_mhz": 10251.0,
+            "memory_free_mib": 400.0,
+            "memory_total_mib": 12282.0,
+            "memory_used_mib": 11598.0,
+            "name": "NVIDIA GeForce RTX 4070 SUPER",
+            "power_draw_w": 56.5,
+            "power_limit_w": 220.0,
+            "pstate": "P2",
+            "raw_columns": [
+              "0",
+              "GPU-e3df9a98-2412-6865-26e5-b5a284aa9138",
+              "NVIDIA GeForce RTX 4070 SUPER",
+              "610.62",
+              "97",
+              "12282",
+              "11598",
+              "400",
+              "41",
+              "56.50",
+              "220.00",
+              "2745",
+              "2745",
+              "10251",
+              "P2",
+              "0"
+            ],
+            "raw_line": "0, GPU-e3df9a98-2412-6865-26e5-b5a284aa9138, NVIDIA GeForce RTX 4070 SUPER, 610.62, 97, 12282, 11598, 400, 41, 56.50, 220.00, 2745, 2745, 10251, P2, 0",
+            "sm_clock_mhz": 2745.0,
+            "temperature_c": 41.0,
+            "utilization_gpu_percent": 97.0,
+            "uuid": "GPU-e3df9a98-2412-6865-26e5-b5a284aa9138"
+          }
+        ]
+      },
+      "host": {
+        "cpu_frequency_mhz": 4201.0,
+        "cpu_percent": 58.7,
+        "cpu_percent_per_core": [
+          44.4,
+          100.0,
+          88.9,
+          100.0,
+          33.3,
+          66.7,
+          88.9,
+          11.1,
+          44.4,
+          66.7,
+          66.7,
+          77.8,
+          44.4,
+          0.0,
+          44.4,
+          55.6
+        ],
+        "disk_io": {
+          "read_bytes": 244159166976,
+          "read_count": 1688114,
+          "read_time_ms": 1566,
+          "write_bytes": 103447184896,
+          "write_count": 957135,
+          "write_time_ms": 1278
+        },
+        "memory_available_bytes": 9017393152,
+        "memory_percent": 73.1,
+        "memory_total_bytes": 33462239232,
+        "memory_used_bytes": 24444846080
+      },
+      "monotonic_ns": 53605650115200,
+      "nvidia_collector": {
+        "command": [
+          "nvidia-smi",
+          "--query-gpu=index,uuid,name,driver_version,utilization.gpu,memory.total,memory.used,memory.free,temperature.gpu,power.draw,power.limit,clocks.gr,clocks.sm,clocks.mem,pstate,fan.speed",
+          "--format=csv,noheader,nounits"
+        ],
+        "duration_ns": 40815300,
+        "error": null,
+        "returncode": 0,
+        "started_at_utc": "2026-09-10T15:42:08.932579+00:00",
+        "stderr_b64": "",
+        "stderr_text": "",
+        "stdout_b64": "MCwgR1BVLWUzZGY5YTk4LTI0MTItNjg2NS0yNmU1LWI1YTI4NGFhOTEzOCwgTlZJRElBIEdlRm9yY2UgUlRYIDQwNzAgU1VQRVIsIDYxMC42MiwgOTcsIDEyMjgyLCAxMTU5OCwgNDAwLCA0MSwgNTYuNTAsIDIyMC4wMCwgMjc0NSwgMjc0NSwgMTAyNTEsIFAyLCAwDQo=",
+        "stdout_text": "0, GPU-e3df9a98-2412-6865-26e5-b5a284aa9138, NVIDIA GeForce RTX 4070 SUPER, 610.62, 97, 12282, 11598, 400, 41, 56.50, 220.00, 2745, 2745, 10251, P2, 0\r\n"
+      },
+      "process": {
+        "cpu_percent": 24.2,
+        "pid": 17976,
+        "rss_bytes": 141963264,
+        "vms_bytes": 126083072
+      },
+      "runtime_processes": [
+        {
+          "cpu_percent": 739.1,
+          "cpu_times": {
+            "system_s": 14.125,
+            "user_s": 28.0
+          },
+          "exe": "C:\\Users\\Matt\\AppData\\Local\\Programs\\Ollama\\lib\\ollama\\llama-server.exe",
+          "io": {
+            "other_bytes": 186846,
+            "other_count": 5856,
+            "read_bytes": 23771872617,
+            "read_count": 45591,
+            "write_bytes": 58085,
+            "write_count": 612
+          },
+          "name": "llama-server.exe",
+          "num_handles": 282,
+          "num_threads": 33,
+          "pid": 8880,
+          "rss_bytes": 15153152000,
+          "vms_bytes": 26929000448
+        },
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 3.640625,
+            "user_s": 3.4375
+          },
+          "exe": "C:\\Users\\Matt\\AppData\\Local\\Programs\\Ollama\\ollama app.exe",
+          "io": {
+            "other_bytes": 1290829790,
+            "other_count": 71122,
+            "read_bytes": 783228744,
+            "read_count": 1691,
+            "write_bytes": 1574405889,
+            "write_count": 36
+          },
+          "name": "ollama app.exe",
+          "num_handles": 421,
+          "num_threads": 19,
+          "pid": 20892,
+          "rss_bytes": 53452800,
+          "vms_bytes": 62947328
+        },
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 115.875,
+            "user_s": 104.609375
+          },
+          "exe": "C:\\Users\\Matt\\AppData\\Local\\Programs\\Ollama\\ollama.exe",
+          "io": {
+            "other_bytes": 41035365301,
+            "other_count": 5734303,
+            "read_bytes": 66055012202,
+            "read_count": 2151541,
+            "write_bytes": 74290371158,
+            "write_count": 4614329
+          },
+          "name": "ollama.exe",
+          "num_handles": 523,
+          "num_threads": 26,
+          "pid": 21316,
+          "rss_bytes": 215056384,
+          "vms_bytes": 248074240
+        }
+      ],
+      "stage": "characterize",
+      "timestamp_utc": "2026-09-10T15:42:08.932355+00:00",
+      "total_gpu_power_w": 56.5
+    },
+    {
+      "case_id": "exp-000008-gptoss-005-capability-probe",
+      "gpu": {
+        "availability": "available",
+        "devices": [
+          {
+            "driver_version": "610.62",
+            "extra_columns": [],
+            "fan_percent": 0.0,
+            "graphics_clock_mhz": 2745.0,
+            "index": 0,
+            "memory_clock_mhz": 10251.0,
+            "memory_free_mib": 400.0,
+            "memory_total_mib": 12282.0,
+            "memory_used_mib": 11598.0,
+            "name": "NVIDIA GeForce RTX 4070 SUPER",
+            "power_draw_w": 57.13,
+            "power_limit_w": 220.0,
+            "pstate": "P2",
+            "raw_columns": [
+              "0",
+              "GPU-e3df9a98-2412-6865-26e5-b5a284aa9138",
+              "NVIDIA GeForce RTX 4070 SUPER",
+              "610.62",
+              "19",
+              "12282",
+              "11598",
+              "400",
+              "39",
+              "57.13",
+              "220.00",
+              "2745",
+              "2745",
+              "10251",
+              "P2",
+              "0"
+            ],
+            "raw_line": "0, GPU-e3df9a98-2412-6865-26e5-b5a284aa9138, NVIDIA GeForce RTX 4070 SUPER, 610.62, 19, 12282, 11598, 400, 39, 57.13, 220.00, 2745, 2745, 10251, P2, 0",
+            "sm_clock_mhz": 2745.0,
+            "temperature_c": 39.0,
+            "utilization_gpu_percent": 19.0,
+            "uuid": "GPU-e3df9a98-2412-6865-26e5-b5a284aa9138"
+          }
+        ]
+      },
+      "host": {
+        "cpu_frequency_mhz": 4201.0,
+        "cpu_percent": 48.7,
+        "cpu_percent_per_core": [
+          76.9,
+          71.4,
+          75.0,
+          60.7,
+          42.9,
+          53.6,
+          50.0,
+          32.1,
+          39.3,
+          46.4,
+          57.1,
+          50.0,
+          10.7,
+          17.2,
+          50.0,
+          35.7
+        ],
+        "disk_io": {
+          "read_bytes": 244159203840,
+          "read_count": 1688116,
+          "read_time_ms": 1566,
+          "write_bytes": 103447184896,
+          "write_count": 957135,
+          "write_time_ms": 1278
+        },
+        "memory_available_bytes": 8898920448,
+        "memory_percent": 73.4,
+        "memory_total_bytes": 33462239232,
+        "memory_used_bytes": 24563318784
+      },
+      "monotonic_ns": 53606099935100,
+      "nvidia_collector": {
+        "command": [
+          "nvidia-smi",
+          "--query-gpu=index,uuid,name,driver_version,utilization.gpu,memory.total,memory.used,memory.free,temperature.gpu,power.draw,power.limit,clocks.gr,clocks.sm,clocks.mem,pstate,fan.speed",
+          "--format=csv,noheader,nounits"
+        ],
+        "duration_ns": 35045400,
+        "error": null,
+        "returncode": 0,
+        "started_at_utc": "2026-09-10T15:42:09.382423+00:00",
+        "stderr_b64": "",
+        "stderr_text": "",
+        "stdout_b64": "MCwgR1BVLWUzZGY5YTk4LTI0MTItNjg2NS0yNmU1LWI1YTI4NGFhOTEzOCwgTlZJRElBIEdlRm9yY2UgUlRYIDQwNzAgU1VQRVIsIDYxMC42MiwgMTksIDEyMjgyLCAxMTU5OCwgNDAwLCAzOSwgNTcuMTMsIDIyMC4wMCwgMjc0NSwgMjc0NSwgMTAyNTEsIFAyLCAwDQo=",
+        "stdout_text": "0, GPU-e3df9a98-2412-6865-26e5-b5a284aa9138, NVIDIA GeForce RTX 4070 SUPER, 610.62, 19, 12282, 11598, 400, 39, 57.13, 220.00, 2745, 2745, 10251, P2, 0\r\n"
+      },
+      "process": {
+        "cpu_percent": 0.0,
+        "pid": 17976,
+        "rss_bytes": 141086720,
+        "vms_bytes": 125681664
+      },
+      "runtime_processes": [
+        {
+          "cpu_percent": 705.9,
+          "cpu_times": {
+            "system_s": 14.75,
+            "user_s": 29.96875
+          },
+          "exe": "C:\\Users\\Matt\\AppData\\Local\\Programs\\Ollama\\lib\\ollama\\llama-server.exe",
+          "io": {
+            "other_bytes": 188414,
+            "other_count": 5948,
+            "read_bytes": 23771872617,
+            "read_count": 45591,
+            "write_bytes": 62093,
+            "write_count": 649
+          },
+          "name": "llama-server.exe",
+          "num_handles": 282,
+          "num_threads": 33,
+          "pid": 8880,
+          "rss_bytes": 15286112256,
+          "vms_bytes": 27062190080
+        },
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 3.640625,
+            "user_s": 3.4375
+          },
+          "exe": "C:\\Users\\Matt\\AppData\\Local\\Programs\\Ollama\\ollama app.exe",
+          "io": {
+            "other_bytes": 1290829790,
+            "other_count": 71122,
+            "read_bytes": 783228744,
+            "read_count": 1691,
+            "write_bytes": 1574405889,
+            "write_count": 36
+          },
+          "name": "ollama app.exe",
+          "num_handles": 421,
+          "num_threads": 19,
+          "pid": 20892,
+          "rss_bytes": 53452800,
+          "vms_bytes": 62947328
+        },
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 115.890625,
+            "user_s": 104.609375
+          },
+          "exe": "C:\\Users\\Matt\\AppData\\Local\\Programs\\Ollama\\ollama.exe",
+          "io": {
+            "other_bytes": 41035380291,
+            "other_count": 5734687,
+            "read_bytes": 66055033846,
+            "read_count": 2151598,
+            "write_bytes": 74290375257,
+            "write_count": 4614343
+          },
+          "name": "ollama.exe",
+          "num_handles": 523,
+          "num_threads": 26,
+          "pid": 21316,
+          "rss_bytes": 215056384,
+          "vms_bytes": 248074240
+        }
+      ],
+      "stage": "characterize",
+      "timestamp_utc": "2026-09-10T15:42:09.382172+00:00",
+      "total_gpu_power_w": 57.13
+    }
+  ]
+}

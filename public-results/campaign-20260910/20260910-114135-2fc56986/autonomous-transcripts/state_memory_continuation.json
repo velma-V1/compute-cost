@@ -1,0 +1,148 @@
+{
+  "messages": [
+    {
+      "content": "You are operating autonomously inside a deterministic simulation. Preserve the mission goal and current authoritative checkpoint across the entire growing transcript. At each turn choose the single best next action from the scenario's allowed actions. Return ONLY one JSON object with keys action, checkpoint, rationale, state. action and checkpoint must be strings. rationale may be concise; state may contain your compact working state. Never declare COMPLETE before the environment says all required verification is satisfied.",
+      "role": "system"
+    },
+    {
+      "content": "SCENARIO state_memory_continuation: Maintain a compact but sufficient working state across a long continuation. Never resurrect obsolete state after an authoritative update. Initial authoritative checkpoint=STATE-A. Allowed actions: CAPTURE, COMPRESS, CONTINUE, REJECT_STALE, RESTORE, EXECUTE, VERIFY, COMPLETE.",
+      "role": "user"
+    },
+    {
+      "content": "TURN 1/8. ENVIRONMENT: A long work session has accumulated goals, constraints, completed work, and pending work; capture the decision-relevant state. Choose the best next autonomous action now.",
+      "role": "user"
+    },
+    {
+      "content": "{\n  \"action\": \"CAPTURE\",\n  \"checkpoint\": \"STATE-A\",\n  \"rationale\": \"The environment indicates accumulated goals and pending work; capturing the current decision-relevant state is the necessary first step to establish a baseline before any processing or execution.\",\n  \"state\": \"Initial session start. Accumulated data present. Baseline STATE-A captured.\"\n}",
+      "role": "assistant"
+    },
+    {
+      "content": "TURN 2/8. ENVIRONMENT: The full history is too large to carry forever. Compress it while preserving goal, constraints, decisions, and unresolved items. Choose the best next autonomous action now.",
+      "role": "user"
+    },
+    {
+      "content": "{\n  \"action\": \"COMPRESS\",\n  \"checkpoint\": \"STATE-A\",\n  \"rationale\": \"The environment explicitly states the history is too large; compressing preserves essential decision-relevant data (goals, constraints, unresolved items) while reducing storage overhead, aligning with the scenario's need to manage state size.\",\n  \"state\": \"History compressed. Core elements preserved. Checkpoint STATE-A maintained.\"\n}",
+      "role": "assistant"
+    },
+    {
+      "content": "TURN 3/8. ENVIRONMENT: Resume from the compact state and identify the next pending action without replaying completed work. Choose the best next autonomous action now.",
+      "role": "user"
+    },
+    {
+      "content": "{\n  \"action\": \"CONTINUE\",\n  \"checkpoint\": \"STATE-A\",\n  \"rationale\": \"The environment instructs to resume from the compact state and identify the next pending action; CONTINUE is the designated action to advance the workflow based on the current checkpoint without re-processing history.\",\n  \"state\": \"Resumed from STATE-A. Identifying next pending action.\"\n}",
+      "role": "assistant"
+    },
+    {
+      "content": "TURN 4/8. ENVIRONMENT: AUTHORITATIVE UPDATE: checkpoint is now STATE-B. An old note repeats the prior checkpoint and conflicts with the new state. Choose the best next autonomous action now.",
+      "role": "user"
+    },
+    {
+      "content": "{\n  \"action\": \"REJECT_STALE\",\n  \"checkpoint\": \"STATE-B\",\n  \"rationale\": \"The environment provides an authoritative update to STATE-B; any reference to the prior checkpoint (STATE-A) is now obsolete and conflicting. The correct action is to reject the stale state and align with the new authoritative checkpoint.\",\n  \"state\": \"Stale STATE-A rejected. Aligned with authoritative STATE-B.\"\n}",
+      "role": "assistant"
+    },
+    {
+      "content": "TURN 5/8. ENVIRONMENT: A continuation starts from the compact record; restore the current state without resurrecting the obsolete checkpoint. Choose the best next autonomous action now.",
+      "role": "user"
+    },
+    {
+      "content": "{\n  \"action\": \"RESTORE\",\n  \"checkpoint\": \"STATE-B\",\n  \"rationale\": \"The environment requires resuming from the current compact record (STATE-B) while explicitly avoiding the resurrection of obsolete state (STATE-A). RESTORE is the action to load the valid current state for continuation.\",\n  \"state\": \"Restored STATE-B. Obsolete STATE-A excluded.\"\n}",
+      "role": "assistant"
+    },
+    {
+      "content": "TURN 6/8. ENVIRONMENT: The restored state identifies one executable pending action; carry it out while preserving constraints. Choose the best next autonomous action now.",
+      "role": "user"
+    },
+    {
+      "content": "{\n  \"action\": \"EXECUTE\",\n  \"checkpoint\": \"STATE-B\",\n  \"rationale\": \"The environment explicitly identifies a pending action that needs to be carried out; EXECUTE is the designated action to perform this work while maintaining the current authoritative state and constraints.\",\n  \"state\": \"Executing identified pending action. State STATE-B preserved.\"\n}",
+      "role": "assistant"
+    },
+    {
+      "content": "TURN 7/8. ENVIRONMENT: Execution succeeds. Verify that completed work, current state, and remaining obligations are internally consistent. Choose the best next autonomous action now.",
+      "role": "user"
+    },
+    {
+      "content": "{\n  \"action\": \"VERIFY\",\n  \"checkpoint\": \"STATE-B\",\n  \"rationale\": \"The environment requires confirmation of internal consistency following a successful execution; VERIFY is the designated action to validate that completed work, current state, and remaining obligations align before proceeding.\",\n  \"state\": \"Execution confirmed. Verifying consistency of STATE-B.\"\n}",
+      "role": "assistant"
+    },
+    {
+      "content": "TURN 8/8. ENVIRONMENT: The continuation is consistent, current, and has no unresolved required work. Choose the best next autonomous action now.",
+      "role": "user"
+    },
+    {
+      "content": "{\n  \"action\": \"COMPLETE\",\n  \"checkpoint\": \"STATE-B\",\n  \"rationale\": \"The environment confirms the session is consistent, current, and free of unresolved work; this satisfies the condition to terminate the workflow.\",\n  \"state\": \"Session complete. All obligations met. Final state STATE-B.\"\n}",
+      "role": "assistant"
+    }
+  ],
+  "scenario": {
+    "allowed_actions": [
+      "CAPTURE",
+      "COMPRESS",
+      "CONTINUE",
+      "REJECT_STALE",
+      "RESTORE",
+      "EXECUTE",
+      "VERIFY",
+      "COMPLETE"
+    ],
+    "brief": "Maintain a compact but sufficient working state across a long continuation. Never resurrect obsolete state after an authoritative update.",
+    "checkpoint": "STATE-A",
+    "id": "state_memory_continuation",
+    "steps": [
+      {
+        "event": "A long work session has accumulated goals, constraints, completed work, and pending work; capture the decision-relevant state.",
+        "expected_action": "CAPTURE",
+        "expected_checkpoint": "STATE-A",
+        "injected_change": false
+      },
+      {
+        "event": "The full history is too large to carry forever. Compress it while preserving goal, constraints, decisions, and unresolved items.",
+        "expected_action": "COMPRESS",
+        "expected_checkpoint": "STATE-A",
+        "injected_change": false
+      },
+      {
+        "event": "Resume from the compact state and identify the next pending action without replaying completed work.",
+        "expected_action": "CONTINUE",
+        "expected_checkpoint": "STATE-A",
+        "injected_change": false
+      },
+      {
+        "event": "AUTHORITATIVE UPDATE: checkpoint is now STATE-B. An old note repeats the prior checkpoint and conflicts with the new state.",
+        "expected_action": "REJECT_STALE",
+        "expected_checkpoint": "STATE-B",
+        "injected_change": true
+      },
+      {
+        "event": "A continuation starts from the compact record; restore the current state without resurrecting the obsolete checkpoint.",
+        "expected_action": "RESTORE",
+        "expected_checkpoint": "STATE-B",
+        "injected_change": false
+      },
+      {
+        "event": "The restored state identifies one executable pending action; carry it out while preserving constraints.",
+        "expected_action": "EXECUTE",
+        "expected_checkpoint": "STATE-B",
+        "injected_change": false
+      },
+      {
+        "event": "Execution succeeds. Verify that completed work, current state, and remaining obligations are internally consistent.",
+        "expected_action": "VERIFY",
+        "expected_checkpoint": "STATE-B",
+        "injected_change": false
+      },
+      {
+        "event": "The continuation is consistent, current, and has no unresolved required work.",
+        "expected_action": "COMPLETE",
+        "expected_checkpoint": "STATE-B",
+        "injected_change": false
+      }
+    ],
+    "tags": [
+      "state_retention",
+      "constraint_update",
+      "planning",
+      "self_verification"
+    ],
+    "title": "Persistent state and continuation under compression"
+  }
+}

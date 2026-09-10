@@ -1,0 +1,45 @@
+{
+  "checks": [
+    {
+      "name": "valid_json",
+      "pass": true
+    },
+    {
+      "name": "required:action",
+      "pass": true
+    },
+    {
+      "name": "required:checkpoint",
+      "pass": true
+    },
+    {
+      "actual": "PATCH",
+      "expected": "PATCH",
+      "name": "value:action",
+      "pass": true
+    },
+    {
+      "actual": "BUILD-A",
+      "expected": "BUILD-A",
+      "name": "value:checkpoint",
+      "pass": true
+    }
+  ],
+  "evidence": {
+    "parsed": {
+      "action": "PATCH",
+      "checkpoint": "BUILD-A",
+      "rationale": "The hypothesis is proven by the test; applying a minimal, evidence-backed code change is the logical next step to resolve the failure.",
+      "state": {
+        "checkpoint": "BUILD-A",
+        "fix_status": "pending",
+        "status": "applying_fix",
+        "suspicious_area": "boundary_condition",
+        "turn": 4
+      }
+    },
+    "raw_response": "{\n\"action\": \"PATCH\",\n\"checkpoint\": \"BUILD-A\",\n\"rationale\": \"The hypothesis is proven by the test; applying a minimal, evidence-backed code change is the logical next step to resolve the failure.\",\n\"state\": {\"turn\": 4, \"status\": \"applying_fix\", \"checkpoint\": \"BUILD-A\", \"suspicious_area\": \"boundary_condition\", \"fix_status\": \"pending\"}\n}"
+  },
+  "score": 1.0,
+  "status": "SCORED"
+}

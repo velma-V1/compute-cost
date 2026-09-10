@@ -1,0 +1,67 @@
+{
+  "checks": [
+    {
+      "name": "valid_json",
+      "pass": true
+    },
+    {
+      "name": "required:facts",
+      "pass": true
+    },
+    {
+      "name": "required:tool_sequence",
+      "pass": true
+    },
+    {
+      "name": "required:arguments",
+      "pass": true
+    },
+    {
+      "name": "required:answer",
+      "pass": true
+    },
+    {
+      "actual": "45",
+      "expected": {
+        "v1": 12,
+        "v2": 15,
+        "v3": 18
+      },
+      "name": "value:facts",
+      "pass": false
+    },
+    {
+      "actual": [],
+      "expected": [
+        "calculator"
+      ],
+      "name": "value:tool_sequence",
+      "pass": false
+    },
+    {
+      "actual": [],
+      "expected": {
+        "expression": "12+15+18"
+      },
+      "name": "value:arguments",
+      "pass": false
+    },
+    {
+      "actual": "45",
+      "expected": 45,
+      "name": "value:answer",
+      "pass": false
+    }
+  ],
+  "evidence": {
+    "parsed": {
+      "answer": "45",
+      "arguments": [],
+      "facts": "45",
+      "tool_sequence": []
+    },
+    "raw_response": "{\"facts\":\"45\",\"tool_sequence\":[],\"arguments\":[],\"answer\":\"45\"}"
+  },
+  "score": 0.0,
+  "status": "SCORED"
+}

@@ -1,0 +1,48 @@
+{
+  "checks": [
+    {
+      "name": "valid_json",
+      "pass": true
+    },
+    {
+      "name": "required:action",
+      "pass": true
+    },
+    {
+      "name": "required:checkpoint",
+      "pass": true
+    },
+    {
+      "actual": "CALCULATE",
+      "expected": "CALCULATE",
+      "name": "value:action",
+      "pass": true
+    },
+    {
+      "actual": "TOOL-A",
+      "expected": "TOOL-A",
+      "name": "value:checkpoint",
+      "pass": true
+    }
+  ],
+  "evidence": {
+    "parsed": {
+      "action": "CALCULATE",
+      "checkpoint": "TOOL-A",
+      "rationale": "The scenario requires computing the product of the retrieved values (17 and 23). CALCULATE is the designated action for performing arithmetic operations on available data.",
+      "state": {
+        "identifier": "42",
+        "operation": "product",
+        "status": "calculating",
+        "target": "Mira",
+        "values": [
+          17,
+          23
+        ]
+      }
+    },
+    "raw_response": "{\n  \"action\": \"CALCULATE\",\n  \"checkpoint\": \"TOOL-A\",\n  \"rationale\": \"The scenario requires computing the product of the retrieved values (17 and 23). CALCULATE is the designated action for performing arithmetic operations on available data.\",\n  \"state\": {\"target\": \"Mira\", \"identifier\": \"42\", \"values\": [17, 23], \"operation\": \"product\", \"status\": \"calculating\"}\n}"
+  },
+  "score": 1.0,
+  "status": "SCORED"
+}

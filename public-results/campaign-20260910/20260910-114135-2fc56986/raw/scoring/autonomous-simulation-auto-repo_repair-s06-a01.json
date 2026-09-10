@@ -1,0 +1,44 @@
+{
+  "checks": [
+    {
+      "name": "valid_json",
+      "pass": true
+    },
+    {
+      "name": "required:action",
+      "pass": true
+    },
+    {
+      "name": "required:checkpoint",
+      "pass": true
+    },
+    {
+      "actual": "TEST",
+      "expected": "RETEST",
+      "name": "value:action",
+      "pass": false
+    },
+    {
+      "actual": "BUILD-B",
+      "expected": "BUILD-B",
+      "name": "value:checkpoint",
+      "pass": true
+    }
+  ],
+  "evidence": {
+    "parsed": {
+      "action": "TEST",
+      "checkpoint": "BUILD-B",
+      "rationale": "A corrected minimal patch has been identified based on new evidence; running the focused tests is required to verify that this specific fix resolves the remaining defect before applying it or declaring completion.",
+      "state": {
+        "checkpoint": "BUILD-B",
+        "patch_status": "ready_for_verification",
+        "status": "verifying_corrected_patch",
+        "turn": 6
+      }
+    },
+    "raw_response": "{\n\"action\": \"TEST\",\n\"checkpoint\": \"BUILD-B\",\n\"rationale\": \"A corrected minimal patch has been identified based on new evidence; running the focused tests is required to verify that this specific fix resolves the remaining defect before applying it or declaring completion.\",\n\"state\": {\"turn\": 6, \"status\": \"verifying_corrected_patch\", \"checkpoint\": \"BUILD-B\", \"patch_status\": \"ready_for_verification\"}\n}"
+  },
+  "score": 0.0,
+  "status": "SCORED"
+}

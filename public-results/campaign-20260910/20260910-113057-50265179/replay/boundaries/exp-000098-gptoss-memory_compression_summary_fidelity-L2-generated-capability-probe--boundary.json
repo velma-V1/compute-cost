@@ -1,0 +1,2096 @@
+{
+  "benchmark_version": "gpt-oss-20b-capability-v1",
+  "boundary": {
+    "boundary_repeats": 2,
+    "family_id": "memory_compression_summary_fidelity",
+    "level": 2,
+    "role": "lower_reliable",
+    "transition_bracket": {
+      "lower_label": "reliable",
+      "lower_level": 2,
+      "upper_label": "failure",
+      "upper_level": 3
+    }
+  },
+  "case": {
+    "capabilities_required": [
+      "memory_compression_summary_fidelity"
+    ],
+    "capability_map": {
+      "capabilities_required": [
+        "memory_compression_summary_fidelity"
+      ],
+      "compound": false,
+      "difficulty": {
+        "dimensions": {
+          "compression_ratio": 2,
+          "fact_count": 3,
+          "priority_constraints": 3,
+          "relationship_count": 3
+        },
+        "level": 2
+      },
+      "family_id": "memory_compression_summary_fidelity",
+      "recovery_eligible": true,
+      "robustness_eligible": true,
+      "rubric_version": "memory-fidelity-v1",
+      "taxonomy_version": "capability-taxonomy-v1"
+    },
+    "category": "memory_compression_summary_fidelity",
+    "compound": false,
+    "difficulty": {
+      "dimensions": {
+        "compression_ratio": 2,
+        "fact_count": 3,
+        "priority_constraints": 3,
+        "relationship_count": 3
+      },
+      "level": 2,
+      "rubric_version": "memory-fidelity-v1"
+    },
+    "difficulty_level": 2,
+    "expected": {
+      "deadline": "deadline-12",
+      "owner": "owner-2"
+    },
+    "family_id": "memory_compression_summary_fidelity",
+    "fixture_generation": {
+      "family_id": "memory_compression_summary_fidelity",
+      "generator_version": "gpt-oss-ladders-v1",
+      "level": 2
+    },
+    "id": "gptoss-memory_compression_summary_fidelity-L2-generated",
+    "oracle_response": "{\"deadline\":\"deadline-12\",\"owner\":\"owner-2\"}",
+    "prompt": "Difficulty L2. Compress this record while preserving only PRIORITY facts. PRIORITY owner=owner-2; PRIORITY deadline=deadline-12; minor0=x0 minor1=x1 minor2=x2 minor3=x3 minor4=x4 minor5=x5 minor6=x6. Return only JSON with keys owner and deadline.",
+    "recovery_eligible": true,
+    "required": [
+      "owner",
+      "deadline"
+    ],
+    "robustness_eligible": true,
+    "scorer": "json",
+    "scorer_version": "1",
+    "suite_version": "gpt-oss-20b-capability-v1",
+    "tags": [],
+    "taxonomy_version": "capability-taxonomy-v1",
+    "timeout_s": 120
+  },
+  "classification": {
+    "basis": "deterministic scorer passed",
+    "measurement_kind": "DERIVED",
+    "result_class": "ANSWER_CORRECT",
+    "valid_for_capability": true
+  },
+  "evidence_key": "exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe",
+  "evidence_refs": {
+    "request": {
+      "bytes": 397,
+      "case_id": "exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe",
+      "path": "raw/runtime/requests/000101-characterize-exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe.bin",
+      "producer": "runtime-adapter",
+      "sha256": "04803b5918797c652dab5866aa59b29888c1ee209dec1f7a2342fa01bc62ec8b",
+      "stage": "characterize"
+    },
+    "request_id": "000101-characterize-exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe",
+    "response": {
+      "bytes": 7862,
+      "case_id": "exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe",
+      "path": "raw/runtime/responses/000101-characterize-exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe.bin",
+      "producer": "runtime-adapter",
+      "sha256": "f2939e6701b48639e219be680bac8e1d84f8e64cb61679fa66a82c482caded0f",
+      "stage": "characterize"
+    },
+    "streams": [
+      {
+        "bytes": 140,
+        "case_id": "exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe",
+        "path": "raw/runtime/streams/000101-characterize-exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe/000000.bin",
+        "producer": "runtime-stream",
+        "sha256": "1ce17659cd1e285ce800c19bbd1e03461b065349a035f2a9d02c38925cadfe48",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 144,
+        "case_id": "exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe",
+        "path": "raw/runtime/streams/000101-characterize-exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe/000001.bin",
+        "producer": "runtime-stream",
+        "sha256": "c51f50c02d7b6f228b3224df7adaead32f6acba12841de987e3aadaa6f19837d",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 142,
+        "case_id": "exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe",
+        "path": "raw/runtime/streams/000101-characterize-exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe/000002.bin",
+        "producer": "runtime-stream",
+        "sha256": "bb6176dc82c1f2861535f80dd5dbe9f2cfb2cf0713ab677f571994eb9c7d98c3",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 146,
+        "case_id": "exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe",
+        "path": "raw/runtime/streams/000101-characterize-exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe/000003.bin",
+        "producer": "runtime-stream",
+        "sha256": "fca0744347570a0f942edca2675cd0a3aa2df2a14994f328b0f5fb267e060519",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 144,
+        "case_id": "exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe",
+        "path": "raw/runtime/streams/000101-characterize-exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe/000004.bin",
+        "producer": "runtime-stream",
+        "sha256": "e22ba6223030cce7df63180e43d76242b85693c4bad4d7dbde23430cdfee9f03",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 144,
+        "case_id": "exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe",
+        "path": "raw/runtime/streams/000101-characterize-exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe/000005.bin",
+        "producer": "runtime-stream",
+        "sha256": "a6ec1c6ba7bc99ad8fdb17118110f2e3a1c19ed8070301dc9b90cf542bd1a4c5",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 144,
+        "case_id": "exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe",
+        "path": "raw/runtime/streams/000101-characterize-exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe/000006.bin",
+        "producer": "runtime-stream",
+        "sha256": "d58a03135d5fbc2f40f02a6f0dc55deacafc39b10ae810ffd2c15087669c7bba",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 145,
+        "case_id": "exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe",
+        "path": "raw/runtime/streams/000101-characterize-exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe/000007.bin",
+        "producer": "runtime-stream",
+        "sha256": "d437d8b4d8b427c52bc676e27dc064adc095e0aca3d4cd10d67cc8c86301c29a",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 143,
+        "case_id": "exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe",
+        "path": "raw/runtime/streams/000101-characterize-exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe/000008.bin",
+        "producer": "runtime-stream",
+        "sha256": "ae4438050b39babc42e6a839417f614ef422c747d0e588a34f4fb6403b3731c9",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 148,
+        "case_id": "exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe",
+        "path": "raw/runtime/streams/000101-characterize-exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe/000009.bin",
+        "producer": "runtime-stream",
+        "sha256": "9980d04a90383c9c9007dd6b8f858e8e5b81a558a1f4d2578fbcb9092e0a618c",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 140,
+        "case_id": "exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe",
+        "path": "raw/runtime/streams/000101-characterize-exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe/000010.bin",
+        "producer": "runtime-stream",
+        "sha256": "09d8e2b9f616cdda1f29ccc15fa01f26cbff6554909ecd38daa46966802cd04c",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 143,
+        "case_id": "exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe",
+        "path": "raw/runtime/streams/000101-characterize-exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe/000011.bin",
+        "producer": "runtime-stream",
+        "sha256": "89345777feecdc9721d1264cf4294a9cc3fffbec9a66f89d214a247e5fc41667",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 146,
+        "case_id": "exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe",
+        "path": "raw/runtime/streams/000101-characterize-exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe/000012.bin",
+        "producer": "runtime-stream",
+        "sha256": "0c9754103b22ee95b12dfd697ad2b2879354c80dafba2281e98cfffa241436bf",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 143,
+        "case_id": "exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe",
+        "path": "raw/runtime/streams/000101-characterize-exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe/000013.bin",
+        "producer": "runtime-stream",
+        "sha256": "f78705164386591ccf87b8068c2bd57e1d244023b917e6fa2da1248fd5508bd9",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 145,
+        "case_id": "exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe",
+        "path": "raw/runtime/streams/000101-characterize-exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe/000014.bin",
+        "producer": "runtime-stream",
+        "sha256": "b828deac803d0dfec9d4a9980be86e3b195d37f4b3d15eb9e558a7b598f186fb",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 140,
+        "case_id": "exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe",
+        "path": "raw/runtime/streams/000101-characterize-exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe/000015.bin",
+        "producer": "runtime-stream",
+        "sha256": "3f0462300df7e2930445bbc85b165404dcf7c72a70a1fbc408182ac21c2a414d",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 144,
+        "case_id": "exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe",
+        "path": "raw/runtime/streams/000101-characterize-exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe/000016.bin",
+        "producer": "runtime-stream",
+        "sha256": "f7589f05b733749ed28da46825af2d9f080efad501b96022886a9829f77a1342",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 140,
+        "case_id": "exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe",
+        "path": "raw/runtime/streams/000101-characterize-exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe/000017.bin",
+        "producer": "runtime-stream",
+        "sha256": "b8a2911c2c4ea1e7d011005317e0a13884dccf3c677cfb7158d47d48c05b5d78",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 140,
+        "case_id": "exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe",
+        "path": "raw/runtime/streams/000101-characterize-exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe/000018.bin",
+        "producer": "runtime-stream",
+        "sha256": "e56b446e1d05a3a6daa43f737614dd25d0ca85c3b9fb33de917d9625c734b227",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 140,
+        "case_id": "exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe",
+        "path": "raw/runtime/streams/000101-characterize-exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe/000019.bin",
+        "producer": "runtime-stream",
+        "sha256": "3e0fb6bf2a49e365edc30743ea30aa9172bc3b2b30a6a0e81030ffdab5dbd411",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 148,
+        "case_id": "exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe",
+        "path": "raw/runtime/streams/000101-characterize-exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe/000020.bin",
+        "producer": "runtime-stream",
+        "sha256": "6ca577e77efdd25ce84e09a715c74ea10d4318f0f05418a6d5714189fabde0c5",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 140,
+        "case_id": "exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe",
+        "path": "raw/runtime/streams/000101-characterize-exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe/000021.bin",
+        "producer": "runtime-stream",
+        "sha256": "84e1be338b693c4d6e1838ec09ff816fe8147b15ffcb496e6f54ce6a4e0c22a2",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 147,
+        "case_id": "exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe",
+        "path": "raw/runtime/streams/000101-characterize-exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe/000022.bin",
+        "producer": "runtime-stream",
+        "sha256": "ea9cce97b7f46343e3c2ea122f6761318ce78356ab4fb2f4b5ecf5ea495cfe35",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 139,
+        "case_id": "exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe",
+        "path": "raw/runtime/streams/000101-characterize-exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe/000023.bin",
+        "producer": "runtime-stream",
+        "sha256": "d265d706f3d3d7ccd7fbf89d9b19c3f64fe763694202aeca600c782c24ce2c76",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 141,
+        "case_id": "exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe",
+        "path": "raw/runtime/streams/000101-characterize-exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe/000024.bin",
+        "producer": "runtime-stream",
+        "sha256": "d3e7e5452c4a147ff97a9badaf2198312fb5cb5bda3e3a210aa99d0f89938317",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 140,
+        "case_id": "exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe",
+        "path": "raw/runtime/streams/000101-characterize-exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe/000025.bin",
+        "producer": "runtime-stream",
+        "sha256": "c43ba0490aa7ebcb58207e53795a034542e4453d748fb8ad169db1ce6cdd5e80",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 142,
+        "case_id": "exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe",
+        "path": "raw/runtime/streams/000101-characterize-exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe/000026.bin",
+        "producer": "runtime-stream",
+        "sha256": "9f4bef3cbe59525a9333ac9d33fd3dce5037a6eba449dde98242329caec59732",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 146,
+        "case_id": "exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe",
+        "path": "raw/runtime/streams/000101-characterize-exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe/000027.bin",
+        "producer": "runtime-stream",
+        "sha256": "0bd882792cd4747a50f0ef4b1bca732c4e60f92910485f49d62b6e79b189c54c",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 143,
+        "case_id": "exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe",
+        "path": "raw/runtime/streams/000101-characterize-exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe/000028.bin",
+        "producer": "runtime-stream",
+        "sha256": "de7759ae4f9c93b809dc3d200aeacac86b3980a50c3c3b80e90c834ebad0e839",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 144,
+        "case_id": "exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe",
+        "path": "raw/runtime/streams/000101-characterize-exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe/000029.bin",
+        "producer": "runtime-stream",
+        "sha256": "4559439b3fd8a7ee9d2740cfff7da6786d9943ded8c3171384129da21380b19c",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 144,
+        "case_id": "exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe",
+        "path": "raw/runtime/streams/000101-characterize-exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe/000030.bin",
+        "producer": "runtime-stream",
+        "sha256": "49c97b9390142047dc99a4c3a5ea774bb1a08d8ee7f273b8c2f020f57dd48ab0",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 144,
+        "case_id": "exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe",
+        "path": "raw/runtime/streams/000101-characterize-exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe/000031.bin",
+        "producer": "runtime-stream",
+        "sha256": "54a6adebd0e3fa9f47aa92afb93572efa331a94c48212e30ab1e35c90bb08980",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 139,
+        "case_id": "exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe",
+        "path": "raw/runtime/streams/000101-characterize-exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe/000032.bin",
+        "producer": "runtime-stream",
+        "sha256": "2de5ef23bf72d5f94cdad3466b77ede6c8b40b62c2f1e08f2f0ac182def31242",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 140,
+        "case_id": "exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe",
+        "path": "raw/runtime/streams/000101-characterize-exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe/000033.bin",
+        "producer": "runtime-stream",
+        "sha256": "e770264898eba89bf575f4542e84c56991795d9a6544db452d5554f6cad7d802",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 144,
+        "case_id": "exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe",
+        "path": "raw/runtime/streams/000101-characterize-exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe/000034.bin",
+        "producer": "runtime-stream",
+        "sha256": "8f6fc2dad70308a67e712f31cdb02a8423be7a74dbb1154c297b5975c43be934",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 147,
+        "case_id": "exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe",
+        "path": "raw/runtime/streams/000101-characterize-exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe/000035.bin",
+        "producer": "runtime-stream",
+        "sha256": "ab9c9f708e24314127239ee69f0f012fdedb7e20ccf5c0be0f83b4fc3813e86c",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 144,
+        "case_id": "exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe",
+        "path": "raw/runtime/streams/000101-characterize-exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe/000036.bin",
+        "producer": "runtime-stream",
+        "sha256": "79c5a5bae48e5cbc37f130620a24904833d051c24eeebccf09907842d49cd768",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 147,
+        "case_id": "exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe",
+        "path": "raw/runtime/streams/000101-characterize-exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe/000037.bin",
+        "producer": "runtime-stream",
+        "sha256": "c93f6f3c812bc3219e358ecbe15eb805fbaf8302c9f37bac945f73f798da2b75",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 140,
+        "case_id": "exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe",
+        "path": "raw/runtime/streams/000101-characterize-exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe/000038.bin",
+        "producer": "runtime-stream",
+        "sha256": "8ab88ad970ecbc0af89169a26e8c2321ee155e1bc7ef13c72d915f5ea651e8ee",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 141,
+        "case_id": "exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe",
+        "path": "raw/runtime/streams/000101-characterize-exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe/000039.bin",
+        "producer": "runtime-stream",
+        "sha256": "0d3bb4f32b2131f1b66516d895acc0074461b8f8fed5eceac4615343a3670a2a",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 142,
+        "case_id": "exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe",
+        "path": "raw/runtime/streams/000101-characterize-exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe/000040.bin",
+        "producer": "runtime-stream",
+        "sha256": "c49829b0e362266ba69bb45a4167507ffe0823c6e0bd6405f6ebbd263e089c16",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 127,
+        "case_id": "exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe",
+        "path": "raw/runtime/streams/000101-characterize-exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe/000041.bin",
+        "producer": "runtime-stream",
+        "sha256": "2417a8145141f22ff9b855adb79e1d4e7699a38c563086be1305af7f640df5c4",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 130,
+        "case_id": "exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe",
+        "path": "raw/runtime/streams/000101-characterize-exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe/000042.bin",
+        "producer": "runtime-stream",
+        "sha256": "020cb0b8c068957efe16f02ad6d921067c591513bb0150ada0a150076dab74d0",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 130,
+        "case_id": "exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe",
+        "path": "raw/runtime/streams/000101-characterize-exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe/000043.bin",
+        "producer": "runtime-stream",
+        "sha256": "a1be53376feedb4799ae77ffa20561caf854a3d6aade0dd939c7c95a58a16725",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 130,
+        "case_id": "exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe",
+        "path": "raw/runtime/streams/000101-characterize-exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe/000044.bin",
+        "producer": "runtime-stream",
+        "sha256": "2d4ce167edb0099463064122b2195e3cc5f619dfd418f7d840035cacaf4d1f21",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 126,
+        "case_id": "exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe",
+        "path": "raw/runtime/streams/000101-characterize-exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe/000045.bin",
+        "producer": "runtime-stream",
+        "sha256": "38ccfdc37098cec73271f8cf4220e7b29590da2bf1402ab626727145deed3da8",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 126,
+        "case_id": "exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe",
+        "path": "raw/runtime/streams/000101-characterize-exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe/000046.bin",
+        "producer": "runtime-stream",
+        "sha256": "c664496b8b1cb1388b5452182e42bc67b3d49cc09b1a2b38ddc60d09d2a0f2bd",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 130,
+        "case_id": "exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe",
+        "path": "raw/runtime/streams/000101-characterize-exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe/000047.bin",
+        "producer": "runtime-stream",
+        "sha256": "02d3e611423699e04f5c6d3c5099fba5c30c9662c67ba10b0d88d3a2f7a69835",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 133,
+        "case_id": "exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe",
+        "path": "raw/runtime/streams/000101-characterize-exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe/000048.bin",
+        "producer": "runtime-stream",
+        "sha256": "bc0cc49323a70f035d8896015750260db0d2fb6f4aaaf241090a9401557031b0",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 130,
+        "case_id": "exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe",
+        "path": "raw/runtime/streams/000101-characterize-exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe/000049.bin",
+        "producer": "runtime-stream",
+        "sha256": "f63a2dbf2a8b8b43729a31d8c0b3b39294f3e5455a27102ab845c7f14cd9b27d",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 133,
+        "case_id": "exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe",
+        "path": "raw/runtime/streams/000101-characterize-exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe/000050.bin",
+        "producer": "runtime-stream",
+        "sha256": "301653699c1d3551eeb88c749c8f8a532ca4d38782a1bb87d44c3b1d0ba04d51",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 125,
+        "case_id": "exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe",
+        "path": "raw/runtime/streams/000101-characterize-exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe/000051.bin",
+        "producer": "runtime-stream",
+        "sha256": "a2bea95b020ac01442f85bb927eb94e5cebea2ddfdaa334d23d1cbcbee00a89f",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 127,
+        "case_id": "exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe",
+        "path": "raw/runtime/streams/000101-characterize-exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe/000052.bin",
+        "producer": "runtime-stream",
+        "sha256": "9b04c064b1b5063dc2d20da4b9ca177dbe5d238e515c7325e4a93281d39f1df1",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 128,
+        "case_id": "exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe",
+        "path": "raw/runtime/streams/000101-characterize-exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe/000053.bin",
+        "producer": "runtime-stream",
+        "sha256": "7384a994e3bfff4492835774cce860ffab0cb97d433bc3cc3e5461051f04d84c",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 324,
+        "case_id": "exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe",
+        "path": "raw/runtime/streams/000101-characterize-exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe/000054.bin",
+        "producer": "runtime-stream",
+        "sha256": "8dfd6d9196e7d540a3c8dc5ae26f5049ec783b610a8807b569e719c29e207754",
+        "stage": "characterize"
+      }
+    ]
+  },
+  "experiment": {
+    "changed_variable": "baseline",
+    "context_request": null,
+    "difficulty_level": 2,
+    "experiment_id": "exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe",
+    "generation_budget": 256,
+    "hypothesis": "establish family difficulty anchor",
+    "parent_experiment_id": null,
+    "prompt_variant": "base",
+    "reasoning_effort": "low",
+    "recovery_level": null,
+    "seed": 42,
+    "task_family": "memory_compression_summary_fidelity",
+    "task_id": "memory_compression_summary_fidelity",
+    "temperature": 0.0,
+    "thinking_mode": true
+  },
+  "generation": {
+    "http_status": 200,
+    "metrics": {
+      "eval_count": 64,
+      "eval_duration_ns": 991387000,
+      "load_duration_ns": 4324600,
+      "prompt_eval_count": 135,
+      "prompt_eval_duration_ns": 180210000,
+      "total_duration_ns": 1192439100
+    },
+    "normalized": {
+      "done": true,
+      "done_reason": "stop",
+      "text": "{\"owner\":\"owner-2\",\"deadline\":\"deadline-12\"}",
+      "thinking": "We need to output JSON with only owner and deadline. The record has owner=owner-2, deadline=deadline-12. So output {\"owner\":\"owner-2\",\"deadline\":\"deadline-12\"}",
+      "tool_calls": []
+    },
+    "ok": true,
+    "phase_metrics": {
+      "answer_chars": 44,
+      "answer_chunks": 13,
+      "answer_span_ns": 182824100,
+      "measurement_kind": "MEASURED",
+      "thinking_chars": 159,
+      "thinking_chunks": 41,
+      "thinking_span_ns": 635520900,
+      "time_to_first_answer_ns": 1004301300,
+      "time_to_first_thinking_ns": 260847200
+    },
+    "raw_response_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDIuNzIwMjE1WiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiIiLCJ0aGlua2luZyI6IldlIn0sImRvbmUiOmZhbHNlfQp7Im1vZGVsIjoiZ3B0LW9zczoyMGIiLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTozNTowMi43MzU0Mjk5WiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiIiLCJ0aGlua2luZyI6IiBuZWVkIn0sImRvbmUiOmZhbHNlfQp7Im1vZGVsIjoiZ3B0LW9zczoyMGIiLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTozNTowMi43NTA5MjQyWiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiIiLCJ0aGlua2luZyI6IiB0byJ9LCJkb25lIjpmYWxzZX0KeyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDIuNzY1OTM5M1oiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiIiwidGhpbmtpbmciOiIgb3V0cHV0In0sImRvbmUiOmZhbHNlfQp7Im1vZGVsIjoiZ3B0LW9zczoyMGIiLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTozNTowMi43ODAyNzk0WiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiIiLCJ0aGlua2luZyI6IiBKU09OIn0sImRvbmUiOmZhbHNlfQp7Im1vZGVsIjoiZ3B0LW9zczoyMGIiLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTozNTowMi43OTYzODc3WiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiIiLCJ0aGlua2luZyI6IiB3aXRoIn0sImRvbmUiOmZhbHNlfQp7Im1vZGVsIjoiZ3B0LW9zczoyMGIiLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTozNTowMi44MTE1OTM1WiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiIiLCJ0aGlua2luZyI6IiBvbmx5In0sImRvbmUiOmZhbHNlfQp7Im1vZGVsIjoiZ3B0LW9zczoyMGIiLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTozNTowMi44MjY5NTYyWiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiIiLCJ0aGlua2luZyI6IiBvd25lciJ9LCJkb25lIjpmYWxzZX0KeyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDIuODQxNDk0MVoiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiIiwidGhpbmtpbmciOiIgYW5kIn0sImRvbmUiOmZhbHNlfQp7Im1vZGVsIjoiZ3B0LW9zczoyMGIiLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTozNTowMi44NTg3Mzg0WiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiIiLCJ0aGlua2luZyI6IiBkZWFkbGluZSJ9LCJkb25lIjpmYWxzZX0KeyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDIuODczNzI4NloiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiIiwidGhpbmtpbmciOiIuIn0sImRvbmUiOmZhbHNlfQp7Im1vZGVsIjoiZ3B0LW9zczoyMGIiLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTozNTowMi44ODE4Mjg5WiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiIiLCJ0aGlua2luZyI6IiBUaGUifSwiZG9uZSI6ZmFsc2V9CnsibW9kZWwiOiJncHQtb3NzOjIwYiIsImNyZWF0ZWRfYXQiOiIyMDI2LTA5LTEwVDE1OjM1OjAyLjkwNDA5MDdaIiwibWVzc2FnZSI6eyJyb2xlIjoiYXNzaXN0YW50IiwiY29udGVudCI6IiIsInRoaW5raW5nIjoiIHJlY29yZCJ9LCJkb25lIjpmYWxzZX0KeyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDIuOTIwMjU3NloiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiIiwidGhpbmtpbmciOiIgaGFzIn0sImRvbmUiOmZhbHNlfQp7Im1vZGVsIjoiZ3B0LW9zczoyMGIiLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTozNTowMi45MzY4MzE0WiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiIiLCJ0aGlua2luZyI6IiBvd25lciJ9LCJkb25lIjpmYWxzZX0KeyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDIuOTUyMjA1NFoiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiIiwidGhpbmtpbmciOiI9In0sImRvbmUiOmZhbHNlfQp7Im1vZGVsIjoiZ3B0LW9zczoyMGIiLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTozNTowMi45Njg2MzY0WiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiIiLCJ0aGlua2luZyI6Im93bmVyIn0sImRvbmUiOmZhbHNlfQp7Im1vZGVsIjoiZ3B0LW9zczoyMGIiLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTozNTowMi45ODU1ODEyWiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiIiLCJ0aGlua2luZyI6Ii0ifSwiZG9uZSI6ZmFsc2V9CnsibW9kZWwiOiJncHQtb3NzOjIwYiIsImNyZWF0ZWRfYXQiOiIyMDI2LTA5LTEwVDE1OjM1OjAzLjAwMTM5MDZaIiwibWVzc2FnZSI6eyJyb2xlIjoiYXNzaXN0YW50IiwiY29udGVudCI6IiIsInRoaW5raW5nIjoiMiJ9LCJkb25lIjpmYWxzZX0KeyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDMuMDE3MjUyNloiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiIiwidGhpbmtpbmciOiIsIn0sImRvbmUiOmZhbHNlfQp7Im1vZGVsIjoiZ3B0LW9zczoyMGIiLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTozNTowMy4wMzI5MzQ5WiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiIiLCJ0aGlua2luZyI6IiBkZWFkbGluZSJ9LCJkb25lIjpmYWxzZX0KeyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDMuMDQ4OTYwNFoiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiIiwidGhpbmtpbmciOiI9In0sImRvbmUiOmZhbHNlfQp7Im1vZGVsIjoiZ3B0LW9zczoyMGIiLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTozNTowMy4wNjQ5MDM3WiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiIiLCJ0aGlua2luZyI6ImRlYWRsaW5lIn0sImRvbmUiOmZhbHNlfQp7Im1vZGVsIjoiZ3B0LW9zczoyMGIiLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTozNTowMy4wODIyNTNaIiwibWVzc2FnZSI6eyJyb2xlIjoiYXNzaXN0YW50IiwiY29udGVudCI6IiIsInRoaW5raW5nIjoiLSJ9LCJkb25lIjpmYWxzZX0KeyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDMuMDk3NjI2MloiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiIiwidGhpbmtpbmciOiIxMiJ9LCJkb25lIjpmYWxzZX0KeyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDMuMTEzNzQyMVoiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiIiwidGhpbmtpbmciOiIuIn0sImRvbmUiOmZhbHNlfQp7Im1vZGVsIjoiZ3B0LW9zczoyMGIiLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTozNTowMy4xMjk5MjAyWiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiIiLCJ0aGlua2luZyI6IiBTbyJ9LCJkb25lIjpmYWxzZX0KeyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDMuMTQ1Njc1MloiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiIiwidGhpbmtpbmciOiIgb3V0cHV0In0sImRvbmUiOmZhbHNlfQp7Im1vZGVsIjoiZ3B0LW9zczoyMGIiLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTozNTowMy4xNjMzNTYxWiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiIiLCJ0aGlua2luZyI6IiB7XCIifSwiZG9uZSI6ZmFsc2V9CnsibW9kZWwiOiJncHQtb3NzOjIwYiIsImNyZWF0ZWRfYXQiOiIyMDI2LTA5LTEwVDE1OjM1OjAzLjE3ODk3ODJaIiwibWVzc2FnZSI6eyJyb2xlIjoiYXNzaXN0YW50IiwiY29udGVudCI6IiIsInRoaW5raW5nIjoib3duZXIifSwiZG9uZSI6ZmFsc2V9CnsibW9kZWwiOiJncHQtb3NzOjIwYiIsImNyZWF0ZWRfYXQiOiIyMDI2LTA5LTEwVDE1OjM1OjAzLjE5NDc4MTdaIiwibWVzc2FnZSI6eyJyb2xlIjoiYXNzaXN0YW50IiwiY29udGVudCI6IiIsInRoaW5raW5nIjoiXCI6XCIifSwiZG9uZSI6ZmFsc2V9CnsibW9kZWwiOiJncHQtb3NzOjIwYiIsImNyZWF0ZWRfYXQiOiIyMDI2LTA5LTEwVDE1OjM1OjAzLjIxMTMyMjRaIiwibWVzc2FnZSI6eyJyb2xlIjoiYXNzaXN0YW50IiwiY29udGVudCI6IiIsInRoaW5raW5nIjoib3duZXIifSwiZG9uZSI6ZmFsc2V9CnsibW9kZWwiOiJncHQtb3NzOjIwYiIsImNyZWF0ZWRfYXQiOiIyMDI2LTA5LTEwVDE1OjM1OjAzLjIyNzY0NloiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiIiwidGhpbmtpbmciOiItIn0sImRvbmUiOmZhbHNlfQp7Im1vZGVsIjoiZ3B0LW9zczoyMGIiLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTozNTowMy4yNDQ2NTE1WiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiIiLCJ0aGlua2luZyI6IjIifSwiZG9uZSI6ZmFsc2V9CnsibW9kZWwiOiJncHQtb3NzOjIwYiIsImNyZWF0ZWRfYXQiOiIyMDI2LTA5LTEwVDE1OjM1OjAzLjI2MDE4NTRaIiwibWVzc2FnZSI6eyJyb2xlIjoiYXNzaXN0YW50IiwiY29udGVudCI6IiIsInRoaW5raW5nIjoiXCIsXCIifSwiZG9uZSI6ZmFsc2V9CnsibW9kZWwiOiJncHQtb3NzOjIwYiIsImNyZWF0ZWRfYXQiOiIyMDI2LTA5LTEwVDE1OjM1OjAzLjI3Njg3OTZaIiwibWVzc2FnZSI6eyJyb2xlIjoiYXNzaXN0YW50IiwiY29udGVudCI6IiIsInRoaW5raW5nIjoiZGVhZGxpbmUifSwiZG9uZSI6ZmFsc2V9CnsibW9kZWwiOiJncHQtb3NzOjIwYiIsImNyZWF0ZWRfYXQiOiIyMDI2LTA5LTEwVDE1OjM1OjAzLjI5MjI3MDZaIiwibWVzc2FnZSI6eyJyb2xlIjoiYXNzaXN0YW50IiwiY29udGVudCI6IiIsInRoaW5raW5nIjoiXCI6XCIifSwiZG9uZSI6ZmFsc2V9CnsibW9kZWwiOiJncHQtb3NzOjIwYiIsImNyZWF0ZWRfYXQiOiIyMDI2LTA5LTEwVDE1OjM1OjAzLjMwNzkzNzlaIiwibWVzc2FnZSI6eyJyb2xlIjoiYXNzaXN0YW50IiwiY29udGVudCI6IiIsInRoaW5raW5nIjoiZGVhZGxpbmUifSwiZG9uZSI6ZmFsc2V9CnsibW9kZWwiOiJncHQtb3NzOjIwYiIsImNyZWF0ZWRfYXQiOiIyMDI2LTA5LTEwVDE1OjM1OjAzLjMyMzY3MDVaIiwibWVzc2FnZSI6eyJyb2xlIjoiYXNzaXN0YW50IiwiY29udGVudCI6IiIsInRoaW5raW5nIjoiLSJ9LCJkb25lIjpmYWxzZX0KeyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDMuMzM5NjY2OVoiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiIiwidGhpbmtpbmciOiIxMiJ9LCJkb25lIjpmYWxzZX0KeyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDMuMzUzOTM1NVoiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiIiwidGhpbmtpbmciOiJcIn0ifSwiZG9uZSI6ZmFsc2V9CnsibW9kZWwiOiJncHQtb3NzOjIwYiIsImNyZWF0ZWRfYXQiOiIyMDI2LTA5LTEwVDE1OjM1OjAzLjQ2MzgzM1oiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50Ijoie1wiIn0sImRvbmUiOmZhbHNlfQp7Im1vZGVsIjoiZ3B0LW9zczoyMGIiLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTozNTowMy40Nzg0ODE4WiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiJvd25lciJ9LCJkb25lIjpmYWxzZX0KeyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDMuNDk0MTUxOVoiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiXCI6XCIifSwiZG9uZSI6ZmFsc2V9CnsibW9kZWwiOiJncHQtb3NzOjIwYiIsImNyZWF0ZWRfYXQiOiIyMDI2LTA5LTEwVDE1OjM1OjAzLjUwOTUxMjJaIiwibWVzc2FnZSI6eyJyb2xlIjoiYXNzaXN0YW50IiwiY29udGVudCI6Im93bmVyIn0sImRvbmUiOmZhbHNlfQp7Im1vZGVsIjoiZ3B0LW9zczoyMGIiLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTozNTowMy41MjQ1OTIzWiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiItIn0sImRvbmUiOmZhbHNlfQp7Im1vZGVsIjoiZ3B0LW9zczoyMGIiLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTozNTowMy41Mzk3MDcxWiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiIyIn0sImRvbmUiOmZhbHNlfQp7Im1vZGVsIjoiZ3B0LW9zczoyMGIiLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTozNTowMy41NTQ5OTkxWiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiJcIixcIiJ9LCJkb25lIjpmYWxzZX0KeyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDMuNTY4MDAwMloiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiZGVhZGxpbmUifSwiZG9uZSI6ZmFsc2V9CnsibW9kZWwiOiJncHQtb3NzOjIwYiIsImNyZWF0ZWRfYXQiOiIyMDI2LTA5LTEwVDE1OjM1OjAzLjU4MzkzNzJaIiwibWVzc2FnZSI6eyJyb2xlIjoiYXNzaXN0YW50IiwiY29udGVudCI6IlwiOlwiIn0sImRvbmUiOmZhbHNlfQp7Im1vZGVsIjoiZ3B0LW9zczoyMGIiLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTozNTowMy42MDAxMTg3WiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiJkZWFkbGluZSJ9LCJkb25lIjpmYWxzZX0KeyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDMuNjE1NTI3WiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiItIn0sImRvbmUiOmZhbHNlfQp7Im1vZGVsIjoiZ3B0LW9zczoyMGIiLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTozNTowMy42MzA5ODE2WiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiIxMiJ9LCJkb25lIjpmYWxzZX0KeyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDMuNjQ2NzA0M1oiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiXCJ9In0sImRvbmUiOmZhbHNlfQp7Im1vZGVsIjoiZ3B0LW9zczoyMGIiLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTozNTowMy42NjI2MjNaIiwibWVzc2FnZSI6eyJyb2xlIjoiYXNzaXN0YW50IiwiY29udGVudCI6IiJ9LCJkb25lIjp0cnVlLCJkb25lX3JlYXNvbiI6InN0b3AiLCJ0b3RhbF9kdXJhdGlvbiI6MTE5MjQzOTEwMCwibG9hZF9kdXJhdGlvbiI6NDMyNDYwMCwicHJvbXB0X2V2YWxfY291bnQiOjEzNSwicHJvbXB0X2V2YWxfY2FjaGVkX2NvdW50IjowLCJwcm9tcHRfZXZhbF9kdXJhdGlvbiI6MTgwMjEwMDAwLCJldmFsX2NvdW50Ijo2NCwiZXZhbF9kdXJhdGlvbiI6OTkxMzg3MDAwfQo=",
+    "request": {
+      "body_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwibWVzc2FnZXMiOlt7InJvbGUiOiJ1c2VyIiwiY29udGVudCI6IkRpZmZpY3VsdHkgTDIuIENvbXByZXNzIHRoaXMgcmVjb3JkIHdoaWxlIHByZXNlcnZpbmcgb25seSBQUklPUklUWSBmYWN0cy4gUFJJT1JJVFkgb3duZXI9b3duZXItMjsgUFJJT1JJVFkgZGVhZGxpbmU9ZGVhZGxpbmUtMTI7IG1pbm9yMD14MCBtaW5vcjE9eDEgbWlub3IyPXgyIG1pbm9yMz14MyBtaW5vcjQ9eDQgbWlub3I1PXg1IG1pbm9yNj14Ni4gUmV0dXJuIG9ubHkgSlNPTiB3aXRoIGtleXMgb3duZXIgYW5kIGRlYWRsaW5lLiJ9XSwic3RyZWFtIjp0cnVlLCJvcHRpb25zIjp7InRlbXBlcmF0dXJlIjowLjAsInNlZWQiOjQyLCJudW1fcHJlZGljdCI6MjU2fSwidGhpbmsiOiJsb3cifQ==",
+      "body_text": "{\"model\":\"gpt-oss:20b\",\"messages\":[{\"role\":\"user\",\"content\":\"Difficulty L2. Compress this record while preserving only PRIORITY facts. PRIORITY owner=owner-2; PRIORITY deadline=deadline-12; minor0=x0 minor1=x1 minor2=x2 minor3=x3 minor4=x4 minor5=x5 minor6=x6. Return only JSON with keys owner and deadline.\"}],\"stream\":true,\"options\":{\"temperature\":0.0,\"seed\":42,\"num_predict\":256},\"think\":\"low\"}",
+      "method": "POST",
+      "started_at_utc": "2026-09-10T15:35:02.459680+00:00",
+      "started_monotonic_ns": 53179177433000,
+      "stream": true,
+      "timeout_s": 120.0,
+      "url": "http://127.0.0.1:11434/api/chat"
+    },
+    "response_headers": {
+      "connection": "close",
+      "content-type": "application/x-ndjson",
+      "date": "Thu, 10 Sep 2026 15:35:02 GMT",
+      "transfer-encoding": "chunked"
+    },
+    "stream_events": [
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:02.720215Z",
+          "done": false,
+          "message": {
+            "content": "",
+            "role": "assistant",
+            "thinking": "We"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDIuNzIwMjE1WiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiIiLCJ0aGlua2luZyI6IldlIn0sImRvbmUiOmZhbHNlfQo=",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:02.720215Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\",\"thinking\":\"We\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:02.720528+00:00",
+        "received_monotonic_ns": 53179438280200,
+        "sequence": 0
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:02.7354299Z",
+          "done": false,
+          "message": {
+            "content": "",
+            "role": "assistant",
+            "thinking": " need"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDIuNzM1NDI5OVoiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiIiwidGhpbmtpbmciOiIgbmVlZCJ9LCJkb25lIjpmYWxzZX0K",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:02.7354299Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\",\"thinking\":\" need\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:02.735543+00:00",
+        "received_monotonic_ns": 53179453296200,
+        "sequence": 1
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:02.7509242Z",
+          "done": false,
+          "message": {
+            "content": "",
+            "role": "assistant",
+            "thinking": " to"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDIuNzUwOTI0MloiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiIiwidGhpbmtpbmciOiIgdG8ifSwiZG9uZSI6ZmFsc2V9Cg==",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:02.7509242Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\",\"thinking\":\" to\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:02.751032+00:00",
+        "received_monotonic_ns": 53179468785100,
+        "sequence": 2
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:02.7659393Z",
+          "done": false,
+          "message": {
+            "content": "",
+            "role": "assistant",
+            "thinking": " output"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDIuNzY1OTM5M1oiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiIiwidGhpbmtpbmciOiIgb3V0cHV0In0sImRvbmUiOmZhbHNlfQo=",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:02.7659393Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\",\"thinking\":\" output\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:02.766051+00:00",
+        "received_monotonic_ns": 53179483804100,
+        "sequence": 3
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:02.7802794Z",
+          "done": false,
+          "message": {
+            "content": "",
+            "role": "assistant",
+            "thinking": " JSON"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDIuNzgwMjc5NFoiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiIiwidGhpbmtpbmciOiIgSlNPTiJ9LCJkb25lIjpmYWxzZX0K",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:02.7802794Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\",\"thinking\":\" JSON\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:02.781375+00:00",
+        "received_monotonic_ns": 53179499127000,
+        "sequence": 4
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:02.7963877Z",
+          "done": false,
+          "message": {
+            "content": "",
+            "role": "assistant",
+            "thinking": " with"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDIuNzk2Mzg3N1oiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiIiwidGhpbmtpbmciOiIgd2l0aCJ9LCJkb25lIjpmYWxzZX0K",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:02.7963877Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\",\"thinking\":\" with\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:02.796494+00:00",
+        "received_monotonic_ns": 53179514246600,
+        "sequence": 5
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:02.8115935Z",
+          "done": false,
+          "message": {
+            "content": "",
+            "role": "assistant",
+            "thinking": " only"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDIuODExNTkzNVoiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiIiwidGhpbmtpbmciOiIgb25seSJ9LCJkb25lIjpmYWxzZX0K",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:02.8115935Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\",\"thinking\":\" only\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:02.811688+00:00",
+        "received_monotonic_ns": 53179529441700,
+        "sequence": 6
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:02.8269562Z",
+          "done": false,
+          "message": {
+            "content": "",
+            "role": "assistant",
+            "thinking": " owner"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDIuODI2OTU2MloiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiIiwidGhpbmtpbmciOiIgb3duZXIifSwiZG9uZSI6ZmFsc2V9Cg==",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:02.8269562Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\",\"thinking\":\" owner\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:02.827216+00:00",
+        "received_monotonic_ns": 53179544970000,
+        "sequence": 7
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:02.8414941Z",
+          "done": false,
+          "message": {
+            "content": "",
+            "role": "assistant",
+            "thinking": " and"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDIuODQxNDk0MVoiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiIiwidGhpbmtpbmciOiIgYW5kIn0sImRvbmUiOmZhbHNlfQo=",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:02.8414941Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\",\"thinking\":\" and\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:02.842762+00:00",
+        "received_monotonic_ns": 53179560515100,
+        "sequence": 8
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:02.8587384Z",
+          "done": false,
+          "message": {
+            "content": "",
+            "role": "assistant",
+            "thinking": " deadline"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDIuODU4NzM4NFoiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiIiwidGhpbmtpbmciOiIgZGVhZGxpbmUifSwiZG9uZSI6ZmFsc2V9Cg==",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:02.8587384Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\",\"thinking\":\" deadline\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:02.858840+00:00",
+        "received_monotonic_ns": 53179576592400,
+        "sequence": 9
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:02.8737286Z",
+          "done": false,
+          "message": {
+            "content": "",
+            "role": "assistant",
+            "thinking": "."
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDIuODczNzI4NloiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiIiwidGhpbmtpbmciOiIuIn0sImRvbmUiOmZhbHNlfQo=",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:02.8737286Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\",\"thinking\":\".\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:02.873822+00:00",
+        "received_monotonic_ns": 53179591575800,
+        "sequence": 10
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:02.8818289Z",
+          "done": false,
+          "message": {
+            "content": "",
+            "role": "assistant",
+            "thinking": " The"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDIuODgxODI4OVoiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiIiwidGhpbmtpbmciOiIgVGhlIn0sImRvbmUiOmZhbHNlfQo=",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:02.8818289Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\",\"thinking\":\" The\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:02.889043+00:00",
+        "received_monotonic_ns": 53179606796400,
+        "sequence": 11
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:02.9040907Z",
+          "done": false,
+          "message": {
+            "content": "",
+            "role": "assistant",
+            "thinking": " record"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDIuOTA0MDkwN1oiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiIiwidGhpbmtpbmciOiIgcmVjb3JkIn0sImRvbmUiOmZhbHNlfQo=",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:02.9040907Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\",\"thinking\":\" record\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:02.904174+00:00",
+        "received_monotonic_ns": 53179621927500,
+        "sequence": 12
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:02.9202576Z",
+          "done": false,
+          "message": {
+            "content": "",
+            "role": "assistant",
+            "thinking": " has"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDIuOTIwMjU3NloiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiIiwidGhpbmtpbmciOiIgaGFzIn0sImRvbmUiOmZhbHNlfQo=",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:02.9202576Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\",\"thinking\":\" has\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:02.920353+00:00",
+        "received_monotonic_ns": 53179638107000,
+        "sequence": 13
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:02.9368314Z",
+          "done": false,
+          "message": {
+            "content": "",
+            "role": "assistant",
+            "thinking": " owner"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDIuOTM2ODMxNFoiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiIiwidGhpbmtpbmciOiIgb3duZXIifSwiZG9uZSI6ZmFsc2V9Cg==",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:02.9368314Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\",\"thinking\":\" owner\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:02.937113+00:00",
+        "received_monotonic_ns": 53179654866000,
+        "sequence": 14
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:02.9522054Z",
+          "done": false,
+          "message": {
+            "content": "",
+            "role": "assistant",
+            "thinking": "="
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDIuOTUyMjA1NFoiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiIiwidGhpbmtpbmciOiI9In0sImRvbmUiOmZhbHNlfQo=",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:02.9522054Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\",\"thinking\":\"=\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:02.958661+00:00",
+        "received_monotonic_ns": 53179676412300,
+        "sequence": 15
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:02.9686364Z",
+          "done": false,
+          "message": {
+            "content": "",
+            "role": "assistant",
+            "thinking": "owner"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDIuOTY4NjM2NFoiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiIiwidGhpbmtpbmciOiJvd25lciJ9LCJkb25lIjpmYWxzZX0K",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:02.9686364Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\",\"thinking\":\"owner\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:02.968736+00:00",
+        "received_monotonic_ns": 53179686489700,
+        "sequence": 16
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:02.9855812Z",
+          "done": false,
+          "message": {
+            "content": "",
+            "role": "assistant",
+            "thinking": "-"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDIuOTg1NTgxMloiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiIiwidGhpbmtpbmciOiItIn0sImRvbmUiOmZhbHNlfQo=",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:02.9855812Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\",\"thinking\":\"-\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:02.985688+00:00",
+        "received_monotonic_ns": 53179703441700,
+        "sequence": 17
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:03.0013906Z",
+          "done": false,
+          "message": {
+            "content": "",
+            "role": "assistant",
+            "thinking": "2"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDMuMDAxMzkwNloiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiIiwidGhpbmtpbmciOiIyIn0sImRvbmUiOmZhbHNlfQo=",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:03.0013906Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\",\"thinking\":\"2\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:03.001501+00:00",
+        "received_monotonic_ns": 53179719254700,
+        "sequence": 18
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:03.0172526Z",
+          "done": false,
+          "message": {
+            "content": "",
+            "role": "assistant",
+            "thinking": ","
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDMuMDE3MjUyNloiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiIiwidGhpbmtpbmciOiIsIn0sImRvbmUiOmZhbHNlfQo=",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:03.0172526Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\",\"thinking\":\",\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:03.017594+00:00",
+        "received_monotonic_ns": 53179735346100,
+        "sequence": 19
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:03.0329349Z",
+          "done": false,
+          "message": {
+            "content": "",
+            "role": "assistant",
+            "thinking": " deadline"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDMuMDMyOTM0OVoiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiIiwidGhpbmtpbmciOiIgZGVhZGxpbmUifSwiZG9uZSI6ZmFsc2V9Cg==",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:03.0329349Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\",\"thinking\":\" deadline\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:03.033061+00:00",
+        "received_monotonic_ns": 53179750813400,
+        "sequence": 20
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:03.0489604Z",
+          "done": false,
+          "message": {
+            "content": "",
+            "role": "assistant",
+            "thinking": "="
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDMuMDQ4OTYwNFoiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiIiwidGhpbmtpbmciOiI9In0sImRvbmUiOmZhbHNlfQo=",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:03.0489604Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\",\"thinking\":\"=\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:03.049085+00:00",
+        "received_monotonic_ns": 53179766838700,
+        "sequence": 21
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:03.0649037Z",
+          "done": false,
+          "message": {
+            "content": "",
+            "role": "assistant",
+            "thinking": "deadline"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDMuMDY0OTAzN1oiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiIiwidGhpbmtpbmciOiJkZWFkbGluZSJ9LCJkb25lIjpmYWxzZX0K",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:03.0649037Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\",\"thinking\":\"deadline\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:03.065031+00:00",
+        "received_monotonic_ns": 53179782784000,
+        "sequence": 22
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:03.082253Z",
+          "done": false,
+          "message": {
+            "content": "",
+            "role": "assistant",
+            "thinking": "-"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDMuMDgyMjUzWiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiIiLCJ0aGlua2luZyI6Ii0ifSwiZG9uZSI6ZmFsc2V9Cg==",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:03.082253Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\",\"thinking\":\"-\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:03.082394+00:00",
+        "received_monotonic_ns": 53179800146900,
+        "sequence": 23
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:03.0976262Z",
+          "done": false,
+          "message": {
+            "content": "",
+            "role": "assistant",
+            "thinking": "12"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDMuMDk3NjI2MloiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiIiwidGhpbmtpbmciOiIxMiJ9LCJkb25lIjpmYWxzZX0K",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:03.0976262Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\",\"thinking\":\"12\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:03.097727+00:00",
+        "received_monotonic_ns": 53179815479600,
+        "sequence": 24
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:03.1137421Z",
+          "done": false,
+          "message": {
+            "content": "",
+            "role": "assistant",
+            "thinking": "."
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDMuMTEzNzQyMVoiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiIiwidGhpbmtpbmciOiIuIn0sImRvbmUiOmZhbHNlfQo=",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:03.1137421Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\",\"thinking\":\".\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:03.113850+00:00",
+        "received_monotonic_ns": 53179831603900,
+        "sequence": 25
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:03.1299202Z",
+          "done": false,
+          "message": {
+            "content": "",
+            "role": "assistant",
+            "thinking": " So"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDMuMTI5OTIwMloiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiIiwidGhpbmtpbmciOiIgU28ifSwiZG9uZSI6ZmFsc2V9Cg==",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:03.1299202Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\",\"thinking\":\" So\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:03.130220+00:00",
+        "received_monotonic_ns": 53179847972100,
+        "sequence": 26
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:03.1456752Z",
+          "done": false,
+          "message": {
+            "content": "",
+            "role": "assistant",
+            "thinking": " output"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDMuMTQ1Njc1MloiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiIiwidGhpbmtpbmciOiIgb3V0cHV0In0sImRvbmUiOmZhbHNlfQo=",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:03.1456752Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\",\"thinking\":\" output\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:03.145800+00:00",
+        "received_monotonic_ns": 53179863553300,
+        "sequence": 27
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:03.1633561Z",
+          "done": false,
+          "message": {
+            "content": "",
+            "role": "assistant",
+            "thinking": " {\""
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDMuMTYzMzU2MVoiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiIiwidGhpbmtpbmciOiIge1wiIn0sImRvbmUiOmZhbHNlfQo=",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:03.1633561Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\",\"thinking\":\" {\\\"\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:03.163495+00:00",
+        "received_monotonic_ns": 53179881247100,
+        "sequence": 28
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:03.1789782Z",
+          "done": false,
+          "message": {
+            "content": "",
+            "role": "assistant",
+            "thinking": "owner"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDMuMTc4OTc4MloiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiIiwidGhpbmtpbmciOiJvd25lciJ9LCJkb25lIjpmYWxzZX0K",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:03.1789782Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\",\"thinking\":\"owner\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:03.179070+00:00",
+        "received_monotonic_ns": 53179896823500,
+        "sequence": 29
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:03.1947817Z",
+          "done": false,
+          "message": {
+            "content": "",
+            "role": "assistant",
+            "thinking": "\":\""
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDMuMTk0NzgxN1oiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiIiwidGhpbmtpbmciOiJcIjpcIiJ9LCJkb25lIjpmYWxzZX0K",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:03.1947817Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\",\"thinking\":\"\\\":\\\"\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:03.194912+00:00",
+        "received_monotonic_ns": 53179912664500,
+        "sequence": 30
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:03.2113224Z",
+          "done": false,
+          "message": {
+            "content": "",
+            "role": "assistant",
+            "thinking": "owner"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDMuMjExMzIyNFoiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiIiwidGhpbmtpbmciOiJvd25lciJ9LCJkb25lIjpmYWxzZX0K",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:03.2113224Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\",\"thinking\":\"owner\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:03.211632+00:00",
+        "received_monotonic_ns": 53179929384400,
+        "sequence": 31
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:03.227646Z",
+          "done": false,
+          "message": {
+            "content": "",
+            "role": "assistant",
+            "thinking": "-"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDMuMjI3NjQ2WiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiIiLCJ0aGlua2luZyI6Ii0ifSwiZG9uZSI6ZmFsc2V9Cg==",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:03.227646Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\",\"thinking\":\"-\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:03.227918+00:00",
+        "received_monotonic_ns": 53179945671000,
+        "sequence": 32
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:03.2446515Z",
+          "done": false,
+          "message": {
+            "content": "",
+            "role": "assistant",
+            "thinking": "2"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDMuMjQ0NjUxNVoiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiIiwidGhpbmtpbmciOiIyIn0sImRvbmUiOmZhbHNlfQo=",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:03.2446515Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\",\"thinking\":\"2\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:03.244763+00:00",
+        "received_monotonic_ns": 53179962516500,
+        "sequence": 33
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:03.2601854Z",
+          "done": false,
+          "message": {
+            "content": "",
+            "role": "assistant",
+            "thinking": "\",\""
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDMuMjYwMTg1NFoiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiIiwidGhpbmtpbmciOiJcIixcIiJ9LCJkb25lIjpmYWxzZX0K",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:03.2601854Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\",\"thinking\":\"\\\",\\\"\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:03.260788+00:00",
+        "received_monotonic_ns": 53179978541500,
+        "sequence": 34
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:03.2768796Z",
+          "done": false,
+          "message": {
+            "content": "",
+            "role": "assistant",
+            "thinking": "deadline"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDMuMjc2ODc5NloiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiIiwidGhpbmtpbmciOiJkZWFkbGluZSJ9LCJkb25lIjpmYWxzZX0K",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:03.2768796Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\",\"thinking\":\"deadline\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:03.276970+00:00",
+        "received_monotonic_ns": 53179994724300,
+        "sequence": 35
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:03.2922706Z",
+          "done": false,
+          "message": {
+            "content": "",
+            "role": "assistant",
+            "thinking": "\":\""
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDMuMjkyMjcwNloiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiIiwidGhpbmtpbmciOiJcIjpcIiJ9LCJkb25lIjpmYWxzZX0K",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:03.2922706Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\",\"thinking\":\"\\\":\\\"\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:03.292369+00:00",
+        "received_monotonic_ns": 53180010123100,
+        "sequence": 36
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:03.3079379Z",
+          "done": false,
+          "message": {
+            "content": "",
+            "role": "assistant",
+            "thinking": "deadline"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDMuMzA3OTM3OVoiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiIiwidGhpbmtpbmciOiJkZWFkbGluZSJ9LCJkb25lIjpmYWxzZX0K",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:03.3079379Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\",\"thinking\":\"deadline\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:03.321646+00:00",
+        "received_monotonic_ns": 53180039398300,
+        "sequence": 37
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:03.3236705Z",
+          "done": false,
+          "message": {
+            "content": "",
+            "role": "assistant",
+            "thinking": "-"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDMuMzIzNjcwNVoiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiIiwidGhpbmtpbmciOiItIn0sImRvbmUiOmZhbHNlfQo=",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:03.3236705Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\",\"thinking\":\"-\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:03.323767+00:00",
+        "received_monotonic_ns": 53180041521000,
+        "sequence": 38
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:03.3396669Z",
+          "done": false,
+          "message": {
+            "content": "",
+            "role": "assistant",
+            "thinking": "12"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDMuMzM5NjY2OVoiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiIiwidGhpbmtpbmciOiIxMiJ9LCJkb25lIjpmYWxzZX0K",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:03.3396669Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\",\"thinking\":\"12\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:03.339774+00:00",
+        "received_monotonic_ns": 53180057526800,
+        "sequence": 39
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:03.3539355Z",
+          "done": false,
+          "message": {
+            "content": "",
+            "role": "assistant",
+            "thinking": "\"}"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDMuMzUzOTM1NVoiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiIiwidGhpbmtpbmciOiJcIn0ifSwiZG9uZSI6ZmFsc2V9Cg==",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:03.3539355Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\",\"thinking\":\"\\\"}\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:03.356048+00:00",
+        "received_monotonic_ns": 53180073801100,
+        "sequence": 40
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:03.463833Z",
+          "done": false,
+          "message": {
+            "content": "{\"",
+            "role": "assistant"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDMuNDYzODMzWiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiJ7XCIifSwiZG9uZSI6ZmFsc2V9Cg==",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:03.463833Z\",\"message\":{\"role\":\"assistant\",\"content\":\"{\\\"\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:03.463982+00:00",
+        "received_monotonic_ns": 53180181734300,
+        "sequence": 41
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:03.4784818Z",
+          "done": false,
+          "message": {
+            "content": "owner",
+            "role": "assistant"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDMuNDc4NDgxOFoiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50Ijoib3duZXIifSwiZG9uZSI6ZmFsc2V9Cg==",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:03.4784818Z\",\"message\":{\"role\":\"assistant\",\"content\":\"owner\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:03.479196+00:00",
+        "received_monotonic_ns": 53180196948000,
+        "sequence": 42
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:03.4941519Z",
+          "done": false,
+          "message": {
+            "content": "\":\"",
+            "role": "assistant"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDMuNDk0MTUxOVoiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiXCI6XCIifSwiZG9uZSI6ZmFsc2V9Cg==",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:03.4941519Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\\\":\\\"\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:03.494263+00:00",
+        "received_monotonic_ns": 53180212016100,
+        "sequence": 43
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:03.5095122Z",
+          "done": false,
+          "message": {
+            "content": "owner",
+            "role": "assistant"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDMuNTA5NTEyMloiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50Ijoib3duZXIifSwiZG9uZSI6ZmFsc2V9Cg==",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:03.5095122Z\",\"message\":{\"role\":\"assistant\",\"content\":\"owner\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:03.509623+00:00",
+        "received_monotonic_ns": 53180227375800,
+        "sequence": 44
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:03.5245923Z",
+          "done": false,
+          "message": {
+            "content": "-",
+            "role": "assistant"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDMuNTI0NTkyM1oiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiLSJ9LCJkb25lIjpmYWxzZX0K",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:03.5245923Z\",\"message\":{\"role\":\"assistant\",\"content\":\"-\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:03.524695+00:00",
+        "received_monotonic_ns": 53180242447800,
+        "sequence": 45
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:03.5397071Z",
+          "done": false,
+          "message": {
+            "content": "2",
+            "role": "assistant"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDMuNTM5NzA3MVoiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiMiJ9LCJkb25lIjpmYWxzZX0K",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:03.5397071Z\",\"message\":{\"role\":\"assistant\",\"content\":\"2\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:03.539809+00:00",
+        "received_monotonic_ns": 53180257561700,
+        "sequence": 46
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:03.5549991Z",
+          "done": false,
+          "message": {
+            "content": "\",\"",
+            "role": "assistant"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDMuNTU0OTk5MVoiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiXCIsXCIifSwiZG9uZSI6ZmFsc2V9Cg==",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:03.5549991Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\\\",\\\"\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:03.555116+00:00",
+        "received_monotonic_ns": 53180272869100,
+        "sequence": 47
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:03.5680002Z",
+          "done": false,
+          "message": {
+            "content": "deadline",
+            "role": "assistant"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDMuNTY4MDAwMloiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiZGVhZGxpbmUifSwiZG9uZSI6ZmFsc2V9Cg==",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:03.5680002Z\",\"message\":{\"role\":\"assistant\",\"content\":\"deadline\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:03.570008+00:00",
+        "received_monotonic_ns": 53180287760700,
+        "sequence": 48
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:03.5839372Z",
+          "done": false,
+          "message": {
+            "content": "\":\"",
+            "role": "assistant"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDMuNTgzOTM3MloiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiXCI6XCIifSwiZG9uZSI6ZmFsc2V9Cg==",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:03.5839372Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\\\":\\\"\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:03.584877+00:00",
+        "received_monotonic_ns": 53180302629700,
+        "sequence": 49
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:03.6001187Z",
+          "done": false,
+          "message": {
+            "content": "deadline",
+            "role": "assistant"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDMuNjAwMTE4N1oiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiZGVhZGxpbmUifSwiZG9uZSI6ZmFsc2V9Cg==",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:03.6001187Z\",\"message\":{\"role\":\"assistant\",\"content\":\"deadline\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:03.600261+00:00",
+        "received_monotonic_ns": 53180318014900,
+        "sequence": 50
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:03.615527Z",
+          "done": false,
+          "message": {
+            "content": "-",
+            "role": "assistant"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDMuNjE1NTI3WiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiItIn0sImRvbmUiOmZhbHNlfQo=",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:03.615527Z\",\"message\":{\"role\":\"assistant\",\"content\":\"-\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:03.615620+00:00",
+        "received_monotonic_ns": 53180333373200,
+        "sequence": 51
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:03.6309816Z",
+          "done": false,
+          "message": {
+            "content": "12",
+            "role": "assistant"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDMuNjMwOTgxNloiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiMTIifSwiZG9uZSI6ZmFsc2V9Cg==",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:03.6309816Z\",\"message\":{\"role\":\"assistant\",\"content\":\"12\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:03.631085+00:00",
+        "received_monotonic_ns": 53180348838800,
+        "sequence": 52
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:03.6467043Z",
+          "done": false,
+          "message": {
+            "content": "\"}",
+            "role": "assistant"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDMuNjQ2NzA0M1oiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiXCJ9In0sImRvbmUiOmZhbHNlfQo=",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:03.6467043Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\\\"}\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:03.646805+00:00",
+        "received_monotonic_ns": 53180364558400,
+        "sequence": 53
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:03.662623Z",
+          "done": true,
+          "done_reason": "stop",
+          "eval_count": 64,
+          "eval_duration": 991387000,
+          "load_duration": 4324600,
+          "message": {
+            "content": "",
+            "role": "assistant"
+          },
+          "model": "gpt-oss:20b",
+          "prompt_eval_cached_count": 0,
+          "prompt_eval_count": 135,
+          "prompt_eval_duration": 180210000,
+          "total_duration": 1192439100
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDMuNjYyNjIzWiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiIifSwiZG9uZSI6dHJ1ZSwiZG9uZV9yZWFzb24iOiJzdG9wIiwidG90YWxfZHVyYXRpb24iOjExOTI0MzkxMDAsImxvYWRfZHVyYXRpb24iOjQzMjQ2MDAsInByb21wdF9ldmFsX2NvdW50IjoxMzUsInByb21wdF9ldmFsX2NhY2hlZF9jb3VudCI6MCwicHJvbXB0X2V2YWxfZHVyYXRpb24iOjE4MDIxMDAwMCwiZXZhbF9jb3VudCI6NjQsImV2YWxfZHVyYXRpb24iOjk5MTM4NzAwMH0K",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:03.662623Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\"},\"done\":true,\"done_reason\":\"stop\",\"total_duration\":1192439100,\"load_duration\":4324600,\"prompt_eval_count\":135,\"prompt_eval_cached_count\":0,\"prompt_eval_duration\":180210000,\"eval_count\":64,\"eval_duration\":991387000}\n",
+        "received_at_utc": "2026-09-10T15:35:03.668877+00:00",
+        "received_monotonic_ns": 53180386631300,
+        "sequence": 54
+      }
+    ],
+    "timing": {
+      "client_ended_monotonic_ns": 53180387058600,
+      "client_latency_ns": 1209646600,
+      "client_started_monotonic_ns": 53179177412000,
+      "first_event_latency_ns": 260847200,
+      "last_event_latency_ns": 1209198300
+    }
+  },
+  "invocation": {
+    "messages": [
+      {
+        "content": "Difficulty L2. Compress this record while preserving only PRIORITY facts. PRIORITY owner=owner-2; PRIORITY deadline=deadline-12; minor0=x0 minor1=x1 minor2=x2 minor3=x3 minor4=x4 minor5=x5 minor6=x6. Return only JSON with keys owner and deadline.",
+        "role": "user"
+      }
+    ],
+    "model": "gpt-oss:20b",
+    "options": {
+      "num_predict": 256,
+      "seed": 42,
+      "temperature": 0.0
+    },
+    "request_fields": {
+      "think": "low"
+    },
+    "stream": true
+  },
+  "model": "gpt-oss:20b",
+  "resolved_config": {
+    "autonomous_simulation": {
+      "enabled": true,
+      "generation_budget": 512,
+      "max_generation_budget": 2048,
+      "scenario_count": 6,
+      "steps_per_scenario": 8
+    },
+    "capability_campaign": {
+      "anchor_level": 2,
+      "boundary_repeats": 2,
+      "generation_budget": 256,
+      "jump": 3,
+      "max_experiments_per_family": 6,
+      "reasoning_effort": null,
+      "reliable_threshold": 0.9,
+      "thinking_mode": false,
+      "unstable_threshold": 0.4
+    },
+    "characterization": {
+      "boundary_repeats": 3,
+      "generation_budget_granularity": 32,
+      "initial_generation_budget": 256,
+      "max_experiments_per_task": 12,
+      "max_generation_budget": 2048,
+      "min_generation_budget": 32,
+      "think_off_generation_budget": 256
+    },
+    "compound_lab": {
+      "boundary_repeats": 3,
+      "enabled": false,
+      "jump": 2,
+      "max_compounds": 6,
+      "max_experiments_per_compound": 16
+    },
+    "cost": {
+      "electricity_configured": false,
+      "electricity_per_kwh": 0.0
+    },
+    "evidence": {
+      "retain_raw_collectors": true,
+      "retain_stream_chunks": true
+    },
+    "generation": {
+      "max_tokens": 256,
+      "seed": 42,
+      "temperature": 0.0
+    },
+    "limits": {
+      "consecutive_context_failures": 2,
+      "context_schedule": [
+        4096,
+        8192,
+        16384,
+        32768
+      ],
+      "host_ram_percent": 95.0,
+      "max_model_calls_per_run": 360,
+      "request_timeout_s": 120,
+      "sustained_iterations": 8,
+      "vram_percent": 98.0
+    },
+    "reasoning_curves": {
+      "enabled": false,
+      "repeats": 3
+    },
+    "recovery_lab": {
+      "enabled": false,
+      "max_attempts_per_candidate": 6,
+      "max_level": "R7",
+      "repeats": 3
+    },
+    "robustness_lab": {
+      "enabled": false,
+      "max_attempts_per_perturbation": 4,
+      "max_perturbations_per_family": 2,
+      "repeats": 2
+    },
+    "runtime": {
+      "endpoint": "http://127.0.0.1:11434"
+    },
+    "telemetry": {
+      "interval_s": 0.25,
+      "nvidia": true
+    }
+  },
+  "schema_version": 2,
+  "scoring": {
+    "checks": [
+      {
+        "name": "valid_json",
+        "pass": true
+      },
+      {
+        "name": "required:owner",
+        "pass": true
+      },
+      {
+        "name": "required:deadline",
+        "pass": true
+      },
+      {
+        "actual": "owner-2",
+        "expected": "owner-2",
+        "name": "value:owner",
+        "pass": true
+      },
+      {
+        "actual": "deadline-12",
+        "expected": "deadline-12",
+        "name": "value:deadline",
+        "pass": true
+      }
+    ],
+    "evidence": {
+      "parsed": {
+        "deadline": "deadline-12",
+        "owner": "owner-2"
+      },
+      "raw_response": "{\"owner\":\"owner-2\",\"deadline\":\"deadline-12\"}"
+    },
+    "score": 1.0,
+    "status": "SCORED"
+  },
+  "source_experiment_id": "exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe",
+  "stage": "characterize",
+  "telemetry_for_experiment": [
+    {
+      "case_id": "exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe",
+      "gpu": {
+        "availability": "available",
+        "devices": [
+          {
+            "driver_version": "610.62",
+            "extra_columns": [],
+            "fan_percent": 30.0,
+            "graphics_clock_mhz": 2745.0,
+            "index": 0,
+            "memory_clock_mhz": 10251.0,
+            "memory_free_mib": 567.0,
+            "memory_total_mib": 12282.0,
+            "memory_used_mib": 11431.0,
+            "name": "NVIDIA GeForce RTX 4070 SUPER",
+            "power_draw_w": 88.24,
+            "power_limit_w": 220.0,
+            "pstate": "P2",
+            "raw_columns": [
+              "0",
+              "GPU-e3df9a98-2412-6865-26e5-b5a284aa9138",
+              "NVIDIA GeForce RTX 4070 SUPER",
+              "610.62",
+              "53",
+              "12282",
+              "11431",
+              "567",
+              "44",
+              "88.24",
+              "220.00",
+              "2745",
+              "2745",
+              "10251",
+              "P2",
+              "30"
+            ],
+            "raw_line": "0, GPU-e3df9a98-2412-6865-26e5-b5a284aa9138, NVIDIA GeForce RTX 4070 SUPER, 610.62, 53, 12282, 11431, 567, 44, 88.24, 220.00, 2745, 2745, 10251, P2, 30",
+            "sm_clock_mhz": 2745.0,
+            "temperature_c": 44.0,
+            "utilization_gpu_percent": 53.0,
+            "uuid": "GPU-e3df9a98-2412-6865-26e5-b5a284aa9138"
+          }
+        ]
+      },
+      "host": {
+        "cpu_frequency_mhz": 4201.0,
+        "cpu_percent": 20.4,
+        "cpu_percent_per_core": [
+          71.4,
+          33.3,
+          85.7,
+          0.0,
+          0.0,
+          16.7,
+          0.0,
+          0.0,
+          33.3,
+          0.0,
+          66.7,
+          14.3,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "disk_io": {
+          "read_bytes": 220420230656,
+          "read_count": 1666755,
+          "read_time_ms": 1547,
+          "write_bytes": 102869673472,
+          "write_count": 945997,
+          "write_time_ms": 1277
+        },
+        "memory_available_bytes": 19245572096,
+        "memory_percent": 42.5,
+        "memory_total_bytes": 33462239232,
+        "memory_used_bytes": 14216667136
+      },
+      "monotonic_ns": 53179122398900,
+      "nvidia_collector": {
+        "command": [
+          "nvidia-smi",
+          "--query-gpu=index,uuid,name,driver_version,utilization.gpu,memory.total,memory.used,memory.free,temperature.gpu,power.draw,power.limit,clocks.gr,clocks.sm,clocks.mem,pstate,fan.speed",
+          "--format=csv,noheader,nounits"
+        ],
+        "duration_ns": 33647700,
+        "error": null,
+        "returncode": 0,
+        "started_at_utc": "2026-09-10T15:35:02.404807+00:00",
+        "stderr_b64": "",
+        "stderr_text": "",
+        "stdout_b64": "MCwgR1BVLWUzZGY5YTk4LTI0MTItNjg2NS0yNmU1LWI1YTI4NGFhOTEzOCwgTlZJRElBIEdlRm9yY2UgUlRYIDQwNzAgU1VQRVIsIDYxMC42MiwgNTMsIDEyMjgyLCAxMTQzMSwgNTY3LCA0NCwgODguMjQsIDIyMC4wMCwgMjc0NSwgMjc0NSwgMTAyNTEsIFAyLCAzMA0K",
+        "stdout_text": "0, GPU-e3df9a98-2412-6865-26e5-b5a284aa9138, NVIDIA GeForce RTX 4070 SUPER, 610.62, 53, 12282, 11431, 567, 44, 88.24, 220.00, 2745, 2745, 10251, P2, 30\r\n"
+      },
+      "process": {
+        "cpu_percent": 31.6,
+        "pid": 16108,
+        "rss_bytes": 163467264,
+        "vms_bytes": 147812352
+      },
+      "runtime_processes": [
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 236.765625,
+            "user_s": 1178.9375
+          },
+          "exe": "C:\\Users\\Matt\\AppData\\Local\\Programs\\Ollama\\lib\\ollama\\llama-server.exe",
+          "io": {
+            "other_bytes": 1473822,
+            "other_count": 65173,
+            "read_bytes": 14000777513,
+            "read_count": 43835,
+            "write_bytes": 609233,
+            "write_count": 5841
+          },
+          "name": "llama-server.exe",
+          "num_handles": 264,
+          "num_threads": 30,
+          "pid": 5388,
+          "rss_bytes": 5166239744,
+          "vms_bytes": 16048123904
+        },
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 3.640625,
+            "user_s": 3.4375
+          },
+          "exe": "C:\\Users\\Matt\\AppData\\Local\\Programs\\Ollama\\ollama app.exe",
+          "io": {
+            "other_bytes": 1290829790,
+            "other_count": 71122,
+            "read_bytes": 783228744,
+            "read_count": 1691,
+            "write_bytes": 1574405889,
+            "write_count": 36
+          },
+          "name": "ollama app.exe",
+          "num_handles": 421,
+          "num_threads": 20,
+          "pid": 20892,
+          "rss_bytes": 53481472,
+          "vms_bytes": 63045632
+        },
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 114.65625,
+            "user_s": 101.9375
+          },
+          "exe": "C:\\Users\\Matt\\AppData\\Local\\Programs\\Ollama\\ollama.exe",
+          "io": {
+            "other_bytes": 41030225116,
+            "other_count": 5653422,
+            "read_bytes": 66014367191,
+            "read_count": 2140909,
+            "write_bytes": 74288713954,
+            "write_count": 4611724
+          },
+          "name": "ollama.exe",
+          "num_handles": 519,
+          "num_threads": 26,
+          "pid": 21316,
+          "rss_bytes": 166293504,
+          "vms_bytes": 198905856
+        }
+      ],
+      "stage": "characterize",
+      "timestamp_utc": "2026-09-10T15:35:02.404639+00:00",
+      "total_gpu_power_w": 88.24
+    },
+    {
+      "case_id": "exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe",
+      "gpu": {
+        "availability": "available",
+        "devices": [
+          {
+            "driver_version": "610.62",
+            "extra_columns": [],
+            "fan_percent": 30.0,
+            "graphics_clock_mhz": 2745.0,
+            "index": 0,
+            "memory_clock_mhz": 10251.0,
+            "memory_free_mib": 608.0,
+            "memory_total_mib": 12282.0,
+            "memory_used_mib": 11390.0,
+            "name": "NVIDIA GeForce RTX 4070 SUPER",
+            "power_draw_w": 106.46,
+            "power_limit_w": 220.0,
+            "pstate": "P2",
+            "raw_columns": [
+              "0",
+              "GPU-e3df9a98-2412-6865-26e5-b5a284aa9138",
+              "NVIDIA GeForce RTX 4070 SUPER",
+              "610.62",
+              "53",
+              "12282",
+              "11390",
+              "608",
+              "45",
+              "106.46",
+              "220.00",
+              "2745",
+              "2745",
+              "10251",
+              "P2",
+              "30"
+            ],
+            "raw_line": "0, GPU-e3df9a98-2412-6865-26e5-b5a284aa9138, NVIDIA GeForce RTX 4070 SUPER, 610.62, 53, 12282, 11390, 608, 45, 106.46, 220.00, 2745, 2745, 10251, P2, 30",
+            "sm_clock_mhz": 2745.0,
+            "temperature_c": 45.0,
+            "utilization_gpu_percent": 53.0,
+            "uuid": "GPU-e3df9a98-2412-6865-26e5-b5a284aa9138"
+          }
+        ]
+      },
+      "host": {
+        "cpu_frequency_mhz": 4201.0,
+        "cpu_percent": 49.5,
+        "cpu_percent_per_core": [
+          85.0,
+          66.3,
+          89.8,
+          58.0,
+          51.5,
+          39.4,
+          55.1,
+          33.7,
+          55.0,
+          40.4,
+          62.6,
+          45.5,
+          18.6,
+          21.4,
+          28.3,
+          37.8
+        ],
+        "disk_io": {
+          "read_bytes": 220423806464,
+          "read_count": 1667071,
+          "read_time_ms": 1547,
+          "write_bytes": 102871655936,
+          "write_count": 946179,
+          "write_time_ms": 1277
+        },
+        "memory_available_bytes": 19599003648,
+        "memory_percent": 41.4,
+        "memory_total_bytes": 33462239232,
+        "memory_used_bytes": 13863235584
+      },
+      "monotonic_ns": 53180656619700,
+      "nvidia_collector": {
+        "command": [
+          "nvidia-smi",
+          "--query-gpu=index,uuid,name,driver_version,utilization.gpu,memory.total,memory.used,memory.free,temperature.gpu,power.draw,power.limit,clocks.gr,clocks.sm,clocks.mem,pstate,fan.speed",
+          "--format=csv,noheader,nounits"
+        ],
+        "duration_ns": 32144700,
+        "error": null,
+        "returncode": 0,
+        "started_at_utc": "2026-09-10T15:35:03.939046+00:00",
+        "stderr_b64": "",
+        "stderr_text": "",
+        "stdout_b64": "MCwgR1BVLWUzZGY5YTk4LTI0MTItNjg2NS0yNmU1LWI1YTI4NGFhOTEzOCwgTlZJRElBIEdlRm9yY2UgUlRYIDQwNzAgU1VQRVIsIDYxMC42MiwgNTMsIDEyMjgyLCAxMTM5MCwgNjA4LCA0NSwgMTA2LjQ2LCAyMjAuMDAsIDI3NDUsIDI3NDUsIDEwMjUxLCBQMiwgMzANCg==",
+        "stdout_text": "0, GPU-e3df9a98-2412-6865-26e5-b5a284aa9138, NVIDIA GeForce RTX 4070 SUPER, 610.62, 53, 12282, 11390, 608, 45, 106.46, 220.00, 2745, 2745, 10251, P2, 30\r\n"
+      },
+      "process": {
+        "cpu_percent": 14.9,
+        "pid": 16108,
+        "rss_bytes": 164085760,
+        "vms_bytes": 148557824
+      },
+      "runtime_processes": [
+        {
+          "cpu_percent": 461.8,
+          "cpu_times": {
+            "system_s": 238.453125,
+            "user_s": 1186.828125
+          },
+          "exe": "C:\\Users\\Matt\\AppData\\Local\\Programs\\Ollama\\lib\\ollama\\llama-server.exe",
+          "io": {
+            "other_bytes": 1482558,
+            "other_count": 65589,
+            "read_bytes": 14000777513,
+            "read_count": 43835,
+            "write_bytes": 619858,
+            "write_count": 5944
+          },
+          "name": "llama-server.exe",
+          "num_handles": 264,
+          "num_threads": 30,
+          "pid": 5388,
+          "rss_bytes": 5248589824,
+          "vms_bytes": 16130633728
+        },
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 3.640625,
+            "user_s": 3.4375
+          },
+          "exe": "C:\\Users\\Matt\\AppData\\Local\\Programs\\Ollama\\ollama app.exe",
+          "io": {
+            "other_bytes": 1290829790,
+            "other_count": 71122,
+            "read_bytes": 783228744,
+            "read_count": 1691,
+            "write_bytes": 1574405889,
+            "write_count": 36
+          },
+          "name": "ollama app.exe",
+          "num_handles": 421,
+          "num_threads": 20,
+          "pid": 20892,
+          "rss_bytes": 53469184,
+          "vms_bytes": 62980096
+        },
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 114.65625,
+            "user_s": 101.953125
+          },
+          "exe": "C:\\Users\\Matt\\AppData\\Local\\Programs\\Ollama\\ollama.exe",
+          "io": {
+            "other_bytes": 41030249073,
+            "other_count": 5653868,
+            "read_bytes": 66014395601,
+            "read_count": 2140966,
+            "write_bytes": 74288724670,
+            "write_count": 4611738
+          },
+          "name": "ollama.exe",
+          "num_handles": 519,
+          "num_threads": 26,
+          "pid": 21316,
+          "rss_bytes": 166293504,
+          "vms_bytes": 198905856
+        }
+      ],
+      "stage": "characterize",
+      "timestamp_utc": "2026-09-10T15:35:03.938859+00:00",
+      "total_gpu_power_w": 106.46
+    }
+  ]
+}

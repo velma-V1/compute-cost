@@ -1,0 +1,44 @@
+{
+  "checks": [
+    {
+      "name": "valid_json",
+      "pass": true
+    },
+    {
+      "name": "required:action",
+      "pass": true
+    },
+    {
+      "name": "required:checkpoint",
+      "pass": true
+    },
+    {
+      "actual": "RETEST",
+      "expected": "AUDIT",
+      "name": "value:action",
+      "pass": false
+    },
+    {
+      "actual": "BUILD-B",
+      "expected": "BUILD-B",
+      "name": "value:checkpoint",
+      "pass": true
+    }
+  ],
+  "evidence": {
+    "parsed": {
+      "action": "RETEST",
+      "checkpoint": "BUILD-B",
+      "rationale": "Focused tests passed, but the scenario requires verifying the broader acceptance contract to ensure no regressions were introduced; running the full test suite is the necessary step before declaring completion.",
+      "state": {
+        "checkpoint": "BUILD-B",
+        "focused_tests_status": "pass",
+        "status": "verifying_acceptance_contract",
+        "turn": 7
+      }
+    },
+    "raw_response": "{\n\"action\": \"RETEST\",\n\"checkpoint\": \"BUILD-B\",\n\"rationale\": \"Focused tests passed, but the scenario requires verifying the broader acceptance contract to ensure no regressions were introduced; running the full test suite is the necessary step before declaring completion.\",\n\"state\": {\"turn\": 7, \"status\": \"verifying_acceptance_contract\", \"checkpoint\": \"BUILD-B\", \"focused_tests_status\": \"pass\"}\n}"
+  },
+  "score": 0.0,
+  "status": "SCORED"
+}

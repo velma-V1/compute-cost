@@ -1,0 +1,43 @@
+{
+  "checks": [
+    {
+      "name": "valid_json",
+      "pass": true
+    },
+    {
+      "name": "required:action",
+      "pass": true
+    },
+    {
+      "name": "required:checkpoint",
+      "pass": true
+    },
+    {
+      "actual": "DECOMPOSE",
+      "expected": "DECOMPOSE",
+      "name": "value:action",
+      "pass": true
+    },
+    {
+      "actual": "PLAN-A",
+      "expected": "PLAN-A",
+      "name": "value:checkpoint",
+      "pass": true
+    }
+  ],
+  "evidence": {
+    "parsed": {
+      "action": "DECOMPOSE",
+      "checkpoint": "PLAN-A",
+      "rationale": "The scenario states there are four dependent workstreams but no defined execution order. Before prioritizing or scheduling, the specific tasks and dependencies within these workstreams must be clearly identified and broken down to understand the structure of the plan.",
+      "state": {
+        "current_phase": "decomposition",
+        "execution_order": "undefined",
+        "workstreams_identified": 4
+      }
+    },
+    "raw_response": "{\n  \"action\": \"DECOMPOSE\",\n  \"checkpoint\": \"PLAN-A\",\n  \"rationale\": \"The scenario states there are four dependent workstreams but no defined execution order. Before prioritizing or scheduling, the specific tasks and dependencies within these workstreams must be clearly identified and broken down to understand the structure of the plan.\",\n  \"state\": {\"current_phase\": \"decomposition\", \"workstreams_identified\": 4, \"execution_order\": \"undefined\"}\n}"
+  },
+  "score": 1.0,
+  "status": "SCORED"
+}

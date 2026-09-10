@@ -1,0 +1,35 @@
+{
+  "checks": [
+    {
+      "name": "executable_tests",
+      "pass": true
+    }
+  ],
+  "evidence": {
+    "executed_source_sha256": "810263b3f9105239a29afae1407ede4c46a1480016a3956a4b704ede9b212414",
+    "extracted_source": "def bucket(value):\n    if value < 3:\n        return 0\n    elif value < 6:\n        return 1\n    elif value < 9:\n        return 2\n    elif value < 12:\n        return 3\n    else:\n        return 4\n",
+    "invocation_sha256": "d6d15e6ec8f2f4d05d5da0aac3b55b2ad55580d4d57c5b2937c1b0606d955731",
+    "raw_response": "def bucket(value):\n    if value < 3:\n        return 0\n    elif value < 6:\n        return 1\n    elif value < 9:\n        return 2\n    elif value < 12:\n        return 3\n    else:\n        return 4",
+    "safety_rejection": null,
+    "subprocess": {
+      "command": [
+        "C:\\Users\\Matt\\compute-cost\\.venv\\Scripts\\python.exe",
+        "-I",
+        "-S",
+        "C:\\Users\\Matt\\AppData\\Local\\Temp\\compute-cost-case-ieup8rno\\case.py"
+      ],
+      "duration_ns": 32900100,
+      "error": null,
+      "returncode": 0,
+      "started_at_utc": "2026-09-10T15:42:23.160015+00:00",
+      "stderr_b64": "",
+      "stderr_text": "",
+      "stdout_b64": "",
+      "stdout_text": ""
+    },
+    "test_source": "assert bucket(0) == 0\nassert bucket(3) == 1\nassert bucket(6) == 2\nassert bucket(9) == 3\nassert bucket(13) == 4",
+    "test_source_sha256": "5f428fa6e28e2fe87738e676e2d068a8d850040595beb3e2b61c3b87a90fdadb"
+  },
+  "score": 1.0,
+  "status": "SCORED"
+}
