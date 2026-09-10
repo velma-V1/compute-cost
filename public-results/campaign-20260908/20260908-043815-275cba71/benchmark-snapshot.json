@@ -1,0 +1,41 @@
+{
+  "benchmark_version": "qwen-characterization-v1",
+  "cases": [
+    {
+      "category": "instruction_following",
+      "difficulty_level": 1,
+      "expected": "BLUE",
+      "id": "char-if-001",
+      "prompt": "Reply with exactly: BLUE",
+      "scorer": "exact",
+      "timeout_s": 120
+    },
+    {
+      "category": "structured_output",
+      "difficulty_level": 2,
+      "expected": {
+        "count": 3,
+        "name": "Ada"
+      },
+      "id": "char-json-001",
+      "prompt": "Return only valid JSON with name set to Ada and count set to 3. No markdown.",
+      "required": [
+        "name",
+        "count"
+      ],
+      "scorer": "json",
+      "timeout_s": 120
+    },
+    {
+      "category": "reasoning_math",
+      "difficulty_level": 3,
+      "expected": 200,
+      "id": "char-math-001",
+      "prompt": "A 240 GB dataset is reduced by 25 percent, then 20 GB is added. What is the final size in GB? Give the number.",
+      "scorer": "numeric",
+      "timeout_s": 120,
+      "tolerance": 0
+    }
+  ],
+  "description": "Representative deterministic tasks for adaptive thinking characterization."
+}
