@@ -95,6 +95,10 @@ def run_fixed_capability_matrix(
         if cell["status"] != "READY" or cell["fixture"] is None:
             if getattr(runner, "store", None) is not None and hasattr(runner.store, "append_jsonl"):
                 runner.store.append_jsonl("comparison-cells.jsonl", copy.deepcopy(cell))
+            # The protected-core plan reserved one physical call for this supported
+            # standardized cell. If the fixture is missing, the cell cannot execute;
+            # retain that absence as evidence and release its otherwise stranded slot.
+            _decrement_mandatory(runner)
             continue
 
         case = cell["fixture"]
