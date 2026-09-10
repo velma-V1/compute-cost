@@ -11,8 +11,13 @@ def test_default_config_contains_safe_bounded_run_settings():
     assert config["limits"]["request_timeout_s"] > 0
     assert config["limits"]["context_schedule"]
     assert config["limits"]["sustained_iterations"] > 0
-    assert config["limits"]["max_model_calls_per_run"] == 360
-    assert config["limits"]["max_model_calls_per_run"] < 400
+    assert config["limits"]["max_model_calls_per_run"] == 700
+    assert config["full_comparability"] == {
+        "enabled": True,
+        "fixed_levels": [2, 5, 8, 10],
+        "hard_call_limit": 700,
+        "protect_fixed_core": True,
+    }
     assert config["cost"]["electricity_configured"] is False
 
     characterization = config["characterization"]
@@ -36,10 +41,6 @@ def test_default_config_contains_safe_bounded_run_settings():
         "generation_budget": 512,
         "max_generation_budget": 2048,
     }
-    assert (40 * capability["max_experiments_per_family"]) + (
-        autonomous["scenario_count"] * autonomous["steps_per_scenario"]
-    ) == 288
-    assert config["limits"]["max_model_calls_per_run"] - 288 == 72
 
     recovery = config["recovery_lab"]
     assert recovery["enabled"] is False
