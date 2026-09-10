@@ -9,8 +9,9 @@ def test_default_campaign_is_compact_and_model_specific():
     assert campaign["reasoning_effort"] is None
     assert campaign["boundary_repeats"] == 2
     assert campaign["max_experiments_per_family"] == 6
-    assert cfg["limits"]["max_model_calls_per_run"] == 360
-    assert cfg["limits"]["max_model_calls_per_run"] < 400
+    assert cfg["limits"]["max_model_calls_per_run"] == 700
+    assert cfg["full_comparability"]["fixed_levels"] == [2, 5, 8, 10]
+    assert cfg["full_comparability"]["protect_fixed_core"] is True
     assert resolve_model_reasoning_control("gpt-oss:20b", campaign) == (True, "low")
     assert resolve_model_reasoning_control("qwen3.5:35b-a3b-q4_K_M", campaign) == (False, None)
     assert resolve_model_reasoning_control("devstral-small-2:24b-instruct-2512-q8_0", campaign) == (False, None)
