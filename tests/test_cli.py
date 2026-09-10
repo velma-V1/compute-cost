@@ -49,14 +49,22 @@ def test_default_config_declares_bounded_capability_campaign_controls():
         "anchor_level": 2,
         "jump": 3,
         "boundary_repeats": 2,
-        "max_experiments_per_family": 2,
+        "max_experiments_per_family": 6,
         "thinking_mode": False,
         "reasoning_effort": None,
         "generation_budget": 256,
         "reliable_threshold": 0.90,
         "unstable_threshold": 0.40,
     }
-    assert cfg["limits"]["max_model_calls_per_run"] == 120
+    assert cfg["limits"]["max_model_calls_per_run"] == 360
+    assert cfg["limits"]["max_model_calls_per_run"] < 400
+    assert cfg["autonomous_simulation"] == {
+        "enabled": True,
+        "scenario_count": 6,
+        "steps_per_scenario": 8,
+        "generation_budget": 512,
+        "max_generation_budget": 2048,
+    }
 
 
 def test_parser_supports_sequential_characterization_campaign():
