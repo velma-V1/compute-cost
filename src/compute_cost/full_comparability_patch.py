@@ -76,19 +76,25 @@ def _install_call_ledger() -> None:
         request_fields: dict[str, Any] | None = None,
     ):
         limit = int(self.config.get("limits", {}).get("max_model_calls_per_run", 700))
+        run_id = self.store.run_id
         ledger = getattr(self, "_call_ledger", None)
-        if not isinstance(ledger, CallLedger) or ledger.limit != limit:
+        ledger_run_id = getattr(self, "_call_ledger_run_id", None)
+        if (
+            not isinstance(ledger, CallLedger)
+            or ledger.limit != limit
+            or ledger_run_id != run_id
+        ):
             ledger = CallLedger(limit=limit)
             self._call_ledger = ledger
+            self._call_ledger_run_id = run_id
 
         category, family, scenario = _call_context(self, stage, case_id)
         try:
             ledger.authorize(category, family=family, scenario=scenario)
         except CallBudgetExceeded:
             # Keep the legacy runner's local counter aligned so its existing
-            # pre-runtime guard creates the normal retained budget-exhausted
-            # evidence without invoking the runtime.
-            run_id = self.store.run_id
+            # pre-runtime guard creates retained budget-exhausted evidence without
+            # invoking the runtime.
             self._model_call_counts[run_id] = max(
                 int(self._model_call_counts.get(run_id, 0)), limit
             )
