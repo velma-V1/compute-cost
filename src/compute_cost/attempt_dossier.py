@@ -8,6 +8,8 @@ expose are marked UNOBSERVABLE instead of inferred or fabricated.
 from __future__ import annotations
 
 import copy
+import json
+from pathlib import Path
 from typing import Any
 
 RETRY_VARIABLES = {"generation_budget", "replication", "recovery_level", "prompt_variant"}
@@ -80,6 +82,12 @@ def build_attempt_dossier(
     parent_id = getattr(spec, "parent_experiment_id", None)
     changed_variable = str(getattr(spec, "changed_variable", "baseline"))
     is_retry = bool(parent_id) and changed_variable in RETRY_VARIABLES
+    request_id = evidence_refs.get("request_id")
+    exchange_path = (
+        f"raw/runtime/exchanges/{request_id}.json"
+        if isinstance(request_id, str) and request_id
+        else None
+    )
 
     return {
         "schema_version": 1,
@@ -118,7 +126,8 @@ def build_attempt_dossier(
             "request_fields": copy.deepcopy(invocation.get("request_fields") or {}),
             "stream": invocation.get("stream"),
             "exact_serialized_request_ref": copy.deepcopy(evidence_refs.get("request")),
-            "request_id": evidence_refs.get("request_id"),
+            "exact_exchange_path": exchange_path,
+            "request_id": request_id,
         },
         "model_output": {
             "final_answer": str(normalized.get("text") or ""),
@@ -170,6 +179,7 @@ def build_attempt_dossier(
             "response": copy.deepcopy(evidence_refs.get("response")),
             "streams": copy.deepcopy(evidence_refs.get("streams") or []),
             "runtime_error": copy.deepcopy(evidence_refs.get("error")),
+            "exchange_path": exchange_path,
             "all_refs": copy.deepcopy(evidence_refs),
             "observable_runtime_envelope": {
                 "metrics": metrics,
@@ -232,3 +242,103 @@ def persist_attempt_dossier(
         },
     )
     return dossier
+
+
+def _read_retained_json(path: Path) -> dict[str, Any] | None:
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    return value if isinstance(value, dict) else None
+
+
+def _standard_invocation(runner: Any, case: dict[str, Any], spec: Any) -> dict[str, Any]:
+    options = runner._generation_options(
+        case,
+        {
+            "num_predict": int(spec.generation_budget),
+            "temperature": float(spec.temperature),
+            "seed": int(spec.seed),
+        },
+    )
+    think_request = spec.reasoning_effort if spec.reasoning_effort is not None else spec.thinking_mode
+    return {
+        "model": runner.model,
+        "messages": [{"role": "user", "content": str(case["prompt"])}],
+        "options": options,
+        "stream": True,
+        "request_fields": {"think": think_request},
+    }
+
+
+def install_execution_hooks() -> None:
+    """Attach dossier persistence to every experiment path already using execute_experiment."""
+    import compute_cost.capability_campaign as capability_campaign
+    import compute_cost.characterization as characterization
+    import compute_cost.compound_lab as compound_lab
+    import compute_cost.reasoning_curves as reasoning_curves
+    import compute_cost.recovery_lab as recovery_lab
+    import compute_cost.robustness_lab as robustness_lab
+
+    current = characterization.execute_experiment
+    if getattr(current, "_attempt_dossier_hook", False):
+        return
+    original = current
+
+    def wrapped_execute_experiment(runner, case, spec, *, parent=None, **kwargs):
+        telemetry_before = list(copy.deepcopy(getattr(runner, "_recent_telemetry", [])))
+        row = original(runner, case, spec, parent=parent, **kwargs)
+        classification = copy.deepcopy(row.get("classification") or {})
+        if not should_persist_attempt_dossier(spec, classification):
+            return row
+
+        refs = copy.deepcopy(row.get("evidence_refs") or {})
+        request_id = refs.get("request_id")
+        run_dir = Path(runner.store.run_dir)
+        generation = None
+        if isinstance(request_id, str) and request_id:
+            generation = _read_retained_json(
+                run_dir / "raw" / "runtime" / "exchanges" / f"{request_id}.json"
+            )
+        safe = str(spec.experiment_id).replace("/", "-").replace("\\", "-")
+        scoring = _read_retained_json(
+            run_dir / "raw" / "scoring" / f"characterize-{safe}.json"
+        )
+        if generation is None or scoring is None:
+            runner.store.record_capture_gap(
+                channel="attempt_dossier",
+                collector="install_execution_hooks",
+                error="retained generation or scoring evidence unavailable",
+                affected=str(spec.experiment_id),
+                continued=True,
+            )
+            return row
+
+        persist_attempt_dossier(
+            runner,
+            case=case,
+            spec=spec,
+            invocation=_standard_invocation(runner, case, spec),
+            generation=generation,
+            scoring=scoring,
+            classification=classification,
+            evidence_refs=refs,
+            telemetry_before=telemetry_before,
+            telemetry_after=list(copy.deepcopy(getattr(runner, "_recent_telemetry", []))),
+        )
+        return row
+
+    wrapped_execute_experiment._attempt_dossier_hook = True
+    characterization.execute_experiment = wrapped_execute_experiment
+
+    # These modules import execute_experiment by value. Replace those references so
+    # every optional lab inherits the same forensic capture without new calls.
+    for module in (
+        capability_campaign,
+        compound_lab,
+        reasoning_curves,
+        recovery_lab,
+        robustness_lab,
+    ):
+        if getattr(module, "execute_experiment", None) is original:
+            module.execute_experiment = wrapped_execute_experiment
