@@ -37,14 +37,14 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "jump": 3,
         "boundary_repeats": 5,
         "max_experiments_per_family": 24,
-        "thinking_mode": True,
-        "reasoning_effort": "medium",
+        "thinking_mode": False,
+        "reasoning_effort": None,
         "generation_budget": 256,
         "reliable_threshold": 0.90,
         "unstable_threshold": 0.40,
     },
     "reasoning_curves": {
-        "enabled": True,
+        "enabled": False,
         "repeats": 3,
     },
     "recovery_lab": {
@@ -142,9 +142,14 @@ def _validate_capability_campaign(config: dict[str, Any]) -> None:
     if not isinstance(c.get("thinking_mode"), bool):
         raise ValueError("capability_campaign.thinking_mode must be bool")
     reasoning_effort = c.get("reasoning_effort")
-    if reasoning_effort not in {"low", "medium", "high"}:
+    if c["thinking_mode"]:
+        if reasoning_effort not in {"low", "medium", "high"}:
+            raise ValueError(
+                "capability_campaign.reasoning_effort must be one of: low, medium, high when thinking is enabled"
+            )
+    elif reasoning_effort is not None:
         raise ValueError(
-            "capability_campaign.reasoning_effort must be one of: low, medium, high"
+            "capability_campaign.reasoning_effort must be omitted/None when thinking is disabled"
         )
 
     reliable = c.get("reliable_threshold")
