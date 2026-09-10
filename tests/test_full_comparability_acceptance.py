@@ -193,7 +193,7 @@ def test_public_runner_emits_reconciled_full_comparability_artifacts(tmp_path: P
 
     run_dir = runner.capability_characterize("gpt-oss:20b")
 
-    assert len(runtime.calls) == 18  # 4 fixed tasks*3 efforts + 1 scenario*2 turns*3 efforts
+    assert len(runtime.calls) == 18
     required = {
         "scorecard.json", "scorecard.md", "task-scorecard.json", "task-scorecard.md",
         "reasoning-comparison.json", "reasoning-comparison.md", "retry-deltas.json", "retry-deltas.md",
@@ -248,8 +248,9 @@ def test_missing_fixed_fixture_releases_unused_protected_slot(monkeypatch):
     monkeypatch.setattr(campaign, "execute_experiment", fake_execute)
     cases = [
         {"id": f"f-L{level}", "family_id": "f", "category": "f", "difficulty_level": level, "prompt": "x", "scorer": "exact", "expected": "OK"}
-        for level in (2, 5, 8)  # L10 intentionally absent: 3 native GPT cells are missing.
+        for level in (2, 5, 8)
     ]
-    rows, _ = run_fixed_capability_matrix(Runner(), cases)
+    runner = Runner()
+    rows, _ = run_fixed_capability_matrix(runner, cases)
     assert len(rows) == 9
-    assert Runner._mandatory_fixed_remaining == 0
+    assert runner._mandatory_fixed_remaining == 0
