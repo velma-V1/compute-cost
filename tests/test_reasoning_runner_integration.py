@@ -148,7 +148,7 @@ def config():
         "jump": 3,
         "boundary_repeats": 2,
         "max_experiments_per_family": 12,
-        "reasoning_effort": "medium",
+        "reasoning_effort": "low",
         "generation_budget": 256,
     })
     cfg["reasoning_curves"] = {"enabled": True, "repeats": 2}
@@ -181,8 +181,8 @@ def test_capability_runner_writes_frontier_local_reasoning_curves_without_mutati
     run_dir = runner.capability_characterize("gpt-oss:20b")
 
     assert runtime.calls[:6] == [
-        (1, "medium"), (4, "medium"), (7, "medium"),
-        (5, "medium"), (4, "medium"), (5, "medium"),
+        (1, "low"), (4, "low"), (7, "low"),
+        (5, "low"), (4, "low"), (5, "low"),
     ]
     assert runtime.calls[6:] == [(4, "low"), (4, "low"), (5, "high"), (5, "high")]
 
