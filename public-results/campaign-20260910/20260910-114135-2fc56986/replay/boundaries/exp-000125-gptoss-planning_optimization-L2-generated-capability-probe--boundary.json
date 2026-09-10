@@ -1,0 +1,776 @@
+{
+  "benchmark_version": "gpt-oss-20b-capability-v1",
+  "boundary": {
+    "boundary_repeats": 2,
+    "family_id": "planning_optimization",
+    "level": 2,
+    "role": "upper_transition",
+    "transition_bracket": {
+      "lower_label": "reliable",
+      "lower_level": 1,
+      "upper_label": "failure",
+      "upper_level": 2
+    }
+  },
+  "case": {
+    "capabilities_required": [
+      "planning_optimization"
+    ],
+    "capability_map": {
+      "capabilities_required": [
+        "planning_optimization"
+      ],
+      "compound": false,
+      "difficulty": {
+        "dimensions": {
+          "action_count": 3,
+          "constraints": 3,
+          "dependency_depth": 2,
+          "objective_count": 3
+        },
+        "level": 2
+      },
+      "family_id": "planning_optimization",
+      "recovery_eligible": true,
+      "robustness_eligible": true,
+      "rubric_version": "planning-v1",
+      "taxonomy_version": "capability-taxonomy-v1"
+    },
+    "category": "planning_optimization",
+    "compound": false,
+    "difficulty": {
+      "dimensions": {
+        "action_count": 3,
+        "constraints": 3,
+        "dependency_depth": 2,
+        "objective_count": 3
+      },
+      "level": 2,
+      "rubric_version": "planning-v1"
+    },
+    "difficulty_level": 2,
+    "expected": "B,D,A,C",
+    "family_id": "planning_optimization",
+    "fixture_generation": {
+      "family_id": "planning_optimization",
+      "generator_version": "gpt-oss-ladders-v1",
+      "level": 2
+    },
+    "id": "gptoss-planning_optimization-L2-generated",
+    "oracle_response": "B,D,A,C",
+    "prompt": "Difficulty L2. One worker executes all tasks without preemption. Durations: A=3h, B=1h, C=4h, D=2h. Precedence constraints: A before C. Minimize the sum of completion times; break exact ties lexicographically. Return only the task order as comma-separated letters.",
+    "recovery_eligible": true,
+    "robustness_eligible": true,
+    "scorer": "exact",
+    "scorer_version": "1",
+    "suite_version": "gpt-oss-20b-capability-v1",
+    "tags": [],
+    "taxonomy_version": "capability-taxonomy-v1",
+    "timeout_s": 120
+  },
+  "classification": {
+    "basis": "runtime completed and deterministic scorer failed",
+    "measurement_kind": "DERIVED",
+    "result_class": "ANSWER_WRONG",
+    "valid_for_capability": true
+  },
+  "evidence_key": "exp-000125-gptoss-planning_optimization-L2-generated-capability-probe",
+  "evidence_refs": {
+    "request": {
+      "bytes": 426,
+      "case_id": "exp-000125-gptoss-planning_optimization-L2-generated-capability-probe",
+      "path": "raw/runtime/requests/000128-characterize-exp-000125-gptoss-planning_optimization-L2-generated-capability-probe.bin",
+      "producer": "runtime-adapter",
+      "sha256": "03d1fc231f0cfb901056d123f06e3154f8eaf24fcdea8762bca62997ffea88cf",
+      "stage": "characterize"
+    },
+    "request_id": "000128-characterize-exp-000125-gptoss-planning_optimization-L2-generated-capability-probe",
+    "response": {
+      "bytes": 883,
+      "case_id": "exp-000125-gptoss-planning_optimization-L2-generated-capability-probe",
+      "path": "raw/runtime/responses/000128-characterize-exp-000125-gptoss-planning_optimization-L2-generated-capability-probe.bin",
+      "producer": "runtime-adapter",
+      "sha256": "31472e47e84dcc7d5aa7f4af2c5273c4f89a4969e9d4c08ad6b87ac0a8bf7eed",
+      "stage": "characterize"
+    },
+    "streams": [
+      {
+        "bytes": 137,
+        "case_id": "exp-000125-gptoss-planning_optimization-L2-generated-capability-probe",
+        "path": "raw/runtime/streams/000128-characterize-exp-000125-gptoss-planning_optimization-L2-generated-capability-probe/000000.bin",
+        "producer": "runtime-stream",
+        "sha256": "8938f69c949b9d5325aeb952af1139fd7d77da5707c2ec9984e916f48658110f",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 138,
+        "case_id": "exp-000125-gptoss-planning_optimization-L2-generated-capability-probe",
+        "path": "raw/runtime/streams/000128-characterize-exp-000125-gptoss-planning_optimization-L2-generated-capability-probe/000001.bin",
+        "producer": "runtime-stream",
+        "sha256": "1473e729d8edadd8193d55ed3a4373731217e308a2fd7e355a74d37065c86f43",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 138,
+        "case_id": "exp-000125-gptoss-planning_optimization-L2-generated-capability-probe",
+        "path": "raw/runtime/streams/000128-characterize-exp-000125-gptoss-planning_optimization-L2-generated-capability-probe/000002.bin",
+        "producer": "runtime-stream",
+        "sha256": "8c0b15c28822a9db6420492174d5210f4080a5637782ae0598d214f71c4b2db5",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 138,
+        "case_id": "exp-000125-gptoss-planning_optimization-L2-generated-capability-probe",
+        "path": "raw/runtime/streams/000128-characterize-exp-000125-gptoss-planning_optimization-L2-generated-capability-probe/000003.bin",
+        "producer": "runtime-stream",
+        "sha256": "cd476aa71eb57db3e9eeaf39e9111d8fec6845c7105d66cb7b649b37e87b4d53",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 332,
+        "case_id": "exp-000125-gptoss-planning_optimization-L2-generated-capability-probe",
+        "path": "raw/runtime/streams/000128-characterize-exp-000125-gptoss-planning_optimization-L2-generated-capability-probe/000004.bin",
+        "producer": "runtime-stream",
+        "sha256": "acbd3ec63651d7ec4ad1e5d08eff74238a1d63d628a690e6ea66e77364771581",
+        "stage": "characterize"
+      }
+    ]
+  },
+  "experiment": {
+    "changed_variable": "baseline",
+    "context_request": null,
+    "difficulty_level": 2,
+    "experiment_id": "exp-000125-gptoss-planning_optimization-L2-generated-capability-probe",
+    "generation_budget": 256,
+    "hypothesis": "establish family difficulty anchor",
+    "parent_experiment_id": null,
+    "prompt_variant": "base",
+    "reasoning_effort": null,
+    "recovery_level": null,
+    "seed": 42,
+    "task_family": "planning_optimization",
+    "task_id": "planning_optimization",
+    "temperature": 0.0,
+    "thinking_mode": false
+  },
+  "generation": {
+    "http_status": 200,
+    "metrics": {
+      "eval_count": 5,
+      "eval_duration_ns": 85731000,
+      "load_duration_ns": 3623200,
+      "prompt_eval_count": 82,
+      "prompt_eval_duration_ns": 383864000,
+      "total_duration_ns": 500825700
+    },
+    "normalized": {
+      "done": true,
+      "done_reason": "stop",
+      "text": "A,B,D,C",
+      "thinking": "",
+      "tool_calls": []
+    },
+    "ok": true,
+    "phase_metrics": {
+      "answer_chars": 7,
+      "answer_chunks": 4,
+      "answer_span_ns": 67466500,
+      "measurement_kind": "MEASURED",
+      "thinking_chars": 0,
+      "thinking_chunks": 0,
+      "thinking_span_ns": null,
+      "time_to_first_answer_ns": 415898500,
+      "time_to_first_thinking_ns": null
+    },
+    "raw_response_b64": "eyJtb2RlbCI6InF3ZW4zLjU6MzViLWEzYi1xNF9LX00iLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTo0NDoxNy43NzI3ODg4WiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiJBIn0sImRvbmUiOmZhbHNlfQp7Im1vZGVsIjoicXdlbjMuNTozNWItYTNiLXE0X0tfTSIsImNyZWF0ZWRfYXQiOiIyMDI2LTA5LTEwVDE1OjQ0OjE3Ljc5OTg5MjFaIiwibWVzc2FnZSI6eyJyb2xlIjoiYXNzaXN0YW50IiwiY29udGVudCI6IixCIn0sImRvbmUiOmZhbHNlfQp7Im1vZGVsIjoicXdlbjMuNTozNWItYTNiLXE0X0tfTSIsImNyZWF0ZWRfYXQiOiIyMDI2LTA5LTEwVDE1OjQ0OjE3LjgyMTY3OTFaIiwibWVzc2FnZSI6eyJyb2xlIjoiYXNzaXN0YW50IiwiY29udGVudCI6IixEIn0sImRvbmUiOmZhbHNlfQp7Im1vZGVsIjoicXdlbjMuNTozNWItYTNiLXE0X0tfTSIsImNyZWF0ZWRfYXQiOiIyMDI2LTA5LTEwVDE1OjQ0OjE3Ljg0MDQyNDdaIiwibWVzc2FnZSI6eyJyb2xlIjoiYXNzaXN0YW50IiwiY29udGVudCI6IixDIn0sImRvbmUiOmZhbHNlfQp7Im1vZGVsIjoicXdlbjMuNTozNWItYTNiLXE0X0tfTSIsImNyZWF0ZWRfYXQiOiIyMDI2LTA5LTEwVDE1OjQ0OjE3Ljg1ODQ0MjNaIiwibWVzc2FnZSI6eyJyb2xlIjoiYXNzaXN0YW50IiwiY29udGVudCI6IiJ9LCJkb25lIjp0cnVlLCJkb25lX3JlYXNvbiI6InN0b3AiLCJ0b3RhbF9kdXJhdGlvbiI6NTAwODI1NzAwLCJsb2FkX2R1cmF0aW9uIjozNjIzMjAwLCJwcm9tcHRfZXZhbF9jb3VudCI6ODIsInByb21wdF9ldmFsX2NhY2hlZF9jb3VudCI6MCwicHJvbXB0X2V2YWxfZHVyYXRpb24iOjM4Mzg2NDAwMCwiZXZhbF9jb3VudCI6NSwiZXZhbF9kdXJhdGlvbiI6ODU3MzEwMDB9Cg==",
+    "request": {
+      "body_b64": "eyJtb2RlbCI6InF3ZW4zLjU6MzViLWEzYi1xNF9LX00iLCJtZXNzYWdlcyI6W3sicm9sZSI6InVzZXIiLCJjb250ZW50IjoiRGlmZmljdWx0eSBMMi4gT25lIHdvcmtlciBleGVjdXRlcyBhbGwgdGFza3Mgd2l0aG91dCBwcmVlbXB0aW9uLiBEdXJhdGlvbnM6IEE9M2gsIEI9MWgsIEM9NGgsIEQ9MmguIFByZWNlZGVuY2UgY29uc3RyYWludHM6IEEgYmVmb3JlIEMuIE1pbmltaXplIHRoZSBzdW0gb2YgY29tcGxldGlvbiB0aW1lczsgYnJlYWsgZXhhY3QgdGllcyBsZXhpY29ncmFwaGljYWxseS4gUmV0dXJuIG9ubHkgdGhlIHRhc2sgb3JkZXIgYXMgY29tbWEtc2VwYXJhdGVkIGxldHRlcnMuIn1dLCJzdHJlYW0iOnRydWUsIm9wdGlvbnMiOnsidGVtcGVyYXR1cmUiOjAuMCwic2VlZCI6NDIsIm51bV9wcmVkaWN0IjoyNTZ9LCJ0aGluayI6ZmFsc2V9",
+      "body_text": "{\"model\":\"qwen3.5:35b-a3b-q4_K_M\",\"messages\":[{\"role\":\"user\",\"content\":\"Difficulty L2. One worker executes all tasks without preemption. Durations: A=3h, B=1h, C=4h, D=2h. Precedence constraints: A before C. Minimize the sum of completion times; break exact ties lexicographically. Return only the task order as comma-separated letters.\"}],\"stream\":true,\"options\":{\"temperature\":0.0,\"seed\":42,\"num_predict\":256},\"think\":false}",
+      "method": "POST",
+      "started_at_utc": "2026-09-10T15:44:17.357202+00:00",
+      "started_monotonic_ns": 53734074956000,
+      "stream": true,
+      "timeout_s": 120.0,
+      "url": "http://127.0.0.1:11434/api/chat"
+    },
+    "response_headers": {
+      "connection": "close",
+      "content-type": "application/x-ndjson",
+      "date": "Thu, 10 Sep 2026 15:44:17 GMT",
+      "transfer-encoding": "chunked"
+    },
+    "stream_events": [
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:44:17.7727888Z",
+          "done": false,
+          "message": {
+            "content": "A",
+            "role": "assistant"
+          },
+          "model": "qwen3.5:35b-a3b-q4_K_M"
+        },
+        "raw_b64": "eyJtb2RlbCI6InF3ZW4zLjU6MzViLWEzYi1xNF9LX00iLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTo0NDoxNy43NzI3ODg4WiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiJBIn0sImRvbmUiOmZhbHNlfQo=",
+        "raw_text": "{\"model\":\"qwen3.5:35b-a3b-q4_K_M\",\"created_at\":\"2026-09-10T15:44:17.7727888Z\",\"message\":{\"role\":\"assistant\",\"content\":\"A\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:44:17.773102+00:00",
+        "received_monotonic_ns": 53734490854500,
+        "sequence": 0
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:44:17.7998921Z",
+          "done": false,
+          "message": {
+            "content": ",B",
+            "role": "assistant"
+          },
+          "model": "qwen3.5:35b-a3b-q4_K_M"
+        },
+        "raw_b64": "eyJtb2RlbCI6InF3ZW4zLjU6MzViLWEzYi1xNF9LX00iLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTo0NDoxNy43OTk4OTIxWiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiIsQiJ9LCJkb25lIjpmYWxzZX0K",
+        "raw_text": "{\"model\":\"qwen3.5:35b-a3b-q4_K_M\",\"created_at\":\"2026-09-10T15:44:17.7998921Z\",\"message\":{\"role\":\"assistant\",\"content\":\",B\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:44:17.800300+00:00",
+        "received_monotonic_ns": 53734518002500,
+        "sequence": 1
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:44:17.8216791Z",
+          "done": false,
+          "message": {
+            "content": ",D",
+            "role": "assistant"
+          },
+          "model": "qwen3.5:35b-a3b-q4_K_M"
+        },
+        "raw_b64": "eyJtb2RlbCI6InF3ZW4zLjU6MzViLWEzYi1xNF9LX00iLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTo0NDoxNy44MjE2NzkxWiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiIsRCJ9LCJkb25lIjpmYWxzZX0K",
+        "raw_text": "{\"model\":\"qwen3.5:35b-a3b-q4_K_M\",\"created_at\":\"2026-09-10T15:44:17.8216791Z\",\"message\":{\"role\":\"assistant\",\"content\":\",D\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:44:17.821812+00:00",
+        "received_monotonic_ns": 53734539564300,
+        "sequence": 2
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:44:17.8404247Z",
+          "done": false,
+          "message": {
+            "content": ",C",
+            "role": "assistant"
+          },
+          "model": "qwen3.5:35b-a3b-q4_K_M"
+        },
+        "raw_b64": "eyJtb2RlbCI6InF3ZW4zLjU6MzViLWEzYi1xNF9LX00iLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTo0NDoxNy44NDA0MjQ3WiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiIsQyJ9LCJkb25lIjpmYWxzZX0K",
+        "raw_text": "{\"model\":\"qwen3.5:35b-a3b-q4_K_M\",\"created_at\":\"2026-09-10T15:44:17.8404247Z\",\"message\":{\"role\":\"assistant\",\"content\":\",C\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:44:17.840569+00:00",
+        "received_monotonic_ns": 53734558321000,
+        "sequence": 3
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:44:17.8584423Z",
+          "done": true,
+          "done_reason": "stop",
+          "eval_count": 5,
+          "eval_duration": 85731000,
+          "load_duration": 3623200,
+          "message": {
+            "content": "",
+            "role": "assistant"
+          },
+          "model": "qwen3.5:35b-a3b-q4_K_M",
+          "prompt_eval_cached_count": 0,
+          "prompt_eval_count": 82,
+          "prompt_eval_duration": 383864000,
+          "total_duration": 500825700
+        },
+        "raw_b64": "eyJtb2RlbCI6InF3ZW4zLjU6MzViLWEzYi1xNF9LX00iLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTo0NDoxNy44NTg0NDIzWiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiIifSwiZG9uZSI6dHJ1ZSwiZG9uZV9yZWFzb24iOiJzdG9wIiwidG90YWxfZHVyYXRpb24iOjUwMDgyNTcwMCwibG9hZF9kdXJhdGlvbiI6MzYyMzIwMCwicHJvbXB0X2V2YWxfY291bnQiOjgyLCJwcm9tcHRfZXZhbF9jYWNoZWRfY291bnQiOjAsInByb21wdF9ldmFsX2R1cmF0aW9uIjozODM4NjQwMDAsImV2YWxfY291bnQiOjUsImV2YWxfZHVyYXRpb24iOjg1NzMxMDAwfQo=",
+        "raw_text": "{\"model\":\"qwen3.5:35b-a3b-q4_K_M\",\"created_at\":\"2026-09-10T15:44:17.8584423Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\"},\"done\":true,\"done_reason\":\"stop\",\"total_duration\":500825700,\"load_duration\":3623200,\"prompt_eval_count\":82,\"prompt_eval_cached_count\":0,\"prompt_eval_duration\":383864000,\"eval_count\":5,\"eval_duration\":85731000}\n",
+        "received_at_utc": "2026-09-10T15:44:17.858802+00:00",
+        "received_monotonic_ns": 53734576554200,
+        "sequence": 4
+      }
+    ],
+    "timing": {
+      "client_ended_monotonic_ns": 53734576757400,
+      "client_latency_ns": 501817800,
+      "client_started_monotonic_ns": 53734074939600,
+      "first_event_latency_ns": 415898500,
+      "last_event_latency_ns": 501598200
+    }
+  },
+  "invocation": {
+    "messages": [
+      {
+        "content": "Difficulty L2. One worker executes all tasks without preemption. Durations: A=3h, B=1h, C=4h, D=2h. Precedence constraints: A before C. Minimize the sum of completion times; break exact ties lexicographically. Return only the task order as comma-separated letters.",
+        "role": "user"
+      }
+    ],
+    "model": "qwen3.5:35b-a3b-q4_K_M",
+    "options": {
+      "num_predict": 256,
+      "seed": 42,
+      "temperature": 0.0
+    },
+    "request_fields": {
+      "think": false
+    },
+    "stream": true
+  },
+  "model": "qwen3.5:35b-a3b-q4_K_M",
+  "resolved_config": {
+    "autonomous_simulation": {
+      "enabled": true,
+      "generation_budget": 512,
+      "max_generation_budget": 2048,
+      "scenario_count": 6,
+      "steps_per_scenario": 8
+    },
+    "capability_campaign": {
+      "anchor_level": 2,
+      "boundary_repeats": 2,
+      "generation_budget": 256,
+      "jump": 3,
+      "max_experiments_per_family": 6,
+      "reasoning_effort": null,
+      "reliable_threshold": 0.9,
+      "thinking_mode": false,
+      "unstable_threshold": 0.4
+    },
+    "characterization": {
+      "boundary_repeats": 3,
+      "generation_budget_granularity": 32,
+      "initial_generation_budget": 256,
+      "max_experiments_per_task": 12,
+      "max_generation_budget": 2048,
+      "min_generation_budget": 32,
+      "think_off_generation_budget": 256
+    },
+    "compound_lab": {
+      "boundary_repeats": 3,
+      "enabled": false,
+      "jump": 2,
+      "max_compounds": 6,
+      "max_experiments_per_compound": 16
+    },
+    "cost": {
+      "electricity_configured": false,
+      "electricity_per_kwh": 0.0
+    },
+    "evidence": {
+      "retain_raw_collectors": true,
+      "retain_stream_chunks": true
+    },
+    "generation": {
+      "max_tokens": 256,
+      "seed": 42,
+      "temperature": 0.0
+    },
+    "limits": {
+      "consecutive_context_failures": 2,
+      "context_schedule": [
+        4096,
+        8192,
+        16384,
+        32768
+      ],
+      "host_ram_percent": 95.0,
+      "max_model_calls_per_run": 360,
+      "request_timeout_s": 120,
+      "sustained_iterations": 8,
+      "vram_percent": 98.0
+    },
+    "reasoning_curves": {
+      "enabled": false,
+      "repeats": 3
+    },
+    "recovery_lab": {
+      "enabled": false,
+      "max_attempts_per_candidate": 6,
+      "max_level": "R7",
+      "repeats": 3
+    },
+    "robustness_lab": {
+      "enabled": false,
+      "max_attempts_per_perturbation": 4,
+      "max_perturbations_per_family": 2,
+      "repeats": 2
+    },
+    "runtime": {
+      "endpoint": "http://127.0.0.1:11434"
+    },
+    "telemetry": {
+      "interval_s": 0.25,
+      "nvidia": true
+    }
+  },
+  "schema_version": 2,
+  "scoring": {
+    "checks": [
+      {
+        "actual": "A,B,D,C",
+        "expected": "B,D,A,C",
+        "name": "exact_match",
+        "pass": false
+      }
+    ],
+    "evidence": {
+      "raw_response": "A,B,D,C"
+    },
+    "score": 0.0,
+    "status": "SCORED"
+  },
+  "source_experiment_id": "exp-000125-gptoss-planning_optimization-L2-generated-capability-probe",
+  "stage": "characterize",
+  "telemetry_for_experiment": [
+    {
+      "case_id": "exp-000125-gptoss-planning_optimization-L2-generated-capability-probe",
+      "gpu": {
+        "availability": "available",
+        "devices": [
+          {
+            "driver_version": "610.62",
+            "extra_columns": [],
+            "fan_percent": 0.0,
+            "graphics_clock_mhz": 2745.0,
+            "index": 0,
+            "memory_clock_mhz": 10251.0,
+            "memory_free_mib": 381.0,
+            "memory_total_mib": 12282.0,
+            "memory_used_mib": 11617.0,
+            "name": "NVIDIA GeForce RTX 4070 SUPER",
+            "power_draw_w": 68.98,
+            "power_limit_w": 220.0,
+            "pstate": "P2",
+            "raw_columns": [
+              "0",
+              "GPU-e3df9a98-2412-6865-26e5-b5a284aa9138",
+              "NVIDIA GeForce RTX 4070 SUPER",
+              "610.62",
+              "30",
+              "12282",
+              "11617",
+              "381",
+              "49",
+              "68.98",
+              "220.00",
+              "2745",
+              "2745",
+              "10251",
+              "P2",
+              "0"
+            ],
+            "raw_line": "0, GPU-e3df9a98-2412-6865-26e5-b5a284aa9138, NVIDIA GeForce RTX 4070 SUPER, 610.62, 30, 12282, 11617, 381, 49, 68.98, 220.00, 2745, 2745, 10251, P2, 0",
+            "sm_clock_mhz": 2745.0,
+            "temperature_c": 49.0,
+            "utilization_gpu_percent": 30.0,
+            "uuid": "GPU-e3df9a98-2412-6865-26e5-b5a284aa9138"
+          }
+        ]
+      },
+      "host": {
+        "cpu_frequency_mhz": 4201.0,
+        "cpu_percent": 53.1,
+        "cpu_percent_per_core": [
+          16.7,
+          83.3,
+          83.3,
+          83.3,
+          66.7,
+          42.9,
+          66.7,
+          14.3,
+          66.7,
+          66.7,
+          66.7,
+          50.0,
+          16.7,
+          50.0,
+          66.7,
+          16.7
+        ],
+        "disk_io": {
+          "read_bytes": 244206822400,
+          "read_count": 1688687,
+          "read_time_ms": 1566,
+          "write_bytes": 104080016896,
+          "write_count": 961198,
+          "write_time_ms": 1279
+        },
+        "memory_available_bytes": 2187956224,
+        "memory_percent": 93.5,
+        "memory_total_bytes": 33462239232,
+        "memory_used_bytes": 31274283008
+      },
+      "monotonic_ns": 53734025304700,
+      "nvidia_collector": {
+        "command": [
+          "nvidia-smi",
+          "--query-gpu=index,uuid,name,driver_version,utilization.gpu,memory.total,memory.used,memory.free,temperature.gpu,power.draw,power.limit,clocks.gr,clocks.sm,clocks.mem,pstate,fan.speed",
+          "--format=csv,noheader,nounits"
+        ],
+        "duration_ns": 34466800,
+        "error": null,
+        "returncode": 0,
+        "started_at_utc": "2026-09-10T15:44:17.307668+00:00",
+        "stderr_b64": "",
+        "stderr_text": "",
+        "stdout_b64": "MCwgR1BVLWUzZGY5YTk4LTI0MTItNjg2NS0yNmU1LWI1YTI4NGFhOTEzOCwgTlZJRElBIEdlRm9yY2UgUlRYIDQwNzAgU1VQRVIsIDYxMC42MiwgMzAsIDEyMjgyLCAxMTYxNywgMzgxLCA0OSwgNjguOTgsIDIyMC4wMCwgMjc0NSwgMjc0NSwgMTAyNTEsIFAyLCAwDQo=",
+        "stdout_text": "0, GPU-e3df9a98-2412-6865-26e5-b5a284aa9138, NVIDIA GeForce RTX 4070 SUPER, 610.62, 30, 12282, 11617, 381, 49, 68.98, 220.00, 2745, 2745, 10251, P2, 0\r\n"
+      },
+      "process": {
+        "cpu_percent": 67.0,
+        "pid": 17976,
+        "rss_bytes": 144818176,
+        "vms_bytes": 128462848
+      },
+      "runtime_processes": [
+        {
+          "cpu_percent": 469.3,
+          "cpu_times": {
+            "system_s": 167.734375,
+            "user_s": 624.421875
+          },
+          "exe": "C:\\Users\\Matt\\AppData\\Local\\Programs\\Ollama\\lib\\ollama\\llama-server.exe",
+          "io": {
+            "other_bytes": 665702,
+            "other_count": 30886,
+            "read_bytes": 23771872617,
+            "read_count": 45591,
+            "write_bytes": 1149549,
+            "write_count": 11283
+          },
+          "name": "llama-server.exe",
+          "num_handles": 282,
+          "num_threads": 30,
+          "pid": 8880,
+          "rss_bytes": 22828920832,
+          "vms_bytes": 34665177088
+        },
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 3.640625,
+            "user_s": 3.4375
+          },
+          "exe": "C:\\Users\\Matt\\AppData\\Local\\Programs\\Ollama\\ollama app.exe",
+          "io": {
+            "other_bytes": 1290829790,
+            "other_count": 71122,
+            "read_bytes": 783228744,
+            "read_count": 1691,
+            "write_bytes": 1574405889,
+            "write_count": 36
+          },
+          "name": "ollama app.exe",
+          "num_handles": 421,
+          "num_threads": 19,
+          "pid": 20892,
+          "rss_bytes": 52727808,
+          "vms_bytes": 63012864
+        },
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 116.609375,
+            "user_s": 105.546875
+          },
+          "exe": "C:\\Users\\Matt\\AppData\\Local\\Programs\\Ollama\\ollama.exe",
+          "io": {
+            "other_bytes": 41037741096,
+            "other_count": 5781574,
+            "read_bytes": 66058167078,
+            "read_count": 2158301,
+            "write_bytes": 74291473269,
+            "write_count": 4616058
+          },
+          "name": "ollama.exe",
+          "num_handles": 523,
+          "num_threads": 26,
+          "pid": 21316,
+          "rss_bytes": 213147648,
+          "vms_bytes": 248074240
+        }
+      ],
+      "stage": "characterize",
+      "timestamp_utc": "2026-09-10T15:44:17.307546+00:00",
+      "total_gpu_power_w": 68.98
+    },
+    {
+      "case_id": "exp-000125-gptoss-planning_optimization-L2-generated-capability-probe",
+      "gpu": {
+        "availability": "available",
+        "devices": [
+          {
+            "driver_version": "610.62",
+            "extra_columns": [],
+            "fan_percent": 0.0,
+            "graphics_clock_mhz": 2745.0,
+            "index": 0,
+            "memory_clock_mhz": 10251.0,
+            "memory_free_mib": 381.0,
+            "memory_total_mib": 12282.0,
+            "memory_used_mib": 11617.0,
+            "name": "NVIDIA GeForce RTX 4070 SUPER",
+            "power_draw_w": 61.43,
+            "power_limit_w": 220.0,
+            "pstate": "P2",
+            "raw_columns": [
+              "0",
+              "GPU-e3df9a98-2412-6865-26e5-b5a284aa9138",
+              "NVIDIA GeForce RTX 4070 SUPER",
+              "610.62",
+              "98",
+              "12282",
+              "11617",
+              "381",
+              "49",
+              "61.43",
+              "220.00",
+              "2745",
+              "2745",
+              "10251",
+              "P2",
+              "0"
+            ],
+            "raw_line": "0, GPU-e3df9a98-2412-6865-26e5-b5a284aa9138, NVIDIA GeForce RTX 4070 SUPER, 610.62, 98, 12282, 11617, 381, 49, 61.43, 220.00, 2745, 2745, 10251, P2, 0",
+            "sm_clock_mhz": 2745.0,
+            "temperature_c": 49.0,
+            "utilization_gpu_percent": 98.0,
+            "uuid": "GPU-e3df9a98-2412-6865-26e5-b5a284aa9138"
+          }
+        ]
+      },
+      "host": {
+        "cpu_frequency_mhz": 4201.0,
+        "cpu_percent": 43.0,
+        "cpu_percent_per_core": [
+          60.4,
+          82.5,
+          53.8,
+          76.9,
+          36.8,
+          43.6,
+          28.2,
+          42.1,
+          42.1,
+          41.0,
+          38.5,
+          43.6,
+          23.1,
+          10.3,
+          33.3,
+          26.3
+        ],
+        "disk_io": {
+          "read_bytes": 244206822400,
+          "read_count": 1688687,
+          "read_time_ms": 1566,
+          "write_bytes": 104080025088,
+          "write_count": 961200,
+          "write_time_ms": 1279
+        },
+        "memory_available_bytes": 2069757952,
+        "memory_percent": 93.8,
+        "memory_total_bytes": 33462239232,
+        "memory_used_bytes": 31392481280
+      },
+      "monotonic_ns": 53734616418500,
+      "nvidia_collector": {
+        "command": [
+          "nvidia-smi",
+          "--query-gpu=index,uuid,name,driver_version,utilization.gpu,memory.total,memory.used,memory.free,temperature.gpu,power.draw,power.limit,clocks.gr,clocks.sm,clocks.mem,pstate,fan.speed",
+          "--format=csv,noheader,nounits"
+        ],
+        "duration_ns": 39779500,
+        "error": null,
+        "returncode": 0,
+        "started_at_utc": "2026-09-10T15:44:17.898988+00:00",
+        "stderr_b64": "",
+        "stderr_text": "",
+        "stdout_b64": "MCwgR1BVLWUzZGY5YTk4LTI0MTItNjg2NS0yNmU1LWI1YTI4NGFhOTEzOCwgTlZJRElBIEdlRm9yY2UgUlRYIDQwNzAgU1VQRVIsIDYxMC42MiwgOTgsIDEyMjgyLCAxMTYxNywgMzgxLCA0OSwgNjEuNDMsIDIyMC4wMCwgMjc0NSwgMjc0NSwgMTAyNTEsIFAyLCAwDQo=",
+        "stdout_text": "0, GPU-e3df9a98-2412-6865-26e5-b5a284aa9138, NVIDIA GeForce RTX 4070 SUPER, 610.62, 98, 12282, 11617, 381, 49, 61.43, 220.00, 2745, 2745, 10251, P2, 0\r\n"
+      },
+      "process": {
+        "cpu_percent": 5.2,
+        "pid": 17976,
+        "rss_bytes": 143716352,
+        "vms_bytes": 128196608
+      },
+      "runtime_processes": [
+        {
+          "cpu_percent": 588.2,
+          "cpu_times": {
+            "system_s": 168.53125,
+            "user_s": 627.015625
+          },
+          "exe": "C:\\Users\\Matt\\AppData\\Local\\Programs\\Ollama\\lib\\ollama\\llama-server.exe",
+          "io": {
+            "other_bytes": 667734,
+            "other_count": 31001,
+            "read_bytes": 23771872617,
+            "read_count": 45591,
+            "write_bytes": 1162813,
+            "write_count": 11414
+          },
+          "name": "llama-server.exe",
+          "num_handles": 282,
+          "num_threads": 30,
+          "pid": 8880,
+          "rss_bytes": 22962806784,
+          "vms_bytes": 34799329280
+        },
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 3.640625,
+            "user_s": 3.4375
+          },
+          "exe": "C:\\Users\\Matt\\AppData\\Local\\Programs\\Ollama\\ollama app.exe",
+          "io": {
+            "other_bytes": 1290829790,
+            "other_count": 71122,
+            "read_bytes": 783228744,
+            "read_count": 1691,
+            "write_bytes": 1574405889,
+            "write_count": 36
+          },
+          "name": "ollama app.exe",
+          "num_handles": 421,
+          "num_threads": 19,
+          "pid": 20892,
+          "rss_bytes": 52727808,
+          "vms_bytes": 63012864
+        },
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 116.625,
+            "user_s": 105.546875
+          },
+          "exe": "C:\\Users\\Matt\\AppData\\Local\\Programs\\Ollama\\ollama.exe",
+          "io": {
+            "other_bytes": 41037756697,
+            "other_count": 5781961,
+            "read_bytes": 66058197978,
+            "read_count": 2158359,
+            "write_bytes": 74291486624,
+            "write_count": 4616073
+          },
+          "name": "ollama.exe",
+          "num_handles": 523,
+          "num_threads": 26,
+          "pid": 21316,
+          "rss_bytes": 213155840,
+          "vms_bytes": 248074240
+        }
+      ],
+      "stage": "characterize",
+      "timestamp_utc": "2026-09-10T15:44:17.898655+00:00",
+      "total_gpu_power_w": 61.43
+    }
+  ]
+}

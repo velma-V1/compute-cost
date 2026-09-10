@@ -1,0 +1,708 @@
+{
+  "benchmark_version": "gpt-oss-20b-capability-v1",
+  "boundary": {
+    "boundary_repeats": 2,
+    "family_id": "meta_reasoning",
+    "level": 1,
+    "role": "upper_transition",
+    "transition_bracket": {
+      "lower_label": "reliable",
+      "lower_level": 0,
+      "upper_label": "failure",
+      "upper_level": 1
+    }
+  },
+  "case": {
+    "capabilities_required": [
+      "meta_reasoning"
+    ],
+    "capability_map": {
+      "capabilities_required": [
+        "meta_reasoning"
+      ],
+      "compound": false,
+      "difficulty": {
+        "dimensions": {
+          "objective_conflicts": 0,
+          "reflection_depth": 1,
+          "resource_constraints": 2,
+          "strategy_choices": 3
+        },
+        "level": 1
+      },
+      "family_id": "meta_reasoning",
+      "recovery_eligible": true,
+      "robustness_eligible": true,
+      "rubric_version": "meta-reasoning-v1",
+      "taxonomy_version": "capability-taxonomy-v1"
+    },
+    "category": "meta_reasoning",
+    "compound": false,
+    "difficulty": {
+      "dimensions": {
+        "objective_conflicts": 0,
+        "reflection_depth": 1,
+        "resource_constraints": 2,
+        "strategy_choices": 3
+      },
+      "level": 1,
+      "rubric_version": "meta-reasoning-v1"
+    },
+    "difficulty_level": 1,
+    "expected": "FAST",
+    "family_id": "meta_reasoning",
+    "fixture_calibration": {
+      "calibration_version": "gpt-oss-calibration-v1",
+      "family_id": "meta_reasoning",
+      "level": 1,
+      "pressure": "STANDARD",
+      "supersedes_fixture_id": "gptoss-meta_reasoning-L1-generated"
+    },
+    "fixture_generation": {
+      "family_id": "meta_reasoning",
+      "generator_version": "semantic-calibration",
+      "level": 1
+    },
+    "id": "gptoss-meta_reasoning-L1-calibrated-v1",
+    "oracle_response": "FAST",
+    "prompt": "Difficulty L1. Strategy catalog: FAST:cost=1,reliability=70%; VERIFY:cost=2,reliability=90%; TOOL:cost=3,reliability=95%. Task requires reliability >= 65% and cost <= 2. Choose the lowest-cost strategy satisfying both constraints; break cost ties by higher reliability then name. Return only the strategy name.",
+    "recovery_eligible": true,
+    "robustness_eligible": true,
+    "scorer": "exact",
+    "scorer_version": "1",
+    "suite_version": "gpt-oss-20b-capability-v1",
+    "tags": [],
+    "taxonomy_version": "capability-taxonomy-v1",
+    "timeout_s": 120
+  },
+  "classification": {
+    "basis": "runtime completed and deterministic scorer failed",
+    "measurement_kind": "DERIVED",
+    "result_class": "ANSWER_WRONG",
+    "valid_for_capability": true
+  },
+  "evidence_key": "exp-000108-gptoss-meta_reasoning-L1-calibrated-v1-capability-replicate",
+  "evidence_refs": {
+    "request": {
+      "bytes": 472,
+      "case_id": "exp-000108-gptoss-meta_reasoning-L1-calibrated-v1-capability-replicate",
+      "path": "raw/runtime/requests/000111-characterize-exp-000108-gptoss-meta_reasoning-L1-calibrated-v1-capability-replicate.bin",
+      "producer": "runtime-adapter",
+      "sha256": "f678163a803e66ee9705ff875bfe87991a3a71154699e4b43bc969042d502adb",
+      "stage": "characterize"
+    },
+    "request_id": "000111-characterize-exp-000108-gptoss-meta_reasoning-L1-calibrated-v1-capability-replicate",
+    "response": {
+      "bytes": 474,
+      "case_id": "exp-000108-gptoss-meta_reasoning-L1-calibrated-v1-capability-replicate",
+      "path": "raw/runtime/responses/000111-characterize-exp-000108-gptoss-meta_reasoning-L1-calibrated-v1-capability-replicate.bin",
+      "producer": "runtime-adapter",
+      "sha256": "b75f6309ffb5ff722157763e66f59f44707f6c69055cc09b50c0c9689469094e",
+      "stage": "characterize"
+    },
+    "streams": [
+      {
+        "bytes": 142,
+        "case_id": "exp-000108-gptoss-meta_reasoning-L1-calibrated-v1-capability-replicate",
+        "path": "raw/runtime/streams/000111-characterize-exp-000108-gptoss-meta_reasoning-L1-calibrated-v1-capability-replicate/000000.bin",
+        "producer": "runtime-stream",
+        "sha256": "c3f9d302d82feecab95350c54e94bafa0312e8fe7135858b4aba74914a515d0d",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 332,
+        "case_id": "exp-000108-gptoss-meta_reasoning-L1-calibrated-v1-capability-replicate",
+        "path": "raw/runtime/streams/000111-characterize-exp-000108-gptoss-meta_reasoning-L1-calibrated-v1-capability-replicate/000001.bin",
+        "producer": "runtime-stream",
+        "sha256": "d1bba135e8e8b88eb161b9e62718208d15ce6aec37d0a022e310c864224ccb39",
+        "stage": "characterize"
+      }
+    ]
+  },
+  "experiment": {
+    "changed_variable": "replication",
+    "context_request": null,
+    "difficulty_level": 1,
+    "experiment_id": "exp-000108-gptoss-meta_reasoning-L1-calibrated-v1-capability-replicate",
+    "generation_budget": 256,
+    "hypothesis": "reproduce failing side of difficulty boundary",
+    "parent_experiment_id": "exp-000106-gptoss-meta_reasoning-L1-calibrated-v1-capability-probe",
+    "prompt_variant": "base",
+    "reasoning_effort": null,
+    "recovery_level": null,
+    "seed": 42,
+    "task_family": "meta_reasoning",
+    "task_id": "meta_reasoning",
+    "temperature": 0.0,
+    "thinking_mode": false
+  },
+  "generation": {
+    "http_status": 200,
+    "metrics": {
+      "eval_count": 2,
+      "eval_duration_ns": 29288000,
+      "load_duration_ns": 3637500,
+      "prompt_eval_count": 93,
+      "prompt_eval_duration_ns": 62598000,
+      "total_duration_ns": 134318500
+    },
+    "normalized": {
+      "done": true,
+      "done_reason": "stop",
+      "text": "VERIFY",
+      "thinking": "",
+      "tool_calls": []
+    },
+    "ok": true,
+    "phase_metrics": {
+      "answer_chars": 6,
+      "answer_chunks": 1,
+      "answer_span_ns": 0,
+      "measurement_kind": "MEASURED",
+      "thinking_chars": 0,
+      "thinking_chunks": 0,
+      "thinking_span_ns": null,
+      "time_to_first_answer_ns": 117376700,
+      "time_to_first_thinking_ns": null
+    },
+    "raw_response_b64": "eyJtb2RlbCI6InF3ZW4zLjU6MzViLWEzYi1xNF9LX00iLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTo0Mzo1NS43MzgyNzAxWiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiJWRVJJRlkifSwiZG9uZSI6ZmFsc2V9CnsibW9kZWwiOiJxd2VuMy41OjM1Yi1hM2ItcTRfS19NIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6NDM6NTUuNzY3NDUyMVoiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiIn0sImRvbmUiOnRydWUsImRvbmVfcmVhc29uIjoic3RvcCIsInRvdGFsX2R1cmF0aW9uIjoxMzQzMTg1MDAsImxvYWRfZHVyYXRpb24iOjM2Mzc1MDAsInByb21wdF9ldmFsX2NvdW50Ijo5MywicHJvbXB0X2V2YWxfY2FjaGVkX2NvdW50Ijo4OSwicHJvbXB0X2V2YWxfZHVyYXRpb24iOjYyNTk4MDAwLCJldmFsX2NvdW50IjoyLCJldmFsX2R1cmF0aW9uIjoyOTI4ODAwMH0K",
+    "request": {
+      "body_b64": "eyJtb2RlbCI6InF3ZW4zLjU6MzViLWEzYi1xNF9LX00iLCJtZXNzYWdlcyI6W3sicm9sZSI6InVzZXIiLCJjb250ZW50IjoiRGlmZmljdWx0eSBMMS4gU3RyYXRlZ3kgY2F0YWxvZzogRkFTVDpjb3N0PTEscmVsaWFiaWxpdHk9NzAlOyBWRVJJRlk6Y29zdD0yLHJlbGlhYmlsaXR5PTkwJTsgVE9PTDpjb3N0PTMscmVsaWFiaWxpdHk9OTUlLiBUYXNrIHJlcXVpcmVzIHJlbGlhYmlsaXR5ID49IDY1JSBhbmQgY29zdCA8PSAyLiBDaG9vc2UgdGhlIGxvd2VzdC1jb3N0IHN0cmF0ZWd5IHNhdGlzZnlpbmcgYm90aCBjb25zdHJhaW50czsgYnJlYWsgY29zdCB0aWVzIGJ5IGhpZ2hlciByZWxpYWJpbGl0eSB0aGVuIG5hbWUuIFJldHVybiBvbmx5IHRoZSBzdHJhdGVneSBuYW1lLiJ9XSwic3RyZWFtIjp0cnVlLCJvcHRpb25zIjp7InRlbXBlcmF0dXJlIjowLjAsInNlZWQiOjQyLCJudW1fcHJlZGljdCI6MjU2fSwidGhpbmsiOmZhbHNlfQ==",
+      "body_text": "{\"model\":\"qwen3.5:35b-a3b-q4_K_M\",\"messages\":[{\"role\":\"user\",\"content\":\"Difficulty L1. Strategy catalog: FAST:cost=1,reliability=70%; VERIFY:cost=2,reliability=90%; TOOL:cost=3,reliability=95%. Task requires reliability >= 65% and cost <= 2. Choose the lowest-cost strategy satisfying both constraints; break cost ties by higher reliability then name. Return only the strategy name.\"}],\"stream\":true,\"options\":{\"temperature\":0.0,\"seed\":42,\"num_predict\":256},\"think\":false}",
+      "method": "POST",
+      "started_at_utc": "2026-09-10T15:43:55.621219+00:00",
+      "started_monotonic_ns": 53712338972300,
+      "stream": true,
+      "timeout_s": 120.0,
+      "url": "http://127.0.0.1:11434/api/chat"
+    },
+    "response_headers": {
+      "connection": "close",
+      "content-type": "application/x-ndjson",
+      "date": "Thu, 10 Sep 2026 15:43:55 GMT",
+      "transfer-encoding": "chunked"
+    },
+    "stream_events": [
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:43:55.7382701Z",
+          "done": false,
+          "message": {
+            "content": "VERIFY",
+            "role": "assistant"
+          },
+          "model": "qwen3.5:35b-a3b-q4_K_M"
+        },
+        "raw_b64": "eyJtb2RlbCI6InF3ZW4zLjU6MzViLWEzYi1xNF9LX00iLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTo0Mzo1NS43MzgyNzAxWiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiJWRVJJRlkifSwiZG9uZSI6ZmFsc2V9Cg==",
+        "raw_text": "{\"model\":\"qwen3.5:35b-a3b-q4_K_M\",\"created_at\":\"2026-09-10T15:43:55.7382701Z\",\"message\":{\"role\":\"assistant\",\"content\":\"VERIFY\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:43:55.738597+00:00",
+        "received_monotonic_ns": 53712456349000,
+        "sequence": 0
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:43:55.7674521Z",
+          "done": true,
+          "done_reason": "stop",
+          "eval_count": 2,
+          "eval_duration": 29288000,
+          "load_duration": 3637500,
+          "message": {
+            "content": "",
+            "role": "assistant"
+          },
+          "model": "qwen3.5:35b-a3b-q4_K_M",
+          "prompt_eval_cached_count": 89,
+          "prompt_eval_count": 93,
+          "prompt_eval_duration": 62598000,
+          "total_duration": 134318500
+        },
+        "raw_b64": "eyJtb2RlbCI6InF3ZW4zLjU6MzViLWEzYi1xNF9LX00iLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTo0Mzo1NS43Njc0NTIxWiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiIifSwiZG9uZSI6dHJ1ZSwiZG9uZV9yZWFzb24iOiJzdG9wIiwidG90YWxfZHVyYXRpb24iOjEzNDMxODUwMCwibG9hZF9kdXJhdGlvbiI6MzYzNzUwMCwicHJvbXB0X2V2YWxfY291bnQiOjkzLCJwcm9tcHRfZXZhbF9jYWNoZWRfY291bnQiOjg5LCJwcm9tcHRfZXZhbF9kdXJhdGlvbiI6NjI1OTgwMDAsImV2YWxfY291bnQiOjIsImV2YWxfZHVyYXRpb24iOjI5Mjg4MDAwfQo=",
+        "raw_text": "{\"model\":\"qwen3.5:35b-a3b-q4_K_M\",\"created_at\":\"2026-09-10T15:43:55.7674521Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\"},\"done\":true,\"done_reason\":\"stop\",\"total_duration\":134318500,\"load_duration\":3637500,\"prompt_eval_count\":93,\"prompt_eval_cached_count\":89,\"prompt_eval_duration\":62598000,\"eval_count\":2,\"eval_duration\":29288000}\n",
+        "received_at_utc": "2026-09-10T15:43:55.767827+00:00",
+        "received_monotonic_ns": 53712485580100,
+        "sequence": 1
+      }
+    ],
+    "timing": {
+      "client_ended_monotonic_ns": 53712485737200,
+      "client_latency_ns": 146783500,
+      "client_started_monotonic_ns": 53712338953700,
+      "first_event_latency_ns": 117376700,
+      "last_event_latency_ns": 146607800
+    }
+  },
+  "invocation": {
+    "messages": [
+      {
+        "content": "Difficulty L1. Strategy catalog: FAST:cost=1,reliability=70%; VERIFY:cost=2,reliability=90%; TOOL:cost=3,reliability=95%. Task requires reliability >= 65% and cost <= 2. Choose the lowest-cost strategy satisfying both constraints; break cost ties by higher reliability then name. Return only the strategy name.",
+        "role": "user"
+      }
+    ],
+    "model": "qwen3.5:35b-a3b-q4_K_M",
+    "options": {
+      "num_predict": 256,
+      "seed": 42,
+      "temperature": 0.0
+    },
+    "request_fields": {
+      "think": false
+    },
+    "stream": true
+  },
+  "model": "qwen3.5:35b-a3b-q4_K_M",
+  "resolved_config": {
+    "autonomous_simulation": {
+      "enabled": true,
+      "generation_budget": 512,
+      "max_generation_budget": 2048,
+      "scenario_count": 6,
+      "steps_per_scenario": 8
+    },
+    "capability_campaign": {
+      "anchor_level": 2,
+      "boundary_repeats": 2,
+      "generation_budget": 256,
+      "jump": 3,
+      "max_experiments_per_family": 6,
+      "reasoning_effort": null,
+      "reliable_threshold": 0.9,
+      "thinking_mode": false,
+      "unstable_threshold": 0.4
+    },
+    "characterization": {
+      "boundary_repeats": 3,
+      "generation_budget_granularity": 32,
+      "initial_generation_budget": 256,
+      "max_experiments_per_task": 12,
+      "max_generation_budget": 2048,
+      "min_generation_budget": 32,
+      "think_off_generation_budget": 256
+    },
+    "compound_lab": {
+      "boundary_repeats": 3,
+      "enabled": false,
+      "jump": 2,
+      "max_compounds": 6,
+      "max_experiments_per_compound": 16
+    },
+    "cost": {
+      "electricity_configured": false,
+      "electricity_per_kwh": 0.0
+    },
+    "evidence": {
+      "retain_raw_collectors": true,
+      "retain_stream_chunks": true
+    },
+    "generation": {
+      "max_tokens": 256,
+      "seed": 42,
+      "temperature": 0.0
+    },
+    "limits": {
+      "consecutive_context_failures": 2,
+      "context_schedule": [
+        4096,
+        8192,
+        16384,
+        32768
+      ],
+      "host_ram_percent": 95.0,
+      "max_model_calls_per_run": 360,
+      "request_timeout_s": 120,
+      "sustained_iterations": 8,
+      "vram_percent": 98.0
+    },
+    "reasoning_curves": {
+      "enabled": false,
+      "repeats": 3
+    },
+    "recovery_lab": {
+      "enabled": false,
+      "max_attempts_per_candidate": 6,
+      "max_level": "R7",
+      "repeats": 3
+    },
+    "robustness_lab": {
+      "enabled": false,
+      "max_attempts_per_perturbation": 4,
+      "max_perturbations_per_family": 2,
+      "repeats": 2
+    },
+    "runtime": {
+      "endpoint": "http://127.0.0.1:11434"
+    },
+    "telemetry": {
+      "interval_s": 0.25,
+      "nvidia": true
+    }
+  },
+  "schema_version": 2,
+  "scoring": {
+    "checks": [
+      {
+        "actual": "VERIFY",
+        "expected": "FAST",
+        "name": "exact_match",
+        "pass": false
+      }
+    ],
+    "evidence": {
+      "raw_response": "VERIFY"
+    },
+    "score": 0.0,
+    "status": "SCORED"
+  },
+  "source_experiment_id": "exp-000108-gptoss-meta_reasoning-L1-calibrated-v1-capability-replicate",
+  "stage": "characterize",
+  "telemetry_for_experiment": [
+    {
+      "case_id": "exp-000108-gptoss-meta_reasoning-L1-calibrated-v1-capability-replicate",
+      "gpu": {
+        "availability": "available",
+        "devices": [
+          {
+            "driver_version": "610.62",
+            "extra_columns": [],
+            "fan_percent": 0.0,
+            "graphics_clock_mhz": 2745.0,
+            "index": 0,
+            "memory_clock_mhz": 10251.0,
+            "memory_free_mib": 409.0,
+            "memory_total_mib": 12282.0,
+            "memory_used_mib": 11589.0,
+            "name": "NVIDIA GeForce RTX 4070 SUPER",
+            "power_draw_w": 71.74,
+            "power_limit_w": 220.0,
+            "pstate": "P2",
+            "raw_columns": [
+              "0",
+              "GPU-e3df9a98-2412-6865-26e5-b5a284aa9138",
+              "NVIDIA GeForce RTX 4070 SUPER",
+              "610.62",
+              "21",
+              "12282",
+              "11589",
+              "409",
+              "46",
+              "71.74",
+              "220.00",
+              "2745",
+              "2745",
+              "10251",
+              "P2",
+              "0"
+            ],
+            "raw_line": "0, GPU-e3df9a98-2412-6865-26e5-b5a284aa9138, NVIDIA GeForce RTX 4070 SUPER, 610.62, 21, 12282, 11589, 409, 46, 71.74, 220.00, 2745, 2745, 10251, P2, 0",
+            "sm_clock_mhz": 2745.0,
+            "temperature_c": 46.0,
+            "utilization_gpu_percent": 21.0,
+            "uuid": "GPU-e3df9a98-2412-6865-26e5-b5a284aa9138"
+          }
+        ]
+      },
+      "host": {
+        "cpu_frequency_mhz": 4201.0,
+        "cpu_percent": 53.5,
+        "cpu_percent_per_core": [
+          75.0,
+          71.4,
+          100.0,
+          57.1,
+          85.7,
+          14.3,
+          85.7,
+          0.0,
+          57.1,
+          71.4,
+          42.9,
+          57.1,
+          14.3,
+          14.3,
+          37.5,
+          71.4
+        ],
+        "disk_io": {
+          "read_bytes": 244167000576,
+          "read_count": 1688390,
+          "read_time_ms": 1566,
+          "write_bytes": 104037623296,
+          "write_count": 960498,
+          "write_time_ms": 1279
+        },
+        "memory_available_bytes": 2235277312,
+        "memory_percent": 93.3,
+        "memory_total_bytes": 33462239232,
+        "memory_used_bytes": 31226961920
+      },
+      "monotonic_ns": 53712282813000,
+      "nvidia_collector": {
+        "command": [
+          "nvidia-smi",
+          "--query-gpu=index,uuid,name,driver_version,utilization.gpu,memory.total,memory.used,memory.free,temperature.gpu,power.draw,power.limit,clocks.gr,clocks.sm,clocks.mem,pstate,fan.speed",
+          "--format=csv,noheader,nounits"
+        ],
+        "duration_ns": 33996700,
+        "error": null,
+        "returncode": 0,
+        "started_at_utc": "2026-09-10T15:43:55.565288+00:00",
+        "stderr_b64": "",
+        "stderr_text": "",
+        "stdout_b64": "MCwgR1BVLWUzZGY5YTk4LTI0MTItNjg2NS0yNmU1LWI1YTI4NGFhOTEzOCwgTlZJRElBIEdlRm9yY2UgUlRYIDQwNzAgU1VQRVIsIDYxMC42MiwgMjEsIDEyMjgyLCAxMTU4OSwgNDA5LCA0NiwgNzEuNzQsIDIyMC4wMCwgMjc0NSwgMjc0NSwgMTAyNTEsIFAyLCAwDQo=",
+        "stdout_text": "0, GPU-e3df9a98-2412-6865-26e5-b5a284aa9138, NVIDIA GeForce RTX 4070 SUPER, 610.62, 21, 12282, 11589, 409, 46, 71.74, 220.00, 2745, 2745, 10251, P2, 0\r\n"
+      },
+      "process": {
+        "cpu_percent": 45.2,
+        "pid": 17976,
+        "rss_bytes": 143826944,
+        "vms_bytes": 128126976
+      },
+      "runtime_processes": [
+        {
+          "cpu_percent": 693.6,
+          "cpu_times": {
+            "system_s": 143.125,
+            "user_s": 515.734375
+          },
+          "exe": "C:\\Users\\Matt\\AppData\\Local\\Programs\\Ollama\\lib\\ollama\\llama-server.exe",
+          "io": {
+            "other_bytes": 572774,
+            "other_count": 26192,
+            "read_bytes": 23771872617,
+            "read_count": 45591,
+            "write_bytes": 951361,
+            "write_count": 9327
+          },
+          "name": "llama-server.exe",
+          "num_handles": 282,
+          "num_threads": 30,
+          "pid": 8880,
+          "rss_bytes": 22825500672,
+          "vms_bytes": 34661756928
+        },
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 3.640625,
+            "user_s": 3.4375
+          },
+          "exe": "C:\\Users\\Matt\\AppData\\Local\\Programs\\Ollama\\ollama app.exe",
+          "io": {
+            "other_bytes": 1290829790,
+            "other_count": 71122,
+            "read_bytes": 783228744,
+            "read_count": 1691,
+            "write_bytes": 1574405889,
+            "write_count": 36
+          },
+          "name": "ollama app.exe",
+          "num_handles": 421,
+          "num_threads": 19,
+          "pid": 20892,
+          "rss_bytes": 52727808,
+          "vms_bytes": 63012864
+        },
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 116.53125,
+            "user_s": 105.34375
+          },
+          "exe": "C:\\Users\\Matt\\AppData\\Local\\Programs\\Ollama\\ollama.exe",
+          "io": {
+            "other_bytes": 41037409276,
+            "other_count": 5774529,
+            "read_bytes": 66057669078,
+            "read_count": 2157321,
+            "write_bytes": 74291273534,
+            "write_count": 4615809
+          },
+          "name": "ollama.exe",
+          "num_handles": 523,
+          "num_threads": 26,
+          "pid": 21316,
+          "rss_bytes": 213114880,
+          "vms_bytes": 248074240
+        }
+      ],
+      "stage": "characterize",
+      "timestamp_utc": "2026-09-10T15:43:55.565053+00:00",
+      "total_gpu_power_w": 71.74
+    },
+    {
+      "case_id": "exp-000108-gptoss-meta_reasoning-L1-calibrated-v1-capability-replicate",
+      "gpu": {
+        "availability": "available",
+        "devices": [
+          {
+            "driver_version": "610.62",
+            "extra_columns": [],
+            "fan_percent": 0.0,
+            "graphics_clock_mhz": 2745.0,
+            "index": 0,
+            "memory_clock_mhz": 10251.0,
+            "memory_free_mib": 409.0,
+            "memory_total_mib": 12282.0,
+            "memory_used_mib": 11589.0,
+            "name": "NVIDIA GeForce RTX 4070 SUPER",
+            "power_draw_w": 58.88,
+            "power_limit_w": 220.0,
+            "pstate": "P2",
+            "raw_columns": [
+              "0",
+              "GPU-e3df9a98-2412-6865-26e5-b5a284aa9138",
+              "NVIDIA GeForce RTX 4070 SUPER",
+              "610.62",
+              "3",
+              "12282",
+              "11589",
+              "409",
+              "46",
+              "58.88",
+              "220.00",
+              "2745",
+              "2745",
+              "10251",
+              "P2",
+              "0"
+            ],
+            "raw_line": "0, GPU-e3df9a98-2412-6865-26e5-b5a284aa9138, NVIDIA GeForce RTX 4070 SUPER, 610.62, 3, 12282, 11589, 409, 46, 58.88, 220.00, 2745, 2745, 10251, P2, 0",
+            "sm_clock_mhz": 2745.0,
+            "temperature_c": 46.0,
+            "utilization_gpu_percent": 3.0,
+            "uuid": "GPU-e3df9a98-2412-6865-26e5-b5a284aa9138"
+          }
+        ]
+      },
+      "host": {
+        "cpu_frequency_mhz": 4201.0,
+        "cpu_percent": 44.4,
+        "cpu_percent_per_core": [
+          61.1,
+          93.3,
+          73.3,
+          46.7,
+          40.0,
+          26.7,
+          53.3,
+          21.4,
+          60.0,
+          26.7,
+          60.0,
+          40.0,
+          13.3,
+          20.0,
+          13.3,
+          57.1
+        ],
+        "disk_io": {
+          "read_bytes": 244167000576,
+          "read_count": 1688390,
+          "read_time_ms": 1566,
+          "write_bytes": 104037639680,
+          "write_count": 960499,
+          "write_time_ms": 1279
+        },
+        "memory_available_bytes": 2153848832,
+        "memory_percent": 93.6,
+        "memory_total_bytes": 33462239232,
+        "memory_used_bytes": 31308390400
+      },
+      "monotonic_ns": 53712513120100,
+      "nvidia_collector": {
+        "command": [
+          "nvidia-smi",
+          "--query-gpu=index,uuid,name,driver_version,utilization.gpu,memory.total,memory.used,memory.free,temperature.gpu,power.draw,power.limit,clocks.gr,clocks.sm,clocks.mem,pstate,fan.speed",
+          "--format=csv,noheader,nounits"
+        ],
+        "duration_ns": 39920900,
+        "error": null,
+        "returncode": 0,
+        "started_at_utc": "2026-09-10T15:43:55.795542+00:00",
+        "stderr_b64": "",
+        "stderr_text": "",
+        "stdout_b64": "MCwgR1BVLWUzZGY5YTk4LTI0MTItNjg2NS0yNmU1LWI1YTI4NGFhOTEzOCwgTlZJRElBIEdlRm9yY2UgUlRYIDQwNzAgU1VQRVIsIDYxMC42MiwgMywgMTIyODIsIDExNTg5LCA0MDksIDQ2LCA1OC44OCwgMjIwLjAwLCAyNzQ1LCAyNzQ1LCAxMDI1MSwgUDIsIDANCg==",
+        "stdout_text": "0, GPU-e3df9a98-2412-6865-26e5-b5a284aa9138, NVIDIA GeForce RTX 4070 SUPER, 610.62, 3, 12282, 11589, 409, 46, 58.88, 220.00, 2745, 2745, 10251, P2, 0\r\n"
+      },
+      "process": {
+        "cpu_percent": 16.2,
+        "pid": 17976,
+        "rss_bytes": 143831040,
+        "vms_bytes": 128126976
+      },
+      "runtime_processes": [
+        {
+          "cpu_percent": 711.8,
+          "cpu_times": {
+            "system_s": 143.46875,
+            "user_s": 516.625
+          },
+          "exe": "C:\\Users\\Matt\\AppData\\Local\\Programs\\Ollama\\lib\\ollama\\llama-server.exe",
+          "io": {
+            "other_bytes": 574134,
+            "other_count": 26271,
+            "read_bytes": 23771872617,
+            "read_count": 45591,
+            "write_bytes": 963632,
+            "write_count": 9450
+          },
+          "name": "llama-server.exe",
+          "num_handles": 282,
+          "num_threads": 30,
+          "pid": 8880,
+          "rss_bytes": 22891368448,
+          "vms_bytes": 34727755776
+        },
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 3.640625,
+            "user_s": 3.4375
+          },
+          "exe": "C:\\Users\\Matt\\AppData\\Local\\Programs\\Ollama\\ollama app.exe",
+          "io": {
+            "other_bytes": 1290829790,
+            "other_count": 71122,
+            "read_bytes": 783228744,
+            "read_count": 1691,
+            "write_bytes": 1574405889,
+            "write_count": 36
+          },
+          "name": "ollama app.exe",
+          "num_handles": 421,
+          "num_threads": 19,
+          "pid": 20892,
+          "rss_bytes": 52727808,
+          "vms_bytes": 63012864
+        },
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 116.53125,
+            "user_s": 105.34375
+          },
+          "exe": "C:\\Users\\Matt\\AppData\\Local\\Programs\\Ollama\\ollama.exe",
+          "io": {
+            "other_bytes": 41037424779,
+            "other_count": 5774913,
+            "read_bytes": 66057698985,
+            "read_count": 2157379,
+            "write_bytes": 74291285896,
+            "write_count": 4615824
+          },
+          "name": "ollama.exe",
+          "num_handles": 523,
+          "num_threads": 26,
+          "pid": 21316,
+          "rss_bytes": 213114880,
+          "vms_bytes": 248074240
+        }
+      ],
+      "stage": "characterize",
+      "timestamp_utc": "2026-09-10T15:43:55.795359+00:00",
+      "total_gpu_power_w": 58.88
+    }
+  ]
+}

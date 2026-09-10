@@ -1,0 +1,48 @@
+{
+  "checks": [
+    {
+      "name": "valid_json",
+      "pass": true
+    },
+    {
+      "name": "required:action",
+      "pass": true
+    },
+    {
+      "name": "required:checkpoint",
+      "pass": true
+    },
+    {
+      "actual": "UPDATE",
+      "expected": "UPDATE",
+      "name": "value:action",
+      "pass": true
+    },
+    {
+      "actual": "SRC-B",
+      "expected": "SRC-B",
+      "name": "value:checkpoint",
+      "pass": true
+    }
+  ],
+  "evidence": {
+    "parsed": {
+      "action": "UPDATE",
+      "checkpoint": "SRC-B",
+      "rationale": "The environment explicitly updates the authoritative checkpoint to SRC-B, indicating a newer primary source has superseded a stale claim. The system state must be updated to reflect this new authority before proceeding with further analysis.",
+      "state": {
+        "authoritative_source": "SRC-B",
+        "collected_sources": [
+          "SRC-A",
+          "SRC-B",
+          "SRC-C"
+        ],
+        "conflict_status": "resolved_by_update",
+        "current_checkpoint": "SRC-B"
+      }
+    },
+    "raw_response": "{\n  \"action\": \"UPDATE\",\n  \"checkpoint\": \"SRC-B\",\n  \"rationale\": \"The environment explicitly updates the authoritative checkpoint to SRC-B, indicating a newer primary source has superseded a stale claim. The system state must be updated to reflect this new authority before proceeding with further analysis.\",\n  \"state\": {\"collected_sources\": [\"SRC-A\", \"SRC-B\", \"SRC-C\"], \"conflict_status\": \"resolved_by_update\", \"authoritative_source\": \"SRC-B\", \"current_checkpoint\": \"SRC-B\"}\n}"
+  },
+  "score": 1.0,
+  "status": "SCORED"
+}

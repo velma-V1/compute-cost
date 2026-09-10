@@ -1,0 +1,148 @@
+{
+  "messages": [
+    {
+      "content": "You are operating autonomously inside a deterministic simulation. Preserve the mission goal and current authoritative checkpoint across the entire growing transcript. At each turn choose the single best next action from the scenario's allowed actions. Return ONLY one JSON object with keys action, checkpoint, rationale, state. action and checkpoint must be strings. rationale may be concise; state may contain your compact working state. Never declare COMPLETE before the environment says all required verification is satisfied.",
+      "role": "system"
+    },
+    {
+      "content": "SCENARIO tool_chain_recovery: Complete a dependent tool workflow without inventing tool results. Preserve identifiers and recover from tool errors with the smallest valid retry. Initial authoritative checkpoint=TOOL-A. Allowed actions: SEARCH, FETCH, CALCULATE, HANDLE_ERROR, RETRY, CROSSCHECK, SYNTHESIZE, COMPLETE.",
+      "role": "user"
+    },
+    {
+      "content": "TURN 1/8. ENVIRONMENT: You need the current record for Mira but have no identifier yet. Choose the best next autonomous action now.",
+      "role": "user"
+    },
+    {
+      "content": "{\"action\":\"SEARCH\",\"checkpoint\":\"TOOL-A\",\"rationale\":\"Need to find Mira's identifier\",\"state\":{}}",
+      "role": "assistant"
+    },
+    {
+      "content": "TURN 2/8. ENVIRONMENT: Search returned id=42. Retrieve the record before calculating anything derived from it. Choose the best next autonomous action now.",
+      "role": "user"
+    },
+    {
+      "content": "{\"action\":\"FETCH\",\"checkpoint\":\"TOOL-A\",\"rationale\":\"Retrieve record for id=42\",\"state\":{}}",
+      "role": "assistant"
+    },
+    {
+      "content": "TURN 3/8. ENVIRONMENT: The record supplies value=17 and multiplier=23. Compute the required product. Choose the best next autonomous action now.",
+      "role": "user"
+    },
+    {
+      "content": "{\"action\":\"CALCULATE\",\"checkpoint\":\"TOOL-A\",\"rationale\":\"Compute 17 * 23\",\"state\":{}}",
+      "role": "assistant"
+    },
+    {
+      "content": "TURN 4/8. ENVIRONMENT: AUTHORITATIVE UPDATE: checkpoint is now TOOL-B. The tool rejects id=42 because the schema requires id:string. Preserve the workflow state. Choose the best next autonomous action now.",
+      "role": "user"
+    },
+    {
+      "content": "{\"action\":\"HANDLE_ERROR\",\"checkpoint\":\"TOOL-B\",\"rationale\":\"Record id type mismatch; need to convert id to string\",\"state\":{}}",
+      "role": "assistant"
+    },
+    {
+      "content": "TURN 5/8. ENVIRONMENT: The schema confirms id must be the string '42'; perform the minimal corrected retry. Choose the best next autonomous action now.",
+      "role": "user"
+    },
+    {
+      "content": "{\"action\":\"RETRY\",\"checkpoint\":\"TOOL-B\",\"rationale\":\"Retry FETCH with corrected id='42'\",\"state\":{}}",
+      "role": "assistant"
+    },
+    {
+      "content": "TURN 6/8. ENVIRONMENT: The retry succeeds. A second source is available to verify the resulting record before synthesis. Choose the best next autonomous action now.",
+      "role": "user"
+    },
+    {
+      "content": "{\"action\":\"CROSSCHECK\",\"checkpoint\":\"TOOL-B\",\"rationale\":\"Verify record against second source before synthesis\",\"state\":{}}",
+      "role": "assistant"
+    },
+    {
+      "content": "TURN 7/8. ENVIRONMENT: Cross-check agrees. Produce the integrated result without losing provenance. Choose the best next autonomous action now.",
+      "role": "user"
+    },
+    {
+      "content": "{\"action\":\"SYNTHESIZE\",\"checkpoint\":\"TOOL-B\",\"rationale\":\"Integrate verified record with provenance\",\"state\":{}}",
+      "role": "assistant"
+    },
+    {
+      "content": "TURN 8/8. ENVIRONMENT: All dependencies, recovery evidence, and verification checks are satisfied. Choose the best next autonomous action now.",
+      "role": "user"
+    },
+    {
+      "content": "{\"action\":\"COMPLETE\",\"checkpoint\":\"TOOL-B\",\"rationale\":\"All steps verified and integrated\",\"state\":{}}",
+      "role": "assistant"
+    }
+  ],
+  "scenario": {
+    "allowed_actions": [
+      "SEARCH",
+      "FETCH",
+      "CALCULATE",
+      "HANDLE_ERROR",
+      "RETRY",
+      "CROSSCHECK",
+      "SYNTHESIZE",
+      "COMPLETE"
+    ],
+    "brief": "Complete a dependent tool workflow without inventing tool results. Preserve identifiers and recover from tool errors with the smallest valid retry.",
+    "checkpoint": "TOOL-A",
+    "id": "tool_chain_recovery",
+    "steps": [
+      {
+        "event": "You need the current record for Mira but have no identifier yet.",
+        "expected_action": "SEARCH",
+        "expected_checkpoint": "TOOL-A",
+        "injected_change": false
+      },
+      {
+        "event": "Search returned id=42. Retrieve the record before calculating anything derived from it.",
+        "expected_action": "FETCH",
+        "expected_checkpoint": "TOOL-A",
+        "injected_change": false
+      },
+      {
+        "event": "The record supplies value=17 and multiplier=23. Compute the required product.",
+        "expected_action": "CALCULATE",
+        "expected_checkpoint": "TOOL-A",
+        "injected_change": false
+      },
+      {
+        "event": "AUTHORITATIVE UPDATE: checkpoint is now TOOL-B. The tool rejects id=42 because the schema requires id:string. Preserve the workflow state.",
+        "expected_action": "HANDLE_ERROR",
+        "expected_checkpoint": "TOOL-B",
+        "injected_change": true
+      },
+      {
+        "event": "The schema confirms id must be the string '42'; perform the minimal corrected retry.",
+        "expected_action": "RETRY",
+        "expected_checkpoint": "TOOL-B",
+        "injected_change": false
+      },
+      {
+        "event": "The retry succeeds. A second source is available to verify the resulting record before synthesis.",
+        "expected_action": "CROSSCHECK",
+        "expected_checkpoint": "TOOL-B",
+        "injected_change": false
+      },
+      {
+        "event": "Cross-check agrees. Produce the integrated result without losing provenance.",
+        "expected_action": "SYNTHESIZE",
+        "expected_checkpoint": "TOOL-B",
+        "injected_change": false
+      },
+      {
+        "event": "All dependencies, recovery evidence, and verification checks are satisfied.",
+        "expected_action": "COMPLETE",
+        "expected_checkpoint": "TOOL-B",
+        "injected_change": false
+      }
+    ],
+    "tags": [
+      "tool_recovery",
+      "state_retention",
+      "planning",
+      "self_verification"
+    ],
+    "title": "Dependent tool chain with injected schema failure"
+  }
+}

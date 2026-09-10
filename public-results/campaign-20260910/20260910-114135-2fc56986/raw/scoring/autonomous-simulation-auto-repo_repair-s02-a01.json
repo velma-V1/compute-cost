@@ -1,0 +1,44 @@
+{
+  "checks": [
+    {
+      "name": "valid_json",
+      "pass": true
+    },
+    {
+      "name": "required:action",
+      "pass": true
+    },
+    {
+      "name": "required:checkpoint",
+      "pass": true
+    },
+    {
+      "actual": "HYPOTHESIZE",
+      "expected": "HYPOTHESIZE",
+      "name": "value:action",
+      "pass": true
+    },
+    {
+      "actual": "BUILD-A",
+      "expected": "BUILD-A",
+      "name": "value:checkpoint",
+      "pass": true
+    }
+  ],
+  "evidence": {
+    "parsed": {
+      "action": "HYPOTHESIZE",
+      "checkpoint": "BUILD-A",
+      "rationale": "Inspection identified a suspicious boundary condition; formulating a specific hypothesis about its causal link to the failure is the necessary step before testing or patching.",
+      "state": {
+        "checkpoint": "BUILD-A",
+        "status": "hypothesis_formulation",
+        "suspicious_area": "boundary_condition",
+        "turn": 2
+      }
+    },
+    "raw_response": "{\n\"action\": \"HYPOTHESIZE\",\n\"checkpoint\": \"BUILD-A\",\n\"rationale\": \"Inspection identified a suspicious boundary condition; formulating a specific hypothesis about its causal link to the failure is the necessary step before testing or patching.\",\n\"state\": {\"turn\": 2, \"status\": \"hypothesis_formulation\", \"checkpoint\": \"BUILD-A\", \"suspicious_area\": \"boundary_condition\"}\n}"
+  },
+  "score": 1.0,
+  "status": "SCORED"
+}

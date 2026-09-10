@@ -1,0 +1,44 @@
+{
+  "checks": [
+    {
+      "name": "valid_json",
+      "pass": true
+    },
+    {
+      "name": "required:action",
+      "pass": true
+    },
+    {
+      "name": "required:checkpoint",
+      "pass": true
+    },
+    {
+      "actual": "REPLAN",
+      "expected": "REPLAN",
+      "name": "value:action",
+      "pass": true
+    },
+    {
+      "actual": "PLAN-B",
+      "expected": "PLAN-B",
+      "name": "value:checkpoint",
+      "pass": true
+    }
+  ],
+  "evidence": {
+    "parsed": {
+      "action": "REPLAN",
+      "checkpoint": "PLAN-B",
+      "rationale": "The authoritative checkpoint has shifted to PLAN-B due to a critical constraint change (resource loss) that invalidates existing scheduled steps. The current schedule is no longer valid; the plan must be reconstructed to accommodate the new reality before attempting recovery or optimization.",
+      "state": {
+        "cause": "resource_disappearance",
+        "checkpoint_updated": true,
+        "current_phase": "replanning",
+        "invalidated_steps": 2
+      }
+    },
+    "raw_response": "{\n  \"action\": \"REPLAN\",\n  \"checkpoint\": \"PLAN-B\",\n  \"rationale\": \"The authoritative checkpoint has shifted to PLAN-B due to a critical constraint change (resource loss) that invalidates existing scheduled steps. The current schedule is no longer valid; the plan must be reconstructed to accommodate the new reality before attempting recovery or optimization.\",\n  \"state\": {\"current_phase\": \"replanning\", \"checkpoint_updated\": true, \"invalidated_steps\": 2, \"cause\": \"resource_disappearance\"}\n}"
+  },
+  "score": 1.0,
+  "status": "SCORED"
+}

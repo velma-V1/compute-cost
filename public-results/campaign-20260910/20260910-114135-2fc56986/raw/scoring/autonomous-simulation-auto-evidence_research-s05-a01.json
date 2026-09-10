@@ -1,0 +1,52 @@
+{
+  "checks": [
+    {
+      "name": "valid_json",
+      "pass": true
+    },
+    {
+      "name": "required:action",
+      "pass": true
+    },
+    {
+      "name": "required:checkpoint",
+      "pass": true
+    },
+    {
+      "actual": "WEIGH_EVIDENCE",
+      "expected": "WEIGH_EVIDENCE",
+      "name": "value:action",
+      "pass": true
+    },
+    {
+      "actual": "SRC-B",
+      "expected": "SRC-B",
+      "name": "value:checkpoint",
+      "pass": true
+    }
+  ],
+  "evidence": {
+    "parsed": {
+      "action": "WEIGH_EVIDENCE",
+      "checkpoint": "SRC-B",
+      "rationale": "The environment instructs to weight the remaining evidence based on authority (where SRC-B is now authoritative) and directness, while acknowledging the stale source as obsolete. This step logically follows the update and precedes identifying any unresolved edge cases or synthesizing a final conclusion.",
+      "state": {
+        "authoritative_source": "SRC-B",
+        "collected_sources": [
+          "SRC-A",
+          "SRC-B",
+          "SRC-C"
+        ],
+        "current_checkpoint": "SRC-B",
+        "stale_source_status": "obsolete",
+        "weighting_criteria": [
+          "authority",
+          "directness"
+        ]
+      }
+    },
+    "raw_response": "{\n  \"action\": \"WEIGH_EVIDENCE\",\n  \"checkpoint\": \"SRC-B\",\n  \"rationale\": \"The environment instructs to weight the remaining evidence based on authority (where SRC-B is now authoritative) and directness, while acknowledging the stale source as obsolete. This step logically follows the update and precedes identifying any unresolved edge cases or synthesizing a final conclusion.\",\n  \"state\": {\"collected_sources\": [\"SRC-A\", \"SRC-B\", \"SRC-C\"], \"authoritative_source\": \"SRC-B\", \"stale_source_status\": \"obsolete\", \"weighting_criteria\": [\"authority\", \"directness\"], \"current_checkpoint\": \"SRC-B\"}\n}"
+  },
+  "score": 1.0,
+  "status": "SCORED"
+}

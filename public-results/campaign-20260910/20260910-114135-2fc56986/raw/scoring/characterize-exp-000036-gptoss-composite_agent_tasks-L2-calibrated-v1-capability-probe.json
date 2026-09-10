@@ -1,0 +1,83 @@
+{
+  "checks": [
+    {
+      "name": "valid_json",
+      "pass": true
+    },
+    {
+      "name": "required:facts",
+      "pass": true
+    },
+    {
+      "name": "required:tool_sequence",
+      "pass": true
+    },
+    {
+      "name": "required:arguments",
+      "pass": true
+    },
+    {
+      "name": "required:answer",
+      "pass": true
+    },
+    {
+      "actual": {
+        "v1": 12,
+        "v2": 15,
+        "v3": 18
+      },
+      "expected": {
+        "v1": 12,
+        "v2": 15,
+        "v3": 18
+      },
+      "name": "value:facts",
+      "pass": true
+    },
+    {
+      "actual": [
+        "calculator"
+      ],
+      "expected": [
+        "calculator"
+      ],
+      "name": "value:tool_sequence",
+      "pass": true
+    },
+    {
+      "actual": {
+        "expression": "12 + 15 + 18"
+      },
+      "expected": {
+        "expression": "12+15+18"
+      },
+      "name": "value:arguments",
+      "pass": false
+    },
+    {
+      "actual": 45,
+      "expected": 45,
+      "name": "value:answer",
+      "pass": true
+    }
+  ],
+  "evidence": {
+    "parsed": {
+      "answer": 45,
+      "arguments": {
+        "expression": "12 + 15 + 18"
+      },
+      "facts": {
+        "v1": 12,
+        "v2": 15,
+        "v3": 18
+      },
+      "tool_sequence": [
+        "calculator"
+      ]
+    },
+    "raw_response": "{\n  \"facts\": {\n    \"v1\": 12,\n    \"v2\": 15,\n    \"v3\": 18\n  },\n  \"tool_sequence\": [\n    \"calculator\"\n  ],\n  \"arguments\": {\n    \"expression\": \"12 + 15 + 18\"\n  },\n  \"answer\": 45\n}"
+  },
+  "score": 0.0,
+  "status": "SCORED"
+}

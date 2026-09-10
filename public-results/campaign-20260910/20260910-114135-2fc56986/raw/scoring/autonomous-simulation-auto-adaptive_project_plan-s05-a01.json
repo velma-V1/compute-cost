@@ -1,0 +1,44 @@
+{
+  "checks": [
+    {
+      "name": "valid_json",
+      "pass": true
+    },
+    {
+      "name": "required:action",
+      "pass": true
+    },
+    {
+      "name": "required:checkpoint",
+      "pass": true
+    },
+    {
+      "actual": "RECOVER",
+      "expected": "RECOVER",
+      "name": "value:action",
+      "pass": true
+    },
+    {
+      "actual": "PLAN-B",
+      "expected": "PLAN-B",
+      "name": "value:checkpoint",
+      "pass": true
+    }
+  ],
+  "evidence": {
+    "parsed": {
+      "action": "RECOVER",
+      "checkpoint": "PLAN-B",
+      "rationale": "The environment specifies that a substitute resource is available but requires modifying the middle of the plan while preserving completed work. This specific requirement to integrate a new constraint (substitute resource) and adjust the existing partial plan without discarding progress defines the 'Recover' action, which focuses on restoring viability after a disruption.",
+      "state": {
+        "checkpoint": "PLAN-B",
+        "completed_work_preserved": true,
+        "constraint_change": "resource_substitution",
+        "current_phase": "recovery"
+      }
+    },
+    "raw_response": "{\n  \"action\": \"RECOVER\",\n  \"checkpoint\": \"PLAN-B\",\n  \"rationale\": \"The environment specifies that a substitute resource is available but requires modifying the middle of the plan while preserving completed work. This specific requirement to integrate a new constraint (substitute resource) and adjust the existing partial plan without discarding progress defines the 'Recover' action, which focuses on restoring viability after a disruption.\",\n  \"state\": {\"current_phase\": \"recovery\", \"checkpoint\": \"PLAN-B\", \"completed_work_preserved\": true, \"constraint_change\": \"resource_substitution\"}\n}"
+  },
+  "score": 1.0,
+  "status": "SCORED"
+}

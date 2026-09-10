@@ -1,0 +1,39 @@
+{
+  "checks": [
+    {
+      "name": "valid_json",
+      "pass": true
+    },
+    {
+      "name": "required:action",
+      "pass": true
+    },
+    {
+      "name": "required:checkpoint",
+      "pass": true
+    },
+    {
+      "actual": "VERIFY",
+      "expected": "VERIFY",
+      "name": "value:action",
+      "pass": true
+    },
+    {
+      "actual": "STATE-B",
+      "expected": "STATE-B",
+      "name": "value:checkpoint",
+      "pass": true
+    }
+  ],
+  "evidence": {
+    "parsed": {
+      "action": "VERIFY",
+      "checkpoint": "STATE-B",
+      "rationale": "The environment requires confirmation of internal consistency following a successful execution; VERIFY is the designated action to validate that completed work, current state, and remaining obligations align before proceeding.",
+      "state": "Execution confirmed. Verifying consistency of STATE-B."
+    },
+    "raw_response": "{\n  \"action\": \"VERIFY\",\n  \"checkpoint\": \"STATE-B\",\n  \"rationale\": \"The environment requires confirmation of internal consistency following a successful execution; VERIFY is the designated action to validate that completed work, current state, and remaining obligations align before proceeding.\",\n  \"state\": \"Execution confirmed. Verifying consistency of STATE-B.\"\n}"
+  },
+  "score": 1.0,
+  "status": "SCORED"
+}

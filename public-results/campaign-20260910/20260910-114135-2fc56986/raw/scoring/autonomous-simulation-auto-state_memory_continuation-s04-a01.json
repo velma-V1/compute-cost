@@ -1,0 +1,39 @@
+{
+  "checks": [
+    {
+      "name": "valid_json",
+      "pass": true
+    },
+    {
+      "name": "required:action",
+      "pass": true
+    },
+    {
+      "name": "required:checkpoint",
+      "pass": true
+    },
+    {
+      "actual": "REJECT_STALE",
+      "expected": "REJECT_STALE",
+      "name": "value:action",
+      "pass": true
+    },
+    {
+      "actual": "STATE-B",
+      "expected": "STATE-B",
+      "name": "value:checkpoint",
+      "pass": true
+    }
+  ],
+  "evidence": {
+    "parsed": {
+      "action": "REJECT_STALE",
+      "checkpoint": "STATE-B",
+      "rationale": "The environment provides an authoritative update to STATE-B; any reference to the prior checkpoint (STATE-A) is now obsolete and conflicting. The correct action is to reject the stale state and align with the new authoritative checkpoint.",
+      "state": "Stale STATE-A rejected. Aligned with authoritative STATE-B."
+    },
+    "raw_response": "{\n  \"action\": \"REJECT_STALE\",\n  \"checkpoint\": \"STATE-B\",\n  \"rationale\": \"The environment provides an authoritative update to STATE-B; any reference to the prior checkpoint (STATE-A) is now obsolete and conflicting. The correct action is to reject the stale state and align with the new authoritative checkpoint.\",\n  \"state\": \"Stale STATE-A rejected. Aligned with authoritative STATE-B.\"\n}"
+  },
+  "score": 1.0,
+  "status": "SCORED"
+}

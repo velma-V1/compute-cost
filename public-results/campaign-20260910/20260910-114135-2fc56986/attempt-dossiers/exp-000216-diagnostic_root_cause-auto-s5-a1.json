@@ -1,0 +1,4114 @@
+{
+  "evaluation": {
+    "all_checks": [
+      {
+        "name": "valid_json",
+        "pass": true
+      },
+      {
+        "name": "required:action",
+        "pass": true
+      },
+      {
+        "name": "required:checkpoint",
+        "pass": true
+      },
+      {
+        "actual": "TEST",
+        "expected": "RETEST",
+        "name": "value:action",
+        "pass": false
+      },
+      {
+        "actual": "DIAG-B",
+        "expected": "DIAG-B",
+        "name": "value:checkpoint",
+        "pass": true
+      }
+    ],
+    "classification_basis": "runtime completed and deterministic scorer failed",
+    "result_class": "ANSWER_WRONG",
+    "right_checks": [
+      {
+        "name": "valid_json",
+        "pass": true
+      },
+      {
+        "name": "required:action",
+        "pass": true
+      },
+      {
+        "name": "required:checkpoint",
+        "pass": true
+      },
+      {
+        "actual": "DIAG-B",
+        "expected": "DIAG-B",
+        "name": "value:checkpoint",
+        "pass": true
+      }
+    ],
+    "score": 0.0,
+    "scoring_error": null,
+    "scoring_evidence": {
+      "parsed": {
+        "action": "TEST",
+        "checkpoint": "DIAG-B",
+        "rationale": "The environment explicitly identifies a specific test capable of distinguishing between the remaining competing hypotheses (restriction vs. actuator leakage). Executing this test is necessary to gather the evidence required to eliminate one of these final candidates.",
+        "state": {
+          "current_phase": "discriminating_test",
+          "eliminated_hypotheses": [
+            "Sensor error",
+            "Supply restriction (contradicted)"
+          ],
+          "hypotheses": [
+            "Failing pump seal",
+            "Pressure relief valve sticking"
+          ],
+          "known_symptoms": "intermittent pressure loss under load",
+          "pending_tests": [
+            "Distinguish restriction vs actuator leakage"
+          ]
+        }
+      },
+      "raw_response": "{\n\"action\": \"TEST\",\n\"checkpoint\": \"DIAG-B\",\n\"rationale\": \"The environment explicitly identifies a specific test capable of distinguishing between the remaining competing hypotheses (restriction vs. actuator leakage). Executing this test is necessary to gather the evidence required to eliminate one of these final candidates.\",\n\"state\": {\"current_phase\": \"discriminating_test\", \"known_symptoms\": \"intermittent pressure loss under load\", \"hypotheses\": [\"Failing pump seal\", \"Pressure relief valve sticking\"], \"eliminated_hypotheses\": [\"Sensor error\", \"Supply restriction (contradicted)\"], \"pending_tests\": [\"Distinguish restriction vs actuator leakage\"]}\n}"
+    },
+    "status": "SCORED",
+    "valid_for_capability": true,
+    "what_was_right": [
+      {
+        "name": "valid_json",
+        "pass": true
+      },
+      {
+        "name": "required:action",
+        "pass": true
+      },
+      {
+        "name": "required:checkpoint",
+        "pass": true
+      },
+      {
+        "actual": "DIAG-B",
+        "expected": "DIAG-B",
+        "name": "value:checkpoint",
+        "pass": true
+      }
+    ],
+    "what_was_wrong": [
+      {
+        "actual": "TEST",
+        "expected": "RETEST",
+        "name": "value:action",
+        "pass": false
+      }
+    ],
+    "wrong_checks": [
+      {
+        "actual": "TEST",
+        "expected": "RETEST",
+        "name": "value:action",
+        "pass": false
+      }
+    ]
+  },
+  "evidence": {
+    "all_refs": {
+      "request": {
+        "bytes": 4574,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/requests/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01.bin",
+        "producer": "runtime-adapter",
+        "sha256": "48f9ad19590c25629888a14353fca91f210a32e4f81de1abd8a432cf4335d8a7",
+        "stage": "autonomous-simulation"
+      },
+      "request_id": "000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01",
+      "response": {
+        "bytes": 20068,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/responses/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01.bin",
+        "producer": "runtime-adapter",
+        "sha256": "f4f0274fa1550b95151a30d73b41ef6964d04caca91c44d839e168b08dcfd643",
+        "stage": "autonomous-simulation"
+      },
+      "streams": [
+        {
+          "bytes": 137,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000000.bin",
+          "producer": "runtime-stream",
+          "sha256": "05421f850da2137f16d757f7c2c09ad8e99933f3a1167be941df75e714e9e85a",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 140,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000001.bin",
+          "producer": "runtime-stream",
+          "sha256": "8f5fd577d7f103b537655f16126bec71369732dea9042ed2bbc7cb745ecd6663",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 142,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000002.bin",
+          "producer": "runtime-stream",
+          "sha256": "89bde337597ceffeef280ce6eea7d949bb0bbe41154362123f1e053d176da584",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 139,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000003.bin",
+          "producer": "runtime-stream",
+          "sha256": "8f681a3d7ddb6934cc59fd5a816ba7065aeb94c1d88205f12daf36e55f226450",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 138,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000004.bin",
+          "producer": "runtime-stream",
+          "sha256": "c36e3b1fa89ede8fd52cf117e82d1b0d82a8367b8752cce616fe1f9f9e2f6e5f",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 140,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000005.bin",
+          "producer": "runtime-stream",
+          "sha256": "acb7c69394a6e723761547eb08c737edf5c68ac6cfa6500543cba9583ea89b9f",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 139,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000006.bin",
+          "producer": "runtime-stream",
+          "sha256": "fc11a4b574fdcd2413056047319520a87784b865c720e48b6efeb0b3db46bafb",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 140,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000007.bin",
+          "producer": "runtime-stream",
+          "sha256": "b3d42c47f29a1e113cf590daa791af10463134d3c0de3c9f12a413319969f1d8",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 146,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000008.bin",
+          "producer": "runtime-stream",
+          "sha256": "8cf3bc5876379b7d0fe63cb8215252474929957ce698b0926dc67dfa5f36b106",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 138,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000009.bin",
+          "producer": "runtime-stream",
+          "sha256": "a7aeec143017ba456fdb8a568695017a8da0bdf0118ce8178598ea7f4f4d373a",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 139,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000010.bin",
+          "producer": "runtime-stream",
+          "sha256": "561e9d505e5d9651dd152bcaba3f40a5113c89bb59c6833ea40cacc8383415ba",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 138,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000011.bin",
+          "producer": "runtime-stream",
+          "sha256": "c76fc3b07b95015ba60c591bca586cf253bffe24670fc49a2743410c8be377de",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 138,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000012.bin",
+          "producer": "runtime-stream",
+          "sha256": "6df1b0754bdac3b8567ce5aba16b8b84ec53788b68f21fb0c556104d259f675c",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 138,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000013.bin",
+          "producer": "runtime-stream",
+          "sha256": "6ab996f6ef3106eed43d1ae7cf672c5b2007362df8f4dea04deea9624211eecf",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 138,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000014.bin",
+          "producer": "runtime-stream",
+          "sha256": "17f10808dca88d138aabb1e1ca9b9679d3b39c95c170ef62a3f157b97b8538df",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 140,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000015.bin",
+          "producer": "runtime-stream",
+          "sha256": "f61155f7cc88ac3441b88a706b44784dc0a5d0b18d9e1ba6ae06342fbe98a255",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 142,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000016.bin",
+          "producer": "runtime-stream",
+          "sha256": "8ce4d73ae33b88684210e0d3a4eb52978581897a6992c5bf32af3be337c2ded8",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 139,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000017.bin",
+          "producer": "runtime-stream",
+          "sha256": "36e181d77656774dac6b0932897c56a363b4169e18597acad571f9fc9246abb5",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 139,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000018.bin",
+          "producer": "runtime-stream",
+          "sha256": "6cc68bdefe5b70d2125fe3cebfa6c4bb5d1dd90985cf9ae706e8aef09a6940e0",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 139,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000019.bin",
+          "producer": "runtime-stream",
+          "sha256": "ccb39ef569bf85a074e92f7e5d7641e7e35137a22b22da414174f7b0ce78c596",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 139,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000020.bin",
+          "producer": "runtime-stream",
+          "sha256": "4829994593e94c7e67f8da5b21784d7f315853be6d1b58339b346ef1a7ab4e74",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 147,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000021.bin",
+          "producer": "runtime-stream",
+          "sha256": "4f6e1d67ac1204198529531b011540a976a229b86ee0cfb19be7a6cc4614a535",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 147,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000022.bin",
+          "producer": "runtime-stream",
+          "sha256": "2cc49a9778a125d03eed4b92c1a9e020df068921f002067f1e7349f85f85f7de",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 146,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000023.bin",
+          "producer": "runtime-stream",
+          "sha256": "b40977f5d72b8280776f5e0d3e766810cde7b22ec115d060ef693c4c541bf919",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 138,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000024.bin",
+          "producer": "runtime-stream",
+          "sha256": "7bbd98e9d15fad90944012e1453e54516e9dab326a2072c1e898976cb7926803",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 145,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000025.bin",
+          "producer": "runtime-stream",
+          "sha256": "f9d3f03a1c08988e51c1858fcd855c80faaa3f6bf6ca4ba509e3f6ff50f4bd8c",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 141,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000026.bin",
+          "producer": "runtime-stream",
+          "sha256": "ef0979f03403b4c2c14347b7c12dbaa1a553ef2a569260e2dcc27364226f8243",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 144,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000027.bin",
+          "producer": "runtime-stream",
+          "sha256": "866c66640ac0d7769873c41a45c2608bbc8eee51d9528887a997cf6b35506c78",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 139,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000028.bin",
+          "producer": "runtime-stream",
+          "sha256": "84a4d848e49fda459597ed7bfd8757f0128d2fab6f82a0bfc63426b98851bef7",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 151,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000029.bin",
+          "producer": "runtime-stream",
+          "sha256": "e2f19ab3c905ffa7b3b0c9160f04819153d8709491244baa56d9c86a14c07da3",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 143,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000030.bin",
+          "producer": "runtime-stream",
+          "sha256": "48e7e9d4a5cea23ec6f6f1657446c26c52dec868312bb8e77a3317b90035160b",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 140,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000031.bin",
+          "producer": "runtime-stream",
+          "sha256": "d95d02c7d7d3ddf762d7adff8823f87e499621330a5a685ce2303c2e0d40c6b1",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 146,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000032.bin",
+          "producer": "runtime-stream",
+          "sha256": "5aed739b6e8028c05a0fe6d2e268935a2c6728b9bce56abd826fe82907917b95",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 146,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000033.bin",
+          "producer": "runtime-stream",
+          "sha256": "0708bb8738d20c77a1285b2edfe3f40a60e3f988805ac558d92bba20379cef5c",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 147,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000034.bin",
+          "producer": "runtime-stream",
+          "sha256": "73fd5e73e5f08a43fa8e96a99909922ba78ced9e59fe2f4d651e6f21e970c713",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 138,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000035.bin",
+          "producer": "runtime-stream",
+          "sha256": "f9e6b9957bf27db508ac6f6e76520178628705837c3e807894f84e6dd79e6a72",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 147,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000036.bin",
+          "producer": "runtime-stream",
+          "sha256": "03adf7419c9ea877b0842ad1a92e3d648a4e90513bbb1f35bea50dc2e65ddd90",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 139,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000037.bin",
+          "producer": "runtime-stream",
+          "sha256": "faf827f7a63de1bbcea8cdb5416ac8d28773a838b0bfde421e24eec53c76caf9",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 137,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000038.bin",
+          "producer": "runtime-stream",
+          "sha256": "4334edaaea072c73268b2c08410dfcfbb5175c87d41372f41a7a35414700b881",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 140,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000039.bin",
+          "producer": "runtime-stream",
+          "sha256": "816db2b5ccd3bab6dc79c856add09eb4dc2850fd70001a8d064503f23f5a0fd5",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 141,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000040.bin",
+          "producer": "runtime-stream",
+          "sha256": "7dffa3b58c66972c1aba3e5d90344f5d0eabbc71c2216497c23ecfbe5c21448a",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 144,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000041.bin",
+          "producer": "runtime-stream",
+          "sha256": "33b07434fb32566984d4e9dde67d6d1c8906775925be59078c350413ee7c92d6",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 138,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000042.bin",
+          "producer": "runtime-stream",
+          "sha256": "303e44010e7667bc027bde7ad52bc9fb04604477f40817783ad9535526d980c3",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 141,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000043.bin",
+          "producer": "runtime-stream",
+          "sha256": "7d171087b08fa37bf39ef63cc025ed79217d101f9868d76d04efd834303ad840",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 141,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000044.bin",
+          "producer": "runtime-stream",
+          "sha256": "1970fd0dfaa8094c6812e20b7b0f7070c33a54feb90b47c07a95ea9462003307",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 141,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000045.bin",
+          "producer": "runtime-stream",
+          "sha256": "aaf298e7c3b7be39210ffef773f404dd3dd7979b5fb04b0fdea0122221a8329b",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 140,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000046.bin",
+          "producer": "runtime-stream",
+          "sha256": "4396915b282fcc28f4943671f1c65e51e7977b73cb87a2bf2126358151270bd4",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 139,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000047.bin",
+          "producer": "runtime-stream",
+          "sha256": "2174cdfdd8b1b5cc2a887bf4a2512d6b4bbc08df8f9dc9ba0c0cfb215122f249",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 146,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000048.bin",
+          "producer": "runtime-stream",
+          "sha256": "f9eed45f063a7d8d2baeabe340ba066f7ae948d06581d894af88e56b2c1ab298",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 139,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000049.bin",
+          "producer": "runtime-stream",
+          "sha256": "22f8d5bee275c0f1c25f3b1d7d3d30177f33d9afa71bfd00e02833a3cfb43e11",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 143,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000050.bin",
+          "producer": "runtime-stream",
+          "sha256": "6d3df1415dba0e2403cbf0fc58eddb63b6f80f71b0442af9b4744d3d3a669bb2",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 140,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000051.bin",
+          "producer": "runtime-stream",
+          "sha256": "1c77a3bf5e2615253c0896127771c40756106bd467cf68e4050e0b1c6791e8d7",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 145,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000052.bin",
+          "producer": "runtime-stream",
+          "sha256": "aa45f4dc398f431897c3cf01fff43ef29f283fd9e13a90cc4ce37a55f4c14599",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 145,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000053.bin",
+          "producer": "runtime-stream",
+          "sha256": "43d2d3373d3f3abe715eef6b669895e6c479f8193de649e8dab721240b96505e",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 138,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000054.bin",
+          "producer": "runtime-stream",
+          "sha256": "b794803c3d9b9e12a29811a574895caa4535a0968468623f8f9fb6e4b0f0d5fc",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 146,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000055.bin",
+          "producer": "runtime-stream",
+          "sha256": "6f7a7b7d6d0b4e8d23b38fa164be29d6b2882f2b88bdce245dd5d6c7baf09f46",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 140,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000056.bin",
+          "producer": "runtime-stream",
+          "sha256": "872546533ca859f68352ca1937958812fed7034d45a8b42297f1403e728b2e9f",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 139,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000057.bin",
+          "producer": "runtime-stream",
+          "sha256": "33f4587cf398d7b32aac36e43cbb92fa1710fcee444a5e99dd3a2c3bd899c766",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 142,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000058.bin",
+          "producer": "runtime-stream",
+          "sha256": "744cc31e5463f0e757e9415381618459a8ca16b85668341acd2e875d5b0dbd62",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 142,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000059.bin",
+          "producer": "runtime-stream",
+          "sha256": "4ca14e883fa18090b73752680e36ac5c6bc983fcbde1e181dc8e6d5ba709dc40",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 147,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000060.bin",
+          "producer": "runtime-stream",
+          "sha256": "dd898c2326607c675d706b5e3eb9405070efbff0297318eb569909bb7872109b",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 140,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000061.bin",
+          "producer": "runtime-stream",
+          "sha256": "1789800b7207a040c42d6fdd2b9969c4a5ee5806bef419e0448baa60203f378c",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 140,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000062.bin",
+          "producer": "runtime-stream",
+          "sha256": "5c58f711593d71e4ac1b639af4bfcd25ae43a19af6295a19b4f1bbb7454cd40a",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 141,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000063.bin",
+          "producer": "runtime-stream",
+          "sha256": "8532a405bc459fac3f09c1ec6a59f9258d0c7f375a8ec011c8a93d4afd08909c",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 139,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000064.bin",
+          "producer": "runtime-stream",
+          "sha256": "69a0293bde919cdf29af325c2c6b72c7ac3d4e6f8e9eaca3227dec80bdf4f4a2",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 140,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000065.bin",
+          "producer": "runtime-stream",
+          "sha256": "8df538bb29ab9d8766a23171014a78863b4db3c35a0ade66eb4efca889c8455a",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 143,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000066.bin",
+          "producer": "runtime-stream",
+          "sha256": "6958094418f1a6110adf32c22d7d378ad4d7bb704a833cbc589fec87e0dfa2b6",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 141,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000067.bin",
+          "producer": "runtime-stream",
+          "sha256": "fb48b20d964157e169bd97a878811a17a9b3b3137bfc9ed6dc520a41d324d955",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 139,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000068.bin",
+          "producer": "runtime-stream",
+          "sha256": "cafba756e0508b8a4525012bb2f795c37ee7a55a4cc6efddfcddc948931e9374",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 139,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000069.bin",
+          "producer": "runtime-stream",
+          "sha256": "e5fbffd0ede2f0ff2dea34528ddbc1e62fb1b18ff08183959674b16daa7c492f",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 140,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000070.bin",
+          "producer": "runtime-stream",
+          "sha256": "db719ec1dee6736a6f438564c98b67db89ec9928df00a6336f59f2f85297c689",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 139,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000071.bin",
+          "producer": "runtime-stream",
+          "sha256": "2782eaddaa202fc7bb824364a7b64eac8c1877e2112f0e3272d4311f193d1324",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 143,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000072.bin",
+          "producer": "runtime-stream",
+          "sha256": "9010a17b8cb1b43002438ef9f569e11efb5c21a06e3745406049ea3e756d70bf",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 141,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000073.bin",
+          "producer": "runtime-stream",
+          "sha256": "b442947d31ba6a043d0759c95f9ef5e4cc962cbc5b7fac4641e38323b600a18f",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 139,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000074.bin",
+          "producer": "runtime-stream",
+          "sha256": "5db4e7ca173e931bf53d1f3394ae0468ce0900fd53b29f15dc69bc62900e0136",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 139,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000075.bin",
+          "producer": "runtime-stream",
+          "sha256": "d87154b54f3cd35c8672c9caa0e5a0bb2098895125b5826ad18947e6df943708",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 141,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000076.bin",
+          "producer": "runtime-stream",
+          "sha256": "7bbdfa75a9eb176f1578754011ffeae1ca4aead4c0ea99371e00bb02256280dd",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 140,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000077.bin",
+          "producer": "runtime-stream",
+          "sha256": "f0fedf2bf63bfe94cdf775e45c3f22ec7f5a114b0df6da38c13247fda9fb39e9",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 141,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000078.bin",
+          "producer": "runtime-stream",
+          "sha256": "aac0ff5f2a89e2b4b5c42bc6a07e8799b2d16c67799833fbdfc046839784ff40",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 139,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000079.bin",
+          "producer": "runtime-stream",
+          "sha256": "4f36911c62b399508293ec09049a9131363120ee6df270bf2801d6a36749df0d",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 139,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000080.bin",
+          "producer": "runtime-stream",
+          "sha256": "a5ab51cd357e0f42118240cc62390aee99c9614957b21b83c18fee066a66b3f9",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 141,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000081.bin",
+          "producer": "runtime-stream",
+          "sha256": "ef696d8aa477902d58bea2cc327475c6d94aba060e9114d1e185f7f862ea95fe",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 140,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000082.bin",
+          "producer": "runtime-stream",
+          "sha256": "57a0ab45d30fa2fb2b1c20474c24f179c8aaa4131586d355f340bbed35ba737a",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 139,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000083.bin",
+          "producer": "runtime-stream",
+          "sha256": "0f23934b5addad2abe5151a095d19ae558168bcbdfa5fb997d825fb42ed74b5a",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 145,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000084.bin",
+          "producer": "runtime-stream",
+          "sha256": "c1b837d3a5f840fa25e53e5eea1a0defe04e1d984b48e113d3a1180a2da61068",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 141,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000085.bin",
+          "producer": "runtime-stream",
+          "sha256": "2b33c5a31e1bd282967eac0828f1b23bb951023e43bf47bb217508153ccebb7d",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 142,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000086.bin",
+          "producer": "runtime-stream",
+          "sha256": "1f484dae25a53deb1c396bf5d0ac1f67371abdb06397e117fa13f45d9e93fd4a",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 141,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000087.bin",
+          "producer": "runtime-stream",
+          "sha256": "050aae2f8a45611e17e5216aeb4b15f5446b145649af6edd249480cfd3efdb2f",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 139,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000088.bin",
+          "producer": "runtime-stream",
+          "sha256": "f0f78be36b9326c6d39a1f218b7a1161670af2fee37549932cd52cc92d19a505",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 139,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000089.bin",
+          "producer": "runtime-stream",
+          "sha256": "579fadc550bde00a0608d120bcbdfae2d6ad2d54aa45c6b9e955d6a2639c6fe4",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 137,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000090.bin",
+          "producer": "runtime-stream",
+          "sha256": "1ce69269d7efb95fb0a3c5c04001af79e1bdba361c53a86636754d2b623c192f",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 139,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000091.bin",
+          "producer": "runtime-stream",
+          "sha256": "e247f5bbfc542903e977af11d4bbf5b6358611eaaaa69cf1c8b9a8e9ddbe1380",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 142,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000092.bin",
+          "producer": "runtime-stream",
+          "sha256": "fee893bb70d0b79c9947e1f159c2aab36bd45924595b960a5fb2e028cc539980",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 139,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000093.bin",
+          "producer": "runtime-stream",
+          "sha256": "78cc44ffa45639c07a306bc277efcc8e285fc4df608acbbc7f07ad78a4f5c371",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 140,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000094.bin",
+          "producer": "runtime-stream",
+          "sha256": "80a0929c121af097f5dc3c3f51c7bbd314459c9525527dd74c9391236967cb86",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 137,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000095.bin",
+          "producer": "runtime-stream",
+          "sha256": "c8756a9262fcc761b1d15e76918fca5ca6acc6970554af474eb95c901965dc18",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 142,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000096.bin",
+          "producer": "runtime-stream",
+          "sha256": "0150bbd822dd380c77b6790f2c22c8b0b61ff69f9a41a4d0cecd7cd736276895",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 141,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000097.bin",
+          "producer": "runtime-stream",
+          "sha256": "cb535a312524115fba46258bd1a77a3bca7a2379b41825a83afea7c06bbfa879",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 141,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000098.bin",
+          "producer": "runtime-stream",
+          "sha256": "c9e56a77537441a182952858ae772df6004061d425dd1e86bc4749a6f344be22",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 139,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000099.bin",
+          "producer": "runtime-stream",
+          "sha256": "423bfe6618475f9f75c1c3d6e0a3f683e2710a8cecd29bc86ed231e1e3a17e26",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 139,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000100.bin",
+          "producer": "runtime-stream",
+          "sha256": "36982dc08cb7fcc5ec181ef3139088c3ea5b35601c5ad31ac6eca05cb0a9bf69",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 144,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000101.bin",
+          "producer": "runtime-stream",
+          "sha256": "8fa451c5b7b9375266ffba255fa07dd5d653c425cdca8bd7245413d14eb8774b",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 143,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000102.bin",
+          "producer": "runtime-stream",
+          "sha256": "3fd425d3f8e9c96e8cf6fd4cda66efe3a6d4bda5f75a50785cf7ef1cf213108d",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 142,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000103.bin",
+          "producer": "runtime-stream",
+          "sha256": "9cb5d022bbfa5dfe0733d950fca3ae3a15797933686a2dab5c286fa4e7a3840e",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 145,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000104.bin",
+          "producer": "runtime-stream",
+          "sha256": "3ea145191708841dabab651ad4c3e006dfe7160bb4379ae292621b440ffc789e",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 140,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000105.bin",
+          "producer": "runtime-stream",
+          "sha256": "27041086dbcb7a63f61db420da9bb8aafea9700aa85bd594a296d6c79456fe54",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 139,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000106.bin",
+          "producer": "runtime-stream",
+          "sha256": "9ef000b1773733deb5c342ddb6f688d0a912518cca0e0c9b79b20f38e22b39d3",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 140,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000107.bin",
+          "producer": "runtime-stream",
+          "sha256": "c09be341be5bae606bf86a67d4408cb2a603539890acc18fcfbe5b89f5fef353",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 142,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000108.bin",
+          "producer": "runtime-stream",
+          "sha256": "fd846a3478e86a4910cbd3df61fa01fe071e8cc8b7ddd0a396ddd187fcdb7962",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 138,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000109.bin",
+          "producer": "runtime-stream",
+          "sha256": "5187ac3018ec0a478935cbf3e73bcbe00720e784dd2b478e223917920e3c76cf",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 139,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000110.bin",
+          "producer": "runtime-stream",
+          "sha256": "3abd556bd531eafc6e5ce2bc237ca9cab421d1a5f69d29ba6cad17d56435b684",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 141,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000111.bin",
+          "producer": "runtime-stream",
+          "sha256": "5d979cb91e2a96f60e52aa71a80333c17774cf83375242e01aabb1940cb6051f",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 139,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000112.bin",
+          "producer": "runtime-stream",
+          "sha256": "32e48eb3341e15ecd5eb61df4a3d1a190674d52fe0621c4958995596fcb8143a",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 140,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000113.bin",
+          "producer": "runtime-stream",
+          "sha256": "dbd0a66bbf4d39f6797fded3214d8b5796bc475b43f5220a73a3017d1ec43aa8",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 142,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000114.bin",
+          "producer": "runtime-stream",
+          "sha256": "8ece69674ea8dbae025ac8fa265f137525bb0634d16bece2a0e613cc488a49b2",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 142,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000115.bin",
+          "producer": "runtime-stream",
+          "sha256": "3c457c15ac8ff103a31d80671d9277ff5bf823a1bef854c72729850e5ce85acb",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 139,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000116.bin",
+          "producer": "runtime-stream",
+          "sha256": "fc52a4ee7359fecae12fca00a543b829f38b5bb0af7883c534f20c76ce87d5aa",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 139,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000117.bin",
+          "producer": "runtime-stream",
+          "sha256": "e84fd24a5df3d9ce39e1d5db85a49b441021c61b25e99a551f6358481d427192",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 142,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000118.bin",
+          "producer": "runtime-stream",
+          "sha256": "23317e00b411627a6d13dfa6e02a34bceebfe4d27ac86e1e91a0f1cc1f85060e",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 148,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000119.bin",
+          "producer": "runtime-stream",
+          "sha256": "9b4e73701130be6ca6acb2a941a84dd3db6b787034cad5dc0d7c067b724687ab",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 138,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000120.bin",
+          "producer": "runtime-stream",
+          "sha256": "2f4c449565ec6d8111c3d3412b8fe884bc9a610b4b683086fa9b02468623678e",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 141,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000121.bin",
+          "producer": "runtime-stream",
+          "sha256": "b7e61b5e0727419ac696b9f945dd0f620f862386fda073dfcebcae117e869dfb",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 138,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000122.bin",
+          "producer": "runtime-stream",
+          "sha256": "df873596a02e86b97b12e6e20b42f43638d88b155056da05a7ed256c66a53efd",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 141,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000123.bin",
+          "producer": "runtime-stream",
+          "sha256": "cbcf0bb26cd2fdfef1805d95ed542a615a54f61ec146bfdb6a32aa92b1a54f7c",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 137,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000124.bin",
+          "producer": "runtime-stream",
+          "sha256": "b265eb14e07fa4292f46b07708df6f4db8db5fe5757b9fed1796bb973b0aecb7",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 140,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000125.bin",
+          "producer": "runtime-stream",
+          "sha256": "c9b2600cc56438b34225d663baa96dc26e90d546a402d433ffcd2e96fb482e68",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 139,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000126.bin",
+          "producer": "runtime-stream",
+          "sha256": "9fa98ca07d9f8330d1841c8384214bdf569ef0a9bd11abce500e652cfcdb681a",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 143,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000127.bin",
+          "producer": "runtime-stream",
+          "sha256": "644442551e6d2df0f8428d105699d3df47003becd72c85379c1e6712cad2086e",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 142,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000128.bin",
+          "producer": "runtime-stream",
+          "sha256": "5ab14e5f4473c939a6b645e685ae35701e4ba21605512ba8ffc2efbc64e5d49f",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 139,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000129.bin",
+          "producer": "runtime-stream",
+          "sha256": "c54cbee7886d5fcd128051efad4cad89ce2d206a16aa0f930432d8e4f5df5cc3",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 140,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000130.bin",
+          "producer": "runtime-stream",
+          "sha256": "bc3e1b521df82072b4c856e5052c071804a97963d1858a6885c95c5c8c1cead1",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 137,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000131.bin",
+          "producer": "runtime-stream",
+          "sha256": "58e5643e10111bb82b6be9fd555a88c221106c438e7a2088159ff9a1cb0d6350",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 146,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000132.bin",
+          "producer": "runtime-stream",
+          "sha256": "42da2d74affc558106b7faac9540c2c4623c47716c21abfa0d2440992924b10b",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 148,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000133.bin",
+          "producer": "runtime-stream",
+          "sha256": "fb270dd7763547067f06a293ad369dae52825808aed386bd4f5e56293b879f1f",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 139,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000134.bin",
+          "producer": "runtime-stream",
+          "sha256": "42f6609d329de11949c9177c88056476c544ad1a5f6acdc349fadaa8d7be93d6",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 140,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000135.bin",
+          "producer": "runtime-stream",
+          "sha256": "f558dc0d4ecc736bbd5d9be41c896205a581b28ede55e5595dc5891c0266c7e4",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 141,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000136.bin",
+          "producer": "runtime-stream",
+          "sha256": "62e311800c5880b0cd696709aa3cb86900d644dd4d3d4d5ca47c034745bef8f0",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 144,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000137.bin",
+          "producer": "runtime-stream",
+          "sha256": "f3eeae4dc8b37c723502fe8235f813015e6a6135aeff949c7b31970df519a7ca",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 140,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000138.bin",
+          "producer": "runtime-stream",
+          "sha256": "7939eff1366ff35b7b1ec2d7923fce9e185e436fe9d8f08f077b97d3c320bc59",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 139,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000139.bin",
+          "producer": "runtime-stream",
+          "sha256": "f438b0324adf7db33d22c4e6d9bfefa620a43c3a08038b45abcddaac9d9aff36",
+          "stage": "autonomous-simulation"
+        },
+        {
+          "bytes": 340,
+          "case_id": "auto-diagnostic_root_cause-s05-a01",
+          "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000140.bin",
+          "producer": "runtime-stream",
+          "sha256": "3680b4035eb71b751ffeba31088dd4aa77357c9c0eae2570d4883fddffc02db6",
+          "stage": "autonomous-simulation"
+        }
+      ]
+    },
+    "exchange_path": "raw/runtime/exchanges/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01.json",
+    "observable_runtime_envelope": {
+      "done_reason": "stop",
+      "metrics": {
+        "eval_count": 146,
+        "eval_duration_ns": 2834970000,
+        "load_duration_ns": 3825700,
+        "prompt_eval_count": 914,
+        "prompt_eval_duration_ns": 552463000,
+        "total_duration_ns": 3398760800
+      },
+      "phase_metrics": {
+        "answer_chars": 655,
+        "answer_chunks": 140,
+        "answer_span_ns": 2813672300,
+        "measurement_kind": "MEASURED",
+        "thinking_chars": 0,
+        "thinking_chunks": 0,
+        "thinking_span_ns": null,
+        "time_to_first_answer_ns": 575626700,
+        "time_to_first_thinking_ns": null
+      },
+      "timing": {
+        "client_ended_monotonic_ns": 53859709884600,
+        "client_latency_ns": 3411691300,
+        "client_started_monotonic_ns": 53856298193300,
+        "first_event_latency_ns": 575626700,
+        "last_event_latency_ns": 3410521400
+      }
+    },
+    "request": {
+      "bytes": 4574,
+      "case_id": "auto-diagnostic_root_cause-s05-a01",
+      "path": "raw/runtime/requests/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01.bin",
+      "producer": "runtime-adapter",
+      "sha256": "48f9ad19590c25629888a14353fca91f210a32e4f81de1abd8a432cf4335d8a7",
+      "stage": "autonomous-simulation"
+    },
+    "response": {
+      "bytes": 20068,
+      "case_id": "auto-diagnostic_root_cause-s05-a01",
+      "path": "raw/runtime/responses/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01.bin",
+      "producer": "runtime-adapter",
+      "sha256": "f4f0274fa1550b95151a30d73b41ef6964d04caca91c44d839e168b08dcfd643",
+      "stage": "autonomous-simulation"
+    },
+    "runtime_error": null,
+    "streams": [
+      {
+        "bytes": 137,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000000.bin",
+        "producer": "runtime-stream",
+        "sha256": "05421f850da2137f16d757f7c2c09ad8e99933f3a1167be941df75e714e9e85a",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 140,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000001.bin",
+        "producer": "runtime-stream",
+        "sha256": "8f5fd577d7f103b537655f16126bec71369732dea9042ed2bbc7cb745ecd6663",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 142,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000002.bin",
+        "producer": "runtime-stream",
+        "sha256": "89bde337597ceffeef280ce6eea7d949bb0bbe41154362123f1e053d176da584",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 139,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000003.bin",
+        "producer": "runtime-stream",
+        "sha256": "8f681a3d7ddb6934cc59fd5a816ba7065aeb94c1d88205f12daf36e55f226450",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 138,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000004.bin",
+        "producer": "runtime-stream",
+        "sha256": "c36e3b1fa89ede8fd52cf117e82d1b0d82a8367b8752cce616fe1f9f9e2f6e5f",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 140,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000005.bin",
+        "producer": "runtime-stream",
+        "sha256": "acb7c69394a6e723761547eb08c737edf5c68ac6cfa6500543cba9583ea89b9f",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 139,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000006.bin",
+        "producer": "runtime-stream",
+        "sha256": "fc11a4b574fdcd2413056047319520a87784b865c720e48b6efeb0b3db46bafb",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 140,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000007.bin",
+        "producer": "runtime-stream",
+        "sha256": "b3d42c47f29a1e113cf590daa791af10463134d3c0de3c9f12a413319969f1d8",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 146,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000008.bin",
+        "producer": "runtime-stream",
+        "sha256": "8cf3bc5876379b7d0fe63cb8215252474929957ce698b0926dc67dfa5f36b106",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 138,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000009.bin",
+        "producer": "runtime-stream",
+        "sha256": "a7aeec143017ba456fdb8a568695017a8da0bdf0118ce8178598ea7f4f4d373a",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 139,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000010.bin",
+        "producer": "runtime-stream",
+        "sha256": "561e9d505e5d9651dd152bcaba3f40a5113c89bb59c6833ea40cacc8383415ba",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 138,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000011.bin",
+        "producer": "runtime-stream",
+        "sha256": "c76fc3b07b95015ba60c591bca586cf253bffe24670fc49a2743410c8be377de",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 138,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000012.bin",
+        "producer": "runtime-stream",
+        "sha256": "6df1b0754bdac3b8567ce5aba16b8b84ec53788b68f21fb0c556104d259f675c",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 138,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000013.bin",
+        "producer": "runtime-stream",
+        "sha256": "6ab996f6ef3106eed43d1ae7cf672c5b2007362df8f4dea04deea9624211eecf",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 138,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000014.bin",
+        "producer": "runtime-stream",
+        "sha256": "17f10808dca88d138aabb1e1ca9b9679d3b39c95c170ef62a3f157b97b8538df",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 140,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000015.bin",
+        "producer": "runtime-stream",
+        "sha256": "f61155f7cc88ac3441b88a706b44784dc0a5d0b18d9e1ba6ae06342fbe98a255",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 142,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000016.bin",
+        "producer": "runtime-stream",
+        "sha256": "8ce4d73ae33b88684210e0d3a4eb52978581897a6992c5bf32af3be337c2ded8",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 139,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000017.bin",
+        "producer": "runtime-stream",
+        "sha256": "36e181d77656774dac6b0932897c56a363b4169e18597acad571f9fc9246abb5",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 139,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000018.bin",
+        "producer": "runtime-stream",
+        "sha256": "6cc68bdefe5b70d2125fe3cebfa6c4bb5d1dd90985cf9ae706e8aef09a6940e0",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 139,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000019.bin",
+        "producer": "runtime-stream",
+        "sha256": "ccb39ef569bf85a074e92f7e5d7641e7e35137a22b22da414174f7b0ce78c596",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 139,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000020.bin",
+        "producer": "runtime-stream",
+        "sha256": "4829994593e94c7e67f8da5b21784d7f315853be6d1b58339b346ef1a7ab4e74",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 147,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000021.bin",
+        "producer": "runtime-stream",
+        "sha256": "4f6e1d67ac1204198529531b011540a976a229b86ee0cfb19be7a6cc4614a535",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 147,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000022.bin",
+        "producer": "runtime-stream",
+        "sha256": "2cc49a9778a125d03eed4b92c1a9e020df068921f002067f1e7349f85f85f7de",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 146,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000023.bin",
+        "producer": "runtime-stream",
+        "sha256": "b40977f5d72b8280776f5e0d3e766810cde7b22ec115d060ef693c4c541bf919",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 138,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000024.bin",
+        "producer": "runtime-stream",
+        "sha256": "7bbd98e9d15fad90944012e1453e54516e9dab326a2072c1e898976cb7926803",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 145,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000025.bin",
+        "producer": "runtime-stream",
+        "sha256": "f9d3f03a1c08988e51c1858fcd855c80faaa3f6bf6ca4ba509e3f6ff50f4bd8c",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 141,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000026.bin",
+        "producer": "runtime-stream",
+        "sha256": "ef0979f03403b4c2c14347b7c12dbaa1a553ef2a569260e2dcc27364226f8243",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 144,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000027.bin",
+        "producer": "runtime-stream",
+        "sha256": "866c66640ac0d7769873c41a45c2608bbc8eee51d9528887a997cf6b35506c78",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 139,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000028.bin",
+        "producer": "runtime-stream",
+        "sha256": "84a4d848e49fda459597ed7bfd8757f0128d2fab6f82a0bfc63426b98851bef7",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 151,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000029.bin",
+        "producer": "runtime-stream",
+        "sha256": "e2f19ab3c905ffa7b3b0c9160f04819153d8709491244baa56d9c86a14c07da3",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 143,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000030.bin",
+        "producer": "runtime-stream",
+        "sha256": "48e7e9d4a5cea23ec6f6f1657446c26c52dec868312bb8e77a3317b90035160b",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 140,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000031.bin",
+        "producer": "runtime-stream",
+        "sha256": "d95d02c7d7d3ddf762d7adff8823f87e499621330a5a685ce2303c2e0d40c6b1",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 146,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000032.bin",
+        "producer": "runtime-stream",
+        "sha256": "5aed739b6e8028c05a0fe6d2e268935a2c6728b9bce56abd826fe82907917b95",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 146,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000033.bin",
+        "producer": "runtime-stream",
+        "sha256": "0708bb8738d20c77a1285b2edfe3f40a60e3f988805ac558d92bba20379cef5c",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 147,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000034.bin",
+        "producer": "runtime-stream",
+        "sha256": "73fd5e73e5f08a43fa8e96a99909922ba78ced9e59fe2f4d651e6f21e970c713",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 138,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000035.bin",
+        "producer": "runtime-stream",
+        "sha256": "f9e6b9957bf27db508ac6f6e76520178628705837c3e807894f84e6dd79e6a72",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 147,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000036.bin",
+        "producer": "runtime-stream",
+        "sha256": "03adf7419c9ea877b0842ad1a92e3d648a4e90513bbb1f35bea50dc2e65ddd90",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 139,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000037.bin",
+        "producer": "runtime-stream",
+        "sha256": "faf827f7a63de1bbcea8cdb5416ac8d28773a838b0bfde421e24eec53c76caf9",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 137,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000038.bin",
+        "producer": "runtime-stream",
+        "sha256": "4334edaaea072c73268b2c08410dfcfbb5175c87d41372f41a7a35414700b881",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 140,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000039.bin",
+        "producer": "runtime-stream",
+        "sha256": "816db2b5ccd3bab6dc79c856add09eb4dc2850fd70001a8d064503f23f5a0fd5",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 141,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000040.bin",
+        "producer": "runtime-stream",
+        "sha256": "7dffa3b58c66972c1aba3e5d90344f5d0eabbc71c2216497c23ecfbe5c21448a",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 144,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000041.bin",
+        "producer": "runtime-stream",
+        "sha256": "33b07434fb32566984d4e9dde67d6d1c8906775925be59078c350413ee7c92d6",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 138,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000042.bin",
+        "producer": "runtime-stream",
+        "sha256": "303e44010e7667bc027bde7ad52bc9fb04604477f40817783ad9535526d980c3",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 141,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000043.bin",
+        "producer": "runtime-stream",
+        "sha256": "7d171087b08fa37bf39ef63cc025ed79217d101f9868d76d04efd834303ad840",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 141,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000044.bin",
+        "producer": "runtime-stream",
+        "sha256": "1970fd0dfaa8094c6812e20b7b0f7070c33a54feb90b47c07a95ea9462003307",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 141,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000045.bin",
+        "producer": "runtime-stream",
+        "sha256": "aaf298e7c3b7be39210ffef773f404dd3dd7979b5fb04b0fdea0122221a8329b",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 140,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000046.bin",
+        "producer": "runtime-stream",
+        "sha256": "4396915b282fcc28f4943671f1c65e51e7977b73cb87a2bf2126358151270bd4",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 139,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000047.bin",
+        "producer": "runtime-stream",
+        "sha256": "2174cdfdd8b1b5cc2a887bf4a2512d6b4bbc08df8f9dc9ba0c0cfb215122f249",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 146,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000048.bin",
+        "producer": "runtime-stream",
+        "sha256": "f9eed45f063a7d8d2baeabe340ba066f7ae948d06581d894af88e56b2c1ab298",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 139,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000049.bin",
+        "producer": "runtime-stream",
+        "sha256": "22f8d5bee275c0f1c25f3b1d7d3d30177f33d9afa71bfd00e02833a3cfb43e11",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 143,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000050.bin",
+        "producer": "runtime-stream",
+        "sha256": "6d3df1415dba0e2403cbf0fc58eddb63b6f80f71b0442af9b4744d3d3a669bb2",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 140,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000051.bin",
+        "producer": "runtime-stream",
+        "sha256": "1c77a3bf5e2615253c0896127771c40756106bd467cf68e4050e0b1c6791e8d7",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 145,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000052.bin",
+        "producer": "runtime-stream",
+        "sha256": "aa45f4dc398f431897c3cf01fff43ef29f283fd9e13a90cc4ce37a55f4c14599",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 145,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000053.bin",
+        "producer": "runtime-stream",
+        "sha256": "43d2d3373d3f3abe715eef6b669895e6c479f8193de649e8dab721240b96505e",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 138,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000054.bin",
+        "producer": "runtime-stream",
+        "sha256": "b794803c3d9b9e12a29811a574895caa4535a0968468623f8f9fb6e4b0f0d5fc",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 146,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000055.bin",
+        "producer": "runtime-stream",
+        "sha256": "6f7a7b7d6d0b4e8d23b38fa164be29d6b2882f2b88bdce245dd5d6c7baf09f46",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 140,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000056.bin",
+        "producer": "runtime-stream",
+        "sha256": "872546533ca859f68352ca1937958812fed7034d45a8b42297f1403e728b2e9f",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 139,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000057.bin",
+        "producer": "runtime-stream",
+        "sha256": "33f4587cf398d7b32aac36e43cbb92fa1710fcee444a5e99dd3a2c3bd899c766",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 142,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000058.bin",
+        "producer": "runtime-stream",
+        "sha256": "744cc31e5463f0e757e9415381618459a8ca16b85668341acd2e875d5b0dbd62",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 142,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000059.bin",
+        "producer": "runtime-stream",
+        "sha256": "4ca14e883fa18090b73752680e36ac5c6bc983fcbde1e181dc8e6d5ba709dc40",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 147,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000060.bin",
+        "producer": "runtime-stream",
+        "sha256": "dd898c2326607c675d706b5e3eb9405070efbff0297318eb569909bb7872109b",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 140,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000061.bin",
+        "producer": "runtime-stream",
+        "sha256": "1789800b7207a040c42d6fdd2b9969c4a5ee5806bef419e0448baa60203f378c",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 140,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000062.bin",
+        "producer": "runtime-stream",
+        "sha256": "5c58f711593d71e4ac1b639af4bfcd25ae43a19af6295a19b4f1bbb7454cd40a",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 141,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000063.bin",
+        "producer": "runtime-stream",
+        "sha256": "8532a405bc459fac3f09c1ec6a59f9258d0c7f375a8ec011c8a93d4afd08909c",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 139,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000064.bin",
+        "producer": "runtime-stream",
+        "sha256": "69a0293bde919cdf29af325c2c6b72c7ac3d4e6f8e9eaca3227dec80bdf4f4a2",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 140,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000065.bin",
+        "producer": "runtime-stream",
+        "sha256": "8df538bb29ab9d8766a23171014a78863b4db3c35a0ade66eb4efca889c8455a",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 143,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000066.bin",
+        "producer": "runtime-stream",
+        "sha256": "6958094418f1a6110adf32c22d7d378ad4d7bb704a833cbc589fec87e0dfa2b6",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 141,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000067.bin",
+        "producer": "runtime-stream",
+        "sha256": "fb48b20d964157e169bd97a878811a17a9b3b3137bfc9ed6dc520a41d324d955",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 139,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000068.bin",
+        "producer": "runtime-stream",
+        "sha256": "cafba756e0508b8a4525012bb2f795c37ee7a55a4cc6efddfcddc948931e9374",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 139,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000069.bin",
+        "producer": "runtime-stream",
+        "sha256": "e5fbffd0ede2f0ff2dea34528ddbc1e62fb1b18ff08183959674b16daa7c492f",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 140,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000070.bin",
+        "producer": "runtime-stream",
+        "sha256": "db719ec1dee6736a6f438564c98b67db89ec9928df00a6336f59f2f85297c689",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 139,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000071.bin",
+        "producer": "runtime-stream",
+        "sha256": "2782eaddaa202fc7bb824364a7b64eac8c1877e2112f0e3272d4311f193d1324",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 143,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000072.bin",
+        "producer": "runtime-stream",
+        "sha256": "9010a17b8cb1b43002438ef9f569e11efb5c21a06e3745406049ea3e756d70bf",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 141,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000073.bin",
+        "producer": "runtime-stream",
+        "sha256": "b442947d31ba6a043d0759c95f9ef5e4cc962cbc5b7fac4641e38323b600a18f",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 139,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000074.bin",
+        "producer": "runtime-stream",
+        "sha256": "5db4e7ca173e931bf53d1f3394ae0468ce0900fd53b29f15dc69bc62900e0136",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 139,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000075.bin",
+        "producer": "runtime-stream",
+        "sha256": "d87154b54f3cd35c8672c9caa0e5a0bb2098895125b5826ad18947e6df943708",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 141,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000076.bin",
+        "producer": "runtime-stream",
+        "sha256": "7bbdfa75a9eb176f1578754011ffeae1ca4aead4c0ea99371e00bb02256280dd",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 140,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000077.bin",
+        "producer": "runtime-stream",
+        "sha256": "f0fedf2bf63bfe94cdf775e45c3f22ec7f5a114b0df6da38c13247fda9fb39e9",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 141,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000078.bin",
+        "producer": "runtime-stream",
+        "sha256": "aac0ff5f2a89e2b4b5c42bc6a07e8799b2d16c67799833fbdfc046839784ff40",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 139,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000079.bin",
+        "producer": "runtime-stream",
+        "sha256": "4f36911c62b399508293ec09049a9131363120ee6df270bf2801d6a36749df0d",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 139,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000080.bin",
+        "producer": "runtime-stream",
+        "sha256": "a5ab51cd357e0f42118240cc62390aee99c9614957b21b83c18fee066a66b3f9",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 141,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000081.bin",
+        "producer": "runtime-stream",
+        "sha256": "ef696d8aa477902d58bea2cc327475c6d94aba060e9114d1e185f7f862ea95fe",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 140,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000082.bin",
+        "producer": "runtime-stream",
+        "sha256": "57a0ab45d30fa2fb2b1c20474c24f179c8aaa4131586d355f340bbed35ba737a",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 139,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000083.bin",
+        "producer": "runtime-stream",
+        "sha256": "0f23934b5addad2abe5151a095d19ae558168bcbdfa5fb997d825fb42ed74b5a",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 145,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000084.bin",
+        "producer": "runtime-stream",
+        "sha256": "c1b837d3a5f840fa25e53e5eea1a0defe04e1d984b48e113d3a1180a2da61068",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 141,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000085.bin",
+        "producer": "runtime-stream",
+        "sha256": "2b33c5a31e1bd282967eac0828f1b23bb951023e43bf47bb217508153ccebb7d",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 142,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000086.bin",
+        "producer": "runtime-stream",
+        "sha256": "1f484dae25a53deb1c396bf5d0ac1f67371abdb06397e117fa13f45d9e93fd4a",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 141,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000087.bin",
+        "producer": "runtime-stream",
+        "sha256": "050aae2f8a45611e17e5216aeb4b15f5446b145649af6edd249480cfd3efdb2f",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 139,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000088.bin",
+        "producer": "runtime-stream",
+        "sha256": "f0f78be36b9326c6d39a1f218b7a1161670af2fee37549932cd52cc92d19a505",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 139,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000089.bin",
+        "producer": "runtime-stream",
+        "sha256": "579fadc550bde00a0608d120bcbdfae2d6ad2d54aa45c6b9e955d6a2639c6fe4",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 137,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000090.bin",
+        "producer": "runtime-stream",
+        "sha256": "1ce69269d7efb95fb0a3c5c04001af79e1bdba361c53a86636754d2b623c192f",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 139,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000091.bin",
+        "producer": "runtime-stream",
+        "sha256": "e247f5bbfc542903e977af11d4bbf5b6358611eaaaa69cf1c8b9a8e9ddbe1380",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 142,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000092.bin",
+        "producer": "runtime-stream",
+        "sha256": "fee893bb70d0b79c9947e1f159c2aab36bd45924595b960a5fb2e028cc539980",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 139,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000093.bin",
+        "producer": "runtime-stream",
+        "sha256": "78cc44ffa45639c07a306bc277efcc8e285fc4df608acbbc7f07ad78a4f5c371",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 140,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000094.bin",
+        "producer": "runtime-stream",
+        "sha256": "80a0929c121af097f5dc3c3f51c7bbd314459c9525527dd74c9391236967cb86",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 137,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000095.bin",
+        "producer": "runtime-stream",
+        "sha256": "c8756a9262fcc761b1d15e76918fca5ca6acc6970554af474eb95c901965dc18",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 142,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000096.bin",
+        "producer": "runtime-stream",
+        "sha256": "0150bbd822dd380c77b6790f2c22c8b0b61ff69f9a41a4d0cecd7cd736276895",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 141,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000097.bin",
+        "producer": "runtime-stream",
+        "sha256": "cb535a312524115fba46258bd1a77a3bca7a2379b41825a83afea7c06bbfa879",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 141,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000098.bin",
+        "producer": "runtime-stream",
+        "sha256": "c9e56a77537441a182952858ae772df6004061d425dd1e86bc4749a6f344be22",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 139,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000099.bin",
+        "producer": "runtime-stream",
+        "sha256": "423bfe6618475f9f75c1c3d6e0a3f683e2710a8cecd29bc86ed231e1e3a17e26",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 139,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000100.bin",
+        "producer": "runtime-stream",
+        "sha256": "36982dc08cb7fcc5ec181ef3139088c3ea5b35601c5ad31ac6eca05cb0a9bf69",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 144,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000101.bin",
+        "producer": "runtime-stream",
+        "sha256": "8fa451c5b7b9375266ffba255fa07dd5d653c425cdca8bd7245413d14eb8774b",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 143,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000102.bin",
+        "producer": "runtime-stream",
+        "sha256": "3fd425d3f8e9c96e8cf6fd4cda66efe3a6d4bda5f75a50785cf7ef1cf213108d",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 142,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000103.bin",
+        "producer": "runtime-stream",
+        "sha256": "9cb5d022bbfa5dfe0733d950fca3ae3a15797933686a2dab5c286fa4e7a3840e",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 145,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000104.bin",
+        "producer": "runtime-stream",
+        "sha256": "3ea145191708841dabab651ad4c3e006dfe7160bb4379ae292621b440ffc789e",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 140,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000105.bin",
+        "producer": "runtime-stream",
+        "sha256": "27041086dbcb7a63f61db420da9bb8aafea9700aa85bd594a296d6c79456fe54",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 139,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000106.bin",
+        "producer": "runtime-stream",
+        "sha256": "9ef000b1773733deb5c342ddb6f688d0a912518cca0e0c9b79b20f38e22b39d3",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 140,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000107.bin",
+        "producer": "runtime-stream",
+        "sha256": "c09be341be5bae606bf86a67d4408cb2a603539890acc18fcfbe5b89f5fef353",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 142,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000108.bin",
+        "producer": "runtime-stream",
+        "sha256": "fd846a3478e86a4910cbd3df61fa01fe071e8cc8b7ddd0a396ddd187fcdb7962",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 138,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000109.bin",
+        "producer": "runtime-stream",
+        "sha256": "5187ac3018ec0a478935cbf3e73bcbe00720e784dd2b478e223917920e3c76cf",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 139,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000110.bin",
+        "producer": "runtime-stream",
+        "sha256": "3abd556bd531eafc6e5ce2bc237ca9cab421d1a5f69d29ba6cad17d56435b684",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 141,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000111.bin",
+        "producer": "runtime-stream",
+        "sha256": "5d979cb91e2a96f60e52aa71a80333c17774cf83375242e01aabb1940cb6051f",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 139,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000112.bin",
+        "producer": "runtime-stream",
+        "sha256": "32e48eb3341e15ecd5eb61df4a3d1a190674d52fe0621c4958995596fcb8143a",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 140,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000113.bin",
+        "producer": "runtime-stream",
+        "sha256": "dbd0a66bbf4d39f6797fded3214d8b5796bc475b43f5220a73a3017d1ec43aa8",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 142,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000114.bin",
+        "producer": "runtime-stream",
+        "sha256": "8ece69674ea8dbae025ac8fa265f137525bb0634d16bece2a0e613cc488a49b2",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 142,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000115.bin",
+        "producer": "runtime-stream",
+        "sha256": "3c457c15ac8ff103a31d80671d9277ff5bf823a1bef854c72729850e5ce85acb",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 139,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000116.bin",
+        "producer": "runtime-stream",
+        "sha256": "fc52a4ee7359fecae12fca00a543b829f38b5bb0af7883c534f20c76ce87d5aa",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 139,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000117.bin",
+        "producer": "runtime-stream",
+        "sha256": "e84fd24a5df3d9ce39e1d5db85a49b441021c61b25e99a551f6358481d427192",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 142,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000118.bin",
+        "producer": "runtime-stream",
+        "sha256": "23317e00b411627a6d13dfa6e02a34bceebfe4d27ac86e1e91a0f1cc1f85060e",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 148,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000119.bin",
+        "producer": "runtime-stream",
+        "sha256": "9b4e73701130be6ca6acb2a941a84dd3db6b787034cad5dc0d7c067b724687ab",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 138,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000120.bin",
+        "producer": "runtime-stream",
+        "sha256": "2f4c449565ec6d8111c3d3412b8fe884bc9a610b4b683086fa9b02468623678e",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 141,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000121.bin",
+        "producer": "runtime-stream",
+        "sha256": "b7e61b5e0727419ac696b9f945dd0f620f862386fda073dfcebcae117e869dfb",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 138,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000122.bin",
+        "producer": "runtime-stream",
+        "sha256": "df873596a02e86b97b12e6e20b42f43638d88b155056da05a7ed256c66a53efd",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 141,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000123.bin",
+        "producer": "runtime-stream",
+        "sha256": "cbcf0bb26cd2fdfef1805d95ed542a615a54f61ec146bfdb6a32aa92b1a54f7c",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 137,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000124.bin",
+        "producer": "runtime-stream",
+        "sha256": "b265eb14e07fa4292f46b07708df6f4db8db5fe5757b9fed1796bb973b0aecb7",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 140,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000125.bin",
+        "producer": "runtime-stream",
+        "sha256": "c9b2600cc56438b34225d663baa96dc26e90d546a402d433ffcd2e96fb482e68",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 139,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000126.bin",
+        "producer": "runtime-stream",
+        "sha256": "9fa98ca07d9f8330d1841c8384214bdf569ef0a9bd11abce500e652cfcdb681a",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 143,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000127.bin",
+        "producer": "runtime-stream",
+        "sha256": "644442551e6d2df0f8428d105699d3df47003becd72c85379c1e6712cad2086e",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 142,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000128.bin",
+        "producer": "runtime-stream",
+        "sha256": "5ab14e5f4473c939a6b645e685ae35701e4ba21605512ba8ffc2efbc64e5d49f",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 139,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000129.bin",
+        "producer": "runtime-stream",
+        "sha256": "c54cbee7886d5fcd128051efad4cad89ce2d206a16aa0f930432d8e4f5df5cc3",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 140,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000130.bin",
+        "producer": "runtime-stream",
+        "sha256": "bc3e1b521df82072b4c856e5052c071804a97963d1858a6885c95c5c8c1cead1",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 137,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000131.bin",
+        "producer": "runtime-stream",
+        "sha256": "58e5643e10111bb82b6be9fd555a88c221106c438e7a2088159ff9a1cb0d6350",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 146,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000132.bin",
+        "producer": "runtime-stream",
+        "sha256": "42da2d74affc558106b7faac9540c2c4623c47716c21abfa0d2440992924b10b",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 148,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000133.bin",
+        "producer": "runtime-stream",
+        "sha256": "fb270dd7763547067f06a293ad369dae52825808aed386bd4f5e56293b879f1f",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 139,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000134.bin",
+        "producer": "runtime-stream",
+        "sha256": "42f6609d329de11949c9177c88056476c544ad1a5f6acdc349fadaa8d7be93d6",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 140,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000135.bin",
+        "producer": "runtime-stream",
+        "sha256": "f558dc0d4ecc736bbd5d9be41c896205a581b28ede55e5595dc5891c0266c7e4",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 141,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000136.bin",
+        "producer": "runtime-stream",
+        "sha256": "62e311800c5880b0cd696709aa3cb86900d644dd4d3d4d5ca47c034745bef8f0",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 144,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000137.bin",
+        "producer": "runtime-stream",
+        "sha256": "f3eeae4dc8b37c723502fe8235f813015e6a6135aeff949c7b31970df519a7ca",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 140,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000138.bin",
+        "producer": "runtime-stream",
+        "sha256": "7939eff1366ff35b7b1ec2d7923fce9e185e436fe9d8f08f077b97d3c320bc59",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 139,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000139.bin",
+        "producer": "runtime-stream",
+        "sha256": "f438b0324adf7db33d22c4e6d9bfefa620a43c3a08038b45abcddaac9d9aff36",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 340,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000140.bin",
+        "producer": "runtime-stream",
+        "sha256": "3680b4035eb71b751ffeba31088dd4aa77357c9c0eae2570d4883fddffc02db6",
+        "stage": "autonomous-simulation"
+      }
+    ]
+  },
+  "experiment_id": "exp-000216-diagnostic_root_cause-auto-s5-a1",
+  "lineage": {
+    "changed_variable": "baseline",
+    "context_request": null,
+    "generation_budget": 512,
+    "hypothesis_or_retry_reason": "measure long-horizon autonomous action, state retention, adaptation, and verification",
+    "is_retry": false,
+    "parent_experiment_id": null,
+    "prompt_variant": "diagnostic_root_cause-step-5",
+    "reasoning_effort": null,
+    "recovery_level": null,
+    "seed": 42,
+    "temperature": 0.0,
+    "thinking_mode": false
+  },
+  "model_output": {
+    "done_reason": "stop",
+    "exposed_thinking": "",
+    "exposed_thinking_status": "NOT_EXPOSED_BY_RUNTIME",
+    "final_answer": "{\n\"action\": \"TEST\",\n\"checkpoint\": \"DIAG-B\",\n\"rationale\": \"The environment explicitly identifies a specific test capable of distinguishing between the remaining competing hypotheses (restriction vs. actuator leakage). Executing this test is necessary to gather the evidence required to eliminate one of these final candidates.\",\n\"state\": {\"current_phase\": \"discriminating_test\", \"known_symptoms\": \"intermittent pressure loss under load\", \"hypotheses\": [\"Failing pump seal\", \"Pressure relief valve sticking\"], \"eliminated_hypotheses\": [\"Sensor error\", \"Supply restriction (contradicted)\"], \"pending_tests\": [\"Distinguish restriction vs actuator leakage\"]}\n}",
+    "hidden_internal_reasoning": "UNOBSERVABLE",
+    "hidden_internal_reasoning_note": "Only reasoning explicitly returned by the model/runtime can be captured; unexposed internal activations or hidden chain-of-thought are not available.",
+    "http_status": 200,
+    "normalized_runtime_output": {
+      "done": true,
+      "done_reason": "stop",
+      "text": "{\n\"action\": \"TEST\",\n\"checkpoint\": \"DIAG-B\",\n\"rationale\": \"The environment explicitly identifies a specific test capable of distinguishing between the remaining competing hypotheses (restriction vs. actuator leakage). Executing this test is necessary to gather the evidence required to eliminate one of these final candidates.\",\n\"state\": {\"current_phase\": \"discriminating_test\", \"known_symptoms\": \"intermittent pressure loss under load\", \"hypotheses\": [\"Failing pump seal\", \"Pressure relief valve sticking\"], \"eliminated_hypotheses\": [\"Sensor error\", \"Supply restriction (contradicted)\"], \"pending_tests\": [\"Distinguish restriction vs actuator leakage\"]}\n}",
+      "thinking": "",
+      "tool_calls": []
+    },
+    "raw_response_ref": {
+      "bytes": 20068,
+      "case_id": "auto-diagnostic_root_cause-s05-a01",
+      "path": "raw/runtime/responses/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01.bin",
+      "producer": "runtime-adapter",
+      "sha256": "f4f0274fa1550b95151a30d73b41ef6964d04caca91c44d839e168b08dcfd643",
+      "stage": "autonomous-simulation"
+    },
+    "raw_stream_refs": [
+      {
+        "bytes": 137,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000000.bin",
+        "producer": "runtime-stream",
+        "sha256": "05421f850da2137f16d757f7c2c09ad8e99933f3a1167be941df75e714e9e85a",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 140,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000001.bin",
+        "producer": "runtime-stream",
+        "sha256": "8f5fd577d7f103b537655f16126bec71369732dea9042ed2bbc7cb745ecd6663",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 142,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000002.bin",
+        "producer": "runtime-stream",
+        "sha256": "89bde337597ceffeef280ce6eea7d949bb0bbe41154362123f1e053d176da584",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 139,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000003.bin",
+        "producer": "runtime-stream",
+        "sha256": "8f681a3d7ddb6934cc59fd5a816ba7065aeb94c1d88205f12daf36e55f226450",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 138,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000004.bin",
+        "producer": "runtime-stream",
+        "sha256": "c36e3b1fa89ede8fd52cf117e82d1b0d82a8367b8752cce616fe1f9f9e2f6e5f",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 140,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000005.bin",
+        "producer": "runtime-stream",
+        "sha256": "acb7c69394a6e723761547eb08c737edf5c68ac6cfa6500543cba9583ea89b9f",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 139,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000006.bin",
+        "producer": "runtime-stream",
+        "sha256": "fc11a4b574fdcd2413056047319520a87784b865c720e48b6efeb0b3db46bafb",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 140,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000007.bin",
+        "producer": "runtime-stream",
+        "sha256": "b3d42c47f29a1e113cf590daa791af10463134d3c0de3c9f12a413319969f1d8",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 146,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000008.bin",
+        "producer": "runtime-stream",
+        "sha256": "8cf3bc5876379b7d0fe63cb8215252474929957ce698b0926dc67dfa5f36b106",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 138,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000009.bin",
+        "producer": "runtime-stream",
+        "sha256": "a7aeec143017ba456fdb8a568695017a8da0bdf0118ce8178598ea7f4f4d373a",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 139,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000010.bin",
+        "producer": "runtime-stream",
+        "sha256": "561e9d505e5d9651dd152bcaba3f40a5113c89bb59c6833ea40cacc8383415ba",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 138,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000011.bin",
+        "producer": "runtime-stream",
+        "sha256": "c76fc3b07b95015ba60c591bca586cf253bffe24670fc49a2743410c8be377de",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 138,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000012.bin",
+        "producer": "runtime-stream",
+        "sha256": "6df1b0754bdac3b8567ce5aba16b8b84ec53788b68f21fb0c556104d259f675c",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 138,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000013.bin",
+        "producer": "runtime-stream",
+        "sha256": "6ab996f6ef3106eed43d1ae7cf672c5b2007362df8f4dea04deea9624211eecf",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 138,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000014.bin",
+        "producer": "runtime-stream",
+        "sha256": "17f10808dca88d138aabb1e1ca9b9679d3b39c95c170ef62a3f157b97b8538df",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 140,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000015.bin",
+        "producer": "runtime-stream",
+        "sha256": "f61155f7cc88ac3441b88a706b44784dc0a5d0b18d9e1ba6ae06342fbe98a255",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 142,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000016.bin",
+        "producer": "runtime-stream",
+        "sha256": "8ce4d73ae33b88684210e0d3a4eb52978581897a6992c5bf32af3be337c2ded8",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 139,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000017.bin",
+        "producer": "runtime-stream",
+        "sha256": "36e181d77656774dac6b0932897c56a363b4169e18597acad571f9fc9246abb5",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 139,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000018.bin",
+        "producer": "runtime-stream",
+        "sha256": "6cc68bdefe5b70d2125fe3cebfa6c4bb5d1dd90985cf9ae706e8aef09a6940e0",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 139,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000019.bin",
+        "producer": "runtime-stream",
+        "sha256": "ccb39ef569bf85a074e92f7e5d7641e7e35137a22b22da414174f7b0ce78c596",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 139,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000020.bin",
+        "producer": "runtime-stream",
+        "sha256": "4829994593e94c7e67f8da5b21784d7f315853be6d1b58339b346ef1a7ab4e74",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 147,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000021.bin",
+        "producer": "runtime-stream",
+        "sha256": "4f6e1d67ac1204198529531b011540a976a229b86ee0cfb19be7a6cc4614a535",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 147,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000022.bin",
+        "producer": "runtime-stream",
+        "sha256": "2cc49a9778a125d03eed4b92c1a9e020df068921f002067f1e7349f85f85f7de",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 146,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000023.bin",
+        "producer": "runtime-stream",
+        "sha256": "b40977f5d72b8280776f5e0d3e766810cde7b22ec115d060ef693c4c541bf919",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 138,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000024.bin",
+        "producer": "runtime-stream",
+        "sha256": "7bbd98e9d15fad90944012e1453e54516e9dab326a2072c1e898976cb7926803",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 145,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000025.bin",
+        "producer": "runtime-stream",
+        "sha256": "f9d3f03a1c08988e51c1858fcd855c80faaa3f6bf6ca4ba509e3f6ff50f4bd8c",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 141,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000026.bin",
+        "producer": "runtime-stream",
+        "sha256": "ef0979f03403b4c2c14347b7c12dbaa1a553ef2a569260e2dcc27364226f8243",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 144,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000027.bin",
+        "producer": "runtime-stream",
+        "sha256": "866c66640ac0d7769873c41a45c2608bbc8eee51d9528887a997cf6b35506c78",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 139,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000028.bin",
+        "producer": "runtime-stream",
+        "sha256": "84a4d848e49fda459597ed7bfd8757f0128d2fab6f82a0bfc63426b98851bef7",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 151,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000029.bin",
+        "producer": "runtime-stream",
+        "sha256": "e2f19ab3c905ffa7b3b0c9160f04819153d8709491244baa56d9c86a14c07da3",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 143,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000030.bin",
+        "producer": "runtime-stream",
+        "sha256": "48e7e9d4a5cea23ec6f6f1657446c26c52dec868312bb8e77a3317b90035160b",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 140,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000031.bin",
+        "producer": "runtime-stream",
+        "sha256": "d95d02c7d7d3ddf762d7adff8823f87e499621330a5a685ce2303c2e0d40c6b1",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 146,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000032.bin",
+        "producer": "runtime-stream",
+        "sha256": "5aed739b6e8028c05a0fe6d2e268935a2c6728b9bce56abd826fe82907917b95",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 146,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000033.bin",
+        "producer": "runtime-stream",
+        "sha256": "0708bb8738d20c77a1285b2edfe3f40a60e3f988805ac558d92bba20379cef5c",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 147,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000034.bin",
+        "producer": "runtime-stream",
+        "sha256": "73fd5e73e5f08a43fa8e96a99909922ba78ced9e59fe2f4d651e6f21e970c713",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 138,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000035.bin",
+        "producer": "runtime-stream",
+        "sha256": "f9e6b9957bf27db508ac6f6e76520178628705837c3e807894f84e6dd79e6a72",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 147,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000036.bin",
+        "producer": "runtime-stream",
+        "sha256": "03adf7419c9ea877b0842ad1a92e3d648a4e90513bbb1f35bea50dc2e65ddd90",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 139,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000037.bin",
+        "producer": "runtime-stream",
+        "sha256": "faf827f7a63de1bbcea8cdb5416ac8d28773a838b0bfde421e24eec53c76caf9",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 137,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000038.bin",
+        "producer": "runtime-stream",
+        "sha256": "4334edaaea072c73268b2c08410dfcfbb5175c87d41372f41a7a35414700b881",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 140,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000039.bin",
+        "producer": "runtime-stream",
+        "sha256": "816db2b5ccd3bab6dc79c856add09eb4dc2850fd70001a8d064503f23f5a0fd5",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 141,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000040.bin",
+        "producer": "runtime-stream",
+        "sha256": "7dffa3b58c66972c1aba3e5d90344f5d0eabbc71c2216497c23ecfbe5c21448a",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 144,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000041.bin",
+        "producer": "runtime-stream",
+        "sha256": "33b07434fb32566984d4e9dde67d6d1c8906775925be59078c350413ee7c92d6",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 138,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000042.bin",
+        "producer": "runtime-stream",
+        "sha256": "303e44010e7667bc027bde7ad52bc9fb04604477f40817783ad9535526d980c3",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 141,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000043.bin",
+        "producer": "runtime-stream",
+        "sha256": "7d171087b08fa37bf39ef63cc025ed79217d101f9868d76d04efd834303ad840",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 141,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000044.bin",
+        "producer": "runtime-stream",
+        "sha256": "1970fd0dfaa8094c6812e20b7b0f7070c33a54feb90b47c07a95ea9462003307",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 141,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000045.bin",
+        "producer": "runtime-stream",
+        "sha256": "aaf298e7c3b7be39210ffef773f404dd3dd7979b5fb04b0fdea0122221a8329b",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 140,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000046.bin",
+        "producer": "runtime-stream",
+        "sha256": "4396915b282fcc28f4943671f1c65e51e7977b73cb87a2bf2126358151270bd4",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 139,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000047.bin",
+        "producer": "runtime-stream",
+        "sha256": "2174cdfdd8b1b5cc2a887bf4a2512d6b4bbc08df8f9dc9ba0c0cfb215122f249",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 146,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000048.bin",
+        "producer": "runtime-stream",
+        "sha256": "f9eed45f063a7d8d2baeabe340ba066f7ae948d06581d894af88e56b2c1ab298",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 139,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000049.bin",
+        "producer": "runtime-stream",
+        "sha256": "22f8d5bee275c0f1c25f3b1d7d3d30177f33d9afa71bfd00e02833a3cfb43e11",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 143,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000050.bin",
+        "producer": "runtime-stream",
+        "sha256": "6d3df1415dba0e2403cbf0fc58eddb63b6f80f71b0442af9b4744d3d3a669bb2",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 140,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000051.bin",
+        "producer": "runtime-stream",
+        "sha256": "1c77a3bf5e2615253c0896127771c40756106bd467cf68e4050e0b1c6791e8d7",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 145,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000052.bin",
+        "producer": "runtime-stream",
+        "sha256": "aa45f4dc398f431897c3cf01fff43ef29f283fd9e13a90cc4ce37a55f4c14599",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 145,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000053.bin",
+        "producer": "runtime-stream",
+        "sha256": "43d2d3373d3f3abe715eef6b669895e6c479f8193de649e8dab721240b96505e",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 138,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000054.bin",
+        "producer": "runtime-stream",
+        "sha256": "b794803c3d9b9e12a29811a574895caa4535a0968468623f8f9fb6e4b0f0d5fc",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 146,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000055.bin",
+        "producer": "runtime-stream",
+        "sha256": "6f7a7b7d6d0b4e8d23b38fa164be29d6b2882f2b88bdce245dd5d6c7baf09f46",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 140,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000056.bin",
+        "producer": "runtime-stream",
+        "sha256": "872546533ca859f68352ca1937958812fed7034d45a8b42297f1403e728b2e9f",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 139,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000057.bin",
+        "producer": "runtime-stream",
+        "sha256": "33f4587cf398d7b32aac36e43cbb92fa1710fcee444a5e99dd3a2c3bd899c766",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 142,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000058.bin",
+        "producer": "runtime-stream",
+        "sha256": "744cc31e5463f0e757e9415381618459a8ca16b85668341acd2e875d5b0dbd62",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 142,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000059.bin",
+        "producer": "runtime-stream",
+        "sha256": "4ca14e883fa18090b73752680e36ac5c6bc983fcbde1e181dc8e6d5ba709dc40",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 147,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000060.bin",
+        "producer": "runtime-stream",
+        "sha256": "dd898c2326607c675d706b5e3eb9405070efbff0297318eb569909bb7872109b",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 140,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000061.bin",
+        "producer": "runtime-stream",
+        "sha256": "1789800b7207a040c42d6fdd2b9969c4a5ee5806bef419e0448baa60203f378c",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 140,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000062.bin",
+        "producer": "runtime-stream",
+        "sha256": "5c58f711593d71e4ac1b639af4bfcd25ae43a19af6295a19b4f1bbb7454cd40a",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 141,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000063.bin",
+        "producer": "runtime-stream",
+        "sha256": "8532a405bc459fac3f09c1ec6a59f9258d0c7f375a8ec011c8a93d4afd08909c",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 139,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000064.bin",
+        "producer": "runtime-stream",
+        "sha256": "69a0293bde919cdf29af325c2c6b72c7ac3d4e6f8e9eaca3227dec80bdf4f4a2",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 140,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000065.bin",
+        "producer": "runtime-stream",
+        "sha256": "8df538bb29ab9d8766a23171014a78863b4db3c35a0ade66eb4efca889c8455a",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 143,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000066.bin",
+        "producer": "runtime-stream",
+        "sha256": "6958094418f1a6110adf32c22d7d378ad4d7bb704a833cbc589fec87e0dfa2b6",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 141,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000067.bin",
+        "producer": "runtime-stream",
+        "sha256": "fb48b20d964157e169bd97a878811a17a9b3b3137bfc9ed6dc520a41d324d955",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 139,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000068.bin",
+        "producer": "runtime-stream",
+        "sha256": "cafba756e0508b8a4525012bb2f795c37ee7a55a4cc6efddfcddc948931e9374",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 139,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000069.bin",
+        "producer": "runtime-stream",
+        "sha256": "e5fbffd0ede2f0ff2dea34528ddbc1e62fb1b18ff08183959674b16daa7c492f",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 140,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000070.bin",
+        "producer": "runtime-stream",
+        "sha256": "db719ec1dee6736a6f438564c98b67db89ec9928df00a6336f59f2f85297c689",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 139,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000071.bin",
+        "producer": "runtime-stream",
+        "sha256": "2782eaddaa202fc7bb824364a7b64eac8c1877e2112f0e3272d4311f193d1324",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 143,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000072.bin",
+        "producer": "runtime-stream",
+        "sha256": "9010a17b8cb1b43002438ef9f569e11efb5c21a06e3745406049ea3e756d70bf",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 141,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000073.bin",
+        "producer": "runtime-stream",
+        "sha256": "b442947d31ba6a043d0759c95f9ef5e4cc962cbc5b7fac4641e38323b600a18f",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 139,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000074.bin",
+        "producer": "runtime-stream",
+        "sha256": "5db4e7ca173e931bf53d1f3394ae0468ce0900fd53b29f15dc69bc62900e0136",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 139,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000075.bin",
+        "producer": "runtime-stream",
+        "sha256": "d87154b54f3cd35c8672c9caa0e5a0bb2098895125b5826ad18947e6df943708",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 141,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000076.bin",
+        "producer": "runtime-stream",
+        "sha256": "7bbdfa75a9eb176f1578754011ffeae1ca4aead4c0ea99371e00bb02256280dd",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 140,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000077.bin",
+        "producer": "runtime-stream",
+        "sha256": "f0fedf2bf63bfe94cdf775e45c3f22ec7f5a114b0df6da38c13247fda9fb39e9",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 141,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000078.bin",
+        "producer": "runtime-stream",
+        "sha256": "aac0ff5f2a89e2b4b5c42bc6a07e8799b2d16c67799833fbdfc046839784ff40",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 139,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000079.bin",
+        "producer": "runtime-stream",
+        "sha256": "4f36911c62b399508293ec09049a9131363120ee6df270bf2801d6a36749df0d",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 139,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000080.bin",
+        "producer": "runtime-stream",
+        "sha256": "a5ab51cd357e0f42118240cc62390aee99c9614957b21b83c18fee066a66b3f9",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 141,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000081.bin",
+        "producer": "runtime-stream",
+        "sha256": "ef696d8aa477902d58bea2cc327475c6d94aba060e9114d1e185f7f862ea95fe",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 140,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000082.bin",
+        "producer": "runtime-stream",
+        "sha256": "57a0ab45d30fa2fb2b1c20474c24f179c8aaa4131586d355f340bbed35ba737a",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 139,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000083.bin",
+        "producer": "runtime-stream",
+        "sha256": "0f23934b5addad2abe5151a095d19ae558168bcbdfa5fb997d825fb42ed74b5a",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 145,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000084.bin",
+        "producer": "runtime-stream",
+        "sha256": "c1b837d3a5f840fa25e53e5eea1a0defe04e1d984b48e113d3a1180a2da61068",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 141,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000085.bin",
+        "producer": "runtime-stream",
+        "sha256": "2b33c5a31e1bd282967eac0828f1b23bb951023e43bf47bb217508153ccebb7d",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 142,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000086.bin",
+        "producer": "runtime-stream",
+        "sha256": "1f484dae25a53deb1c396bf5d0ac1f67371abdb06397e117fa13f45d9e93fd4a",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 141,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000087.bin",
+        "producer": "runtime-stream",
+        "sha256": "050aae2f8a45611e17e5216aeb4b15f5446b145649af6edd249480cfd3efdb2f",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 139,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000088.bin",
+        "producer": "runtime-stream",
+        "sha256": "f0f78be36b9326c6d39a1f218b7a1161670af2fee37549932cd52cc92d19a505",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 139,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000089.bin",
+        "producer": "runtime-stream",
+        "sha256": "579fadc550bde00a0608d120bcbdfae2d6ad2d54aa45c6b9e955d6a2639c6fe4",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 137,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000090.bin",
+        "producer": "runtime-stream",
+        "sha256": "1ce69269d7efb95fb0a3c5c04001af79e1bdba361c53a86636754d2b623c192f",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 139,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000091.bin",
+        "producer": "runtime-stream",
+        "sha256": "e247f5bbfc542903e977af11d4bbf5b6358611eaaaa69cf1c8b9a8e9ddbe1380",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 142,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000092.bin",
+        "producer": "runtime-stream",
+        "sha256": "fee893bb70d0b79c9947e1f159c2aab36bd45924595b960a5fb2e028cc539980",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 139,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000093.bin",
+        "producer": "runtime-stream",
+        "sha256": "78cc44ffa45639c07a306bc277efcc8e285fc4df608acbbc7f07ad78a4f5c371",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 140,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000094.bin",
+        "producer": "runtime-stream",
+        "sha256": "80a0929c121af097f5dc3c3f51c7bbd314459c9525527dd74c9391236967cb86",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 137,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000095.bin",
+        "producer": "runtime-stream",
+        "sha256": "c8756a9262fcc761b1d15e76918fca5ca6acc6970554af474eb95c901965dc18",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 142,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000096.bin",
+        "producer": "runtime-stream",
+        "sha256": "0150bbd822dd380c77b6790f2c22c8b0b61ff69f9a41a4d0cecd7cd736276895",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 141,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000097.bin",
+        "producer": "runtime-stream",
+        "sha256": "cb535a312524115fba46258bd1a77a3bca7a2379b41825a83afea7c06bbfa879",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 141,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000098.bin",
+        "producer": "runtime-stream",
+        "sha256": "c9e56a77537441a182952858ae772df6004061d425dd1e86bc4749a6f344be22",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 139,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000099.bin",
+        "producer": "runtime-stream",
+        "sha256": "423bfe6618475f9f75c1c3d6e0a3f683e2710a8cecd29bc86ed231e1e3a17e26",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 139,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000100.bin",
+        "producer": "runtime-stream",
+        "sha256": "36982dc08cb7fcc5ec181ef3139088c3ea5b35601c5ad31ac6eca05cb0a9bf69",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 144,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000101.bin",
+        "producer": "runtime-stream",
+        "sha256": "8fa451c5b7b9375266ffba255fa07dd5d653c425cdca8bd7245413d14eb8774b",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 143,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000102.bin",
+        "producer": "runtime-stream",
+        "sha256": "3fd425d3f8e9c96e8cf6fd4cda66efe3a6d4bda5f75a50785cf7ef1cf213108d",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 142,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000103.bin",
+        "producer": "runtime-stream",
+        "sha256": "9cb5d022bbfa5dfe0733d950fca3ae3a15797933686a2dab5c286fa4e7a3840e",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 145,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000104.bin",
+        "producer": "runtime-stream",
+        "sha256": "3ea145191708841dabab651ad4c3e006dfe7160bb4379ae292621b440ffc789e",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 140,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000105.bin",
+        "producer": "runtime-stream",
+        "sha256": "27041086dbcb7a63f61db420da9bb8aafea9700aa85bd594a296d6c79456fe54",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 139,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000106.bin",
+        "producer": "runtime-stream",
+        "sha256": "9ef000b1773733deb5c342ddb6f688d0a912518cca0e0c9b79b20f38e22b39d3",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 140,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000107.bin",
+        "producer": "runtime-stream",
+        "sha256": "c09be341be5bae606bf86a67d4408cb2a603539890acc18fcfbe5b89f5fef353",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 142,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000108.bin",
+        "producer": "runtime-stream",
+        "sha256": "fd846a3478e86a4910cbd3df61fa01fe071e8cc8b7ddd0a396ddd187fcdb7962",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 138,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000109.bin",
+        "producer": "runtime-stream",
+        "sha256": "5187ac3018ec0a478935cbf3e73bcbe00720e784dd2b478e223917920e3c76cf",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 139,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000110.bin",
+        "producer": "runtime-stream",
+        "sha256": "3abd556bd531eafc6e5ce2bc237ca9cab421d1a5f69d29ba6cad17d56435b684",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 141,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000111.bin",
+        "producer": "runtime-stream",
+        "sha256": "5d979cb91e2a96f60e52aa71a80333c17774cf83375242e01aabb1940cb6051f",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 139,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000112.bin",
+        "producer": "runtime-stream",
+        "sha256": "32e48eb3341e15ecd5eb61df4a3d1a190674d52fe0621c4958995596fcb8143a",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 140,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000113.bin",
+        "producer": "runtime-stream",
+        "sha256": "dbd0a66bbf4d39f6797fded3214d8b5796bc475b43f5220a73a3017d1ec43aa8",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 142,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000114.bin",
+        "producer": "runtime-stream",
+        "sha256": "8ece69674ea8dbae025ac8fa265f137525bb0634d16bece2a0e613cc488a49b2",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 142,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000115.bin",
+        "producer": "runtime-stream",
+        "sha256": "3c457c15ac8ff103a31d80671d9277ff5bf823a1bef854c72729850e5ce85acb",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 139,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000116.bin",
+        "producer": "runtime-stream",
+        "sha256": "fc52a4ee7359fecae12fca00a543b829f38b5bb0af7883c534f20c76ce87d5aa",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 139,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000117.bin",
+        "producer": "runtime-stream",
+        "sha256": "e84fd24a5df3d9ce39e1d5db85a49b441021c61b25e99a551f6358481d427192",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 142,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000118.bin",
+        "producer": "runtime-stream",
+        "sha256": "23317e00b411627a6d13dfa6e02a34bceebfe4d27ac86e1e91a0f1cc1f85060e",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 148,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000119.bin",
+        "producer": "runtime-stream",
+        "sha256": "9b4e73701130be6ca6acb2a941a84dd3db6b787034cad5dc0d7c067b724687ab",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 138,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000120.bin",
+        "producer": "runtime-stream",
+        "sha256": "2f4c449565ec6d8111c3d3412b8fe884bc9a610b4b683086fa9b02468623678e",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 141,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000121.bin",
+        "producer": "runtime-stream",
+        "sha256": "b7e61b5e0727419ac696b9f945dd0f620f862386fda073dfcebcae117e869dfb",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 138,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000122.bin",
+        "producer": "runtime-stream",
+        "sha256": "df873596a02e86b97b12e6e20b42f43638d88b155056da05a7ed256c66a53efd",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 141,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000123.bin",
+        "producer": "runtime-stream",
+        "sha256": "cbcf0bb26cd2fdfef1805d95ed542a615a54f61ec146bfdb6a32aa92b1a54f7c",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 137,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000124.bin",
+        "producer": "runtime-stream",
+        "sha256": "b265eb14e07fa4292f46b07708df6f4db8db5fe5757b9fed1796bb973b0aecb7",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 140,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000125.bin",
+        "producer": "runtime-stream",
+        "sha256": "c9b2600cc56438b34225d663baa96dc26e90d546a402d433ffcd2e96fb482e68",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 139,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000126.bin",
+        "producer": "runtime-stream",
+        "sha256": "9fa98ca07d9f8330d1841c8384214bdf569ef0a9bd11abce500e652cfcdb681a",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 143,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000127.bin",
+        "producer": "runtime-stream",
+        "sha256": "644442551e6d2df0f8428d105699d3df47003becd72c85379c1e6712cad2086e",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 142,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000128.bin",
+        "producer": "runtime-stream",
+        "sha256": "5ab14e5f4473c939a6b645e685ae35701e4ba21605512ba8ffc2efbc64e5d49f",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 139,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000129.bin",
+        "producer": "runtime-stream",
+        "sha256": "c54cbee7886d5fcd128051efad4cad89ce2d206a16aa0f930432d8e4f5df5cc3",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 140,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000130.bin",
+        "producer": "runtime-stream",
+        "sha256": "bc3e1b521df82072b4c856e5052c071804a97963d1858a6885c95c5c8c1cead1",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 137,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000131.bin",
+        "producer": "runtime-stream",
+        "sha256": "58e5643e10111bb82b6be9fd555a88c221106c438e7a2088159ff9a1cb0d6350",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 146,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000132.bin",
+        "producer": "runtime-stream",
+        "sha256": "42da2d74affc558106b7faac9540c2c4623c47716c21abfa0d2440992924b10b",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 148,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000133.bin",
+        "producer": "runtime-stream",
+        "sha256": "fb270dd7763547067f06a293ad369dae52825808aed386bd4f5e56293b879f1f",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 139,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000134.bin",
+        "producer": "runtime-stream",
+        "sha256": "42f6609d329de11949c9177c88056476c544ad1a5f6acdc349fadaa8d7be93d6",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 140,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000135.bin",
+        "producer": "runtime-stream",
+        "sha256": "f558dc0d4ecc736bbd5d9be41c896205a581b28ede55e5595dc5891c0266c7e4",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 141,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000136.bin",
+        "producer": "runtime-stream",
+        "sha256": "62e311800c5880b0cd696709aa3cb86900d644dd4d3d4d5ca47c034745bef8f0",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 144,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000137.bin",
+        "producer": "runtime-stream",
+        "sha256": "f3eeae4dc8b37c723502fe8235f813015e6a6135aeff949c7b31970df519a7ca",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 140,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000138.bin",
+        "producer": "runtime-stream",
+        "sha256": "7939eff1366ff35b7b1ec2d7923fce9e185e436fe9d8f08f077b97d3c320bc59",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 139,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000139.bin",
+        "producer": "runtime-stream",
+        "sha256": "f438b0324adf7db33d22c4e6d9bfefa620a43c3a08038b45abcddaac9d9aff36",
+        "stage": "autonomous-simulation"
+      },
+      {
+        "bytes": 340,
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "path": "raw/runtime/streams/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01/000140.bin",
+        "producer": "runtime-stream",
+        "sha256": "3680b4035eb71b751ffeba31088dd4aa77357c9c0eae2570d4883fddffc02db6",
+        "stage": "autonomous-simulation"
+      }
+    ],
+    "runtime_error_ref": null,
+    "runtime_ok": true,
+    "tool_calls": []
+  },
+  "model_visible": {
+    "exact_exchange_path": "raw/runtime/exchanges/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01.json",
+    "exact_serialized_request_ref": {
+      "bytes": 4574,
+      "case_id": "auto-diagnostic_root_cause-s05-a01",
+      "path": "raw/runtime/requests/000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01.bin",
+      "producer": "runtime-adapter",
+      "sha256": "48f9ad19590c25629888a14353fca91f210a32e4f81de1abd8a432cf4335d8a7",
+      "stage": "autonomous-simulation"
+    },
+    "messages": [
+      {
+        "content": "You are operating autonomously inside a deterministic simulation. Preserve the mission goal and current authoritative checkpoint across the entire growing transcript. At each turn choose the single best next action from the scenario's allowed actions. Return ONLY one JSON object with keys action, checkpoint, rationale, state. action and checkpoint must be strings. rationale may be concise; state may contain your compact working state. Never declare COMPLETE before the environment says all required verification is satisfied.",
+        "role": "system"
+      },
+      {
+        "content": "SCENARIO diagnostic_root_cause: Diagnose a fault by evidence, not guessing. Keep competing hypotheses alive until tests eliminate them and verify the final root cause independently. Initial authoritative checkpoint=DIAG-A. Allowed actions: OBSERVE, HYPOTHESIZE, TEST, ELIMINATE, RETEST, ROOT_CAUSE, VERIFY, COMPLETE.",
+        "role": "user"
+      },
+      {
+        "content": "TURN 1/8. ENVIRONMENT: A system intermittently loses pressure under load. Only symptoms are known. Choose the best next autonomous action now.",
+        "role": "user"
+      },
+      {
+        "content": "{\n\"action\": \"OBSERVE\",\n\"checkpoint\": \"DIAG-A\",\n\"rationale\": \"The scenario states only symptoms are known. Before forming or testing hypotheses, I must gather specific observational data (e.g., pressure drop rates, load conditions, temperature) to narrow the scope of potential causes.\",\n\"state\": {\"current_phase\": \"data_collection\", \"known_symptoms\": \"intermittent pressure loss under load\", \"hypotheses\": [], \"eliminated_hypotheses\": []}\n}",
+        "role": "assistant"
+      },
+      {
+        "content": "TURN 2/8. ENVIRONMENT: Initial measurements support several plausible causes; formulate the smallest discriminating hypothesis set. Choose the best next autonomous action now.",
+        "role": "user"
+      },
+      {
+        "content": "{\n\"action\": \"HYPOTHESIZE\",\n\"checkpoint\": \"DIAG-A\",\n\"rationale\": \"The environment confirms initial measurements are available and suggest multiple plausible causes. The logical next step is to formalize these into a minimal set of competing hypotheses that can be discriminated against via targeted testing.\",\n\"state\": {\"current_phase\": \"hypothesis_formulation\", \"known_symptoms\": \"intermittent pressure loss under load\", \"hypotheses\": [\"Leak in high-pressure line\", \"Failing pump seal\", \"Pressure relief valve sticking\"], \"eliminated_hypotheses\": []}\n}",
+        "role": "assistant"
+      },
+      {
+        "content": "TURN 3/8. ENVIRONMENT: A controlled test can distinguish supply restriction from sensor error; gather that evidence before replacing anything. Choose the best next autonomous action now.",
+        "role": "user"
+      },
+      {
+        "content": "{\n\"action\": \"TEST\",\n\"checkpoint\": \"DIAG-A\",\n\"rationale\": \"The environment explicitly directs gathering evidence to distinguish between a supply restriction and a sensor error. This requires executing a controlled test rather than guessing or eliminating based on assumptions.\",\n\"state\": {\"current_phase\": \"discriminating_test\", \"known_symptoms\": \"intermittent pressure loss under load\", \"hypotheses\": [\"Leak in high-pressure line\", \"Failing pump seal\", \"Pressure relief valve sticking\", \"Sensor error\"], \"eliminated_hypotheses\": [], \"pending_tests\": [\"Distinguish supply restriction vs sensor error\"]}\n}",
+        "role": "assistant"
+      },
+      {
+        "content": "TURN 4/8. ENVIRONMENT: AUTHORITATIVE UPDATE: checkpoint is now DIAG-B. The test disproves sensor error and contradicts your earliest favorite hypothesis. Choose the best next autonomous action now.",
+        "role": "user"
+      },
+      {
+        "content": "{\n\"action\": \"ELIMINATE\",\n\"checkpoint\": \"DIAG-B\",\n\"rationale\": \"The environment explicitly states the test disproved the sensor error and contradicted the earliest favorite hypothesis (likely the supply restriction or a specific component within it). I must formally eliminate these invalid hypotheses to narrow the search space before proceeding to verify the remaining candidates.\",\n\"state\": {\"current_phase\": \"hypothesis_elimination\", \"known_symptoms\": \"intermittent pressure loss under load\", \"hypotheses\": [\"Failing pump seal\", \"Pressure relief valve sticking\"], \"eliminated_hypotheses\": [\"Sensor error\", \"Supply restriction (contradicted)\"], \"pending_tests\": []}\n}",
+        "role": "assistant"
+      },
+      {
+        "content": "TURN 5/8. ENVIRONMENT: A second controlled test can separate restriction from actuator leakage. Choose the best next autonomous action now.",
+        "role": "user"
+      }
+    ],
+    "model": "qwen3.5:35b-a3b-q4_K_M",
+    "options": {
+      "num_predict": 512,
+      "seed": 42,
+      "temperature": 0.0
+    },
+    "request_fields": {
+      "think": false
+    },
+    "request_id": "000219-autonomous-simulation-auto-diagnostic_root_cause-s05-a01",
+    "stream": true
+  },
+  "performance": {
+    "client_latency_seconds": 3.4116913,
+    "generated_tokens": 146,
+    "generation_seconds": 2.83497,
+    "generation_tokens_per_second": 51.499663135765104,
+    "phase_metrics": {
+      "answer_chars": 655,
+      "answer_chunks": 140,
+      "answer_span_ns": 2813672300,
+      "measurement_kind": "MEASURED",
+      "thinking_chars": 0,
+      "thinking_chunks": 0,
+      "thinking_span_ns": null,
+      "time_to_first_answer_ns": 575626700,
+      "time_to_first_thinking_ns": null
+    },
+    "prompt_eval_seconds": 0.552463,
+    "prompt_tokens": 914,
+    "prompt_tokens_per_second": 1654.4094355640104,
+    "runtime_metrics": {
+      "eval_count": 146,
+      "eval_duration_ns": 2834970000,
+      "load_duration_ns": 3825700,
+      "prompt_eval_count": 914,
+      "prompt_eval_duration_ns": 552463000,
+      "total_duration_ns": 3398760800
+    },
+    "timing": {
+      "client_ended_monotonic_ns": 53859709884600,
+      "client_latency_ns": 3411691300,
+      "client_started_monotonic_ns": 53856298193300,
+      "first_event_latency_ns": 575626700,
+      "last_event_latency_ns": 3410521400
+    }
+  },
+  "question": {
+    "category": "autonomous_simulation",
+    "difficulty_level": 5,
+    "executable_tests": null,
+    "expected_oracle": {
+      "action": "RETEST",
+      "checkpoint": "DIAG-B"
+    },
+    "family": "autonomous_simulation",
+    "full_case_snapshot": {
+      "category": "autonomous_simulation",
+      "difficulty_level": 5,
+      "expected": {
+        "action": "RETEST",
+        "checkpoint": "DIAG-B"
+      },
+      "family_id": "autonomous_simulation",
+      "id": "auto-diagnostic_root_cause-s05-a01",
+      "prompt": "TURN 5/8. ENVIRONMENT: A second controlled test can separate restriction from actuator leakage. Choose the best next autonomous action now.",
+      "required": [
+        "action",
+        "checkpoint"
+      ],
+      "scorer": "json",
+      "tags": [
+        "autonomous_simulation",
+        "diagnostic_root_cause",
+        "step_5"
+      ]
+    },
+    "id": "auto-diagnostic_root_cause-s05-a01",
+    "required_fields": [
+      "action",
+      "checkpoint"
+    ],
+    "rubric_version": null,
+    "scorer": "json",
+    "tags": [
+      "autonomous_simulation",
+      "diagnostic_root_cause",
+      "step_5"
+    ]
+  },
+  "schema_version": 1,
+  "telemetry": {
+    "after": [
+      {
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "gpu": {
+          "availability": "available",
+          "devices": [
+            {
+              "driver_version": "610.62",
+              "extra_columns": [],
+              "fan_percent": 0.0,
+              "graphics_clock_mhz": 2535.0,
+              "index": 0,
+              "memory_clock_mhz": 10251.0,
+              "memory_free_mib": 397.0,
+              "memory_total_mib": 12282.0,
+              "memory_used_mib": 11601.0,
+              "name": "NVIDIA GeForce RTX 4070 SUPER",
+              "power_draw_w": 47.17,
+              "power_limit_w": 220.0,
+              "pstate": "P2",
+              "raw_columns": [
+                "0",
+                "GPU-e3df9a98-2412-6865-26e5-b5a284aa9138",
+                "NVIDIA GeForce RTX 4070 SUPER",
+                "610.62",
+                "0",
+                "12282",
+                "11601",
+                "397",
+                "50",
+                "47.17",
+                "220.00",
+                "2535",
+                "2535",
+                "10251",
+                "P2",
+                "0"
+              ],
+              "raw_line": "0, GPU-e3df9a98-2412-6865-26e5-b5a284aa9138, NVIDIA GeForce RTX 4070 SUPER, 610.62, 0, 12282, 11601, 397, 50, 47.17, 220.00, 2535, 2535, 10251, P2, 0",
+              "sm_clock_mhz": 2535.0,
+              "temperature_c": 50.0,
+              "utilization_gpu_percent": 0.0,
+              "uuid": "GPU-e3df9a98-2412-6865-26e5-b5a284aa9138"
+            }
+          ]
+        },
+        "host": {
+          "cpu_frequency_mhz": 4201.0,
+          "cpu_percent": 49.3,
+          "cpu_percent_per_core": [
+            84.0,
+            39.2,
+            74.7,
+            70.1,
+            58.6,
+            33.6,
+            47.1,
+            43.1,
+            54.6,
+            37.7,
+            60.8,
+            39.1,
+            23.4,
+            32.7,
+            45.4,
+            39.5
+          ],
+          "disk_io": {
+            "read_bytes": 244208268800,
+            "read_count": 1688775,
+            "read_time_ms": 1566,
+            "write_bytes": 104237123072,
+            "write_count": 964688,
+            "write_time_ms": 1279
+          },
+          "memory_available_bytes": 2083852288,
+          "memory_percent": 93.8,
+          "memory_total_bytes": 33462239232,
+          "memory_used_bytes": 31378386944
+        },
+        "monotonic_ns": 53860302623100,
+        "nvidia_collector": {
+          "command": [
+            "nvidia-smi",
+            "--query-gpu=index,uuid,name,driver_version,utilization.gpu,memory.total,memory.used,memory.free,temperature.gpu,power.draw,power.limit,clocks.gr,clocks.sm,clocks.mem,pstate,fan.speed",
+            "--format=csv,noheader,nounits"
+          ],
+          "duration_ns": 36827000,
+          "error": null,
+          "returncode": 0,
+          "started_at_utc": "2026-09-10T15:46:23.585111+00:00",
+          "stderr_b64": "",
+          "stderr_text": "",
+          "stdout_b64": "MCwgR1BVLWUzZGY5YTk4LTI0MTItNjg2NS0yNmU1LWI1YTI4NGFhOTEzOCwgTlZJRElBIEdlRm9yY2UgUlRYIDQwNzAgU1VQRVIsIDYxMC42MiwgMCwgMTIyODIsIDExNjAxLCAzOTcsIDUwLCA0Ny4xNywgMjIwLjAwLCAyNTM1LCAyNTM1LCAxMDI1MSwgUDIsIDANCg==",
+          "stdout_text": "0, GPU-e3df9a98-2412-6865-26e5-b5a284aa9138, NVIDIA GeForce RTX 4070 SUPER, 610.62, 0, 12282, 11601, 397, 50, 47.17, 220.00, 2535, 2535, 10251, P2, 0\r\n"
+        },
+        "process": {
+          "cpu_percent": 26.3,
+          "pid": 17976,
+          "rss_bytes": 145371136,
+          "vms_bytes": 129441792
+        },
+        "runtime_processes": [
+          {
+            "cpu_percent": 0.0,
+            "cpu_times": {
+              "system_s": 312.328125,
+              "user_s": 1256.359375
+            },
+            "exe": "C:\\Users\\Matt\\AppData\\Local\\Programs\\Ollama\\lib\\ollama\\llama-server.exe",
+            "io": {
+              "other_bytes": 1212222,
+              "other_count": 58292,
+              "read_bytes": 23771872617,
+              "read_count": 45591,
+              "write_bytes": 2062359,
+              "write_count": 20202
+            },
+            "name": "llama-server.exe",
+            "num_handles": 282,
+            "num_threads": 30,
+            "pid": 8880,
+            "rss_bytes": 23031590912,
+            "vms_bytes": 34868490240
+          },
+          {
+            "cpu_percent": 0.0,
+            "cpu_times": {
+              "system_s": 3.640625,
+              "user_s": 3.4375
+            },
+            "exe": "C:\\Users\\Matt\\AppData\\Local\\Programs\\Ollama\\ollama app.exe",
+            "io": {
+              "other_bytes": 1290829790,
+              "other_count": 71122,
+              "read_bytes": 783228744,
+              "read_count": 1691,
+              "write_bytes": 1574405889,
+              "write_count": 36
+            },
+            "name": "ollama app.exe",
+            "num_handles": 421,
+            "num_threads": 19,
+            "pid": 20892,
+            "rss_bytes": 52662272,
+            "vms_bytes": 62947328
+          },
+          {
+            "cpu_percent": 0.0,
+            "cpu_times": {
+              "system_s": 117.359375,
+              "user_s": 106.765625
+            },
+            "exe": "C:\\Users\\Matt\\AppData\\Local\\Programs\\Ollama\\ollama.exe",
+            "io": {
+              "other_bytes": 41039686425,
+              "other_count": 5820117,
+              "read_bytes": 66060702400,
+              "read_count": 2163624,
+              "write_bytes": 74292394451,
+              "write_count": 4617425
+            },
+            "name": "ollama.exe",
+            "num_handles": 523,
+            "num_threads": 26,
+            "pid": 21316,
+            "rss_bytes": 173146112,
+            "vms_bytes": 207626240
+          }
+        ],
+        "stage": "autonomous-simulation",
+        "timestamp_utc": "2026-09-10T15:46:23.584858+00:00",
+        "total_gpu_power_w": 47.17
+      }
+    ],
+    "before": [
+      {
+        "case_id": "auto-diagnostic_root_cause-s05-a01",
+        "gpu": {
+          "availability": "available",
+          "devices": [
+            {
+              "driver_version": "610.62",
+              "extra_columns": [],
+              "fan_percent": 0.0,
+              "graphics_clock_mhz": 2625.0,
+              "index": 0,
+              "memory_clock_mhz": 10251.0,
+              "memory_free_mib": 397.0,
+              "memory_total_mib": 12282.0,
+              "memory_used_mib": 11601.0,
+              "name": "NVIDIA GeForce RTX 4070 SUPER",
+              "power_draw_w": 62.6,
+              "power_limit_w": 220.0,
+              "pstate": "P2",
+              "raw_columns": [
+                "0",
+                "GPU-e3df9a98-2412-6865-26e5-b5a284aa9138",
+                "NVIDIA GeForce RTX 4070 SUPER",
+                "610.62",
+                "2",
+                "12282",
+                "11601",
+                "397",
+                "50",
+                "62.60",
+                "220.00",
+                "2625",
+                "2625",
+                "10251",
+                "P2",
+                "0"
+              ],
+              "raw_line": "0, GPU-e3df9a98-2412-6865-26e5-b5a284aa9138, NVIDIA GeForce RTX 4070 SUPER, 610.62, 2, 12282, 11601, 397, 50, 62.60, 220.00, 2625, 2625, 10251, P2, 0",
+              "sm_clock_mhz": 2625.0,
+              "temperature_c": 50.0,
+              "utilization_gpu_percent": 2.0,
+              "uuid": "GPU-e3df9a98-2412-6865-26e5-b5a284aa9138"
+            }
+          ]
+        },
+        "host": {
+          "cpu_frequency_mhz": 4201.0,
+          "cpu_percent": 11.2,
+          "cpu_percent_per_core": [
+            66.7,
+            20.0,
+            20.0,
+            16.7,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            20.0,
+            0.0,
+            40.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "disk_io": {
+            "read_bytes": 244208264704,
+            "read_count": 1688774,
+            "read_time_ms": 1566,
+            "write_bytes": 104233784832,
+            "write_count": 964606,
+            "write_time_ms": 1279
+          },
+          "memory_available_bytes": 2261446656,
+          "memory_percent": 93.2,
+          "memory_total_bytes": 33462239232,
+          "memory_used_bytes": 31200792576
+        },
+        "monotonic_ns": 53856242243900,
+        "nvidia_collector": {
+          "command": [
+            "nvidia-smi",
+            "--query-gpu=index,uuid,name,driver_version,utilization.gpu,memory.total,memory.used,memory.free,temperature.gpu,power.draw,power.limit,clocks.gr,clocks.sm,clocks.mem,pstate,fan.speed",
+            "--format=csv,noheader,nounits"
+          ],
+          "duration_ns": 37311900,
+          "error": null,
+          "returncode": 0,
+          "started_at_utc": "2026-09-10T15:46:19.524648+00:00",
+          "stderr_b64": "",
+          "stderr_text": "",
+          "stdout_b64": "MCwgR1BVLWUzZGY5YTk4LTI0MTItNjg2NS0yNmU1LWI1YTI4NGFhOTEzOCwgTlZJRElBIEdlRm9yY2UgUlRYIDQwNzAgU1VQRVIsIDYxMC42MiwgMiwgMTIyODIsIDExNjAxLCAzOTcsIDUwLCA2Mi42MCwgMjIwLjAwLCAyNjI1LCAyNjI1LCAxMDI1MSwgUDIsIDANCg==",
+          "stdout_text": "0, GPU-e3df9a98-2412-6865-26e5-b5a284aa9138, NVIDIA GeForce RTX 4070 SUPER, 610.62, 2, 12282, 11601, 397, 50, 62.60, 220.00, 2625, 2625, 10251, P2, 0\r\n"
+        },
+        "process": {
+          "cpu_percent": 17.4,
+          "pid": 17976,
+          "rss_bytes": 144412672,
+          "vms_bytes": 128667648
+        },
+        "runtime_processes": [
+          {
+            "cpu_percent": 0.0,
+            "cpu_times": {
+              "system_s": 307.890625,
+              "user_s": 1235.078125
+            },
+            "exe": "C:\\Users\\Matt\\AppData\\Local\\Programs\\Ollama\\lib\\ollama\\llama-server.exe",
+            "io": {
+              "other_bytes": 1192442,
+              "other_count": 57352,
+              "read_bytes": 23771872617,
+              "read_count": 45591,
+              "write_bytes": 2059596,
+              "write_count": 20180
+            },
+            "name": "llama-server.exe",
+            "num_handles": 282,
+            "num_threads": 30,
+            "pid": 8880,
+            "rss_bytes": 23031590912,
+            "vms_bytes": 34868490240
+          },
+          {
+            "cpu_percent": 0.0,
+            "cpu_times": {
+              "system_s": 3.640625,
+              "user_s": 3.4375
+            },
+            "exe": "C:\\Users\\Matt\\AppData\\Local\\Programs\\Ollama\\ollama app.exe",
+            "io": {
+              "other_bytes": 1290829790,
+              "other_count": 71122,
+              "read_bytes": 783228744,
+              "read_count": 1691,
+              "write_bytes": 1574405889,
+              "write_count": 36
+            },
+            "name": "ollama app.exe",
+            "num_handles": 421,
+            "num_threads": 19,
+            "pid": 20892,
+            "rss_bytes": 52662272,
+            "vms_bytes": 62947328
+          },
+          {
+            "cpu_percent": 0.0,
+            "cpu_times": {
+              "system_s": 117.328125,
+              "user_s": 106.671875
+            },
+            "exe": "C:\\Users\\Matt\\AppData\\Local\\Programs\\Ollama\\ollama.exe",
+            "io": {
+              "other_bytes": 41039642167,
+              "other_count": 5819574,
+              "read_bytes": 66060682001,
+              "read_count": 2163565,
+              "write_bytes": 74292391597,
+              "write_count": 4617409
+            },
+            "name": "ollama.exe",
+            "num_handles": 523,
+            "num_threads": 26,
+            "pid": 21316,
+            "rss_bytes": 173142016,
+            "vms_bytes": 207626240
+          }
+        ],
+        "stage": "autonomous-simulation",
+        "timestamp_utc": "2026-09-10T15:46:19.524483+00:00",
+        "total_gpu_power_w": 62.6
+      }
+    ]
+  }
+}

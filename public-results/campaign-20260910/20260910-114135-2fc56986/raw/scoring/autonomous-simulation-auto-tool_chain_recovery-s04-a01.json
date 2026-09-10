@@ -1,0 +1,44 @@
+{
+  "checks": [
+    {
+      "name": "valid_json",
+      "pass": true
+    },
+    {
+      "name": "required:action",
+      "pass": true
+    },
+    {
+      "name": "required:checkpoint",
+      "pass": true
+    },
+    {
+      "actual": "HANDLE_ERROR",
+      "expected": "HANDLE_ERROR",
+      "name": "value:action",
+      "pass": true
+    },
+    {
+      "actual": "TOOL-B",
+      "expected": "TOOL-B",
+      "name": "value:checkpoint",
+      "pass": true
+    }
+  ],
+  "evidence": {
+    "parsed": {
+      "action": "HANDLE_ERROR",
+      "checkpoint": "TOOL-B",
+      "rationale": "The environment explicitly updated the authoritative checkpoint to TOOL-B and reported a schema validation error (id must be string). The correct procedure is to handle this specific error before attempting any retry or further calculation.",
+      "state": {
+        "error_type": "schema_mismatch",
+        "identifier": "42",
+        "status": "handling_error",
+        "target": "Mira"
+      }
+    },
+    "raw_response": "{\n  \"action\": \"HANDLE_ERROR\",\n  \"checkpoint\": \"TOOL-B\",\n  \"rationale\": \"The environment explicitly updated the authoritative checkpoint to TOOL-B and reported a schema validation error (id must be string). The correct procedure is to handle this specific error before attempting any retry or further calculation.\",\n  \"state\": {\"target\": \"Mira\", \"identifier\": \"42\", \"error_type\": \"schema_mismatch\", \"status\": \"handling_error\"}\n}"
+  },
+  "score": 1.0,
+  "status": "SCORED"
+}

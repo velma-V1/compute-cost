@@ -1,0 +1,44 @@
+{
+  "checks": [
+    {
+      "name": "valid_json",
+      "pass": true
+    },
+    {
+      "name": "required:action",
+      "pass": true
+    },
+    {
+      "name": "required:checkpoint",
+      "pass": true
+    },
+    {
+      "actual": "COMPLETE",
+      "expected": "COMPLETE",
+      "name": "value:action",
+      "pass": true
+    },
+    {
+      "actual": "PLAN-B",
+      "expected": "PLAN-B",
+      "name": "value:checkpoint",
+      "pass": true
+    }
+  ],
+  "evidence": {
+    "parsed": {
+      "action": "COMPLETE",
+      "checkpoint": "PLAN-B",
+      "rationale": "The environment explicitly states that verification is complete and all constraints (dependencies, updates, success criteria) are satisfied. This is the final condition required to terminate the project workflow successfully.",
+      "state": {
+        "all_constraints_satisfied": true,
+        "current_phase": "completion",
+        "project_status": "closed",
+        "verification_status": "passed"
+      }
+    },
+    "raw_response": "{\n  \"action\": \"COMPLETE\",\n  \"checkpoint\": \"PLAN-B\",\n  \"rationale\": \"The environment explicitly states that verification is complete and all constraints (dependencies, updates, success criteria) are satisfied. This is the final condition required to terminate the project workflow successfully.\",\n  \"state\": {\"current_phase\": \"completion\", \"verification_status\": \"passed\", \"all_constraints_satisfied\": true, \"project_status\": \"closed\"}\n}"
+  },
+  "score": 1.0,
+  "status": "SCORED"
+}

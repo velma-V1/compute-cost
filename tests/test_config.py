@@ -11,7 +11,8 @@ def test_default_config_contains_safe_bounded_run_settings():
     assert config["limits"]["request_timeout_s"] > 0
     assert config["limits"]["context_schedule"]
     assert config["limits"]["sustained_iterations"] > 0
-    assert config["limits"]["max_model_calls_per_run"] == 3000
+    assert config["limits"]["max_model_calls_per_run"] == 360
+    assert config["limits"]["max_model_calls_per_run"] < 400
     assert config["cost"]["electricity_configured"] is False
 
     characterization = config["characterization"]
@@ -23,20 +24,37 @@ def test_default_config_contains_safe_bounded_run_settings():
     assert characterization["max_experiments_per_task"] == 12
     assert characterization["think_off_generation_budget"] == 256
 
+    capability = config["capability_campaign"]
+    assert capability["max_experiments_per_family"] == 6
+    assert capability["generation_budget"] == 256
+
+    autonomous = config["autonomous_simulation"]
+    assert autonomous == {
+        "enabled": True,
+        "scenario_count": 6,
+        "steps_per_scenario": 8,
+        "generation_budget": 512,
+        "max_generation_budget": 2048,
+    }
+    assert (40 * capability["max_experiments_per_family"]) + (
+        autonomous["scenario_count"] * autonomous["steps_per_scenario"]
+    ) == 288
+    assert config["limits"]["max_model_calls_per_run"] - 288 == 72
+
     recovery = config["recovery_lab"]
-    assert recovery["enabled"] is True
+    assert recovery["enabled"] is False
     assert recovery["repeats"] == 3
     assert recovery["max_level"] == "R7"
     assert recovery["max_attempts_per_candidate"] == 6
 
     robustness = config["robustness_lab"]
-    assert robustness["enabled"] is True
+    assert robustness["enabled"] is False
     assert robustness["repeats"] == 2
     assert robustness["max_perturbations_per_family"] == 2
     assert robustness["max_attempts_per_perturbation"] == 4
 
     compound = config["compound_lab"]
-    assert compound["enabled"] is True
+    assert compound["enabled"] is False
     assert compound["jump"] == 2
     assert compound["boundary_repeats"] == 3
     assert compound["max_experiments_per_compound"] == 16
@@ -56,6 +74,7 @@ def test_user_toml_and_dotted_overrides_merge_without_erasing_other_defaults(tmp
     assert config["cost"]["electricity_per_kwh"] == 0.12
     assert config["cost"]["electricity_configured"] is True
     assert config["characterization"]["boundary_repeats"] == 3
+    assert config["autonomous_simulation"]["scenario_count"] == 6
 
 
 def test_global_model_call_budget_is_validated():

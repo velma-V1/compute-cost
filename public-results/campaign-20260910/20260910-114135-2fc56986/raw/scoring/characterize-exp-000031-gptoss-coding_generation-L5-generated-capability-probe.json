@@ -1,0 +1,35 @@
+{
+  "checks": [
+    {
+      "name": "executable_tests",
+      "pass": false
+    }
+  ],
+  "evidence": {
+    "executed_source_sha256": "a890691cd53607c2de70999d9bbe22e37d5a2b045e8ac33517ec9ce5928c7b39",
+    "extracted_source": "def bucket(value):\n    if value < 3:\n        return 0\n    if value >= 21:\n        return 7\n    return (value // 3) - 1\n",
+    "invocation_sha256": "c09b8da365ecfc9ea3a98720ba20e3189956ee59d4e6ea066a02bf0e39174600",
+    "raw_response": "def bucket(value):\n    if value < 3:\n        return 0\n    if value >= 21:\n        return 7\n    return (value // 3) - 1",
+    "safety_rejection": null,
+    "subprocess": {
+      "command": [
+        "C:\\Users\\Matt\\compute-cost\\.venv\\Scripts\\python.exe",
+        "-I",
+        "-S",
+        "C:\\Users\\Matt\\AppData\\Local\\Temp\\compute-cost-case-dqxzwhsb\\case.py"
+      ],
+      "duration_ns": 62838200,
+      "error": null,
+      "returncode": 1,
+      "started_at_utc": "2026-09-10T15:42:24.770054+00:00",
+      "stderr_b64": "VHJhY2ViYWNrIChtb3N0IHJlY2VudCBjYWxsIGxhc3QpOg0KICBGaWxlICJDOlxVc2Vyc1xNYXR0XEFwcERhdGFcTG9jYWxcVGVtcFxjb21wdXRlLWNvc3QtY2FzZS1kcXh6d2hzYlxjYXNlLnB5IiwgbGluZSA5LCBpbiA8bW9kdWxlPg0KICAgIGFzc2VydCBidWNrZXQoMykgPT0gMQ0KICAgICAgICAgICBeXl5eXl5eXl5eXl5eXg0KQXNzZXJ0aW9uRXJyb3INCg==",
+      "stderr_text": "Traceback (most recent call last):\r\n  File \"C:\\Users\\Matt\\AppData\\Local\\Temp\\compute-cost-case-dqxzwhsb\\case.py\", line 9, in <module>\r\n    assert bucket(3) == 1\r\n           ^^^^^^^^^^^^^^\r\nAssertionError\r\n",
+      "stdout_b64": "",
+      "stdout_text": ""
+    },
+    "test_source": "assert bucket(0) == 0\nassert bucket(3) == 1\nassert bucket(6) == 2\nassert bucket(9) == 3\nassert bucket(12) == 4\nassert bucket(15) == 5\nassert bucket(18) == 6\nassert bucket(22) == 7",
+    "test_source_sha256": "112bbafd75d6abd485ad6516dbd108d669b78ab2daa81473f7974e6a09f1cce6"
+  },
+  "score": 0.0,
+  "status": "SCORED"
+}

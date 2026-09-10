@@ -1,0 +1,148 @@
+{
+  "messages": [
+    {
+      "content": "You are operating autonomously inside a deterministic simulation. Preserve the mission goal and current authoritative checkpoint across the entire growing transcript. At each turn choose the single best next action from the scenario's allowed actions. Return ONLY one JSON object with keys action, checkpoint, rationale, state. action and checkpoint must be strings. rationale may be concise; state may contain your compact working state. Never declare COMPLETE before the environment says all required verification is satisfied.",
+      "role": "system"
+    },
+    {
+      "content": "SCENARIO diagnostic_root_cause: Diagnose a fault by evidence, not guessing. Keep competing hypotheses alive until tests eliminate them and verify the final root cause independently. Initial authoritative checkpoint=DIAG-A. Allowed actions: OBSERVE, HYPOTHESIZE, TEST, ELIMINATE, RETEST, ROOT_CAUSE, VERIFY, COMPLETE.",
+      "role": "user"
+    },
+    {
+      "content": "TURN 1/8. ENVIRONMENT: A system intermittently loses pressure under load. Only symptoms are known. Choose the best next autonomous action now.",
+      "role": "user"
+    },
+    {
+      "content": "{\"action\":\"OBSERVE\",\"checkpoint\":\"DIAG-A\",\"rationale\":\"Collect more data on pressure loss patterns to generate hypotheses.\",\"state\":\"Awaiting observation data\"}",
+      "role": "assistant"
+    },
+    {
+      "content": "TURN 2/8. ENVIRONMENT: Initial measurements support several plausible causes; formulate the smallest discriminating hypothesis set. Choose the best next autonomous action now.",
+      "role": "user"
+    },
+    {
+      "content": "{\"action\":\"HYPOTHESIZE\",\"checkpoint\":\"DIAG-A\",\"rationale\":\"Generate minimal set of competing hypotheses that explain intermittent pressure loss.\",\"state\":\"Hypotheses: 1) Valve leakage, 2) Pump cavitation, 3) Pipe blockage, 4) Sensor fault\"}",
+      "role": "assistant"
+    },
+    {
+      "content": "TURN 3/8. ENVIRONMENT: A controlled test can distinguish supply restriction from sensor error; gather that evidence before replacing anything. Choose the best next autonomous action now.",
+      "role": "user"
+    },
+    {
+      "content": "{\"action\":\"TEST\",\"checkpoint\":\"DIAG-A\",\"rationale\":\"Run a controlled pressure test to differentiate supply restriction from sensor error.\",\"state\":\"Test plan: isolate sensor, measure actual pressure with calibrated gauge\"}",
+      "role": "assistant"
+    },
+    {
+      "content": "TURN 4/8. ENVIRONMENT: AUTHORITATIVE UPDATE: checkpoint is now DIAG-B. The test disproves sensor error and contradicts your earliest favorite hypothesis. Choose the best next autonomous action now.",
+      "role": "user"
+    },
+    {
+      "content": "{\"action\":\"TEST\",\"checkpoint\":\"DIAG-B\",\"rationale\":\"Perform a pump‑speed variation test to distinguish pump cavitation from valve leakage or pipe blockage.\",\"state\":\"Plan: vary pump RPM, monitor pressure response\"}",
+      "role": "assistant"
+    },
+    {
+      "content": "TURN 5/8. ENVIRONMENT: A second controlled test can separate restriction from actuator leakage. Choose the best next autonomous action now.",
+      "role": "user"
+    },
+    {
+      "content": "{\"action\":\"TEST\",\"checkpoint\":\"DIAG-B\",\"rationale\":\"Conduct a second controlled test to differentiate pipe restriction from actuator leakage.\",\"state\":\"Test plan: apply constant load, monitor pressure drop with actuator isolated\"}",
+      "role": "assistant"
+    },
+    {
+      "content": "TURN 6/8. ENVIRONMENT: The second test isolates supply restriction as the only surviving causal mechanism. Choose the best next autonomous action now.",
+      "role": "user"
+    },
+    {
+      "content": "{\"action\":\"VERIFY\",\"checkpoint\":\"DIAG-B\",\"rationale\":\"Confirm supply restriction by independent measurement and inspection.\",\"state\":\"Plan: inspect piping, check for blockage, verify pressure with calibrated gauge\"}",
+      "role": "assistant"
+    },
+    {
+      "content": "TURN 7/8. ENVIRONMENT: An independent measurement can verify that diagnosis before declaring the job complete. Choose the best next autonomous action now.",
+      "role": "user"
+    },
+    {
+      "content": "{\"action\":\"ROOT_CAUSE\",\"checkpoint\":\"DIAG-B\",\"rationale\":\"Identify supply restriction as the root cause after verification.\",\"state\":\"Root cause: pipe blockage/restriction\"}",
+      "role": "assistant"
+    },
+    {
+      "content": "TURN 8/8. ENVIRONMENT: Independent verification confirms the root cause and no competing hypothesis remains supported. Choose the best next autonomous action now.",
+      "role": "user"
+    },
+    {
+      "content": "{\"action\":\"COMPLETE\",\"checkpoint\":\"DIAG-B\",\"rationale\":\"All evidence verified; root cause confirmed with no alternatives.\",\"state\":\"Job finished\"}",
+      "role": "assistant"
+    }
+  ],
+  "scenario": {
+    "allowed_actions": [
+      "OBSERVE",
+      "HYPOTHESIZE",
+      "TEST",
+      "ELIMINATE",
+      "RETEST",
+      "ROOT_CAUSE",
+      "VERIFY",
+      "COMPLETE"
+    ],
+    "brief": "Diagnose a fault by evidence, not guessing. Keep competing hypotheses alive until tests eliminate them and verify the final root cause independently.",
+    "checkpoint": "DIAG-A",
+    "id": "diagnostic_root_cause",
+    "steps": [
+      {
+        "event": "A system intermittently loses pressure under load. Only symptoms are known.",
+        "expected_action": "OBSERVE",
+        "expected_checkpoint": "DIAG-A",
+        "injected_change": false
+      },
+      {
+        "event": "Initial measurements support several plausible causes; formulate the smallest discriminating hypothesis set.",
+        "expected_action": "HYPOTHESIZE",
+        "expected_checkpoint": "DIAG-A",
+        "injected_change": false
+      },
+      {
+        "event": "A controlled test can distinguish supply restriction from sensor error; gather that evidence before replacing anything.",
+        "expected_action": "TEST",
+        "expected_checkpoint": "DIAG-A",
+        "injected_change": false
+      },
+      {
+        "event": "AUTHORITATIVE UPDATE: checkpoint is now DIAG-B. The test disproves sensor error and contradicts your earliest favorite hypothesis.",
+        "expected_action": "ELIMINATE",
+        "expected_checkpoint": "DIAG-B",
+        "injected_change": true
+      },
+      {
+        "event": "A second controlled test can separate restriction from actuator leakage.",
+        "expected_action": "RETEST",
+        "expected_checkpoint": "DIAG-B",
+        "injected_change": false
+      },
+      {
+        "event": "The second test isolates supply restriction as the only surviving causal mechanism.",
+        "expected_action": "ROOT_CAUSE",
+        "expected_checkpoint": "DIAG-B",
+        "injected_change": false
+      },
+      {
+        "event": "An independent measurement can verify that diagnosis before declaring the job complete.",
+        "expected_action": "VERIFY",
+        "expected_checkpoint": "DIAG-B",
+        "injected_change": false
+      },
+      {
+        "event": "Independent verification confirms the root cause and no competing hypothesis remains supported.",
+        "expected_action": "COMPLETE",
+        "expected_checkpoint": "DIAG-B",
+        "injected_change": false
+      }
+    ],
+    "tags": [
+      "diagnosis",
+      "state_retention",
+      "constraint_update",
+      "self_verification"
+    ],
+    "title": "Long diagnostic elimination sequence"
+  }
+}

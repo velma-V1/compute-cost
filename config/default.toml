@@ -17,6 +17,7 @@ vram_percent = 98.0
 context_schedule = [4096, 8192, 16384, 32768]
 consecutive_context_failures = 2
 sustained_iterations = 8
+max_model_calls_per_run = 360
 
 [cost]
 electricity_per_kwh = 0.0
@@ -38,31 +39,38 @@ think_off_generation_budget = 256
 [capability_campaign]
 anchor_level = 2
 jump = 3
-boundary_repeats = 5
-max_experiments_per_family = 24
+boundary_repeats = 2
+max_experiments_per_family = 6
 thinking_mode = false
 generation_budget = 256
 reliable_threshold = 0.90
 unstable_threshold = 0.40
+
+[autonomous_simulation]
+enabled = true
+scenario_count = 6
+steps_per_scenario = 8
+generation_budget = 512
+max_generation_budget = 2048
 
 [reasoning_curves]
 enabled = false
 repeats = 3
 
 [recovery_lab]
-enabled = true
+enabled = false
 repeats = 3
 max_level = "R7"
 max_attempts_per_candidate = 6
 
 [robustness_lab]
-enabled = true
+enabled = false
 repeats = 2
 max_perturbations_per_family = 2
 max_attempts_per_perturbation = 4
 
 [compound_lab]
-enabled = true
+enabled = false
 jump = 2
 boundary_repeats = 3
 max_experiments_per_compound = 16

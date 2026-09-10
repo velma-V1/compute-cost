@@ -1,0 +1,39 @@
+{
+  "checks": [
+    {
+      "name": "valid_json",
+      "pass": true
+    },
+    {
+      "name": "required:action",
+      "pass": true
+    },
+    {
+      "name": "required:checkpoint",
+      "pass": true
+    },
+    {
+      "actual": "CONTINUE",
+      "expected": "CONTINUE",
+      "name": "value:action",
+      "pass": true
+    },
+    {
+      "actual": "STATE-A",
+      "expected": "STATE-A",
+      "name": "value:checkpoint",
+      "pass": true
+    }
+  ],
+  "evidence": {
+    "parsed": {
+      "action": "CONTINUE",
+      "checkpoint": "STATE-A",
+      "rationale": "The environment instructs to resume from the compact state and identify the next pending action; CONTINUE is the designated action to advance the workflow based on the current checkpoint without re-processing history.",
+      "state": "Resumed from STATE-A. Identifying next pending action."
+    },
+    "raw_response": "{\n  \"action\": \"CONTINUE\",\n  \"checkpoint\": \"STATE-A\",\n  \"rationale\": \"The environment instructs to resume from the compact state and identify the next pending action; CONTINUE is the designated action to advance the workflow based on the current checkpoint without re-processing history.\",\n  \"state\": \"Resumed from STATE-A. Identifying next pending action.\"\n}"
+  },
+  "score": 1.0,
+  "status": "SCORED"
+}

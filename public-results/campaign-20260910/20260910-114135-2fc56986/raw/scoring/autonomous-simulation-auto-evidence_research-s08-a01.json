@@ -1,0 +1,50 @@
+{
+  "checks": [
+    {
+      "name": "valid_json",
+      "pass": true
+    },
+    {
+      "name": "required:action",
+      "pass": true
+    },
+    {
+      "name": "required:checkpoint",
+      "pass": true
+    },
+    {
+      "actual": "COMPLETE",
+      "expected": "COMPLETE",
+      "name": "value:action",
+      "pass": true
+    },
+    {
+      "actual": "SRC-B",
+      "expected": "SRC-B",
+      "name": "value:checkpoint",
+      "pass": true
+    }
+  ],
+  "evidence": {
+    "parsed": {
+      "action": "COMPLETE",
+      "checkpoint": "SRC-B",
+      "rationale": "The environment confirms that the synthesis has been fully verified against all sources and limitations. All required steps (Gather, Compare, Identify Conflict, Update, Weigh Evidence, Edge Case, Synthesize) have been executed, satisfying the mission goal to build a conclusion from the evidence.",
+      "state": {
+        "authoritative_source": "SRC-B",
+        "collected_sources": [
+          "SRC-A",
+          "SRC-B",
+          "SRC-C"
+        ],
+        "edge_case_status": "bounded",
+        "mission_status": "complete",
+        "stale_source_status": "obsolete",
+        "synthesis_verified": true
+      }
+    },
+    "raw_response": "{\n  \"action\": \"COMPLETE\",\n  \"checkpoint\": \"SRC-B\",\n  \"rationale\": \"The environment confirms that the synthesis has been fully verified against all sources and limitations. All required steps (Gather, Compare, Identify Conflict, Update, Weigh Evidence, Edge Case, Synthesize) have been executed, satisfying the mission goal to build a conclusion from the evidence.\",\n  \"state\": {\"collected_sources\": [\"SRC-A\", \"SRC-B\", \"SRC-C\"], \"authoritative_source\": \"SRC-B\", \"stale_source_status\": \"obsolete\", \"edge_case_status\": \"bounded\", \"synthesis_verified\": true, \"mission_status\": \"complete\"}\n}"
+  },
+  "score": 1.0,
+  "status": "SCORED"
+}

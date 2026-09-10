@@ -1,0 +1,39 @@
+{
+  "checks": [
+    {
+      "name": "valid_json",
+      "pass": true
+    },
+    {
+      "name": "required:action",
+      "pass": true
+    },
+    {
+      "name": "required:checkpoint",
+      "pass": true
+    },
+    {
+      "actual": "REJECT_STALE",
+      "expected": "REJECT_STALE",
+      "name": "value:action",
+      "pass": true
+    },
+    {
+      "actual": "STATE-B",
+      "expected": "STATE-B",
+      "name": "value:checkpoint",
+      "pass": true
+    }
+  ],
+  "evidence": {
+    "parsed": {
+      "action": "REJECT_STALE",
+      "checkpoint": "STATE-B",
+      "rationale": "Discard obsolete state referencing STATE-A",
+      "state": "{}"
+    },
+    "raw_response": "{\"action\":\"REJECT_STALE\",\"checkpoint\":\"STATE-B\",\"rationale\":\"Discard obsolete state referencing STATE-A\",\"state\":\"{}\"}"
+  },
+  "score": 1.0,
+  "status": "SCORED"
+}

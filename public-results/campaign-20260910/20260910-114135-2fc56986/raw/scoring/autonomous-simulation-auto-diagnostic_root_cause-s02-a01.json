@@ -1,0 +1,48 @@
+{
+  "checks": [
+    {
+      "name": "valid_json",
+      "pass": true
+    },
+    {
+      "name": "required:action",
+      "pass": true
+    },
+    {
+      "name": "required:checkpoint",
+      "pass": true
+    },
+    {
+      "actual": "HYPOTHESIZE",
+      "expected": "HYPOTHESIZE",
+      "name": "value:action",
+      "pass": true
+    },
+    {
+      "actual": "DIAG-A",
+      "expected": "DIAG-A",
+      "name": "value:checkpoint",
+      "pass": true
+    }
+  ],
+  "evidence": {
+    "parsed": {
+      "action": "HYPOTHESIZE",
+      "checkpoint": "DIAG-A",
+      "rationale": "The environment confirms initial measurements are available and suggest multiple plausible causes. The logical next step is to formalize these into a minimal set of competing hypotheses that can be discriminated against via targeted testing.",
+      "state": {
+        "current_phase": "hypothesis_formulation",
+        "eliminated_hypotheses": [],
+        "hypotheses": [
+          "Leak in high-pressure line",
+          "Failing pump seal",
+          "Pressure relief valve sticking"
+        ],
+        "known_symptoms": "intermittent pressure loss under load"
+      }
+    },
+    "raw_response": "{\n\"action\": \"HYPOTHESIZE\",\n\"checkpoint\": \"DIAG-A\",\n\"rationale\": \"The environment confirms initial measurements are available and suggest multiple plausible causes. The logical next step is to formalize these into a minimal set of competing hypotheses that can be discriminated against via targeted testing.\",\n\"state\": {\"current_phase\": \"hypothesis_formulation\", \"known_symptoms\": \"intermittent pressure loss under load\", \"hypotheses\": [\"Leak in high-pressure line\", \"Failing pump seal\", \"Pressure relief valve sticking\"], \"eliminated_hypotheses\": []}\n}"
+  },
+  "score": 1.0,
+  "status": "SCORED"
+}

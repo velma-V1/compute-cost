@@ -1,0 +1,726 @@
+{
+  "benchmark_version": "gpt-oss-20b-capability-v1",
+  "boundary": {
+    "boundary_repeats": 2,
+    "family_id": "uncertainty_calibration",
+    "level": 4,
+    "role": "lower_reliable",
+    "transition_bracket": {
+      "lower_label": "reliable",
+      "lower_level": 4,
+      "upper_label": "failure",
+      "upper_level": 5
+    }
+  },
+  "case": {
+    "capabilities_required": [
+      "uncertainty_calibration"
+    ],
+    "capability_map": {
+      "capabilities_required": [
+        "uncertainty_calibration"
+      ],
+      "compound": false,
+      "difficulty": {
+        "dimensions": {
+          "confidence_granularity": 5,
+          "conflict_level": 5,
+          "evidence_strength": 5,
+          "unknown_fraction": 4
+        },
+        "level": 4
+      },
+      "family_id": "uncertainty_calibration",
+      "recovery_eligible": true,
+      "robustness_eligible": true,
+      "rubric_version": "calibration-v1",
+      "taxonomy_version": "capability-taxonomy-v1"
+    },
+    "category": "uncertainty_calibration",
+    "compound": false,
+    "difficulty": {
+      "dimensions": {
+        "confidence_granularity": 5,
+        "conflict_level": 5,
+        "evidence_strength": 5,
+        "unknown_fraction": 4
+      },
+      "level": 4,
+      "rubric_version": "calibration-v1"
+    },
+    "difficulty_level": 4,
+    "expected": "MEDIUM",
+    "family_id": "uncertainty_calibration",
+    "fixture_generation": {
+      "family_id": "uncertainty_calibration",
+      "generator_version": "gpt-oss-ladders-v1",
+      "level": 4
+    },
+    "id": "gptoss-uncertainty_calibration-L4-generated",
+    "oracle_response": "MEDIUM",
+    "prompt": "Difficulty L4. Independent evidence items: 6 support the claim and 2 equally reliable items oppose it. Using HIGH for >=80% support, MEDIUM for >=60%, otherwise LOW, return only the calibrated bucket.",
+    "recovery_eligible": true,
+    "robustness_eligible": true,
+    "scorer": "exact",
+    "scorer_version": "1",
+    "suite_version": "gpt-oss-20b-capability-v1",
+    "tags": [],
+    "taxonomy_version": "capability-taxonomy-v1",
+    "timeout_s": 120
+  },
+  "classification": {
+    "basis": "deterministic scorer passed",
+    "measurement_kind": "DERIVED",
+    "result_class": "ANSWER_CORRECT",
+    "valid_for_capability": true
+  },
+  "evidence_key": "exp-000186-gptoss-uncertainty_calibration-L4-generated-capability-replicate",
+  "evidence_refs": {
+    "request": {
+      "bytes": 362,
+      "case_id": "exp-000186-gptoss-uncertainty_calibration-L4-generated-capability-replicate",
+      "path": "raw/runtime/requests/000189-characterize-exp-000186-gptoss-uncertainty_calibration-L4-generated-capability-replicate.bin",
+      "producer": "runtime-adapter",
+      "sha256": "59d36cd2a5f589de6e8a62524821869f76dfe7d2c6fbc4e33e3d6e86d34bee1d",
+      "stage": "characterize"
+    },
+    "request_id": "000189-characterize-exp-000186-gptoss-uncertainty_calibration-L4-generated-capability-replicate",
+    "response": {
+      "bytes": 609,
+      "case_id": "exp-000186-gptoss-uncertainty_calibration-L4-generated-capability-replicate",
+      "path": "raw/runtime/responses/000189-characterize-exp-000186-gptoss-uncertainty_calibration-L4-generated-capability-replicate.bin",
+      "producer": "runtime-adapter",
+      "sha256": "8a3e9a3556e419db51093e3dcf02eaf3041796a1ca1f71d81a151366adb9573b",
+      "stage": "characterize"
+    },
+    "streams": [
+      {
+        "bytes": 137,
+        "case_id": "exp-000186-gptoss-uncertainty_calibration-L4-generated-capability-replicate",
+        "path": "raw/runtime/streams/000189-characterize-exp-000186-gptoss-uncertainty_calibration-L4-generated-capability-replicate/000000.bin",
+        "producer": "runtime-stream",
+        "sha256": "bf8035e04bb16a5fdadebea8ed97e031a4b29db8db6469d591c87cbef02c0d8b",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 141,
+        "case_id": "exp-000186-gptoss-uncertainty_calibration-L4-generated-capability-replicate",
+        "path": "raw/runtime/streams/000189-characterize-exp-000186-gptoss-uncertainty_calibration-L4-generated-capability-replicate/000001.bin",
+        "producer": "runtime-stream",
+        "sha256": "a5bd8670ab7f0bb530544eb9383ed3c6651546883a0a0d17dbc77805b3a86034",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 331,
+        "case_id": "exp-000186-gptoss-uncertainty_calibration-L4-generated-capability-replicate",
+        "path": "raw/runtime/streams/000189-characterize-exp-000186-gptoss-uncertainty_calibration-L4-generated-capability-replicate/000002.bin",
+        "producer": "runtime-stream",
+        "sha256": "b3a3f03ae1f8721a54e279ec60769f4b2979d8867c24f23466c996e0b916379d",
+        "stage": "characterize"
+      }
+    ]
+  },
+  "experiment": {
+    "changed_variable": "replication",
+    "context_request": null,
+    "difficulty_level": 4,
+    "experiment_id": "exp-000186-gptoss-uncertainty_calibration-L4-generated-capability-replicate",
+    "generation_budget": 256,
+    "hypothesis": "reproduce passing side of difficulty boundary",
+    "parent_experiment_id": "exp-000185-gptoss-uncertainty_calibration-L4-generated-capability-probe",
+    "prompt_variant": "base",
+    "reasoning_effort": null,
+    "recovery_level": null,
+    "seed": 42,
+    "task_family": "uncertainty_calibration",
+    "task_id": "uncertainty_calibration",
+    "temperature": 0.0,
+    "thinking_mode": false
+  },
+  "generation": {
+    "http_status": 200,
+    "metrics": {
+      "eval_count": 3,
+      "eval_duration_ns": 51400000,
+      "load_duration_ns": 3665600,
+      "prompt_eval_count": 59,
+      "prompt_eval_duration_ns": 61607000,
+      "total_duration_ns": 119104200
+    },
+    "normalized": {
+      "done": true,
+      "done_reason": "stop",
+      "text": "MEDIUM",
+      "thinking": "",
+      "tool_calls": []
+    },
+    "ok": true,
+    "phase_metrics": {
+      "answer_chars": 6,
+      "answer_chunks": 2,
+      "answer_span_ns": 27700100,
+      "measurement_kind": "MEASURED",
+      "thinking_chars": 0,
+      "thinking_chunks": 0,
+      "thinking_span_ns": null,
+      "time_to_first_answer_ns": 68476200,
+      "time_to_first_thinking_ns": null
+    },
+    "raw_response_b64": "eyJtb2RlbCI6InF3ZW4zLjU6MzViLWEzYi1xNF9LX00iLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTo0NToxMi42NDAwMDkyWiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiJNIn0sImRvbmUiOmZhbHNlfQp7Im1vZGVsIjoicXdlbjMuNTozNWItYTNiLXE0X0tfTSIsImNyZWF0ZWRfYXQiOiIyMDI2LTA5LTEwVDE1OjQ1OjEyLjY2NzgyMjZaIiwibWVzc2FnZSI6eyJyb2xlIjoiYXNzaXN0YW50IiwiY29udGVudCI6IkVESVVNIn0sImRvbmUiOmZhbHNlfQp7Im1vZGVsIjoicXdlbjMuNTozNWItYTNiLXE0X0tfTSIsImNyZWF0ZWRfYXQiOiIyMDI2LTA5LTEwVDE1OjQ1OjEyLjY5MTM0OVoiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiIn0sImRvbmUiOnRydWUsImRvbmVfcmVhc29uIjoic3RvcCIsInRvdGFsX2R1cmF0aW9uIjoxMTkxMDQyMDAsImxvYWRfZHVyYXRpb24iOjM2NjU2MDAsInByb21wdF9ldmFsX2NvdW50Ijo1OSwicHJvbXB0X2V2YWxfY2FjaGVkX2NvdW50Ijo1NSwicHJvbXB0X2V2YWxfZHVyYXRpb24iOjYxNjA3MDAwLCJldmFsX2NvdW50IjozLCJldmFsX2R1cmF0aW9uIjo1MTQwMDAwMH0K",
+    "request": {
+      "body_b64": "eyJtb2RlbCI6InF3ZW4zLjU6MzViLWEzYi1xNF9LX00iLCJtZXNzYWdlcyI6W3sicm9sZSI6InVzZXIiLCJjb250ZW50IjoiRGlmZmljdWx0eSBMNC4gSW5kZXBlbmRlbnQgZXZpZGVuY2UgaXRlbXM6IDYgc3VwcG9ydCB0aGUgY2xhaW0gYW5kIDIgZXF1YWxseSByZWxpYWJsZSBpdGVtcyBvcHBvc2UgaXQuIFVzaW5nIEhJR0ggZm9yID49ODAlIHN1cHBvcnQsIE1FRElVTSBmb3IgPj02MCUsIG90aGVyd2lzZSBMT1csIHJldHVybiBvbmx5IHRoZSBjYWxpYnJhdGVkIGJ1Y2tldC4ifV0sInN0cmVhbSI6dHJ1ZSwib3B0aW9ucyI6eyJ0ZW1wZXJhdHVyZSI6MC4wLCJzZWVkIjo0MiwibnVtX3ByZWRpY3QiOjI1Nn0sInRoaW5rIjpmYWxzZX0=",
+      "body_text": "{\"model\":\"qwen3.5:35b-a3b-q4_K_M\",\"messages\":[{\"role\":\"user\",\"content\":\"Difficulty L4. Independent evidence items: 6 support the claim and 2 equally reliable items oppose it. Using HIGH for >=80% support, MEDIUM for >=60%, otherwise LOW, return only the calibrated bucket.\"}],\"stream\":true,\"options\":{\"temperature\":0.0,\"seed\":42,\"num_predict\":256},\"think\":false}",
+      "method": "POST",
+      "started_at_utc": "2026-09-10T15:45:12.571834+00:00",
+      "started_monotonic_ns": 53789289588400,
+      "stream": true,
+      "timeout_s": 120.0,
+      "url": "http://127.0.0.1:11434/api/chat"
+    },
+    "response_headers": {
+      "connection": "close",
+      "content-type": "application/x-ndjson",
+      "date": "Thu, 10 Sep 2026 15:45:12 GMT",
+      "transfer-encoding": "chunked"
+    },
+    "stream_events": [
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:45:12.6400092Z",
+          "done": false,
+          "message": {
+            "content": "M",
+            "role": "assistant"
+          },
+          "model": "qwen3.5:35b-a3b-q4_K_M"
+        },
+        "raw_b64": "eyJtb2RlbCI6InF3ZW4zLjU6MzViLWEzYi1xNF9LX00iLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTo0NToxMi42NDAwMDkyWiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiJNIn0sImRvbmUiOmZhbHNlfQo=",
+        "raw_text": "{\"model\":\"qwen3.5:35b-a3b-q4_K_M\",\"created_at\":\"2026-09-10T15:45:12.6400092Z\",\"message\":{\"role\":\"assistant\",\"content\":\"M\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:45:12.640312+00:00",
+        "received_monotonic_ns": 53789358064600,
+        "sequence": 0
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:45:12.6678226Z",
+          "done": false,
+          "message": {
+            "content": "EDIUM",
+            "role": "assistant"
+          },
+          "model": "qwen3.5:35b-a3b-q4_K_M"
+        },
+        "raw_b64": "eyJtb2RlbCI6InF3ZW4zLjU6MzViLWEzYi1xNF9LX00iLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTo0NToxMi42Njc4MjI2WiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiJFRElVTSJ9LCJkb25lIjpmYWxzZX0K",
+        "raw_text": "{\"model\":\"qwen3.5:35b-a3b-q4_K_M\",\"created_at\":\"2026-09-10T15:45:12.6678226Z\",\"message\":{\"role\":\"assistant\",\"content\":\"EDIUM\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:45:12.668014+00:00",
+        "received_monotonic_ns": 53789385764700,
+        "sequence": 1
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:45:12.691349Z",
+          "done": true,
+          "done_reason": "stop",
+          "eval_count": 3,
+          "eval_duration": 51400000,
+          "load_duration": 3665600,
+          "message": {
+            "content": "",
+            "role": "assistant"
+          },
+          "model": "qwen3.5:35b-a3b-q4_K_M",
+          "prompt_eval_cached_count": 55,
+          "prompt_eval_count": 59,
+          "prompt_eval_duration": 61607000,
+          "total_duration": 119104200
+        },
+        "raw_b64": "eyJtb2RlbCI6InF3ZW4zLjU6MzViLWEzYi1xNF9LX00iLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTo0NToxMi42OTEzNDlaIiwibWVzc2FnZSI6eyJyb2xlIjoiYXNzaXN0YW50IiwiY29udGVudCI6IiJ9LCJkb25lIjp0cnVlLCJkb25lX3JlYXNvbiI6InN0b3AiLCJ0b3RhbF9kdXJhdGlvbiI6MTE5MTA0MjAwLCJsb2FkX2R1cmF0aW9uIjozNjY1NjAwLCJwcm9tcHRfZXZhbF9jb3VudCI6NTksInByb21wdF9ldmFsX2NhY2hlZF9jb3VudCI6NTUsInByb21wdF9ldmFsX2R1cmF0aW9uIjo2MTYwNzAwMCwiZXZhbF9jb3VudCI6MywiZXZhbF9kdXJhdGlvbiI6NTE0MDAwMDB9Cg==",
+        "raw_text": "{\"model\":\"qwen3.5:35b-a3b-q4_K_M\",\"created_at\":\"2026-09-10T15:45:12.691349Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\"},\"done\":true,\"done_reason\":\"stop\",\"total_duration\":119104200,\"load_duration\":3665600,\"prompt_eval_count\":59,\"prompt_eval_cached_count\":55,\"prompt_eval_duration\":61607000,\"eval_count\":3,\"eval_duration\":51400000}\n",
+        "received_at_utc": "2026-09-10T15:45:12.691688+00:00",
+        "received_monotonic_ns": 53789409440000,
+        "sequence": 2
+      }
+    ],
+    "timing": {
+      "client_ended_monotonic_ns": 53789409679700,
+      "client_latency_ns": 120106900,
+      "client_started_monotonic_ns": 53789289572800,
+      "first_event_latency_ns": 68476200,
+      "last_event_latency_ns": 119851600
+    }
+  },
+  "invocation": {
+    "messages": [
+      {
+        "content": "Difficulty L4. Independent evidence items: 6 support the claim and 2 equally reliable items oppose it. Using HIGH for >=80% support, MEDIUM for >=60%, otherwise LOW, return only the calibrated bucket.",
+        "role": "user"
+      }
+    ],
+    "model": "qwen3.5:35b-a3b-q4_K_M",
+    "options": {
+      "num_predict": 256,
+      "seed": 42,
+      "temperature": 0.0
+    },
+    "request_fields": {
+      "think": false
+    },
+    "stream": true
+  },
+  "model": "qwen3.5:35b-a3b-q4_K_M",
+  "resolved_config": {
+    "autonomous_simulation": {
+      "enabled": true,
+      "generation_budget": 512,
+      "max_generation_budget": 2048,
+      "scenario_count": 6,
+      "steps_per_scenario": 8
+    },
+    "capability_campaign": {
+      "anchor_level": 2,
+      "boundary_repeats": 2,
+      "generation_budget": 256,
+      "jump": 3,
+      "max_experiments_per_family": 6,
+      "reasoning_effort": null,
+      "reliable_threshold": 0.9,
+      "thinking_mode": false,
+      "unstable_threshold": 0.4
+    },
+    "characterization": {
+      "boundary_repeats": 3,
+      "generation_budget_granularity": 32,
+      "initial_generation_budget": 256,
+      "max_experiments_per_task": 12,
+      "max_generation_budget": 2048,
+      "min_generation_budget": 32,
+      "think_off_generation_budget": 256
+    },
+    "compound_lab": {
+      "boundary_repeats": 3,
+      "enabled": false,
+      "jump": 2,
+      "max_compounds": 6,
+      "max_experiments_per_compound": 16
+    },
+    "cost": {
+      "electricity_configured": false,
+      "electricity_per_kwh": 0.0
+    },
+    "evidence": {
+      "retain_raw_collectors": true,
+      "retain_stream_chunks": true
+    },
+    "generation": {
+      "max_tokens": 256,
+      "seed": 42,
+      "temperature": 0.0
+    },
+    "limits": {
+      "consecutive_context_failures": 2,
+      "context_schedule": [
+        4096,
+        8192,
+        16384,
+        32768
+      ],
+      "host_ram_percent": 95.0,
+      "max_model_calls_per_run": 360,
+      "request_timeout_s": 120,
+      "sustained_iterations": 8,
+      "vram_percent": 98.0
+    },
+    "reasoning_curves": {
+      "enabled": false,
+      "repeats": 3
+    },
+    "recovery_lab": {
+      "enabled": false,
+      "max_attempts_per_candidate": 6,
+      "max_level": "R7",
+      "repeats": 3
+    },
+    "robustness_lab": {
+      "enabled": false,
+      "max_attempts_per_perturbation": 4,
+      "max_perturbations_per_family": 2,
+      "repeats": 2
+    },
+    "runtime": {
+      "endpoint": "http://127.0.0.1:11434"
+    },
+    "telemetry": {
+      "interval_s": 0.25,
+      "nvidia": true
+    }
+  },
+  "schema_version": 2,
+  "scoring": {
+    "checks": [
+      {
+        "actual": "MEDIUM",
+        "expected": "MEDIUM",
+        "name": "exact_match",
+        "pass": true
+      }
+    ],
+    "evidence": {
+      "raw_response": "MEDIUM"
+    },
+    "score": 1.0,
+    "status": "SCORED"
+  },
+  "source_experiment_id": "exp-000186-gptoss-uncertainty_calibration-L4-generated-capability-replicate",
+  "stage": "characterize",
+  "telemetry_for_experiment": [
+    {
+      "case_id": "exp-000186-gptoss-uncertainty_calibration-L4-generated-capability-replicate",
+      "gpu": {
+        "availability": "available",
+        "devices": [
+          {
+            "driver_version": "610.62",
+            "extra_columns": [],
+            "fan_percent": 0.0,
+            "graphics_clock_mhz": 2745.0,
+            "index": 0,
+            "memory_clock_mhz": 10251.0,
+            "memory_free_mib": 385.0,
+            "memory_total_mib": 12282.0,
+            "memory_used_mib": 11613.0,
+            "name": "NVIDIA GeForce RTX 4070 SUPER",
+            "power_draw_w": 62.38,
+            "power_limit_w": 220.0,
+            "pstate": "P2",
+            "raw_columns": [
+              "0",
+              "GPU-e3df9a98-2412-6865-26e5-b5a284aa9138",
+              "NVIDIA GeForce RTX 4070 SUPER",
+              "610.62",
+              "64",
+              "12282",
+              "11613",
+              "385",
+              "50",
+              "62.38",
+              "220.00",
+              "2745",
+              "2745",
+              "10251",
+              "P2",
+              "0"
+            ],
+            "raw_line": "0, GPU-e3df9a98-2412-6865-26e5-b5a284aa9138, NVIDIA GeForce RTX 4070 SUPER, 610.62, 64, 12282, 11613, 385, 50, 62.38, 220.00, 2745, 2745, 10251, P2, 0",
+            "sm_clock_mhz": 2745.0,
+            "temperature_c": 50.0,
+            "utilization_gpu_percent": 64.0,
+            "uuid": "GPU-e3df9a98-2412-6865-26e5-b5a284aa9138"
+          }
+        ]
+      },
+      "host": {
+        "cpu_frequency_mhz": 4201.0,
+        "cpu_percent": 51.0,
+        "cpu_percent_per_core": [
+          66.7,
+          50.0,
+          83.3,
+          83.3,
+          16.7,
+          66.7,
+          0.0,
+          100.0,
+          16.7,
+          100.0,
+          83.3,
+          50.0,
+          33.3,
+          0.0,
+          16.7,
+          50.0
+        ],
+        "disk_io": {
+          "read_bytes": 244207873024,
+          "read_count": 1688755,
+          "read_time_ms": 1566,
+          "write_bytes": 104137561600,
+          "write_count": 962797,
+          "write_time_ms": 1279
+        },
+        "memory_available_bytes": 2332151808,
+        "memory_percent": 93.0,
+        "memory_total_bytes": 33462239232,
+        "memory_used_bytes": 31130087424
+      },
+      "monotonic_ns": 53789238162600,
+      "nvidia_collector": {
+        "command": [
+          "nvidia-smi",
+          "--query-gpu=index,uuid,name,driver_version,utilization.gpu,memory.total,memory.used,memory.free,temperature.gpu,power.draw,power.limit,clocks.gr,clocks.sm,clocks.mem,pstate,fan.speed",
+          "--format=csv,noheader,nounits"
+        ],
+        "duration_ns": 32662000,
+        "error": null,
+        "returncode": 0,
+        "started_at_utc": "2026-09-10T15:45:12.520542+00:00",
+        "stderr_b64": "",
+        "stderr_text": "",
+        "stdout_b64": "MCwgR1BVLWUzZGY5YTk4LTI0MTItNjg2NS0yNmU1LWI1YTI4NGFhOTEzOCwgTlZJRElBIEdlRm9yY2UgUlRYIDQwNzAgU1VQRVIsIDYxMC42MiwgNjQsIDEyMjgyLCAxMTYxMywgMzg1LCA1MCwgNjIuMzgsIDIyMC4wMCwgMjc0NSwgMjc0NSwgMTAyNTEsIFAyLCAwDQo=",
+        "stdout_text": "0, GPU-e3df9a98-2412-6865-26e5-b5a284aa9138, NVIDIA GeForce RTX 4070 SUPER, 610.62, 64, 12282, 11613, 385, 50, 62.38, 220.00, 2745, 2745, 10251, P2, 0\r\n"
+      },
+      "process": {
+        "cpu_percent": 18.2,
+        "pid": 17976,
+        "rss_bytes": 144654336,
+        "vms_bytes": 128880640
+      },
+      "runtime_processes": [
+        {
+          "cpu_percent": 747.9,
+          "cpu_times": {
+            "system_s": 236.578125,
+            "user_s": 889.59375
+          },
+          "exe": "C:\\Users\\Matt\\AppData\\Local\\Programs\\Ollama\\lib\\ollama\\llama-server.exe",
+          "io": {
+            "other_bytes": 883382,
+            "other_count": 42317,
+            "read_bytes": 23771872617,
+            "read_count": 45591,
+            "write_bytes": 1873579,
+            "write_count": 18440
+          },
+          "name": "llama-server.exe",
+          "num_handles": 282,
+          "num_threads": 30,
+          "pid": 8880,
+          "rss_bytes": 22939193344,
+          "vms_bytes": 34775670784
+        },
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 3.640625,
+            "user_s": 3.4375
+          },
+          "exe": "C:\\Users\\Matt\\AppData\\Local\\Programs\\Ollama\\ollama app.exe",
+          "io": {
+            "other_bytes": 1290829790,
+            "other_count": 71122,
+            "read_bytes": 783228744,
+            "read_count": 1691,
+            "write_bytes": 1574405889,
+            "write_count": 36
+          },
+          "name": "ollama app.exe",
+          "num_handles": 421,
+          "num_threads": 19,
+          "pid": 20892,
+          "rss_bytes": 52727808,
+          "vms_bytes": 63012864
+        },
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 117.046875,
+            "user_s": 106.0625
+          },
+          "exe": "C:\\Users\\Matt\\AppData\\Local\\Programs\\Ollama\\ollama.exe",
+          "io": {
+            "other_bytes": 41038800336,
+            "other_count": 5805930,
+            "read_bytes": 66059966904,
+            "read_count": 2161818,
+            "write_bytes": 74292202850,
+            "write_count": 4616952
+          },
+          "name": "ollama.exe",
+          "num_handles": 523,
+          "num_threads": 26,
+          "pid": 21316,
+          "rss_bytes": 173109248,
+          "vms_bytes": 207626240
+        }
+      ],
+      "stage": "characterize",
+      "timestamp_utc": "2026-09-10T15:45:12.520403+00:00",
+      "total_gpu_power_w": 62.38
+    },
+    {
+      "case_id": "exp-000186-gptoss-uncertainty_calibration-L4-generated-capability-replicate",
+      "gpu": {
+        "availability": "available",
+        "devices": [
+          {
+            "driver_version": "610.62",
+            "extra_columns": [],
+            "fan_percent": 0.0,
+            "graphics_clock_mhz": 2745.0,
+            "index": 0,
+            "memory_clock_mhz": 10251.0,
+            "memory_free_mib": 385.0,
+            "memory_total_mib": 12282.0,
+            "memory_used_mib": 11613.0,
+            "name": "NVIDIA GeForce RTX 4070 SUPER",
+            "power_draw_w": 62.61,
+            "power_limit_w": 220.0,
+            "pstate": "P2",
+            "raw_columns": [
+              "0",
+              "GPU-e3df9a98-2412-6865-26e5-b5a284aa9138",
+              "NVIDIA GeForce RTX 4070 SUPER",
+              "610.62",
+              "0",
+              "12282",
+              "11613",
+              "385",
+              "48",
+              "62.61",
+              "220.00",
+              "2745",
+              "2745",
+              "10251",
+              "P2",
+              "0"
+            ],
+            "raw_line": "0, GPU-e3df9a98-2412-6865-26e5-b5a284aa9138, NVIDIA GeForce RTX 4070 SUPER, 610.62, 0, 12282, 11613, 385, 48, 62.61, 220.00, 2745, 2745, 10251, P2, 0",
+            "sm_clock_mhz": 2745.0,
+            "temperature_c": 48.0,
+            "utilization_gpu_percent": 0.0,
+            "uuid": "GPU-e3df9a98-2412-6865-26e5-b5a284aa9138"
+          }
+        ]
+      },
+      "host": {
+        "cpu_frequency_mhz": 4201.0,
+        "cpu_percent": 55.9,
+        "cpu_percent_per_core": [
+          93.8,
+          46.2,
+          76.9,
+          92.3,
+          46.2,
+          69.2,
+          38.5,
+          53.8,
+          46.2,
+          53.8,
+          76.9,
+          53.8,
+          23.1,
+          30.8,
+          46.2,
+          38.5
+        ],
+        "disk_io": {
+          "read_bytes": 244207873024,
+          "read_count": 1688755,
+          "read_time_ms": 1566,
+          "write_bytes": 104137561600,
+          "write_count": 962797,
+          "write_time_ms": 1279
+        },
+        "memory_available_bytes": 2259853312,
+        "memory_percent": 93.2,
+        "memory_total_bytes": 33462239232,
+        "memory_used_bytes": 31202385920
+      },
+      "monotonic_ns": 53789438342000,
+      "nvidia_collector": {
+        "command": [
+          "nvidia-smi",
+          "--query-gpu=index,uuid,name,driver_version,utilization.gpu,memory.total,memory.used,memory.free,temperature.gpu,power.draw,power.limit,clocks.gr,clocks.sm,clocks.mem,pstate,fan.speed",
+          "--format=csv,noheader,nounits"
+        ],
+        "duration_ns": 41972500,
+        "error": null,
+        "returncode": 0,
+        "started_at_utc": "2026-09-10T15:45:12.720821+00:00",
+        "stderr_b64": "",
+        "stderr_text": "",
+        "stdout_b64": "MCwgR1BVLWUzZGY5YTk4LTI0MTItNjg2NS0yNmU1LWI1YTI4NGFhOTEzOCwgTlZJRElBIEdlRm9yY2UgUlRYIDQwNzAgU1VQRVIsIDYxMC42MiwgMCwgMTIyODIsIDExNjEzLCAzODUsIDQ4LCA2Mi42MSwgMjIwLjAwLCAyNzQ1LCAyNzQ1LCAxMDI1MSwgUDIsIDANCg==",
+        "stdout_text": "0, GPU-e3df9a98-2412-6865-26e5-b5a284aa9138, NVIDIA GeForce RTX 4070 SUPER, 610.62, 0, 12282, 11613, 385, 48, 62.61, 220.00, 2745, 2745, 10251, P2, 0\r\n"
+      },
+      "process": {
+        "cpu_percent": 21.3,
+        "pid": 17976,
+        "rss_bytes": 145264640,
+        "vms_bytes": 129490944
+      },
+      "runtime_processes": [
+        {
+          "cpu_percent": 705.4,
+          "cpu_times": {
+            "system_s": 236.9375,
+            "user_s": 890.625
+          },
+          "exe": "C:\\Users\\Matt\\AppData\\Local\\Programs\\Ollama\\lib\\ollama\\llama-server.exe",
+          "io": {
+            "other_bytes": 884774,
+            "other_count": 42396,
+            "read_bytes": 23771872617,
+            "read_count": 45591,
+            "write_bytes": 1875772,
+            "write_count": 18458
+          },
+          "name": "llama-server.exe",
+          "num_handles": 282,
+          "num_threads": 30,
+          "pid": 8880,
+          "rss_bytes": 23005061120,
+          "vms_bytes": 34841669632
+        },
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 3.640625,
+            "user_s": 3.4375
+          },
+          "exe": "C:\\Users\\Matt\\AppData\\Local\\Programs\\Ollama\\ollama app.exe",
+          "io": {
+            "other_bytes": 1290829790,
+            "other_count": 71122,
+            "read_bytes": 783228744,
+            "read_count": 1691,
+            "write_bytes": 1574405889,
+            "write_count": 36
+          },
+          "name": "ollama app.exe",
+          "num_handles": 421,
+          "num_threads": 19,
+          "pid": 20892,
+          "rss_bytes": 52727808,
+          "vms_bytes": 63012864
+        },
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 117.046875,
+            "user_s": 106.0625
+          },
+          "exe": "C:\\Users\\Matt\\AppData\\Local\\Programs\\Ollama\\ollama.exe",
+          "io": {
+            "other_bytes": 41038815518,
+            "other_count": 5806315,
+            "read_bytes": 66059986733,
+            "read_count": 2161873,
+            "write_bytes": 74292205134,
+            "write_count": 4616964
+          },
+          "name": "ollama.exe",
+          "num_handles": 523,
+          "num_threads": 26,
+          "pid": 21316,
+          "rss_bytes": 173109248,
+          "vms_bytes": 207626240
+        }
+      ],
+      "stage": "characterize",
+      "timestamp_utc": "2026-09-10T15:45:12.720581+00:00",
+      "total_gpu_power_w": 62.61
+    }
+  ]
+}

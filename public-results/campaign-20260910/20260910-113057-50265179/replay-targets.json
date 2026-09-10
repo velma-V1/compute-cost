@@ -1,0 +1,667 @@
+{
+  "model": "gpt-oss:20b",
+  "schema_version": 1,
+  "selection_policy": {
+    "executes_model_calls": false,
+    "full_registry_is_source_of_truth": true,
+    "non_model_failures_are_not_capability_weaknesses": true,
+    "priority_order": [
+      "RAW_BOUNDARY_RETEST",
+      "RECOVERY_LIMIT_RETEST",
+      "MODEL_FAILURE_RETEST",
+      "EVIDENCE_INTEGRITY_REPRODUCTION"
+    ],
+    "replicates_are_grouped_not_discarded": true
+  },
+  "summary": {
+    "boundary_entries_attached": 16,
+    "evidence_integrity_groups": 13,
+    "matched_entries": 65,
+    "other_model_failure_groups": 10,
+    "raw_boundary_groups": 12,
+    "recovery_limit_groups": 0,
+    "registry_entries": 65,
+    "selected_groups": 35,
+    "unmatched_registry_entries": 0
+  },
+  "targets": [
+    {
+      "difficulty_level": 0,
+      "evidence_count": 2,
+      "failure_origin": "MODEL_FAILURE",
+      "failure_signature": "cascading_error",
+      "family_id": "composite_agent_tasks",
+      "primary_path": "replay/failures/exp-000040-gptoss-composite_agent_tasks-L0-calibrated-v1-capability-probe.json",
+      "primary_replay_id": "exp-000040-gptoss-composite_agent_tasks-L0-calibrated-v1-capability-probe",
+      "priority": 1,
+      "reason": "RAW_BOUNDARY_RETEST",
+      "recovery_level": null,
+      "result_class": "ANSWER_WRONG",
+      "supporting_replay_ids": [
+        "exp-000041-gptoss-composite_agent_tasks-L0-calibrated-v1-capability-replicate"
+      ]
+    },
+    {
+      "difficulty_level": 0,
+      "evidence_count": 2,
+      "failure_origin": "MODEL_FAILURE",
+      "failure_signature": null,
+      "family_id": "context_retrieval",
+      "primary_path": "replay/failures/exp-000049-gptoss-context_retrieval-L0-generated-capability-probe.json",
+      "primary_replay_id": "exp-000049-gptoss-context_retrieval-L0-generated-capability-probe",
+      "priority": 1,
+      "reason": "RAW_BOUNDARY_RETEST",
+      "recovery_level": null,
+      "result_class": "CONTEXT_FAILURE",
+      "supporting_replay_ids": [
+        "exp-000050-gptoss-context_retrieval-L0-generated-capability-replicate"
+      ]
+    },
+    {
+      "difficulty_level": 0,
+      "evidence_count": 2,
+      "failure_origin": "MODEL_FAILURE",
+      "failure_signature": null,
+      "family_id": "decomposition",
+      "primary_path": "replay/failures/exp-000062-gptoss-decomposition-L0-calibrated-v1-capability-probe.json",
+      "primary_replay_id": "exp-000062-gptoss-decomposition-L0-calibrated-v1-capability-probe",
+      "priority": 1,
+      "reason": "RAW_BOUNDARY_RETEST",
+      "recovery_level": null,
+      "result_class": "FORMAT_FAILURE",
+      "supporting_replay_ids": [
+        "exp-000063-gptoss-decomposition-L0-calibrated-v1-capability-replicate"
+      ]
+    },
+    {
+      "difficulty_level": 0,
+      "evidence_count": 2,
+      "failure_origin": "MODEL_FAILURE",
+      "failure_signature": null,
+      "family_id": "extraction_transformation",
+      "primary_path": "replay/failures/exp-000070-gptoss-extraction_transformation-L0-generated-capability-probe.json",
+      "primary_replay_id": "exp-000070-gptoss-extraction_transformation-L0-generated-capability-probe",
+      "priority": 1,
+      "reason": "RAW_BOUNDARY_RETEST",
+      "recovery_level": null,
+      "result_class": "FORMAT_FAILURE",
+      "supporting_replay_ids": [
+        "exp-000071-gptoss-extraction_transformation-L0-generated-capability-replicate"
+      ]
+    },
+    {
+      "boundary_replays": {
+        "lower_reliable": [
+          {
+            "difficulty_level": 2,
+            "path": "replay/boundaries/exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe--boundary.json",
+            "replay_id": "exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe--boundary",
+            "source_experiment_id": "exp-000098-gptoss-memory_compression_summary_fidelity-L2-generated-capability-probe"
+          },
+          {
+            "difficulty_level": 2,
+            "path": "replay/boundaries/exp-000101-gptoss-memory_compression_summary_fidelity-L2-generated-capability-replicate--boundary.json",
+            "replay_id": "exp-000101-gptoss-memory_compression_summary_fidelity-L2-generated-capability-replicate--boundary",
+            "source_experiment_id": "exp-000101-gptoss-memory_compression_summary_fidelity-L2-generated-capability-replicate"
+          }
+        ],
+        "upper_transition": [
+          {
+            "difficulty_level": 3,
+            "path": "replay/boundaries/exp-000100-gptoss-031-capability-probe--boundary.json",
+            "replay_id": "exp-000100-gptoss-031-capability-probe--boundary",
+            "source_experiment_id": "exp-000100-gptoss-031-capability-probe"
+          },
+          {
+            "difficulty_level": 3,
+            "path": "replay/boundaries/exp-000102-gptoss-031-capability-replicate--boundary.json",
+            "replay_id": "exp-000102-gptoss-031-capability-replicate--boundary",
+            "source_experiment_id": "exp-000102-gptoss-031-capability-replicate"
+          }
+        ]
+      },
+      "difficulty_level": 3,
+      "evidence_count": 2,
+      "failure_origin": "MODEL_FAILURE",
+      "failure_signature": "state_loss",
+      "family_id": "memory_compression_summary_fidelity",
+      "primary_path": "replay/failures/exp-000100-gptoss-031-capability-probe.json",
+      "primary_replay_id": "exp-000100-gptoss-031-capability-probe",
+      "priority": 1,
+      "reason": "RAW_BOUNDARY_RETEST",
+      "recovery_level": null,
+      "result_class": "FORMAT_FAILURE",
+      "supporting_replay_ids": [
+        "exp-000102-gptoss-031-capability-replicate"
+      ]
+    },
+    {
+      "difficulty_level": 0,
+      "evidence_count": 2,
+      "failure_origin": "MODEL_FAILURE",
+      "failure_signature": "assumption_error",
+      "family_id": "missing_information_handling",
+      "primary_path": "replay/failures/exp-000109-gptoss-missing_information_handling-L0-calibrated-v1-capability-probe.json",
+      "primary_replay_id": "exp-000109-gptoss-missing_information_handling-L0-calibrated-v1-capability-probe",
+      "priority": 1,
+      "reason": "RAW_BOUNDARY_RETEST",
+      "recovery_level": null,
+      "result_class": "FORMAT_FAILURE",
+      "supporting_replay_ids": [
+        "exp-000110-gptoss-missing_information_handling-L0-calibrated-v1-capability-replicate"
+      ]
+    },
+    {
+      "difficulty_level": 8,
+      "evidence_count": 1,
+      "failure_origin": "MODEL_FAILURE",
+      "failure_signature": null,
+      "family_id": "planning_optimization",
+      "primary_path": "replay/failures/exp-000126-gptoss-planning_optimization-L8-generated-capability-probe.json",
+      "primary_replay_id": "exp-000126-gptoss-planning_optimization-L8-generated-capability-probe",
+      "priority": 1,
+      "reason": "RAW_BOUNDARY_RETEST",
+      "recovery_level": null,
+      "result_class": "ANSWER_WRONG",
+      "supporting_replay_ids": []
+    },
+    {
+      "boundary_replays": {
+        "lower_reliable": [
+          {
+            "difficulty_level": 4,
+            "path": "replay/boundaries/exp-000153-gptoss-sibling_transfer_generalization-L4-calibrated-v1-capability-probe--boundary.json",
+            "replay_id": "exp-000153-gptoss-sibling_transfer_generalization-L4-calibrated-v1-capability-probe--boundary",
+            "source_experiment_id": "exp-000153-gptoss-sibling_transfer_generalization-L4-calibrated-v1-capability-probe"
+          },
+          {
+            "difficulty_level": 4,
+            "path": "replay/boundaries/exp-000154-gptoss-sibling_transfer_generalization-L4-calibrated-v1-capability-replicate--boundary.json",
+            "replay_id": "exp-000154-gptoss-sibling_transfer_generalization-L4-calibrated-v1-capability-replicate--boundary",
+            "source_experiment_id": "exp-000154-gptoss-sibling_transfer_generalization-L4-calibrated-v1-capability-replicate"
+          }
+        ],
+        "upper_transition": [
+          {
+            "difficulty_level": 5,
+            "path": "replay/boundaries/exp-000150-gptoss-sibling_transfer_generalization-L5-calibrated-v1-capability-probe--boundary.json",
+            "replay_id": "exp-000150-gptoss-sibling_transfer_generalization-L5-calibrated-v1-capability-probe--boundary",
+            "source_experiment_id": "exp-000150-gptoss-sibling_transfer_generalization-L5-calibrated-v1-capability-probe"
+          },
+          {
+            "difficulty_level": 5,
+            "path": "replay/boundaries/exp-000155-gptoss-sibling_transfer_generalization-L5-calibrated-v1-capability-replicate--boundary.json",
+            "replay_id": "exp-000155-gptoss-sibling_transfer_generalization-L5-calibrated-v1-capability-replicate--boundary",
+            "source_experiment_id": "exp-000155-gptoss-sibling_transfer_generalization-L5-calibrated-v1-capability-replicate"
+          }
+        ]
+      },
+      "difficulty_level": 5,
+      "evidence_count": 2,
+      "failure_origin": "MODEL_FAILURE",
+      "failure_signature": null,
+      "family_id": "sibling_transfer_generalization",
+      "primary_path": "replay/failures/exp-000150-gptoss-sibling_transfer_generalization-L5-calibrated-v1-capability-probe.json",
+      "primary_replay_id": "exp-000150-gptoss-sibling_transfer_generalization-L5-calibrated-v1-capability-probe",
+      "priority": 1,
+      "reason": "RAW_BOUNDARY_RETEST",
+      "recovery_level": null,
+      "result_class": "ANSWER_WRONG",
+      "supporting_replay_ids": [
+        "exp-000155-gptoss-sibling_transfer_generalization-L5-calibrated-v1-capability-replicate"
+      ]
+    },
+    {
+      "boundary_replays": {
+        "lower_reliable": [
+          {
+            "difficulty_level": 2,
+            "path": "replay/boundaries/exp-000166-gptoss-008-capability-probe--boundary.json",
+            "replay_id": "exp-000166-gptoss-008-capability-probe--boundary",
+            "source_experiment_id": "exp-000166-gptoss-008-capability-probe"
+          },
+          {
+            "difficulty_level": 2,
+            "path": "replay/boundaries/exp-000169-gptoss-008-capability-replicate--boundary.json",
+            "replay_id": "exp-000169-gptoss-008-capability-replicate--boundary",
+            "source_experiment_id": "exp-000169-gptoss-008-capability-replicate"
+          }
+        ],
+        "upper_transition": [
+          {
+            "difficulty_level": 3,
+            "path": "replay/boundaries/exp-000168-gptoss-temporal_reasoning-L3-generated-capability-probe--boundary.json",
+            "replay_id": "exp-000168-gptoss-temporal_reasoning-L3-generated-capability-probe--boundary",
+            "source_experiment_id": "exp-000168-gptoss-temporal_reasoning-L3-generated-capability-probe"
+          },
+          {
+            "difficulty_level": 3,
+            "path": "replay/boundaries/exp-000170-gptoss-temporal_reasoning-L3-generated-capability-replicate--boundary.json",
+            "replay_id": "exp-000170-gptoss-temporal_reasoning-L3-generated-capability-replicate--boundary",
+            "source_experiment_id": "exp-000170-gptoss-temporal_reasoning-L3-generated-capability-replicate"
+          }
+        ]
+      },
+      "difficulty_level": 3,
+      "evidence_count": 2,
+      "failure_origin": "MODEL_FAILURE",
+      "failure_signature": null,
+      "family_id": "temporal_reasoning",
+      "primary_path": "replay/failures/exp-000168-gptoss-temporal_reasoning-L3-generated-capability-probe.json",
+      "primary_replay_id": "exp-000168-gptoss-temporal_reasoning-L3-generated-capability-probe",
+      "priority": 1,
+      "reason": "RAW_BOUNDARY_RETEST",
+      "recovery_level": null,
+      "result_class": "ANSWER_WRONG",
+      "supporting_replay_ids": [
+        "exp-000170-gptoss-temporal_reasoning-L3-generated-capability-replicate"
+      ]
+    },
+    {
+      "difficulty_level": 0,
+      "evidence_count": 2,
+      "failure_origin": "MODEL_FAILURE",
+      "failure_signature": "verification_failure",
+      "family_id": "test_generation_verification",
+      "primary_path": "replay/failures/exp-000173-gptoss-test_generation_verification-L0-calibrated-v1-capability-probe.json",
+      "primary_replay_id": "exp-000173-gptoss-test_generation_verification-L0-calibrated-v1-capability-probe",
+      "priority": 1,
+      "reason": "RAW_BOUNDARY_RETEST",
+      "recovery_level": null,
+      "result_class": "FORMAT_FAILURE",
+      "supporting_replay_ids": [
+        "exp-000174-gptoss-test_generation_verification-L0-calibrated-v1-capability-replicate"
+      ]
+    },
+    {
+      "boundary_replays": {
+        "lower_reliable": [
+          {
+            "difficulty_level": 2,
+            "path": "replay/boundaries/exp-000175-gptoss-017-capability-probe--boundary.json",
+            "replay_id": "exp-000175-gptoss-017-capability-probe--boundary",
+            "source_experiment_id": "exp-000175-gptoss-017-capability-probe"
+          },
+          {
+            "difficulty_level": 2,
+            "path": "replay/boundaries/exp-000178-gptoss-017-capability-replicate--boundary.json",
+            "replay_id": "exp-000178-gptoss-017-capability-replicate--boundary",
+            "source_experiment_id": "exp-000178-gptoss-017-capability-replicate"
+          }
+        ],
+        "upper_transition": [
+          {
+            "difficulty_level": 3,
+            "path": "replay/boundaries/exp-000177-gptoss-tool_argument_correctness-L3-generated-capability-probe--boundary.json",
+            "replay_id": "exp-000177-gptoss-tool_argument_correctness-L3-generated-capability-probe--boundary",
+            "source_experiment_id": "exp-000177-gptoss-tool_argument_correctness-L3-generated-capability-probe"
+          },
+          {
+            "difficulty_level": 3,
+            "path": "replay/boundaries/exp-000179-gptoss-tool_argument_correctness-L3-generated-capability-replicate--boundary.json",
+            "replay_id": "exp-000179-gptoss-tool_argument_correctness-L3-generated-capability-replicate--boundary",
+            "source_experiment_id": "exp-000179-gptoss-tool_argument_correctness-L3-generated-capability-replicate"
+          }
+        ]
+      },
+      "difficulty_level": 3,
+      "evidence_count": 2,
+      "failure_origin": "MODEL_FAILURE",
+      "failure_signature": "tool_argument_error",
+      "family_id": "tool_argument_correctness",
+      "primary_path": "replay/failures/exp-000177-gptoss-tool_argument_correctness-L3-generated-capability-probe.json",
+      "primary_replay_id": "exp-000177-gptoss-tool_argument_correctness-L3-generated-capability-probe",
+      "priority": 1,
+      "reason": "RAW_BOUNDARY_RETEST",
+      "recovery_level": null,
+      "result_class": "TOOL_FAILURE",
+      "supporting_replay_ids": [
+        "exp-000179-gptoss-tool_argument_correctness-L3-generated-capability-replicate"
+      ]
+    },
+    {
+      "difficulty_level": 0,
+      "evidence_count": 2,
+      "failure_origin": "MODEL_FAILURE",
+      "failure_signature": "verification_failure",
+      "family_id": "verification_critique",
+      "primary_path": "replay/failures/exp-000199-gptoss-verification_critique-L0-generated-capability-probe.json",
+      "primary_replay_id": "exp-000199-gptoss-verification_critique-L0-generated-capability-probe",
+      "priority": 1,
+      "reason": "RAW_BOUNDARY_RETEST",
+      "recovery_level": null,
+      "result_class": "FORMAT_FAILURE",
+      "supporting_replay_ids": [
+        "exp-000200-gptoss-verification_critique-L0-generated-capability-replicate"
+      ]
+    },
+    {
+      "difficulty_level": 2,
+      "evidence_count": 1,
+      "failure_origin": "MODEL_FAILURE",
+      "failure_signature": "cascading_error",
+      "family_id": "composite_agent_tasks",
+      "primary_path": "replay/failures/exp-000039-gptoss-composite_agent_tasks-L2-calibrated-v1-capability-probe.json",
+      "primary_replay_id": "exp-000039-gptoss-composite_agent_tasks-L2-calibrated-v1-capability-probe",
+      "priority": 3,
+      "reason": "MODEL_FAILURE_RETEST",
+      "recovery_level": null,
+      "result_class": "ANSWER_WRONG",
+      "supporting_replay_ids": []
+    },
+    {
+      "difficulty_level": 2,
+      "evidence_count": 1,
+      "failure_origin": "MODEL_FAILURE",
+      "failure_signature": null,
+      "family_id": "context_retrieval",
+      "primary_path": "replay/failures/exp-000047-gptoss-024-capability-probe.json",
+      "primary_replay_id": "exp-000047-gptoss-024-capability-probe",
+      "priority": 3,
+      "reason": "MODEL_FAILURE_RETEST",
+      "recovery_level": null,
+      "result_class": "CONTEXT_FAILURE",
+      "supporting_replay_ids": []
+    },
+    {
+      "difficulty_level": 2,
+      "evidence_count": 1,
+      "failure_origin": "MODEL_FAILURE",
+      "failure_signature": null,
+      "family_id": "decomposition",
+      "primary_path": "replay/failures/exp-000061-gptoss-decomposition-L2-calibrated-v1-capability-probe.json",
+      "primary_replay_id": "exp-000061-gptoss-decomposition-L2-calibrated-v1-capability-probe",
+      "priority": 3,
+      "reason": "MODEL_FAILURE_RETEST",
+      "recovery_level": null,
+      "result_class": "FORMAT_FAILURE",
+      "supporting_replay_ids": []
+    },
+    {
+      "difficulty_level": 2,
+      "evidence_count": 1,
+      "failure_origin": "MODEL_FAILURE",
+      "failure_signature": null,
+      "family_id": "extraction_transformation",
+      "primary_path": "replay/failures/exp-000069-gptoss-003-capability-probe.json",
+      "primary_replay_id": "exp-000069-gptoss-003-capability-probe",
+      "priority": 3,
+      "reason": "MODEL_FAILURE_RETEST",
+      "recovery_level": null,
+      "result_class": "FORMAT_FAILURE",
+      "supporting_replay_ids": []
+    },
+    {
+      "difficulty_level": 5,
+      "evidence_count": 1,
+      "failure_origin": "MODEL_FAILURE",
+      "failure_signature": "state_loss",
+      "family_id": "memory_compression_summary_fidelity",
+      "primary_path": "replay/failures/exp-000099-gptoss-memory_compression_summary_fidelity-L5-generated-capability-probe.json",
+      "primary_replay_id": "exp-000099-gptoss-memory_compression_summary_fidelity-L5-generated-capability-probe",
+      "priority": 3,
+      "reason": "MODEL_FAILURE_RETEST",
+      "recovery_level": null,
+      "result_class": "FORMAT_FAILURE",
+      "supporting_replay_ids": []
+    },
+    {
+      "difficulty_level": 2,
+      "evidence_count": 1,
+      "failure_origin": "MODEL_FAILURE",
+      "failure_signature": "assumption_error",
+      "family_id": "missing_information_handling",
+      "primary_path": "replay/failures/exp-000108-gptoss-missing_information_handling-L2-calibrated-v1-capability-probe.json",
+      "primary_replay_id": "exp-000108-gptoss-missing_information_handling-L2-calibrated-v1-capability-probe",
+      "priority": 3,
+      "reason": "MODEL_FAILURE_RETEST",
+      "recovery_level": null,
+      "result_class": "FORMAT_FAILURE",
+      "supporting_replay_ids": []
+    },
+    {
+      "difficulty_level": 5,
+      "evidence_count": 1,
+      "failure_origin": "MODEL_FAILURE",
+      "failure_signature": null,
+      "family_id": "temporal_reasoning",
+      "primary_path": "replay/failures/exp-000167-gptoss-temporal_reasoning-L5-generated-capability-probe.json",
+      "primary_replay_id": "exp-000167-gptoss-temporal_reasoning-L5-generated-capability-probe",
+      "priority": 3,
+      "reason": "MODEL_FAILURE_RETEST",
+      "recovery_level": null,
+      "result_class": "ANSWER_WRONG",
+      "supporting_replay_ids": []
+    },
+    {
+      "difficulty_level": 2,
+      "evidence_count": 1,
+      "failure_origin": "MODEL_FAILURE",
+      "failure_signature": "verification_failure",
+      "family_id": "test_generation_verification",
+      "primary_path": "replay/failures/exp-000172-gptoss-test_generation_verification-L2-calibrated-v1-capability-probe.json",
+      "primary_replay_id": "exp-000172-gptoss-test_generation_verification-L2-calibrated-v1-capability-probe",
+      "priority": 3,
+      "reason": "MODEL_FAILURE_RETEST",
+      "recovery_level": null,
+      "result_class": "FORMAT_FAILURE",
+      "supporting_replay_ids": []
+    },
+    {
+      "difficulty_level": 5,
+      "evidence_count": 1,
+      "failure_origin": "MODEL_FAILURE",
+      "failure_signature": "tool_argument_error",
+      "family_id": "tool_argument_correctness",
+      "primary_path": "replay/failures/exp-000176-gptoss-tool_argument_correctness-L5-generated-capability-probe.json",
+      "primary_replay_id": "exp-000176-gptoss-tool_argument_correctness-L5-generated-capability-probe",
+      "priority": 3,
+      "reason": "MODEL_FAILURE_RETEST",
+      "recovery_level": null,
+      "result_class": "TOOL_FAILURE",
+      "supporting_replay_ids": []
+    },
+    {
+      "difficulty_level": 2,
+      "evidence_count": 1,
+      "failure_origin": "MODEL_FAILURE",
+      "failure_signature": "verification_failure",
+      "family_id": "verification_critique",
+      "primary_path": "replay/failures/exp-000198-gptoss-verification_critique-L2-generated-capability-probe.json",
+      "primary_replay_id": "exp-000198-gptoss-verification_critique-L2-generated-capability-probe",
+      "priority": 3,
+      "reason": "MODEL_FAILURE_RETEST",
+      "recovery_level": null,
+      "result_class": "FORMAT_FAILURE",
+      "supporting_replay_ids": []
+    },
+    {
+      "difficulty_level": 8,
+      "evidence_count": 1,
+      "failure_origin": "MODEL_FAILURE",
+      "failure_signature": null,
+      "family_id": "algebra_quantitative_reasoning",
+      "primary_path": "replay/anomalies/exp-000008-gptoss-algebra_quantitative_reasoning-L8-generated-capability-probe.json",
+      "primary_replay_id": "exp-000008-gptoss-algebra_quantitative_reasoning-L8-generated-capability-probe",
+      "priority": 4,
+      "reason": "EVIDENCE_INTEGRITY_REPRODUCTION",
+      "recovery_level": null,
+      "result_class": "THINK_TRUNCATED",
+      "supporting_replay_ids": []
+    },
+    {
+      "difficulty_level": 10,
+      "evidence_count": 2,
+      "failure_origin": "MODEL_FAILURE",
+      "failure_signature": null,
+      "family_id": "algebra_quantitative_reasoning",
+      "primary_path": "replay/anomalies/exp-000010-gptoss-algebra_quantitative_reasoning-L10-generated-capability-probe.json",
+      "primary_replay_id": "exp-000010-gptoss-algebra_quantitative_reasoning-L10-generated-capability-probe",
+      "priority": 4,
+      "reason": "EVIDENCE_INTEGRITY_REPRODUCTION",
+      "recovery_level": null,
+      "result_class": "THINK_TRUNCATED",
+      "supporting_replay_ids": [
+        "exp-000011-gptoss-algebra_quantitative_reasoning-L10-generated-capability-probe"
+      ]
+    },
+    {
+      "difficulty_level": 0,
+      "evidence_count": 1,
+      "failure_origin": "MODEL_FAILURE",
+      "failure_signature": null,
+      "family_id": "context_retrieval",
+      "primary_path": "replay/anomalies/exp-000048-gptoss-context_retrieval-L0-generated-capability-probe.json",
+      "primary_replay_id": "exp-000048-gptoss-context_retrieval-L0-generated-capability-probe",
+      "priority": 4,
+      "reason": "EVIDENCE_INTEGRITY_REPRODUCTION",
+      "recovery_level": null,
+      "result_class": "THINK_TRUNCATED",
+      "supporting_replay_ids": []
+    },
+    {
+      "difficulty_level": 8,
+      "evidence_count": 1,
+      "failure_origin": "MODEL_FAILURE",
+      "failure_signature": null,
+      "family_id": "instruction_following_constraint_stacking",
+      "primary_path": "replay/anomalies/exp-000089-gptoss-instruction_following_constraint_stacking-L8-calibrated-v1-capability-probe.json",
+      "primary_replay_id": "exp-000089-gptoss-instruction_following_constraint_stacking-L8-calibrated-v1-capability-probe",
+      "priority": 4,
+      "reason": "EVIDENCE_INTEGRITY_REPRODUCTION",
+      "recovery_level": null,
+      "result_class": "THINK_TRUNCATED",
+      "supporting_replay_ids": []
+    },
+    {
+      "difficulty_level": 2,
+      "evidence_count": 1,
+      "failure_origin": "MODEL_FAILURE",
+      "failure_signature": null,
+      "family_id": "planning_optimization",
+      "primary_path": "replay/anomalies/exp-000121-gptoss-planning_optimization-L2-generated-capability-probe.json",
+      "primary_replay_id": "exp-000121-gptoss-planning_optimization-L2-generated-capability-probe",
+      "priority": 4,
+      "reason": "EVIDENCE_INTEGRITY_REPRODUCTION",
+      "recovery_level": null,
+      "result_class": "THINK_TRUNCATED",
+      "supporting_replay_ids": []
+    },
+    {
+      "difficulty_level": 5,
+      "evidence_count": 1,
+      "failure_origin": "MODEL_FAILURE",
+      "failure_signature": null,
+      "family_id": "planning_optimization",
+      "primary_path": "replay/anomalies/exp-000123-gptoss-planning_optimization-L5-generated-capability-probe.json",
+      "primary_replay_id": "exp-000123-gptoss-planning_optimization-L5-generated-capability-probe",
+      "priority": 4,
+      "reason": "EVIDENCE_INTEGRITY_REPRODUCTION",
+      "recovery_level": null,
+      "result_class": "THINK_TRUNCATED",
+      "supporting_replay_ids": []
+    },
+    {
+      "difficulty_level": 6,
+      "evidence_count": 1,
+      "failure_origin": "MODEL_FAILURE",
+      "failure_signature": null,
+      "family_id": "planning_optimization",
+      "primary_path": "replay/anomalies/exp-000127-gptoss-planning_optimization-L6-generated-capability-probe.json",
+      "primary_replay_id": "exp-000127-gptoss-planning_optimization-L6-generated-capability-probe",
+      "priority": 4,
+      "reason": "EVIDENCE_INTEGRITY_REPRODUCTION",
+      "recovery_level": null,
+      "result_class": "THINK_TRUNCATED",
+      "supporting_replay_ids": []
+    },
+    {
+      "difficulty_level": 7,
+      "evidence_count": 2,
+      "failure_origin": "MODEL_FAILURE",
+      "failure_signature": null,
+      "family_id": "planning_optimization",
+      "primary_path": "replay/anomalies/exp-000129-gptoss-planning_optimization-L7-generated-capability-probe.json",
+      "primary_replay_id": "exp-000129-gptoss-planning_optimization-L7-generated-capability-probe",
+      "priority": 4,
+      "reason": "EVIDENCE_INTEGRITY_REPRODUCTION",
+      "recovery_level": null,
+      "result_class": "THINK_TRUNCATED",
+      "supporting_replay_ids": [
+        "exp-000130-gptoss-planning_optimization-L7-generated-capability-probe"
+      ]
+    },
+    {
+      "difficulty_level": 8,
+      "evidence_count": 1,
+      "failure_origin": "MODEL_FAILURE",
+      "failure_signature": null,
+      "family_id": "planning_optimization",
+      "primary_path": "replay/anomalies/exp-000125-gptoss-planning_optimization-L8-generated-capability-probe.json",
+      "primary_replay_id": "exp-000125-gptoss-planning_optimization-L8-generated-capability-probe",
+      "priority": 4,
+      "reason": "EVIDENCE_INTEGRITY_REPRODUCTION",
+      "recovery_level": null,
+      "result_class": "THINK_TRUNCATED",
+      "supporting_replay_ids": []
+    },
+    {
+      "difficulty_level": 3,
+      "evidence_count": 1,
+      "failure_origin": "MODEL_FAILURE",
+      "failure_signature": null,
+      "family_id": "sibling_transfer_generalization",
+      "primary_path": "replay/anomalies/exp-000151-gptoss-sibling_transfer_generalization-L3-calibrated-v1-capability-probe.json",
+      "primary_replay_id": "exp-000151-gptoss-sibling_transfer_generalization-L3-calibrated-v1-capability-probe",
+      "priority": 4,
+      "reason": "EVIDENCE_INTEGRITY_REPRODUCTION",
+      "recovery_level": null,
+      "result_class": "THINK_TRUNCATED",
+      "supporting_replay_ids": []
+    },
+    {
+      "difficulty_level": 5,
+      "evidence_count": 1,
+      "failure_origin": "MODEL_FAILURE",
+      "failure_signature": null,
+      "family_id": "sibling_transfer_generalization",
+      "primary_path": "replay/anomalies/exp-000149-gptoss-sibling_transfer_generalization-L5-calibrated-v1-capability-probe.json",
+      "primary_replay_id": "exp-000149-gptoss-sibling_transfer_generalization-L5-calibrated-v1-capability-probe",
+      "priority": 4,
+      "reason": "EVIDENCE_INTEGRITY_REPRODUCTION",
+      "recovery_level": null,
+      "result_class": "THINK_TRUNCATED",
+      "supporting_replay_ids": []
+    },
+    {
+      "difficulty_level": 2,
+      "evidence_count": 1,
+      "failure_origin": "MODEL_FAILURE",
+      "failure_signature": null,
+      "family_id": "test_generation_verification",
+      "primary_path": "replay/anomalies/exp-000171-gptoss-test_generation_verification-L2-calibrated-v1-capability-probe.json",
+      "primary_replay_id": "exp-000171-gptoss-test_generation_verification-L2-calibrated-v1-capability-probe",
+      "priority": 4,
+      "reason": "EVIDENCE_INTEGRITY_REPRODUCTION",
+      "recovery_level": null,
+      "result_class": "THINK_TRUNCATED",
+      "supporting_replay_ids": []
+    },
+    {
+      "difficulty_level": 5,
+      "evidence_count": 2,
+      "failure_origin": "MODEL_FAILURE",
+      "failure_signature": null,
+      "family_id": "tool_selection",
+      "primary_path": "replay/failures/exp-000186-gptoss-tool_selection-L5-generated-capability-probe.json",
+      "primary_replay_id": "exp-000186-gptoss-tool_selection-L5-generated-capability-probe",
+      "priority": 4,
+      "reason": "EVIDENCE_INTEGRITY_REPRODUCTION",
+      "recovery_level": null,
+      "result_class": "NO_FINAL_ANSWER",
+      "supporting_replay_ids": [
+        "exp-000187-gptoss-tool_selection-L5-generated-capability-replicate"
+      ]
+    }
+  ]
+}

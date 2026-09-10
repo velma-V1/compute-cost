@@ -1,0 +1,5756 @@
+{
+  "benchmark_version": "qwen-characterization-v1",
+  "case": {
+    "category": "reasoning_math",
+    "difficulty_level": 3,
+    "expected": 200,
+    "id": "char-math-001",
+    "prompt": "A 240 GB dataset is reduced by 25 percent, then 20 GB is added. What is the final size in GB? Give the number.",
+    "scorer": "numeric",
+    "timeout_s": 120,
+    "tolerance": 0
+  },
+  "classification": {
+    "basis": "runtime completed and deterministic scorer failed",
+    "measurement_kind": "DERIVED",
+    "result_class": "ANSWER_WRONG",
+    "valid_for_capability": true
+  },
+  "created_at_utc": "2026-09-08T10:02:58.805768+00:00",
+  "evidence_key": "exp-000016-char-math-001-think-off-256",
+  "experiment": {
+    "changed_variable": "baseline",
+    "context_request": null,
+    "difficulty_level": 3,
+    "experiment_id": "exp-000016-char-math-001-think-off-256",
+    "generation_budget": 256,
+    "hypothesis": "establish thinking-off capability baseline",
+    "parent_experiment_id": null,
+    "prompt_variant": "base",
+    "recovery_level": null,
+    "seed": 42,
+    "task_family": "reasoning_math",
+    "task_id": "char-math-001",
+    "temperature": 0.0,
+    "thinking_mode": false
+  },
+  "generation": {
+    "http_status": 200,
+    "metrics": {
+      "eval_count": 4,
+      "eval_duration_ns": 1451541000,
+      "load_duration_ns": 3510700,
+      "prompt_eval_count": 47,
+      "prompt_eval_duration_ns": 1864908000,
+      "total_duration_ns": 3361246700
+    },
+    "normalized": {
+      "done": true,
+      "done_reason": "stop",
+      "text": "180",
+      "thinking": "",
+      "tool_calls": []
+    },
+    "ok": true,
+    "phase_metrics": {
+      "answer_chars": 3,
+      "answer_chunks": 3,
+      "answer_span_ns": 968875500,
+      "measurement_kind": "MEASURED",
+      "thinking_chars": 0,
+      "thinking_chunks": 0,
+      "thinking_span_ns": null,
+      "time_to_first_answer_ns": 1909792700,
+      "time_to_first_thinking_ns": null
+    },
+    "raw_response_b64": "eyJtb2RlbCI6InF3ZW4zLjU6MjdiLXE4XzAiLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0wOFQxMDowMjo1Ny4wOTc2NDY1WiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiIxIn0sImRvbmUiOmZhbHNlfQp7Im1vZGVsIjoicXdlbjMuNToyN2ItcThfMCIsImNyZWF0ZWRfYXQiOiIyMDI2LTA5LTA4VDEwOjAyOjU3LjU4Mjc0WiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiI4In0sImRvbmUiOmZhbHNlfQp7Im1vZGVsIjoicXdlbjMuNToyN2ItcThfMCIsImNyZWF0ZWRfYXQiOiIyMDI2LTA5LTA4VDEwOjAyOjU4LjA2NTUwODlaIiwibWVzc2FnZSI6eyJyb2xlIjoiYXNzaXN0YW50IiwiY29udGVudCI6IjAifSwiZG9uZSI6ZmFsc2V9CnsibW9kZWwiOiJxd2VuMy41OjI3Yi1xOF8wIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMDhUMTA6MDI6NTguNTUwMzA4NloiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiIn0sImRvbmUiOnRydWUsImRvbmVfcmVhc29uIjoic3RvcCIsInRvdGFsX2R1cmF0aW9uIjozMzYxMjQ2NzAwLCJsb2FkX2R1cmF0aW9uIjozNTEwNzAwLCJwcm9tcHRfZXZhbF9jb3VudCI6NDcsInByb21wdF9ldmFsX2R1cmF0aW9uIjoxODY0OTA4MDAwLCJldmFsX2NvdW50Ijo0LCJldmFsX2R1cmF0aW9uIjoxNDUxNTQxMDAwfQo=",
+    "request": {
+      "body_b64": "eyJtb2RlbCI6InF3ZW4zLjU6MjdiLXE4XzAiLCJtZXNzYWdlcyI6W3sicm9sZSI6InVzZXIiLCJjb250ZW50IjoiQSAyNDAgR0IgZGF0YXNldCBpcyByZWR1Y2VkIGJ5IDI1IHBlcmNlbnQsIHRoZW4gMjAgR0IgaXMgYWRkZWQuIFdoYXQgaXMgdGhlIGZpbmFsIHNpemUgaW4gR0I/IEdpdmUgdGhlIG51bWJlci4ifV0sInN0cmVhbSI6dHJ1ZSwib3B0aW9ucyI6eyJ0ZW1wZXJhdHVyZSI6MC4wLCJzZWVkIjo0MiwibnVtX3ByZWRpY3QiOjI1Nn0sInRoaW5rIjpmYWxzZX0=",
+      "body_text": "{\"model\":\"qwen3.5:27b-q8_0\",\"messages\":[{\"role\":\"user\",\"content\":\"A 240 GB dataset is reduced by 25 percent, then 20 GB is added. What is the final size in GB? Give the number.\"}],\"stream\":true,\"options\":{\"temperature\":0.0,\"seed\":42,\"num_predict\":256},\"think\":false}",
+      "method": "POST",
+      "started_at_utc": "2026-09-08T10:02:55.188410+00:00",
+      "started_monotonic_ns": 1169315987321600,
+      "stream": true,
+      "timeout_s": 120.0,
+      "url": "http://127.0.0.1:11434/api/chat"
+    },
+    "response_headers": {
+      "connection": "close",
+      "content-type": "application/x-ndjson",
+      "date": "Tue, 08 Sep 2026 10:02:57 GMT",
+      "transfer-encoding": "chunked"
+    },
+    "stream_events": [
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-08T10:02:57.0976465Z",
+          "done": false,
+          "message": {
+            "content": "1",
+            "role": "assistant"
+          },
+          "model": "qwen3.5:27b-q8_0"
+        },
+        "raw_b64": "eyJtb2RlbCI6InF3ZW4zLjU6MjdiLXE4XzAiLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0wOFQxMDowMjo1Ny4wOTc2NDY1WiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiIxIn0sImRvbmUiOmZhbHNlfQo=",
+        "raw_text": "{\"model\":\"qwen3.5:27b-q8_0\",\"created_at\":\"2026-09-08T10:02:57.0976465Z\",\"message\":{\"role\":\"assistant\",\"content\":\"1\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-08T10:02:57.098203+00:00",
+        "received_monotonic_ns": 1169317897114300,
+        "sequence": 0
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-08T10:02:57.58274Z",
+          "done": false,
+          "message": {
+            "content": "8",
+            "role": "assistant"
+          },
+          "model": "qwen3.5:27b-q8_0"
+        },
+        "raw_b64": "eyJtb2RlbCI6InF3ZW4zLjU6MjdiLXE4XzAiLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0wOFQxMDowMjo1Ny41ODI3NFoiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiOCJ9LCJkb25lIjpmYWxzZX0K",
+        "raw_text": "{\"model\":\"qwen3.5:27b-q8_0\",\"created_at\":\"2026-09-08T10:02:57.58274Z\",\"message\":{\"role\":\"assistant\",\"content\":\"8\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-08T10:02:57.583009+00:00",
+        "received_monotonic_ns": 1169318381921600,
+        "sequence": 1
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-08T10:02:58.0655089Z",
+          "done": false,
+          "message": {
+            "content": "0",
+            "role": "assistant"
+          },
+          "model": "qwen3.5:27b-q8_0"
+        },
+        "raw_b64": "eyJtb2RlbCI6InF3ZW4zLjU6MjdiLXE4XzAiLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0wOFQxMDowMjo1OC4wNjU1MDg5WiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiIwIn0sImRvbmUiOmZhbHNlfQo=",
+        "raw_text": "{\"model\":\"qwen3.5:27b-q8_0\",\"created_at\":\"2026-09-08T10:02:58.0655089Z\",\"message\":{\"role\":\"assistant\",\"content\":\"0\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-08T10:02:58.067079+00:00",
+        "received_monotonic_ns": 1169318865989800,
+        "sequence": 2
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-08T10:02:58.5503086Z",
+          "done": true,
+          "done_reason": "stop",
+          "eval_count": 4,
+          "eval_duration": 1451541000,
+          "load_duration": 3510700,
+          "message": {
+            "content": "",
+            "role": "assistant"
+          },
+          "model": "qwen3.5:27b-q8_0",
+          "prompt_eval_count": 47,
+          "prompt_eval_duration": 1864908000,
+          "total_duration": 3361246700
+        },
+        "raw_b64": "eyJtb2RlbCI6InF3ZW4zLjU6MjdiLXE4XzAiLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0wOFQxMDowMjo1OC41NTAzMDg2WiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiIifSwiZG9uZSI6dHJ1ZSwiZG9uZV9yZWFzb24iOiJzdG9wIiwidG90YWxfZHVyYXRpb24iOjMzNjEyNDY3MDAsImxvYWRfZHVyYXRpb24iOjM1MTA3MDAsInByb21wdF9ldmFsX2NvdW50Ijo0NywicHJvbXB0X2V2YWxfZHVyYXRpb24iOjE4NjQ5MDgwMDAsImV2YWxfY291bnQiOjQsImV2YWxfZHVyYXRpb24iOjE0NTE1NDEwMDB9Cg==",
+        "raw_text": "{\"model\":\"qwen3.5:27b-q8_0\",\"created_at\":\"2026-09-08T10:02:58.5503086Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\"},\"done\":true,\"done_reason\":\"stop\",\"total_duration\":3361246700,\"load_duration\":3510700,\"prompt_eval_count\":47,\"prompt_eval_duration\":1864908000,\"eval_count\":4,\"eval_duration\":1451541000}\n",
+        "received_at_utc": "2026-09-08T10:02:58.550686+00:00",
+        "received_monotonic_ns": 1169319349598000,
+        "sequence": 3
+      }
+    ],
+    "timing": {
+      "client_latency_ns": 3362547400,
+      "first_event_latency_ns": 1909792700,
+      "last_event_latency_ns": 3362276400
+    }
+  },
+  "invocation": {
+    "messages": [
+      {
+        "content": "A 240 GB dataset is reduced by 25 percent, then 20 GB is added. What is the final size in GB? Give the number.",
+        "role": "user"
+      }
+    ],
+    "model": "qwen3.5:27b-q8_0",
+    "options": {
+      "num_predict": 256,
+      "seed": 42,
+      "temperature": 0.0
+    },
+    "request_fields": {
+      "think": false
+    },
+    "stream": true
+  },
+  "model": "qwen3.5:27b-q8_0",
+  "resolved_config": {
+    "characterization": {
+      "boundary_repeats": 3,
+      "generation_budget_granularity": 32,
+      "initial_generation_budget": 256,
+      "max_experiments_per_task": 12,
+      "max_generation_budget": 2048,
+      "min_generation_budget": 32,
+      "think_off_generation_budget": 256
+    },
+    "cost": {
+      "electricity_configured": false,
+      "electricity_per_kwh": 0.0
+    },
+    "evidence": {
+      "retain_raw_collectors": true,
+      "retain_stream_chunks": true
+    },
+    "generation": {
+      "max_tokens": 256,
+      "seed": 42,
+      "temperature": 0.0
+    },
+    "limits": {
+      "consecutive_context_failures": 2,
+      "context_schedule": [
+        4096,
+        8192,
+        16384,
+        32768
+      ],
+      "host_ram_percent": 95.0,
+      "request_timeout_s": 120,
+      "sustained_iterations": 8,
+      "vram_percent": 98.0
+    },
+    "runtime": {
+      "endpoint": "http://127.0.0.1:11434"
+    },
+    "telemetry": {
+      "interval_s": 0.25,
+      "nvidia": true
+    }
+  },
+  "schema_version": 2,
+  "scoring": {
+    "checks": [
+      {
+        "actual": 180.0,
+        "expected": 200.0,
+        "name": "numeric_match",
+        "pass": false,
+        "tolerance": 0.0
+      }
+    ],
+    "evidence": {
+      "raw_response": "180"
+    },
+    "score": 0.0,
+    "status": "SCORED"
+  },
+  "stage": "characterize",
+  "telemetry_before_failure": [
+    {
+      "gpu": {
+        "availability": "available",
+        "devices": [
+          {
+            "driver_version": "610.62",
+            "extra_columns": [],
+            "fan_percent": 0.0,
+            "graphics_clock_mhz": 2505.0,
+            "index": 0,
+            "memory_clock_mhz": 10251.0,
+            "memory_free_mib": 509.0,
+            "memory_total_mib": 12282.0,
+            "memory_used_mib": 11489.0,
+            "name": "NVIDIA GeForce RTX 4070 SUPER",
+            "power_draw_w": 34.52,
+            "power_limit_w": 220.0,
+            "pstate": "P2",
+            "raw_columns": [
+              "0",
+              "[redacted-gpu-uuid]",
+              "NVIDIA GeForce RTX 4070 SUPER",
+              "610.62",
+              "0",
+              "12282",
+              "11489",
+              "509",
+              "40",
+              "34.52",
+              "220.00",
+              "2505",
+              "2505",
+              "10251",
+              "P2",
+              "0"
+            ],
+            "raw_line": "0, [redacted-gpu-uuid], NVIDIA GeForce RTX 4070 SUPER, 610.62, 0, 12282, 11489, 509, 40, 34.52, 220.00, 2505, 2505, 10251, P2, 0",
+            "sm_clock_mhz": 2505.0,
+            "temperature_c": 40.0,
+            "utilization_gpu_percent": 0.0,
+            "uuid": "[redacted-gpu-uuid]"
+          }
+        ]
+      },
+      "host": {
+        "cpu_frequency_mhz": 4201.0,
+        "cpu_percent": 63.6,
+        "cpu_percent_per_core": [
+          94.0,
+          83.7,
+          98.0,
+          98.0,
+          67.3,
+          34.7,
+          57.1,
+          46.9,
+          63.3,
+          59.2,
+          66.0,
+          73.5,
+          83.7,
+          10.2,
+          57.1,
+          24.5
+        ],
+        "disk_io": {
+          "read_bytes": 11596454297088,
+          "read_count": 21053256,
+          "read_time_ms": 85417,
+          "write_bytes": 1116374975488,
+          "write_count": 27873305,
+          "write_time_ms": 45245
+        },
+        "memory_available_bytes": 2091597824,
+        "memory_percent": 93.7,
+        "memory_total_bytes": 33462239232,
+        "memory_used_bytes": 31370641408
+      },
+      "monotonic_ns": 1169298706018900,
+      "nvidia_collector": {
+        "command": [
+          "nvidia-smi",
+          "--query-gpu=index,uuid,name,driver_version,utilization.gpu,memory.total,memory.used,memory.free,temperature.gpu,power.draw,power.limit,clocks.gr,clocks.sm,clocks.mem,pstate,fan.speed",
+          "--format=csv,noheader,nounits"
+        ],
+        "duration_ns": 399438300,
+        "error": null,
+        "returncode": 0,
+        "started_at_utc": "2026-09-08T10:02:37.908414+00:00",
+        "stderr_b64": "",
+        "stderr_text": "",
+        "stdout_b64": "MCwgW3JlZGFjdGVkLWdwdS11dWlkXSwgTlZJRElBIEdlRm9yY2UgUlRYIDQwNzAgU1VQRVIsIDYxMC42MiwgMCwgMTIyODIsIDExNDg5LCA1MDksIDQwLCAzNC41MiwgMjIwLjAwLCAyNTA1LCAyNTA1LCAxMDI1MSwgUDIsIDANCg==",
+        "stdout_text": "0, [redacted-gpu-uuid], NVIDIA GeForce RTX 4070 SUPER, 610.62, 0, 12282, 11489, 509, 40, 34.52, 220.00, 2505, 2505, 10251, P2, 0\r\n"
+      },
+      "process": {
+        "cpu_percent": 10.1,
+        "pid": 19756,
+        "rss_bytes": 137981952,
+        "vms_bytes": 122355712
+      },
+      "runtime_processes": [
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 19.828125,
+            "user_s": 24.859375
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\ollama app.exe",
+          "io": {
+            "other_bytes": 4272993913,
+            "other_count": 271945,
+            "read_bytes": 3117384718,
+            "read_count": 6868,
+            "write_bytes": 6270334127,
+            "write_count": 700
+          },
+          "name": "ollama app.exe",
+          "num_handles": 447,
+          "num_threads": 21,
+          "pid": 17200,
+          "rss_bytes": 41517056,
+          "vms_bytes": 65527808
+        },
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 735.515625,
+            "user_s": 706.890625
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\ollama.exe",
+          "io": {
+            "other_bytes": 135004051871,
+            "other_count": 56236985,
+            "read_bytes": 197084142246,
+            "read_count": 6768789,
+            "write_bytes": 137916154033,
+            "write_count": 8882389
+          },
+          "name": "ollama.exe",
+          "num_handles": 569,
+          "num_threads": 28,
+          "pid": 27860,
+          "rss_bytes": 72667136,
+          "vms_bytes": 146255872
+        },
+        {
+          "cpu_percent": 793.9,
+          "cpu_times": {
+            "system_s": 554.0,
+            "user_s": 10198.6875
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\lib\\ollama\\llama-server.exe",
+          "io": {
+            "other_bytes": 2083366,
+            "other_count": 120522,
+            "read_bytes": 29817395835,
+            "read_count": 33634,
+            "write_bytes": 99599,
+            "write_count": 1025
+          },
+          "name": "llama-server.exe",
+          "num_handles": 258,
+          "num_threads": 30,
+          "pid": 33760,
+          "rss_bytes": 20334051328,
+          "vms_bytes": 33566687232
+        }
+      ],
+      "stage": "background",
+      "timestamp_utc": "2026-09-08T10:02:37.907053+00:00",
+      "total_gpu_power_w": 34.52
+    },
+    {
+      "gpu": {
+        "availability": "available",
+        "devices": [
+          {
+            "driver_version": "610.62",
+            "extra_columns": [],
+            "fan_percent": 0.0,
+            "graphics_clock_mhz": 2505.0,
+            "index": 0,
+            "memory_clock_mhz": 10251.0,
+            "memory_free_mib": 509.0,
+            "memory_total_mib": 12282.0,
+            "memory_used_mib": 11489.0,
+            "name": "NVIDIA GeForce RTX 4070 SUPER",
+            "power_draw_w": 37.93,
+            "power_limit_w": 220.0,
+            "pstate": "P2",
+            "raw_columns": [
+              "0",
+              "[redacted-gpu-uuid]",
+              "NVIDIA GeForce RTX 4070 SUPER",
+              "610.62",
+              "2",
+              "12282",
+              "11489",
+              "509",
+              "41",
+              "37.93",
+              "220.00",
+              "2505",
+              "2505",
+              "10251",
+              "P2",
+              "0"
+            ],
+            "raw_line": "0, [redacted-gpu-uuid], NVIDIA GeForce RTX 4070 SUPER, 610.62, 2, 12282, 11489, 509, 41, 37.93, 220.00, 2505, 2505, 10251, P2, 0",
+            "sm_clock_mhz": 2505.0,
+            "temperature_c": 41.0,
+            "utilization_gpu_percent": 2.0,
+            "uuid": "[redacted-gpu-uuid]"
+          }
+        ]
+      },
+      "host": {
+        "cpu_frequency_mhz": 4201.0,
+        "cpu_percent": 64.2,
+        "cpu_percent_per_core": [
+          87.2,
+          95.7,
+          93.6,
+          91.5,
+          51.1,
+          53.2,
+          48.9,
+          55.3,
+          34.0,
+          80.9,
+          66.0,
+          70.2,
+          85.1,
+          18.4,
+          59.6,
+          38.3
+        ],
+        "disk_io": {
+          "read_bytes": 11596454297088,
+          "read_count": 21053256,
+          "read_time_ms": 85417,
+          "write_bytes": 1116375254016,
+          "write_count": 27873316,
+          "write_time_ms": 45245
+        },
+        "memory_available_bytes": 2094415872,
+        "memory_percent": 93.7,
+        "memory_total_bytes": 33462239232,
+        "memory_used_bytes": 31367823360
+      },
+      "monotonic_ns": 1169299451590900,
+      "nvidia_collector": {
+        "command": [
+          "nvidia-smi",
+          "--query-gpu=index,uuid,name,driver_version,utilization.gpu,memory.total,memory.used,memory.free,temperature.gpu,power.draw,power.limit,clocks.gr,clocks.sm,clocks.mem,pstate,fan.speed",
+          "--format=csv,noheader,nounits"
+        ],
+        "duration_ns": 388199500,
+        "error": null,
+        "returncode": 0,
+        "started_at_utc": "2026-09-08T10:02:38.654201+00:00",
+        "stderr_b64": "",
+        "stderr_text": "",
+        "stdout_b64": "MCwgW3JlZGFjdGVkLWdwdS11dWlkXSwgTlZJRElBIEdlRm9yY2UgUlRYIDQwNzAgU1VQRVIsIDYxMC42MiwgMiwgMTIyODIsIDExNDg5LCA1MDksIDQxLCAzNy45MywgMjIwLjAwLCAyNTA1LCAyNTA1LCAxMDI1MSwgUDIsIDANCg==",
+        "stdout_text": "0, [redacted-gpu-uuid], NVIDIA GeForce RTX 4070 SUPER, 610.62, 2, 12282, 11489, 509, 41, 37.93, 220.00, 2505, 2505, 10251, P2, 0\r\n"
+      },
+      "process": {
+        "cpu_percent": 17.0,
+        "pid": 19756,
+        "rss_bytes": 137277440,
+        "vms_bytes": 121364480
+      },
+      "runtime_processes": [
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 19.828125,
+            "user_s": 24.859375
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\ollama app.exe",
+          "io": {
+            "other_bytes": 4272993913,
+            "other_count": 271945,
+            "read_bytes": 3117384718,
+            "read_count": 6868,
+            "write_bytes": 6270334127,
+            "write_count": 700
+          },
+          "name": "ollama app.exe",
+          "num_handles": 447,
+          "num_threads": 21,
+          "pid": 17200,
+          "rss_bytes": 41517056,
+          "vms_bytes": 65527808
+        },
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 735.515625,
+            "user_s": 706.890625
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\ollama.exe",
+          "io": {
+            "other_bytes": 135004052125,
+            "other_count": 56236987,
+            "read_bytes": 197084142338,
+            "read_count": 6768790,
+            "write_bytes": 137916154125,
+            "write_count": 8882390
+          },
+          "name": "ollama.exe",
+          "num_handles": 569,
+          "num_threads": 28,
+          "pid": 27860,
+          "rss_bytes": 72667136,
+          "vms_bytes": 146255872
+        },
+        {
+          "cpu_percent": 800.2,
+          "cpu_times": {
+            "system_s": 554.140625,
+            "user_s": 10204.46875
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\lib\\ollama\\llama-server.exe",
+          "io": {
+            "other_bytes": 2084358,
+            "other_count": 120580,
+            "read_bytes": 29817395835,
+            "read_count": 33634,
+            "write_bytes": 99691,
+            "write_count": 1026
+          },
+          "name": "llama-server.exe",
+          "num_handles": 258,
+          "num_threads": 30,
+          "pid": 33760,
+          "rss_bytes": 20334051328,
+          "vms_bytes": 33566687232
+        }
+      ],
+      "stage": "background",
+      "timestamp_utc": "2026-09-08T10:02:38.652622+00:00",
+      "total_gpu_power_w": 37.93
+    },
+    {
+      "gpu": {
+        "availability": "available",
+        "devices": [
+          {
+            "driver_version": "610.62",
+            "extra_columns": [],
+            "fan_percent": 0.0,
+            "graphics_clock_mhz": 1305.0,
+            "index": 0,
+            "memory_clock_mhz": 5001.0,
+            "memory_free_mib": 483.0,
+            "memory_total_mib": 12282.0,
+            "memory_used_mib": 11515.0,
+            "name": "NVIDIA GeForce RTX 4070 SUPER",
+            "power_draw_w": 39.72,
+            "power_limit_w": 220.0,
+            "pstate": "P3",
+            "raw_columns": [
+              "0",
+              "[redacted-gpu-uuid]",
+              "NVIDIA GeForce RTX 4070 SUPER",
+              "610.62",
+              "5",
+              "12282",
+              "11515",
+              "483",
+              "40",
+              "39.72",
+              "220.00",
+              "1305",
+              "1305",
+              "5001",
+              "P3",
+              "0"
+            ],
+            "raw_line": "0, [redacted-gpu-uuid], NVIDIA GeForce RTX 4070 SUPER, 610.62, 5, 12282, 11515, 483, 40, 39.72, 220.00, 1305, 1305, 5001, P3, 0",
+            "sm_clock_mhz": 1305.0,
+            "temperature_c": 40.0,
+            "utilization_gpu_percent": 5.0,
+            "uuid": "[redacted-gpu-uuid]"
+          }
+        ]
+      },
+      "host": {
+        "cpu_frequency_mhz": 4201.0,
+        "cpu_percent": 75.9,
+        "cpu_percent_per_core": [
+          94.0,
+          95.7,
+          89.4,
+          95.8,
+          68.1,
+          66.0,
+          53.2,
+          76.6,
+          76.6,
+          68.1,
+          83.3,
+          85.1,
+          80.9,
+          46.8,
+          68.1,
+          64.6
+        ],
+        "disk_io": {
+          "read_bytes": 11596454567424,
+          "read_count": 21053262,
+          "read_time_ms": 85417,
+          "write_bytes": 1116375368704,
+          "write_count": 27873326,
+          "write_time_ms": 45245
+        },
+        "memory_available_bytes": 2090037248,
+        "memory_percent": 93.8,
+        "memory_total_bytes": 33462239232,
+        "memory_used_bytes": 31372201984
+      },
+      "monotonic_ns": 1169300212672000,
+      "nvidia_collector": {
+        "command": [
+          "nvidia-smi",
+          "--query-gpu=index,uuid,name,driver_version,utilization.gpu,memory.total,memory.used,memory.free,temperature.gpu,power.draw,power.limit,clocks.gr,clocks.sm,clocks.mem,pstate,fan.speed",
+          "--format=csv,noheader,nounits"
+        ],
+        "duration_ns": 358354200,
+        "error": null,
+        "returncode": 0,
+        "started_at_utc": "2026-09-08T10:02:39.414461+00:00",
+        "stderr_b64": "",
+        "stderr_text": "",
+        "stdout_b64": "MCwgW3JlZGFjdGVkLWdwdS11dWlkXSwgTlZJRElBIEdlRm9yY2UgUlRYIDQwNzAgU1VQRVIsIDYxMC42MiwgNSwgMTIyODIsIDExNTE1LCA0ODMsIDQwLCAzOS43MiwgMjIwLjAwLCAxMzA1LCAxMzA1LCA1MDAxLCBQMywgMA0K",
+        "stdout_text": "0, [redacted-gpu-uuid], NVIDIA GeForce RTX 4070 SUPER, 610.62, 5, 12282, 11515, 483, 40, 39.72, 220.00, 1305, 1305, 5001, P3, 0\r\n"
+      },
+      "process": {
+        "cpu_percent": 10.7,
+        "pid": 19756,
+        "rss_bytes": 138162176,
+        "vms_bytes": 122339328
+      },
+      "runtime_processes": [
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 19.828125,
+            "user_s": 24.859375
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\ollama app.exe",
+          "io": {
+            "other_bytes": 4272993913,
+            "other_count": 271945,
+            "read_bytes": 3117384718,
+            "read_count": 6868,
+            "write_bytes": 6270334127,
+            "write_count": 700
+          },
+          "name": "ollama app.exe",
+          "num_handles": 447,
+          "num_threads": 21,
+          "pid": 17200,
+          "rss_bytes": 41517056,
+          "vms_bytes": 65527808
+        },
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 735.515625,
+            "user_s": 706.890625
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\ollama.exe",
+          "io": {
+            "other_bytes": 135004052382,
+            "other_count": 56236989,
+            "read_bytes": 197084142338,
+            "read_count": 6768790,
+            "write_bytes": 137916154125,
+            "write_count": 8882390
+          },
+          "name": "ollama.exe",
+          "num_handles": 569,
+          "num_threads": 28,
+          "pid": 27860,
+          "rss_bytes": 72667136,
+          "vms_bytes": 146255872
+        },
+        {
+          "cpu_percent": 773.9,
+          "cpu_times": {
+            "system_s": 554.328125,
+            "user_s": 10209.890625
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\lib\\ollama\\llama-server.exe",
+          "io": {
+            "other_bytes": 2085446,
+            "other_count": 120644,
+            "read_bytes": 29817395835,
+            "read_count": 33634,
+            "write_bytes": 99691,
+            "write_count": 1026
+          },
+          "name": "llama-server.exe",
+          "num_handles": 258,
+          "num_threads": 30,
+          "pid": 33760,
+          "rss_bytes": 20334051328,
+          "vms_bytes": 33566687232
+        }
+      ],
+      "stage": "background",
+      "timestamp_utc": "2026-09-08T10:02:39.413706+00:00",
+      "total_gpu_power_w": 39.72
+    },
+    {
+      "gpu": {
+        "availability": "available",
+        "devices": [
+          {
+            "driver_version": "610.62",
+            "extra_columns": [],
+            "fan_percent": 0.0,
+            "graphics_clock_mhz": 1170.0,
+            "index": 0,
+            "memory_clock_mhz": 5001.0,
+            "memory_free_mib": 483.0,
+            "memory_total_mib": 12282.0,
+            "memory_used_mib": 11515.0,
+            "name": "NVIDIA GeForce RTX 4070 SUPER",
+            "power_draw_w": 32.92,
+            "power_limit_w": 220.0,
+            "pstate": "P3",
+            "raw_columns": [
+              "0",
+              "[redacted-gpu-uuid]",
+              "NVIDIA GeForce RTX 4070 SUPER",
+              "610.62",
+              "5",
+              "12282",
+              "11515",
+              "483",
+              "40",
+              "32.92",
+              "220.00",
+              "1170",
+              "1170",
+              "5001",
+              "P3",
+              "0"
+            ],
+            "raw_line": "0, [redacted-gpu-uuid], NVIDIA GeForce RTX 4070 SUPER, 610.62, 5, 12282, 11515, 483, 40, 32.92, 220.00, 1170, 1170, 5001, P3, 0",
+            "sm_clock_mhz": 1170.0,
+            "temperature_c": 40.0,
+            "utilization_gpu_percent": 5.0,
+            "uuid": "[redacted-gpu-uuid]"
+          }
+        ]
+      },
+      "host": {
+        "cpu_frequency_mhz": 4201.0,
+        "cpu_percent": 69.5,
+        "cpu_percent_per_core": [
+          100.0,
+          98.1,
+          100.0,
+          98.1,
+          57.7,
+          55.8,
+          63.5,
+          48.1,
+          75.0,
+          50.0,
+          80.8,
+          78.8,
+          82.7,
+          17.3,
+          51.9,
+          51.9
+        ],
+        "disk_io": {
+          "read_bytes": 11596454764032,
+          "read_count": 21053265,
+          "read_time_ms": 85417,
+          "write_bytes": 1116375368704,
+          "write_count": 27873326,
+          "write_time_ms": 45245
+        },
+        "memory_available_bytes": 2087350272,
+        "memory_percent": 93.8,
+        "memory_total_bytes": 33462239232,
+        "memory_used_bytes": 31374888960
+      },
+      "monotonic_ns": 1169300946069800,
+      "nvidia_collector": {
+        "command": [
+          "nvidia-smi",
+          "--query-gpu=index,uuid,name,driver_version,utilization.gpu,memory.total,memory.used,memory.free,temperature.gpu,power.draw,power.limit,clocks.gr,clocks.sm,clocks.mem,pstate,fan.speed",
+          "--format=csv,noheader,nounits"
+        ],
+        "duration_ns": 435335400,
+        "error": null,
+        "returncode": 0,
+        "started_at_utc": "2026-09-08T10:02:40.147616+00:00",
+        "stderr_b64": "",
+        "stderr_text": "",
+        "stdout_b64": "MCwgW3JlZGFjdGVkLWdwdS11dWlkXSwgTlZJRElBIEdlRm9yY2UgUlRYIDQwNzAgU1VQRVIsIDYxMC42MiwgNSwgMTIyODIsIDExNTE1LCA0ODMsIDQwLCAzMi45MiwgMjIwLjAwLCAxMTcwLCAxMTcwLCA1MDAxLCBQMywgMA0K",
+        "stdout_text": "0, [redacted-gpu-uuid], NVIDIA GeForce RTX 4070 SUPER, 610.62, 5, 12282, 11515, 483, 40, 32.92, 220.00, 1170, 1170, 5001, P3, 0\r\n"
+      },
+      "process": {
+        "cpu_percent": 11.6,
+        "pid": 19756,
+        "rss_bytes": 138211328,
+        "vms_bytes": 122339328
+      },
+      "runtime_processes": [
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 19.828125,
+            "user_s": 24.859375
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\ollama app.exe",
+          "io": {
+            "other_bytes": 4272993913,
+            "other_count": 271945,
+            "read_bytes": 3117384718,
+            "read_count": 6868,
+            "write_bytes": 6270334127,
+            "write_count": 700
+          },
+          "name": "ollama app.exe",
+          "num_handles": 447,
+          "num_threads": 21,
+          "pid": 17200,
+          "rss_bytes": 41517056,
+          "vms_bytes": 65527808
+        },
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 735.515625,
+            "user_s": 706.890625
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\ollama.exe",
+          "io": {
+            "other_bytes": 135004052507,
+            "other_count": 56236990,
+            "read_bytes": 197084142338,
+            "read_count": 6768790,
+            "write_bytes": 137916154125,
+            "write_count": 8882390
+          },
+          "name": "ollama.exe",
+          "num_handles": 569,
+          "num_threads": 28,
+          "pid": 27860,
+          "rss_bytes": 72667136,
+          "vms_bytes": 146255872
+        },
+        {
+          "cpu_percent": 794.7,
+          "cpu_times": {
+            "system_s": 554.40625,
+            "user_s": 10216.0
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\lib\\ollama\\llama-server.exe",
+          "io": {
+            "other_bytes": 2086486,
+            "other_count": 120707,
+            "read_bytes": 29817395835,
+            "read_count": 33634,
+            "write_bytes": 99691,
+            "write_count": 1026
+          },
+          "name": "llama-server.exe",
+          "num_handles": 258,
+          "num_threads": 30,
+          "pid": 33760,
+          "rss_bytes": 20334051328,
+          "vms_bytes": 33566687232
+        }
+      ],
+      "stage": "background",
+      "timestamp_utc": "2026-09-08T10:02:40.147126+00:00",
+      "total_gpu_power_w": 32.92
+    },
+    {
+      "gpu": {
+        "availability": "available",
+        "devices": [
+          {
+            "driver_version": "610.62",
+            "extra_columns": [],
+            "fan_percent": 0.0,
+            "graphics_clock_mhz": 780.0,
+            "index": 0,
+            "memory_clock_mhz": 5001.0,
+            "memory_free_mib": 483.0,
+            "memory_total_mib": 12282.0,
+            "memory_used_mib": 11515.0,
+            "name": "NVIDIA GeForce RTX 4070 SUPER",
+            "power_draw_w": 26.14,
+            "power_limit_w": 220.0,
+            "pstate": "P3",
+            "raw_columns": [
+              "0",
+              "[redacted-gpu-uuid]",
+              "NVIDIA GeForce RTX 4070 SUPER",
+              "610.62",
+              "0",
+              "12282",
+              "11515",
+              "483",
+              "40",
+              "26.14",
+              "220.00",
+              "780",
+              "780",
+              "5001",
+              "P3",
+              "0"
+            ],
+            "raw_line": "0, [redacted-gpu-uuid], NVIDIA GeForce RTX 4070 SUPER, 610.62, 0, 12282, 11515, 483, 40, 26.14, 220.00, 780, 780, 5001, P3, 0",
+            "sm_clock_mhz": 780.0,
+            "temperature_c": 40.0,
+            "utilization_gpu_percent": 0.0,
+            "uuid": "[redacted-gpu-uuid]"
+          }
+        ]
+      },
+      "host": {
+        "cpu_frequency_mhz": 4201.0,
+        "cpu_percent": 65.0,
+        "cpu_percent_per_core": [
+          89.1,
+          95.5,
+          100.0,
+          93.2,
+          60.0,
+          50.0,
+          31.8,
+          72.7,
+          36.4,
+          77.3,
+          52.3,
+          80.0,
+          75.0,
+          31.1,
+          29.5,
+          65.9
+        ],
+        "disk_io": {
+          "read_bytes": 11596454764032,
+          "read_count": 21053265,
+          "read_time_ms": 85417,
+          "write_bytes": 1116375507968,
+          "write_count": 27873332,
+          "write_time_ms": 45245
+        },
+        "memory_available_bytes": 2090356736,
+        "memory_percent": 93.8,
+        "memory_total_bytes": 33462239232,
+        "memory_used_bytes": 31371882496
+      },
+      "monotonic_ns": 1169301675510800,
+      "nvidia_collector": {
+        "command": [
+          "nvidia-smi",
+          "--query-gpu=index,uuid,name,driver_version,utilization.gpu,memory.total,memory.used,memory.free,temperature.gpu,power.draw,power.limit,clocks.gr,clocks.sm,clocks.mem,pstate,fan.speed",
+          "--format=csv,noheader,nounits"
+        ],
+        "duration_ns": 391296800,
+        "error": null,
+        "returncode": 0,
+        "started_at_utc": "2026-09-08T10:02:40.877397+00:00",
+        "stderr_b64": "",
+        "stderr_text": "",
+        "stdout_b64": "MCwgW3JlZGFjdGVkLWdwdS11dWlkXSwgTlZJRElBIEdlRm9yY2UgUlRYIDQwNzAgU1VQRVIsIDYxMC42MiwgMCwgMTIyODIsIDExNTE1LCA0ODMsIDQwLCAyNi4xNCwgMjIwLjAwLCA3ODAsIDc4MCwgNTAwMSwgUDMsIDANCg==",
+        "stdout_text": "0, [redacted-gpu-uuid], NVIDIA GeForce RTX 4070 SUPER, 610.62, 0, 12282, 11515, 483, 40, 26.14, 220.00, 780, 780, 5001, P3, 0\r\n"
+      },
+      "process": {
+        "cpu_percent": 4.6,
+        "pid": 19756,
+        "rss_bytes": 136949760,
+        "vms_bytes": 121032704
+      },
+      "runtime_processes": [
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 19.828125,
+            "user_s": 24.859375
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\ollama app.exe",
+          "io": {
+            "other_bytes": 4272993913,
+            "other_count": 271945,
+            "read_bytes": 3117384718,
+            "read_count": 6868,
+            "write_bytes": 6270334127,
+            "write_count": 700
+          },
+          "name": "ollama app.exe",
+          "num_handles": 447,
+          "num_threads": 21,
+          "pid": 17200,
+          "rss_bytes": 41517056,
+          "vms_bytes": 65527808
+        },
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 735.515625,
+            "user_s": 706.890625
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\ollama.exe",
+          "io": {
+            "other_bytes": 135004052758,
+            "other_count": 56236992,
+            "read_bytes": 197084142338,
+            "read_count": 6768790,
+            "write_bytes": 137916154125,
+            "write_count": 8882390
+          },
+          "name": "ollama.exe",
+          "num_handles": 569,
+          "num_threads": 28,
+          "pid": 27860,
+          "rss_bytes": 72667136,
+          "vms_bytes": 146255872
+        },
+        {
+          "cpu_percent": 792.3,
+          "cpu_times": {
+            "system_s": 554.6875,
+            "user_s": 10221.40625
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\lib\\ollama\\llama-server.exe",
+          "io": {
+            "other_bytes": 2087494,
+            "other_count": 120766,
+            "read_bytes": 29817395835,
+            "read_count": 33634,
+            "write_bytes": 99691,
+            "write_count": 1026
+          },
+          "name": "llama-server.exe",
+          "num_handles": 258,
+          "num_threads": 30,
+          "pid": 33760,
+          "rss_bytes": 20334051328,
+          "vms_bytes": 33566687232
+        }
+      ],
+      "stage": "background",
+      "timestamp_utc": "2026-09-08T10:02:40.876556+00:00",
+      "total_gpu_power_w": 26.14
+    },
+    {
+      "gpu": {
+        "availability": "available",
+        "devices": [
+          {
+            "driver_version": "610.62",
+            "extra_columns": [],
+            "fan_percent": 0.0,
+            "graphics_clock_mhz": 690.0,
+            "index": 0,
+            "memory_clock_mhz": 5001.0,
+            "memory_free_mib": 486.0,
+            "memory_total_mib": 12282.0,
+            "memory_used_mib": 11512.0,
+            "name": "NVIDIA GeForce RTX 4070 SUPER",
+            "power_draw_w": 25.84,
+            "power_limit_w": 220.0,
+            "pstate": "P3",
+            "raw_columns": [
+              "0",
+              "[redacted-gpu-uuid]",
+              "NVIDIA GeForce RTX 4070 SUPER",
+              "610.62",
+              "2",
+              "12282",
+              "11512",
+              "486",
+              "41",
+              "25.84",
+              "220.00",
+              "690",
+              "690",
+              "5001",
+              "P3",
+              "0"
+            ],
+            "raw_line": "0, [redacted-gpu-uuid], NVIDIA GeForce RTX 4070 SUPER, 610.62, 2, 12282, 11512, 486, 41, 25.84, 220.00, 690, 690, 5001, P3, 0",
+            "sm_clock_mhz": 690.0,
+            "temperature_c": 41.0,
+            "utilization_gpu_percent": 2.0,
+            "uuid": "[redacted-gpu-uuid]"
+          }
+        ]
+      },
+      "host": {
+        "cpu_frequency_mhz": 4201.0,
+        "cpu_percent": 66.3,
+        "cpu_percent_per_core": [
+          89.1,
+          91.1,
+          93.3,
+          95.6,
+          64.4,
+          51.1,
+          44.4,
+          66.7,
+          57.8,
+          75.6,
+          77.8,
+          78.3,
+          68.9,
+          28.9,
+          17.8,
+          57.8
+        ],
+        "disk_io": {
+          "read_bytes": 11596455240192,
+          "read_count": 21053283,
+          "read_time_ms": 85417,
+          "write_bytes": 1116375582720,
+          "write_count": 27873341,
+          "write_time_ms": 45245
+        },
+        "memory_available_bytes": 2090532864,
+        "memory_percent": 93.8,
+        "memory_total_bytes": 33462239232,
+        "memory_used_bytes": 31371706368
+      },
+      "monotonic_ns": 1169302427978900,
+      "nvidia_collector": {
+        "command": [
+          "nvidia-smi",
+          "--query-gpu=index,uuid,name,driver_version,utilization.gpu,memory.total,memory.used,memory.free,temperature.gpu,power.draw,power.limit,clocks.gr,clocks.sm,clocks.mem,pstate,fan.speed",
+          "--format=csv,noheader,nounits"
+        ],
+        "duration_ns": 340841500,
+        "error": null,
+        "returncode": 0,
+        "started_at_utc": "2026-09-08T10:02:41.630013+00:00",
+        "stderr_b64": "",
+        "stderr_text": "",
+        "stdout_b64": "MCwgW3JlZGFjdGVkLWdwdS11dWlkXSwgTlZJRElBIEdlRm9yY2UgUlRYIDQwNzAgU1VQRVIsIDYxMC42MiwgMiwgMTIyODIsIDExNTEyLCA0ODYsIDQxLCAyNS44NCwgMjIwLjAwLCA2OTAsIDY5MCwgNTAwMSwgUDMsIDANCg==",
+        "stdout_text": "0, [redacted-gpu-uuid], NVIDIA GeForce RTX 4070 SUPER, 610.62, 2, 12282, 11512, 486, 41, 25.84, 220.00, 690, 690, 5001, P3, 0\r\n"
+      },
+      "process": {
+        "cpu_percent": 11.1,
+        "pid": 19756,
+        "rss_bytes": 137850880,
+        "vms_bytes": 122060800
+      },
+      "runtime_processes": [
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 19.828125,
+            "user_s": 24.859375
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\ollama app.exe",
+          "io": {
+            "other_bytes": 4272993913,
+            "other_count": 271945,
+            "read_bytes": 3117384718,
+            "read_count": 6868,
+            "write_bytes": 6270334127,
+            "write_count": 700
+          },
+          "name": "ollama app.exe",
+          "num_handles": 447,
+          "num_threads": 21,
+          "pid": 17200,
+          "rss_bytes": 41517056,
+          "vms_bytes": 65527808
+        },
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 735.515625,
+            "user_s": 706.890625
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\ollama.exe",
+          "io": {
+            "other_bytes": 135004053010,
+            "other_count": 56236994,
+            "read_bytes": 197084142430,
+            "read_count": 6768791,
+            "write_bytes": 137916154217,
+            "write_count": 8882391
+          },
+          "name": "ollama.exe",
+          "num_handles": 569,
+          "num_threads": 28,
+          "pid": 27860,
+          "rss_bytes": 72667136,
+          "vms_bytes": 146255872
+        },
+        {
+          "cpu_percent": 799.5,
+          "cpu_times": {
+            "system_s": 554.890625,
+            "user_s": 10226.796875
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\lib\\ollama\\llama-server.exe",
+          "io": {
+            "other_bytes": 2088502,
+            "other_count": 120825,
+            "read_bytes": 29817395835,
+            "read_count": 33634,
+            "write_bytes": 99783,
+            "write_count": 1027
+          },
+          "name": "llama-server.exe",
+          "num_handles": 258,
+          "num_threads": 30,
+          "pid": 33760,
+          "rss_bytes": 20334051328,
+          "vms_bytes": 33566687232
+        }
+      ],
+      "stage": "background",
+      "timestamp_utc": "2026-09-08T10:02:41.629020+00:00",
+      "total_gpu_power_w": 25.84
+    },
+    {
+      "gpu": {
+        "availability": "available",
+        "devices": [
+          {
+            "driver_version": "610.62",
+            "extra_columns": [],
+            "fan_percent": 0.0,
+            "graphics_clock_mhz": 495.0,
+            "index": 0,
+            "memory_clock_mhz": 5001.0,
+            "memory_free_mib": 486.0,
+            "memory_total_mib": 12282.0,
+            "memory_used_mib": 11512.0,
+            "name": "NVIDIA GeForce RTX 4070 SUPER",
+            "power_draw_w": 26.45,
+            "power_limit_w": 220.0,
+            "pstate": "P3",
+            "raw_columns": [
+              "0",
+              "[redacted-gpu-uuid]",
+              "NVIDIA GeForce RTX 4070 SUPER",
+              "610.62",
+              "26",
+              "12282",
+              "11512",
+              "486",
+              "40",
+              "26.45",
+              "220.00",
+              "495",
+              "495",
+              "5001",
+              "P3",
+              "0"
+            ],
+            "raw_line": "0, [redacted-gpu-uuid], NVIDIA GeForce RTX 4070 SUPER, 610.62, 26, 12282, 11512, 486, 40, 26.45, 220.00, 495, 495, 5001, P3, 0",
+            "sm_clock_mhz": 495.0,
+            "temperature_c": 40.0,
+            "utilization_gpu_percent": 26.0,
+            "uuid": "[redacted-gpu-uuid]"
+          }
+        ]
+      },
+      "host": {
+        "cpu_frequency_mhz": 4201.0,
+        "cpu_percent": 66.0,
+        "cpu_percent_per_core": [
+          98.0,
+          95.8,
+          95.8,
+          95.8,
+          52.1,
+          66.7,
+          52.1,
+          56.2,
+          42.9,
+          72.9,
+          71.4,
+          75.0,
+          79.2,
+          14.6,
+          37.5,
+          50.0
+        ],
+        "disk_io": {
+          "read_bytes": 11596455523840,
+          "read_count": 21053290,
+          "read_time_ms": 85417,
+          "write_bytes": 1116375808000,
+          "write_count": 27873356,
+          "write_time_ms": 45245
+        },
+        "memory_available_bytes": 2086060032,
+        "memory_percent": 93.8,
+        "memory_total_bytes": 33462239232,
+        "memory_used_bytes": 31376179200
+      },
+      "monotonic_ns": 1169303135268200,
+      "nvidia_collector": {
+        "command": [
+          "nvidia-smi",
+          "--query-gpu=index,uuid,name,driver_version,utilization.gpu,memory.total,memory.used,memory.free,temperature.gpu,power.draw,power.limit,clocks.gr,clocks.sm,clocks.mem,pstate,fan.speed",
+          "--format=csv,noheader,nounits"
+        ],
+        "duration_ns": 390734600,
+        "error": null,
+        "returncode": 0,
+        "started_at_utc": "2026-09-08T10:02:42.337496+00:00",
+        "stderr_b64": "",
+        "stderr_text": "",
+        "stdout_b64": "MCwgW3JlZGFjdGVkLWdwdS11dWlkXSwgTlZJRElBIEdlRm9yY2UgUlRYIDQwNzAgU1VQRVIsIDYxMC42MiwgMjYsIDEyMjgyLCAxMTUxMiwgNDg2LCA0MCwgMjYuNDUsIDIyMC4wMCwgNDk1LCA0OTUsIDUwMDEsIFAzLCAwDQo=",
+        "stdout_text": "0, [redacted-gpu-uuid], NVIDIA GeForce RTX 4070 SUPER, 610.62, 26, 12282, 11512, 486, 40, 26.45, 220.00, 495, 495, 5001, P3, 0\r\n"
+      },
+      "process": {
+        "cpu_percent": 12.4,
+        "pid": 19756,
+        "rss_bytes": 137928704,
+        "vms_bytes": 122191872
+      },
+      "runtime_processes": [
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 19.828125,
+            "user_s": 24.859375
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\ollama app.exe",
+          "io": {
+            "other_bytes": 4272993913,
+            "other_count": 271945,
+            "read_bytes": 3117384718,
+            "read_count": 6868,
+            "write_bytes": 6270334127,
+            "write_count": 700
+          },
+          "name": "ollama app.exe",
+          "num_handles": 447,
+          "num_threads": 21,
+          "pid": 17200,
+          "rss_bytes": 41517056,
+          "vms_bytes": 65527808
+        },
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 735.515625,
+            "user_s": 706.890625
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\ollama.exe",
+          "io": {
+            "other_bytes": 135004053134,
+            "other_count": 56236995,
+            "read_bytes": 197084142430,
+            "read_count": 6768791,
+            "write_bytes": 137916154217,
+            "write_count": 8882391
+          },
+          "name": "ollama.exe",
+          "num_handles": 569,
+          "num_threads": 28,
+          "pid": 27860,
+          "rss_bytes": 72667136,
+          "vms_bytes": 146255872
+        },
+        {
+          "cpu_percent": 792.2,
+          "cpu_times": {
+            "system_s": 555.125,
+            "user_s": 10232.53125
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\lib\\ollama\\llama-server.exe",
+          "io": {
+            "other_bytes": 2089526,
+            "other_count": 120887,
+            "read_bytes": 29817395835,
+            "read_count": 33634,
+            "write_bytes": 99783,
+            "write_count": 1027
+          },
+          "name": "llama-server.exe",
+          "num_handles": 258,
+          "num_threads": 30,
+          "pid": 33760,
+          "rss_bytes": 20334051328,
+          "vms_bytes": 33566687232
+        }
+      ],
+      "stage": "background",
+      "timestamp_utc": "2026-09-08T10:02:42.336304+00:00",
+      "total_gpu_power_w": 26.45
+    },
+    {
+      "gpu": {
+        "availability": "available",
+        "devices": [
+          {
+            "driver_version": "610.62",
+            "extra_columns": [],
+            "fan_percent": 0.0,
+            "graphics_clock_mhz": 420.0,
+            "index": 0,
+            "memory_clock_mhz": 5001.0,
+            "memory_free_mib": 486.0,
+            "memory_total_mib": 12282.0,
+            "memory_used_mib": 11512.0,
+            "name": "NVIDIA GeForce RTX 4070 SUPER",
+            "power_draw_w": 26.78,
+            "power_limit_w": 220.0,
+            "pstate": "P3",
+            "raw_columns": [
+              "0",
+              "[redacted-gpu-uuid]",
+              "NVIDIA GeForce RTX 4070 SUPER",
+              "610.62",
+              "30",
+              "12282",
+              "11512",
+              "486",
+              "40",
+              "26.78",
+              "220.00",
+              "420",
+              "420",
+              "5001",
+              "P3",
+              "0"
+            ],
+            "raw_line": "0, [redacted-gpu-uuid], NVIDIA GeForce RTX 4070 SUPER, 610.62, 30, 12282, 11512, 486, 40, 26.78, 220.00, 420, 420, 5001, P3, 0",
+            "sm_clock_mhz": 420.0,
+            "temperature_c": 40.0,
+            "utilization_gpu_percent": 30.0,
+            "uuid": "[redacted-gpu-uuid]"
+          }
+        ]
+      },
+      "host": {
+        "cpu_frequency_mhz": 4201.0,
+        "cpu_percent": 68.2,
+        "cpu_percent_per_core": [
+          97.9,
+          93.5,
+          95.7,
+          93.5,
+          60.9,
+          58.7,
+          52.2,
+          60.9,
+          52.2,
+          69.6,
+          71.7,
+          80.4,
+          76.1,
+          31.1,
+          50.0,
+          44.4
+        ],
+        "disk_io": {
+          "read_bytes": 11596455937536,
+          "read_count": 21053298,
+          "read_time_ms": 85417,
+          "write_bytes": 1116375808000,
+          "write_count": 27873356,
+          "write_time_ms": 45245
+        },
+        "memory_available_bytes": 2085351424,
+        "memory_percent": 93.8,
+        "memory_total_bytes": 33462239232,
+        "memory_used_bytes": 31376887808
+      },
+      "monotonic_ns": 1169303887728100,
+      "nvidia_collector": {
+        "command": [
+          "nvidia-smi",
+          "--query-gpu=index,uuid,name,driver_version,utilization.gpu,memory.total,memory.used,memory.free,temperature.gpu,power.draw,power.limit,clocks.gr,clocks.sm,clocks.mem,pstate,fan.speed",
+          "--format=csv,noheader,nounits"
+        ],
+        "duration_ns": 349158700,
+        "error": null,
+        "returncode": 0,
+        "started_at_utc": "2026-09-08T10:02:43.089808+00:00",
+        "stderr_b64": "",
+        "stderr_text": "",
+        "stdout_b64": "MCwgW3JlZGFjdGVkLWdwdS11dWlkXSwgTlZJRElBIEdlRm9yY2UgUlRYIDQwNzAgU1VQRVIsIDYxMC42MiwgMzAsIDEyMjgyLCAxMTUxMiwgNDg2LCA0MCwgMjYuNzgsIDIyMC4wMCwgNDIwLCA0MjAsIDUwMDEsIFAzLCAwDQo=",
+        "stdout_text": "0, [redacted-gpu-uuid], NVIDIA GeForce RTX 4070 SUPER, 610.62, 30, 12282, 11512, 486, 40, 26.78, 220.00, 420, 420, 5001, P3, 0\r\n"
+      },
+      "process": {
+        "cpu_percent": 13.2,
+        "pid": 19756,
+        "rss_bytes": 137949184,
+        "vms_bytes": 122191872
+      },
+      "runtime_processes": [
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 19.828125,
+            "user_s": 24.859375
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\ollama app.exe",
+          "io": {
+            "other_bytes": 4272993913,
+            "other_count": 271945,
+            "read_bytes": 3117384718,
+            "read_count": 6868,
+            "write_bytes": 6270334127,
+            "write_count": 700
+          },
+          "name": "ollama app.exe",
+          "num_handles": 447,
+          "num_threads": 21,
+          "pid": 17200,
+          "rss_bytes": 41517056,
+          "vms_bytes": 65527808
+        },
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 735.515625,
+            "user_s": 706.890625
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\ollama.exe",
+          "io": {
+            "other_bytes": 135004053387,
+            "other_count": 56236997,
+            "read_bytes": 197084142430,
+            "read_count": 6768791,
+            "write_bytes": 137916154217,
+            "write_count": 8882391
+          },
+          "name": "ollama.exe",
+          "num_handles": 569,
+          "num_threads": 28,
+          "pid": 27860,
+          "rss_bytes": 72667136,
+          "vms_bytes": 146255872
+        },
+        {
+          "cpu_percent": 795.7,
+          "cpu_times": {
+            "system_s": 555.453125,
+            "user_s": 10237.890625
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\lib\\ollama\\llama-server.exe",
+          "io": {
+            "other_bytes": 2090614,
+            "other_count": 120951,
+            "read_bytes": 29817395835,
+            "read_count": 33634,
+            "write_bytes": 99783,
+            "write_count": 1027
+          },
+          "name": "llama-server.exe",
+          "num_handles": 258,
+          "num_threads": 30,
+          "pid": 33760,
+          "rss_bytes": 20334051328,
+          "vms_bytes": 33566687232
+        }
+      ],
+      "stage": "background",
+      "timestamp_utc": "2026-09-08T10:02:43.088775+00:00",
+      "total_gpu_power_w": 26.78
+    },
+    {
+      "gpu": {
+        "availability": "available",
+        "devices": [
+          {
+            "driver_version": "610.62",
+            "extra_columns": [],
+            "fan_percent": 0.0,
+            "graphics_clock_mhz": 315.0,
+            "index": 0,
+            "memory_clock_mhz": 5001.0,
+            "memory_free_mib": 486.0,
+            "memory_total_mib": 12282.0,
+            "memory_used_mib": 11512.0,
+            "name": "NVIDIA GeForce RTX 4070 SUPER",
+            "power_draw_w": 27.06,
+            "power_limit_w": 220.0,
+            "pstate": "P3",
+            "raw_columns": [
+              "0",
+              "[redacted-gpu-uuid]",
+              "NVIDIA GeForce RTX 4070 SUPER",
+              "610.62",
+              "0",
+              "12282",
+              "11512",
+              "486",
+              "40",
+              "27.06",
+              "220.00",
+              "315",
+              "315",
+              "5001",
+              "P3",
+              "0"
+            ],
+            "raw_line": "0, [redacted-gpu-uuid], NVIDIA GeForce RTX 4070 SUPER, 610.62, 0, 12282, 11512, 486, 40, 27.06, 220.00, 315, 315, 5001, P3, 0",
+            "sm_clock_mhz": 315.0,
+            "temperature_c": 40.0,
+            "utilization_gpu_percent": 0.0,
+            "uuid": "[redacted-gpu-uuid]"
+          }
+        ]
+      },
+      "host": {
+        "cpu_frequency_mhz": 4201.0,
+        "cpu_percent": 65.1,
+        "cpu_percent_per_core": [
+          88.2,
+          98.0,
+          96.0,
+          98.0,
+          48.1,
+          68.0,
+          38.0,
+          64.0,
+          54.0,
+          58.0,
+          60.0,
+          92.0,
+          64.0,
+          25.5,
+          37.3,
+          52.9
+        ],
+        "disk_io": {
+          "read_bytes": 11596456130048,
+          "read_count": 21053302,
+          "read_time_ms": 85417,
+          "write_bytes": 1116375939072,
+          "write_count": 27873365,
+          "write_time_ms": 45245
+        },
+        "memory_available_bytes": 2089328640,
+        "memory_percent": 93.8,
+        "memory_total_bytes": 33462239232,
+        "memory_used_bytes": 31372910592
+      },
+      "monotonic_ns": 1169304599434300,
+      "nvidia_collector": {
+        "command": [
+          "nvidia-smi",
+          "--query-gpu=index,uuid,name,driver_version,utilization.gpu,memory.total,memory.used,memory.free,temperature.gpu,power.draw,power.limit,clocks.gr,clocks.sm,clocks.mem,pstate,fan.speed",
+          "--format=csv,noheader,nounits"
+        ],
+        "duration_ns": 427448000,
+        "error": null,
+        "returncode": 0,
+        "started_at_utc": "2026-09-08T10:02:43.800912+00:00",
+        "stderr_b64": "",
+        "stderr_text": "",
+        "stdout_b64": "MCwgW3JlZGFjdGVkLWdwdS11dWlkXSwgTlZJRElBIEdlRm9yY2UgUlRYIDQwNzAgU1VQRVIsIDYxMC42MiwgMCwgMTIyODIsIDExNTEyLCA0ODYsIDQwLCAyNy4wNiwgMjIwLjAwLCAzMTUsIDMxNSwgNTAwMSwgUDMsIDANCg==",
+        "stdout_text": "0, [redacted-gpu-uuid], NVIDIA GeForce RTX 4070 SUPER, 610.62, 0, 12282, 11512, 486, 40, 27.06, 220.00, 315, 315, 5001, P3, 0\r\n"
+      },
+      "process": {
+        "cpu_percent": 9.9,
+        "pid": 19756,
+        "rss_bytes": 138035200,
+        "vms_bytes": 122273792
+      },
+      "runtime_processes": [
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 19.828125,
+            "user_s": 24.859375
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\ollama app.exe",
+          "io": {
+            "other_bytes": 4272993913,
+            "other_count": 271945,
+            "read_bytes": 3117384718,
+            "read_count": 6868,
+            "write_bytes": 6270334127,
+            "write_count": 700
+          },
+          "name": "ollama app.exe",
+          "num_handles": 447,
+          "num_threads": 21,
+          "pid": 17200,
+          "rss_bytes": 41517056,
+          "vms_bytes": 65527808
+        },
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 735.515625,
+            "user_s": 706.890625
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\ollama.exe",
+          "io": {
+            "other_bytes": 135004053520,
+            "other_count": 56236998,
+            "read_bytes": 197084142430,
+            "read_count": 6768791,
+            "write_bytes": 137916154217,
+            "write_count": 8882391
+          },
+          "name": "ollama.exe",
+          "num_handles": 569,
+          "num_threads": 28,
+          "pid": 27860,
+          "rss_bytes": 72667136,
+          "vms_bytes": 146255872
+        },
+        {
+          "cpu_percent": 783.2,
+          "cpu_times": {
+            "system_s": 555.671875,
+            "user_s": 10243.671875
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\lib\\ollama\\llama-server.exe",
+          "io": {
+            "other_bytes": 2091622,
+            "other_count": 121012,
+            "read_bytes": 29817395835,
+            "read_count": 33634,
+            "write_bytes": 99783,
+            "write_count": 1027
+          },
+          "name": "llama-server.exe",
+          "num_handles": 258,
+          "num_threads": 30,
+          "pid": 33760,
+          "rss_bytes": 20334051328,
+          "vms_bytes": 33566687232
+        }
+      ],
+      "stage": "background",
+      "timestamp_utc": "2026-09-08T10:02:43.800499+00:00",
+      "total_gpu_power_w": 27.06
+    },
+    {
+      "gpu": {
+        "availability": "available",
+        "devices": [
+          {
+            "driver_version": "610.62",
+            "extra_columns": [],
+            "fan_percent": 0.0,
+            "graphics_clock_mhz": 255.0,
+            "index": 0,
+            "memory_clock_mhz": 5001.0,
+            "memory_free_mib": 486.0,
+            "memory_total_mib": 12282.0,
+            "memory_used_mib": 11512.0,
+            "name": "NVIDIA GeForce RTX 4070 SUPER",
+            "power_draw_w": 25.02,
+            "power_limit_w": 220.0,
+            "pstate": "P3",
+            "raw_columns": [
+              "0",
+              "[redacted-gpu-uuid]",
+              "NVIDIA GeForce RTX 4070 SUPER",
+              "610.62",
+              "0",
+              "12282",
+              "11512",
+              "486",
+              "40",
+              "25.02",
+              "220.00",
+              "255",
+              "255",
+              "5001",
+              "P3",
+              "0"
+            ],
+            "raw_line": "0, [redacted-gpu-uuid], NVIDIA GeForce RTX 4070 SUPER, 610.62, 0, 12282, 11512, 486, 40, 25.02, 220.00, 255, 255, 5001, P3, 0",
+            "sm_clock_mhz": 255.0,
+            "temperature_c": 40.0,
+            "utilization_gpu_percent": 0.0,
+            "uuid": "[redacted-gpu-uuid]"
+          }
+        ]
+      },
+      "host": {
+        "cpu_frequency_mhz": 4201.0,
+        "cpu_percent": 64.6,
+        "cpu_percent_per_core": [
+          75.6,
+          97.4,
+          94.9,
+          92.5,
+          67.5,
+          43.6,
+          46.2,
+          59.0,
+          43.6,
+          66.7,
+          66.7,
+          72.5,
+          84.6,
+          28.2,
+          40.0,
+          53.8
+        ],
+        "disk_io": {
+          "read_bytes": 11596456865792,
+          "read_count": 21053324,
+          "read_time_ms": 85417,
+          "write_bytes": 1116375939072,
+          "write_count": 27873365,
+          "write_time_ms": 45245
+        },
+        "memory_available_bytes": 2085408768,
+        "memory_percent": 93.8,
+        "memory_total_bytes": 33462239232,
+        "memory_used_bytes": 31376830464
+      },
+      "monotonic_ns": 1169305332590600,
+      "nvidia_collector": {
+        "command": [
+          "nvidia-smi",
+          "--query-gpu=index,uuid,name,driver_version,utilization.gpu,memory.total,memory.used,memory.free,temperature.gpu,power.draw,power.limit,clocks.gr,clocks.sm,clocks.mem,pstate,fan.speed",
+          "--format=csv,noheader,nounits"
+        ],
+        "duration_ns": 300038700,
+        "error": null,
+        "returncode": 0,
+        "started_at_utc": "2026-09-08T10:02:44.534562+00:00",
+        "stderr_b64": "",
+        "stderr_text": "",
+        "stdout_b64": "MCwgW3JlZGFjdGVkLWdwdS11dWlkXSwgTlZJRElBIEdlRm9yY2UgUlRYIDQwNzAgU1VQRVIsIDYxMC42MiwgMCwgMTIyODIsIDExNTEyLCA0ODYsIDQwLCAyNS4wMiwgMjIwLjAwLCAyNTUsIDI1NSwgNTAwMSwgUDMsIDANCg==",
+        "stdout_text": "0, [redacted-gpu-uuid], NVIDIA GeForce RTX 4070 SUPER, 610.62, 0, 12282, 11512, 486, 40, 25.02, 220.00, 255, 255, 5001, P3, 0\r\n"
+      },
+      "process": {
+        "cpu_percent": 5.2,
+        "pid": 19756,
+        "rss_bytes": 138117120,
+        "vms_bytes": 122355712
+      },
+      "runtime_processes": [
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 19.828125,
+            "user_s": 24.859375
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\ollama app.exe",
+          "io": {
+            "other_bytes": 4272993913,
+            "other_count": 271945,
+            "read_bytes": 3117384718,
+            "read_count": 6868,
+            "write_bytes": 6270334127,
+            "write_count": 700
+          },
+          "name": "ollama app.exe",
+          "num_handles": 447,
+          "num_threads": 21,
+          "pid": 17200,
+          "rss_bytes": 41517056,
+          "vms_bytes": 65527808
+        },
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 735.515625,
+            "user_s": 706.890625
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\ollama.exe",
+          "io": {
+            "other_bytes": 135004053780,
+            "other_count": 56237000,
+            "read_bytes": 197084142430,
+            "read_count": 6768791,
+            "write_bytes": 137916154217,
+            "write_count": 8882391
+          },
+          "name": "ollama.exe",
+          "num_handles": 569,
+          "num_threads": 28,
+          "pid": 27860,
+          "rss_bytes": 72667136,
+          "vms_bytes": 146255872
+        },
+        {
+          "cpu_percent": 794.1,
+          "cpu_times": {
+            "system_s": 555.90625,
+            "user_s": 10248.453125
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\lib\\ollama\\llama-server.exe",
+          "io": {
+            "other_bytes": 2092470,
+            "other_count": 121061,
+            "read_bytes": 29817395835,
+            "read_count": 33634,
+            "write_bytes": 99783,
+            "write_count": 1027
+          },
+          "name": "llama-server.exe",
+          "num_handles": 258,
+          "num_threads": 30,
+          "pid": 33760,
+          "rss_bytes": 20334051328,
+          "vms_bytes": 33566687232
+        }
+      ],
+      "stage": "background",
+      "timestamp_utc": "2026-09-08T10:02:44.533633+00:00",
+      "total_gpu_power_w": 25.02
+    },
+    {
+      "gpu": {
+        "availability": "available",
+        "devices": [
+          {
+            "driver_version": "610.62",
+            "extra_columns": [],
+            "fan_percent": 0.0,
+            "graphics_clock_mhz": 240.0,
+            "index": 0,
+            "memory_clock_mhz": 5001.0,
+            "memory_free_mib": 486.0,
+            "memory_total_mib": 12282.0,
+            "memory_used_mib": 11512.0,
+            "name": "NVIDIA GeForce RTX 4070 SUPER",
+            "power_draw_w": 24.96,
+            "power_limit_w": 220.0,
+            "pstate": "P3",
+            "raw_columns": [
+              "0",
+              "[redacted-gpu-uuid]",
+              "NVIDIA GeForce RTX 4070 SUPER",
+              "610.62",
+              "5",
+              "12282",
+              "11512",
+              "486",
+              "40",
+              "24.96",
+              "220.00",
+              "240",
+              "240",
+              "5001",
+              "P3",
+              "0"
+            ],
+            "raw_line": "0, [redacted-gpu-uuid], NVIDIA GeForce RTX 4070 SUPER, 610.62, 5, 12282, 11512, 486, 40, 24.96, 220.00, 240, 240, 5001, P3, 0",
+            "sm_clock_mhz": 240.0,
+            "temperature_c": 40.0,
+            "utilization_gpu_percent": 5.0,
+            "uuid": "[redacted-gpu-uuid]"
+          }
+        ]
+      },
+      "host": {
+        "cpu_frequency_mhz": 4201.0,
+        "cpu_percent": 69.4,
+        "cpu_percent_per_core": [
+          98.1,
+          88.0,
+          92.0,
+          100.0,
+          70.0,
+          54.0,
+          60.8,
+          54.0,
+          68.0,
+          58.0,
+          76.5,
+          76.0,
+          66.0,
+          38.0,
+          60.0,
+          50.0
+        ],
+        "disk_io": {
+          "read_bytes": 11596456882176,
+          "read_count": 21053325,
+          "read_time_ms": 85417,
+          "write_bytes": 1116376049664,
+          "write_count": 27873373,
+          "write_time_ms": 45245
+        },
+        "memory_available_bytes": 2083115008,
+        "memory_percent": 93.8,
+        "memory_total_bytes": 33462239232,
+        "memory_used_bytes": 31379124224
+      },
+      "monotonic_ns": 1169305994396800,
+      "nvidia_collector": {
+        "command": [
+          "nvidia-smi",
+          "--query-gpu=index,uuid,name,driver_version,utilization.gpu,memory.total,memory.used,memory.free,temperature.gpu,power.draw,power.limit,clocks.gr,clocks.sm,clocks.mem,pstate,fan.speed",
+          "--format=csv,noheader,nounits"
+        ],
+        "duration_ns": 426276100,
+        "error": null,
+        "returncode": 0,
+        "started_at_utc": "2026-09-08T10:02:45.195961+00:00",
+        "stderr_b64": "",
+        "stderr_text": "",
+        "stdout_b64": "MCwgW3JlZGFjdGVkLWdwdS11dWlkXSwgTlZJRElBIEdlRm9yY2UgUlRYIDQwNzAgU1VQRVIsIDYxMC42MiwgNSwgMTIyODIsIDExNTEyLCA0ODYsIDQwLCAyNC45NiwgMjIwLjAwLCAyNDAsIDI0MCwgNTAwMSwgUDMsIDANCg==",
+        "stdout_text": "0, [redacted-gpu-uuid], NVIDIA GeForce RTX 4070 SUPER, 610.62, 5, 12282, 11512, 486, 40, 24.96, 220.00, 240, 240, 5001, P3, 0\r\n"
+      },
+      "process": {
+        "cpu_percent": 9.9,
+        "pid": 19756,
+        "rss_bytes": 138174464,
+        "vms_bytes": 122355712
+      },
+      "runtime_processes": [
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 19.828125,
+            "user_s": 24.859375
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\ollama app.exe",
+          "io": {
+            "other_bytes": 4272993913,
+            "other_count": 271945,
+            "read_bytes": 3117384718,
+            "read_count": 6868,
+            "write_bytes": 6270334127,
+            "write_count": 700
+          },
+          "name": "ollama app.exe",
+          "num_handles": 447,
+          "num_threads": 21,
+          "pid": 17200,
+          "rss_bytes": 41517056,
+          "vms_bytes": 65527808
+        },
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 735.515625,
+            "user_s": 706.890625
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\ollama.exe",
+          "io": {
+            "other_bytes": 135004053908,
+            "other_count": 56237001,
+            "read_bytes": 197084142522,
+            "read_count": 6768792,
+            "write_bytes": 137916154309,
+            "write_count": 8882392
+          },
+          "name": "ollama.exe",
+          "num_handles": 569,
+          "num_threads": 28,
+          "pid": 27860,
+          "rss_bytes": 72667136,
+          "vms_bytes": 146255872
+        },
+        {
+          "cpu_percent": 790.9,
+          "cpu_times": {
+            "system_s": 556.171875,
+            "user_s": 10254.1875
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\lib\\ollama\\llama-server.exe",
+          "io": {
+            "other_bytes": 2093398,
+            "other_count": 121117,
+            "read_bytes": 29817395835,
+            "read_count": 33634,
+            "write_bytes": 99875,
+            "write_count": 1028
+          },
+          "name": "llama-server.exe",
+          "num_handles": 258,
+          "num_threads": 30,
+          "pid": 33760,
+          "rss_bytes": 20334051328,
+          "vms_bytes": 33566687232
+        }
+      ],
+      "stage": "background",
+      "timestamp_utc": "2026-09-08T10:02:45.195466+00:00",
+      "total_gpu_power_w": 24.96
+    },
+    {
+      "gpu": {
+        "availability": "available",
+        "devices": [
+          {
+            "driver_version": "610.62",
+            "extra_columns": [],
+            "fan_percent": 0.0,
+            "graphics_clock_mhz": 2505.0,
+            "index": 0,
+            "memory_clock_mhz": 10251.0,
+            "memory_free_mib": 437.0,
+            "memory_total_mib": 12282.0,
+            "memory_used_mib": 11561.0,
+            "name": "NVIDIA GeForce RTX 4070 SUPER",
+            "power_draw_w": 25.03,
+            "power_limit_w": 220.0,
+            "pstate": "P2",
+            "raw_columns": [
+              "0",
+              "[redacted-gpu-uuid]",
+              "NVIDIA GeForce RTX 4070 SUPER",
+              "610.62",
+              "0",
+              "12282",
+              "11561",
+              "437",
+              "40",
+              "25.03",
+              "220.00",
+              "2505",
+              "2505",
+              "10251",
+              "P2",
+              "0"
+            ],
+            "raw_line": "0, [redacted-gpu-uuid], NVIDIA GeForce RTX 4070 SUPER, 610.62, 0, 12282, 11561, 437, 40, 25.03, 220.00, 2505, 2505, 10251, P2, 0",
+            "sm_clock_mhz": 2505.0,
+            "temperature_c": 40.0,
+            "utilization_gpu_percent": 0.0,
+            "uuid": "[redacted-gpu-uuid]"
+          }
+        ]
+      },
+      "host": {
+        "cpu_frequency_mhz": 4201.0,
+        "cpu_percent": 77.4,
+        "cpu_percent_per_core": [
+          93.2,
+          100.0,
+          97.6,
+          97.6,
+          78.6,
+          59.5,
+          66.7,
+          54.8,
+          81.0,
+          78.6,
+          92.9,
+          90.5,
+          88.1,
+          40.5,
+          64.3,
+          54.8
+        ],
+        "disk_io": {
+          "read_bytes": 11596480150016,
+          "read_count": 21053948,
+          "read_time_ms": 85417,
+          "write_bytes": 1116376401920,
+          "write_count": 27873404,
+          "write_time_ms": 45245
+        },
+        "memory_available_bytes": 2039922688,
+        "memory_percent": 93.9,
+        "memory_total_bytes": 33462239232,
+        "memory_used_bytes": 31422316544
+      },
+      "monotonic_ns": 1169306728983100,
+      "nvidia_collector": {
+        "command": [
+          "nvidia-smi",
+          "--query-gpu=index,uuid,name,driver_version,utilization.gpu,memory.total,memory.used,memory.free,temperature.gpu,power.draw,power.limit,clocks.gr,clocks.sm,clocks.mem,pstate,fan.speed",
+          "--format=csv,noheader,nounits"
+        ],
+        "duration_ns": 347375300,
+        "error": null,
+        "returncode": 0,
+        "started_at_utc": "2026-09-08T10:02:45.930751+00:00",
+        "stderr_b64": "",
+        "stderr_text": "",
+        "stdout_b64": "MCwgW3JlZGFjdGVkLWdwdS11dWlkXSwgTlZJRElBIEdlRm9yY2UgUlRYIDQwNzAgU1VQRVIsIDYxMC42MiwgMCwgMTIyODIsIDExNTYxLCA0MzcsIDQwLCAyNS4wMywgMjIwLjAwLCAyNTA1LCAyNTA1LCAxMDI1MSwgUDIsIDANCg==",
+        "stdout_text": "0, [redacted-gpu-uuid], NVIDIA GeForce RTX 4070 SUPER, 610.62, 0, 12282, 11561, 437, 40, 25.03, 220.00, 2505, 2505, 10251, P2, 0\r\n"
+      },
+      "process": {
+        "cpu_percent": 9.5,
+        "pid": 19756,
+        "rss_bytes": 138244096,
+        "vms_bytes": 122355712
+      },
+      "runtime_processes": [
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 19.828125,
+            "user_s": 24.859375
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\ollama app.exe",
+          "io": {
+            "other_bytes": 4272993913,
+            "other_count": 271945,
+            "read_bytes": 3117384718,
+            "read_count": 6868,
+            "write_bytes": 6270334127,
+            "write_count": 700
+          },
+          "name": "ollama app.exe",
+          "num_handles": 447,
+          "num_threads": 21,
+          "pid": 17200,
+          "rss_bytes": 41517056,
+          "vms_bytes": 65527808
+        },
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 735.515625,
+            "user_s": 706.890625
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\ollama.exe",
+          "io": {
+            "other_bytes": 135004054165,
+            "other_count": 56237003,
+            "read_bytes": 197084142522,
+            "read_count": 6768792,
+            "write_bytes": 137916154309,
+            "write_count": 8882392
+          },
+          "name": "ollama.exe",
+          "num_handles": 569,
+          "num_threads": 28,
+          "pid": 27860,
+          "rss_bytes": 72667136,
+          "vms_bytes": 146255872
+        },
+        {
+          "cpu_percent": 777.4,
+          "cpu_times": {
+            "system_s": 556.546875,
+            "user_s": 10259.140625
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\lib\\ollama\\llama-server.exe",
+          "io": {
+            "other_bytes": 2094486,
+            "other_count": 121181,
+            "read_bytes": 29817395835,
+            "read_count": 33634,
+            "write_bytes": 99875,
+            "write_count": 1028
+          },
+          "name": "llama-server.exe",
+          "num_handles": 258,
+          "num_threads": 30,
+          "pid": 33760,
+          "rss_bytes": 20334051328,
+          "vms_bytes": 33566687232
+        }
+      ],
+      "stage": "background",
+      "timestamp_utc": "2026-09-08T10:02:45.930041+00:00",
+      "total_gpu_power_w": 25.03
+    },
+    {
+      "gpu": {
+        "availability": "available",
+        "devices": [
+          {
+            "driver_version": "610.62",
+            "extra_columns": [],
+            "fan_percent": 0.0,
+            "graphics_clock_mhz": 2505.0,
+            "index": 0,
+            "memory_clock_mhz": 10251.0,
+            "memory_free_mib": 443.0,
+            "memory_total_mib": 12282.0,
+            "memory_used_mib": 11555.0,
+            "name": "NVIDIA GeForce RTX 4070 SUPER",
+            "power_draw_w": 38.06,
+            "power_limit_w": 220.0,
+            "pstate": "P2",
+            "raw_columns": [
+              "0",
+              "[redacted-gpu-uuid]",
+              "NVIDIA GeForce RTX 4070 SUPER",
+              "610.62",
+              "20",
+              "12282",
+              "11555",
+              "443",
+              "42",
+              "38.06",
+              "220.00",
+              "2505",
+              "2505",
+              "10251",
+              "P2",
+              "0"
+            ],
+            "raw_line": "0, [redacted-gpu-uuid], NVIDIA GeForce RTX 4070 SUPER, 610.62, 20, 12282, 11555, 443, 42, 38.06, 220.00, 2505, 2505, 10251, P2, 0",
+            "sm_clock_mhz": 2505.0,
+            "temperature_c": 42.0,
+            "utilization_gpu_percent": 20.0,
+            "uuid": "[redacted-gpu-uuid]"
+          }
+        ]
+      },
+      "host": {
+        "cpu_frequency_mhz": 4201.0,
+        "cpu_percent": 67.7,
+        "cpu_percent_per_core": [
+          90.4,
+          98.0,
+          100.0,
+          92.0,
+          54.0,
+          62.0,
+          58.0,
+          54.0,
+          60.0,
+          62.0,
+          64.0,
+          86.0,
+          86.0,
+          20.0,
+          48.0,
+          48.0
+        ],
+        "disk_io": {
+          "read_bytes": 11596486468096,
+          "read_count": 21054212,
+          "read_time_ms": 85417,
+          "write_bytes": 1116376845312,
+          "write_count": 27873465,
+          "write_time_ms": 45245
+        },
+        "memory_available_bytes": 2009116672,
+        "memory_percent": 94.0,
+        "memory_total_bytes": 33462239232,
+        "memory_used_bytes": 31453122560
+      },
+      "monotonic_ns": 1169307456382800,
+      "nvidia_collector": {
+        "command": [
+          "nvidia-smi",
+          "--query-gpu=index,uuid,name,driver_version,utilization.gpu,memory.total,memory.used,memory.free,temperature.gpu,power.draw,power.limit,clocks.gr,clocks.sm,clocks.mem,pstate,fan.speed",
+          "--format=csv,noheader,nounits"
+        ],
+        "duration_ns": 397311000,
+        "error": null,
+        "returncode": 0,
+        "started_at_utc": "2026-09-08T10:02:46.658338+00:00",
+        "stderr_b64": "",
+        "stderr_text": "",
+        "stdout_b64": "MCwgW3JlZGFjdGVkLWdwdS11dWlkXSwgTlZJRElBIEdlRm9yY2UgUlRYIDQwNzAgU1VQRVIsIDYxMC42MiwgMjAsIDEyMjgyLCAxMTU1NSwgNDQzLCA0MiwgMzguMDYsIDIyMC4wMCwgMjUwNSwgMjUwNSwgMTAyNTEsIFAyLCAwDQo=",
+        "stdout_text": "0, [redacted-gpu-uuid], NVIDIA GeForce RTX 4070 SUPER, 610.62, 20, 12282, 11555, 443, 42, 38.06, 220.00, 2505, 2505, 10251, P2, 0\r\n"
+      },
+      "process": {
+        "cpu_percent": 10.0,
+        "pid": 19756,
+        "rss_bytes": 138301440,
+        "vms_bytes": 122363904
+      },
+      "runtime_processes": [
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 19.828125,
+            "user_s": 24.859375
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\ollama app.exe",
+          "io": {
+            "other_bytes": 4272993913,
+            "other_count": 271945,
+            "read_bytes": 3117384718,
+            "read_count": 6868,
+            "write_bytes": 6270334127,
+            "write_count": 700
+          },
+          "name": "ollama app.exe",
+          "num_handles": 447,
+          "num_threads": 21,
+          "pid": 17200,
+          "rss_bytes": 41517056,
+          "vms_bytes": 65527808
+        },
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 735.515625,
+            "user_s": 706.890625
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\ollama.exe",
+          "io": {
+            "other_bytes": 135004054415,
+            "other_count": 56237005,
+            "read_bytes": 197084142522,
+            "read_count": 6768792,
+            "write_bytes": 137916154309,
+            "write_count": 8882392
+          },
+          "name": "ollama.exe",
+          "num_handles": 569,
+          "num_threads": 28,
+          "pid": 27860,
+          "rss_bytes": 72667136,
+          "vms_bytes": 146255872
+        },
+        {
+          "cpu_percent": 800.5,
+          "cpu_times": {
+            "system_s": 556.671875,
+            "user_s": 10265.234375
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\lib\\ollama\\llama-server.exe",
+          "io": {
+            "other_bytes": 2095558,
+            "other_count": 121244,
+            "read_bytes": 29817395835,
+            "read_count": 33634,
+            "write_bytes": 99875,
+            "write_count": 1028
+          },
+          "name": "llama-server.exe",
+          "num_handles": 258,
+          "num_threads": 30,
+          "pid": 33760,
+          "rss_bytes": 20334051328,
+          "vms_bytes": 33566687232
+        }
+      ],
+      "stage": "background",
+      "timestamp_utc": "2026-09-08T10:02:46.657444+00:00",
+      "total_gpu_power_w": 38.06
+    },
+    {
+      "gpu": {
+        "availability": "available",
+        "devices": [
+          {
+            "driver_version": "610.62",
+            "extra_columns": [],
+            "fan_percent": 0.0,
+            "graphics_clock_mhz": 2505.0,
+            "index": 0,
+            "memory_clock_mhz": 10251.0,
+            "memory_free_mib": 443.0,
+            "memory_total_mib": 12282.0,
+            "memory_used_mib": 11555.0,
+            "name": "NVIDIA GeForce RTX 4070 SUPER",
+            "power_draw_w": 39.99,
+            "power_limit_w": 220.0,
+            "pstate": "P2",
+            "raw_columns": [
+              "0",
+              "[redacted-gpu-uuid]",
+              "NVIDIA GeForce RTX 4070 SUPER",
+              "610.62",
+              "0",
+              "12282",
+              "11555",
+              "443",
+              "41",
+              "39.99",
+              "220.00",
+              "2505",
+              "2505",
+              "10251",
+              "P2",
+              "0"
+            ],
+            "raw_line": "0, [redacted-gpu-uuid], NVIDIA GeForce RTX 4070 SUPER, 610.62, 0, 12282, 11555, 443, 41, 39.99, 220.00, 2505, 2505, 10251, P2, 0",
+            "sm_clock_mhz": 2505.0,
+            "temperature_c": 41.0,
+            "utilization_gpu_percent": 0.0,
+            "uuid": "[redacted-gpu-uuid]"
+          }
+        ]
+      },
+      "host": {
+        "cpu_frequency_mhz": 4201.0,
+        "cpu_percent": 67.2,
+        "cpu_percent_per_core": [
+          88.2,
+          98.0,
+          90.2,
+          92.2,
+          56.9,
+          60.8,
+          49.0,
+          63.5,
+          78.4,
+          47.1,
+          75.0,
+          68.6,
+          84.3,
+          15.7,
+          56.9,
+          50.0
+        ],
+        "disk_io": {
+          "read_bytes": 11596486836736,
+          "read_count": 21054221,
+          "read_time_ms": 85417,
+          "write_bytes": 1116376849408,
+          "write_count": 27873466,
+          "write_time_ms": 45245
+        },
+        "memory_available_bytes": 2016190464,
+        "memory_percent": 94.0,
+        "memory_total_bytes": 33462239232,
+        "memory_used_bytes": 31446048768
+      },
+      "monotonic_ns": 1169308227700300,
+      "nvidia_collector": {
+        "command": [
+          "nvidia-smi",
+          "--query-gpu=index,uuid,name,driver_version,utilization.gpu,memory.total,memory.used,memory.free,temperature.gpu,power.draw,power.limit,clocks.gr,clocks.sm,clocks.mem,pstate,fan.speed",
+          "--format=csv,noheader,nounits"
+        ],
+        "duration_ns": 416954300,
+        "error": null,
+        "returncode": 0,
+        "started_at_utc": "2026-09-08T10:02:47.429681+00:00",
+        "stderr_b64": "",
+        "stderr_text": "",
+        "stdout_b64": "MCwgW3JlZGFjdGVkLWdwdS11dWlkXSwgTlZJRElBIEdlRm9yY2UgUlRYIDQwNzAgU1VQRVIsIDYxMC42MiwgMCwgMTIyODIsIDExNTU1LCA0NDMsIDQxLCAzOS45OSwgMjIwLjAwLCAyNTA1LCAyNTA1LCAxMDI1MSwgUDIsIDANCg==",
+        "stdout_text": "0, [redacted-gpu-uuid], NVIDIA GeForce RTX 4070 SUPER, 610.62, 0, 12282, 11555, 443, 41, 39.99, 220.00, 2505, 2505, 10251, P2, 0\r\n"
+      },
+      "process": {
+        "cpu_percent": 7.9,
+        "pid": 19756,
+        "rss_bytes": 138317824,
+        "vms_bytes": 122363904
+      },
+      "runtime_processes": [
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 19.828125,
+            "user_s": 24.859375
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\ollama app.exe",
+          "io": {
+            "other_bytes": 4272993913,
+            "other_count": 271945,
+            "read_bytes": 3117384718,
+            "read_count": 6868,
+            "write_bytes": 6270334127,
+            "write_count": 700
+          },
+          "name": "ollama app.exe",
+          "num_handles": 447,
+          "num_threads": 21,
+          "pid": 17200,
+          "rss_bytes": 41517056,
+          "vms_bytes": 65527808
+        },
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 735.515625,
+            "user_s": 706.890625
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\ollama.exe",
+          "io": {
+            "other_bytes": 135004054550,
+            "other_count": 56237006,
+            "read_bytes": 197084142522,
+            "read_count": 6768792,
+            "write_bytes": 137916154309,
+            "write_count": 8882392
+          },
+          "name": "ollama.exe",
+          "num_handles": 569,
+          "num_threads": 28,
+          "pid": 27860,
+          "rss_bytes": 72667136,
+          "vms_bytes": 146255872
+        },
+        {
+          "cpu_percent": 801.2,
+          "cpu_times": {
+            "system_s": 556.828125,
+            "user_s": 10271.171875
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\lib\\ollama\\llama-server.exe",
+          "io": {
+            "other_bytes": 2096502,
+            "other_count": 121301,
+            "read_bytes": 29817395835,
+            "read_count": 33634,
+            "write_bytes": 99875,
+            "write_count": 1028
+          },
+          "name": "llama-server.exe",
+          "num_handles": 258,
+          "num_threads": 30,
+          "pid": 33760,
+          "rss_bytes": 20334051328,
+          "vms_bytes": 33566687232
+        }
+      ],
+      "stage": "background",
+      "timestamp_utc": "2026-09-08T10:02:47.428737+00:00",
+      "total_gpu_power_w": 39.99
+    },
+    {
+      "gpu": {
+        "availability": "available",
+        "devices": [
+          {
+            "driver_version": "610.62",
+            "extra_columns": [],
+            "fan_percent": 0.0,
+            "graphics_clock_mhz": 2505.0,
+            "index": 0,
+            "memory_clock_mhz": 10251.0,
+            "memory_free_mib": 443.0,
+            "memory_total_mib": 12282.0,
+            "memory_used_mib": 11555.0,
+            "name": "NVIDIA GeForce RTX 4070 SUPER",
+            "power_draw_w": 37.96,
+            "power_limit_w": 220.0,
+            "pstate": "P2",
+            "raw_columns": [
+              "0",
+              "[redacted-gpu-uuid]",
+              "NVIDIA GeForce RTX 4070 SUPER",
+              "610.62",
+              "0",
+              "12282",
+              "11555",
+              "443",
+              "40",
+              "37.96",
+              "220.00",
+              "2505",
+              "2505",
+              "10251",
+              "P2",
+              "0"
+            ],
+            "raw_line": "0, [redacted-gpu-uuid], NVIDIA GeForce RTX 4070 SUPER, 610.62, 0, 12282, 11555, 443, 40, 37.96, 220.00, 2505, 2505, 10251, P2, 0",
+            "sm_clock_mhz": 2505.0,
+            "temperature_c": 40.0,
+            "utilization_gpu_percent": 0.0,
+            "uuid": "[redacted-gpu-uuid]"
+          }
+        ]
+      },
+      "host": {
+        "cpu_frequency_mhz": 4201.0,
+        "cpu_percent": 67.8,
+        "cpu_percent_per_core": [
+          93.8,
+          86.7,
+          95.6,
+          93.3,
+          60.0,
+          52.2,
+          68.9,
+          44.4,
+          62.2,
+          68.9,
+          60.0,
+          91.1,
+          68.2,
+          43.5,
+          47.7,
+          47.8
+        ],
+        "disk_io": {
+          "read_bytes": 11596487016960,
+          "read_count": 21054226,
+          "read_time_ms": 85417,
+          "write_bytes": 1116377033728,
+          "write_count": 27873485,
+          "write_time_ms": 45245
+        },
+        "memory_available_bytes": 2019323904,
+        "memory_percent": 94.0,
+        "memory_total_bytes": 33462239232,
+        "memory_used_bytes": 31442915328
+      },
+      "monotonic_ns": 1169308966973300,
+      "nvidia_collector": {
+        "command": [
+          "nvidia-smi",
+          "--query-gpu=index,uuid,name,driver_version,utilization.gpu,memory.total,memory.used,memory.free,temperature.gpu,power.draw,power.limit,clocks.gr,clocks.sm,clocks.mem,pstate,fan.speed",
+          "--format=csv,noheader,nounits"
+        ],
+        "duration_ns": 376964500,
+        "error": null,
+        "returncode": 0,
+        "started_at_utc": "2026-09-08T10:02:48.169172+00:00",
+        "stderr_b64": "",
+        "stderr_text": "",
+        "stdout_b64": "MCwgW3JlZGFjdGVkLWdwdS11dWlkXSwgTlZJRElBIEdlRm9yY2UgUlRYIDQwNzAgU1VQRVIsIDYxMC42MiwgMCwgMTIyODIsIDExNTU1LCA0NDMsIDQwLCAzNy45NiwgMjIwLjAwLCAyNTA1LCAyNTA1LCAxMDI1MSwgUDIsIDANCg==",
+        "stdout_text": "0, [redacted-gpu-uuid], NVIDIA GeForce RTX 4070 SUPER, 610.62, 0, 12282, 11555, 443, 40, 37.96, 220.00, 2505, 2505, 10251, P2, 0\r\n"
+      },
+      "process": {
+        "cpu_percent": 4.5,
+        "pid": 19756,
+        "rss_bytes": 138317824,
+        "vms_bytes": 122363904
+      },
+      "runtime_processes": [
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 19.828125,
+            "user_s": 24.859375
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\ollama app.exe",
+          "io": {
+            "other_bytes": 4272993913,
+            "other_count": 271945,
+            "read_bytes": 3117384718,
+            "read_count": 6868,
+            "write_bytes": 6270334127,
+            "write_count": 700
+          },
+          "name": "ollama app.exe",
+          "num_handles": 447,
+          "num_threads": 21,
+          "pid": 17200,
+          "rss_bytes": 41517056,
+          "vms_bytes": 65527808
+        },
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 735.515625,
+            "user_s": 706.890625
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\ollama.exe",
+          "io": {
+            "other_bytes": 135004054806,
+            "other_count": 56237008,
+            "read_bytes": 197084142614,
+            "read_count": 6768793,
+            "write_bytes": 137916154401,
+            "write_count": 8882393
+          },
+          "name": "ollama.exe",
+          "num_handles": 569,
+          "num_threads": 28,
+          "pid": 27860,
+          "rss_bytes": 72667136,
+          "vms_bytes": 146255872
+        },
+        {
+          "cpu_percent": 794.0,
+          "cpu_times": {
+            "system_s": 556.96875,
+            "user_s": 10276.84375
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\lib\\ollama\\llama-server.exe",
+          "io": {
+            "other_bytes": 2097526,
+            "other_count": 121361,
+            "read_bytes": 29817395835,
+            "read_count": 33634,
+            "write_bytes": 99967,
+            "write_count": 1029
+          },
+          "name": "llama-server.exe",
+          "num_handles": 258,
+          "num_threads": 30,
+          "pid": 33760,
+          "rss_bytes": 20334051328,
+          "vms_bytes": 33566687232
+        }
+      ],
+      "stage": "background",
+      "timestamp_utc": "2026-09-08T10:02:48.168031+00:00",
+      "total_gpu_power_w": 37.96
+    },
+    {
+      "gpu": {
+        "availability": "available",
+        "devices": [
+          {
+            "driver_version": "610.62",
+            "extra_columns": [],
+            "fan_percent": 0.0,
+            "graphics_clock_mhz": 2505.0,
+            "index": 0,
+            "memory_clock_mhz": 10251.0,
+            "memory_free_mib": 443.0,
+            "memory_total_mib": 12282.0,
+            "memory_used_mib": 11555.0,
+            "name": "NVIDIA GeForce RTX 4070 SUPER",
+            "power_draw_w": 38.03,
+            "power_limit_w": 220.0,
+            "pstate": "P2",
+            "raw_columns": [
+              "0",
+              "[redacted-gpu-uuid]",
+              "NVIDIA GeForce RTX 4070 SUPER",
+              "610.62",
+              "4",
+              "12282",
+              "11555",
+              "443",
+              "40",
+              "38.03",
+              "220.00",
+              "2505",
+              "2505",
+              "10251",
+              "P2",
+              "0"
+            ],
+            "raw_line": "0, [redacted-gpu-uuid], NVIDIA GeForce RTX 4070 SUPER, 610.62, 4, 12282, 11555, 443, 40, 38.03, 220.00, 2505, 2505, 10251, P2, 0",
+            "sm_clock_mhz": 2505.0,
+            "temperature_c": 40.0,
+            "utilization_gpu_percent": 4.0,
+            "uuid": "[redacted-gpu-uuid]"
+          }
+        ]
+      },
+      "host": {
+        "cpu_frequency_mhz": 4201.0,
+        "cpu_percent": 68.0,
+        "cpu_percent_per_core": [
+          94.1,
+          93.6,
+          100.0,
+          91.5,
+          63.8,
+          59.6,
+          51.1,
+          63.8,
+          55.3,
+          63.8,
+          80.9,
+          72.3,
+          68.8,
+          41.3,
+          35.4,
+          51.1
+        ],
+        "disk_io": {
+          "read_bytes": 11596490502656,
+          "read_count": 21054363,
+          "read_time_ms": 85417,
+          "write_bytes": 1116377484288,
+          "write_count": 27873554,
+          "write_time_ms": 45245
+        },
+        "memory_available_bytes": 2002690048,
+        "memory_percent": 94.0,
+        "memory_total_bytes": 33462239232,
+        "memory_used_bytes": 31459549184
+      },
+      "monotonic_ns": 1169309711718000,
+      "nvidia_collector": {
+        "command": [
+          "nvidia-smi",
+          "--query-gpu=index,uuid,name,driver_version,utilization.gpu,memory.total,memory.used,memory.free,temperature.gpu,power.draw,power.limit,clocks.gr,clocks.sm,clocks.mem,pstate,fan.speed",
+          "--format=csv,noheader,nounits"
+        ],
+        "duration_ns": 369146000,
+        "error": null,
+        "returncode": 0,
+        "started_at_utc": "2026-09-08T10:02:48.914429+00:00",
+        "stderr_b64": "",
+        "stderr_text": "",
+        "stdout_b64": "MCwgW3JlZGFjdGVkLWdwdS11dWlkXSwgTlZJRElBIEdlRm9yY2UgUlRYIDQwNzAgU1VQRVIsIDYxMC42MiwgNCwgMTIyODIsIDExNTU1LCA0NDMsIDQwLCAzOC4wMywgMjIwLjAwLCAyNTA1LCAyNTA1LCAxMDI1MSwgUDIsIDANCg==",
+        "stdout_text": "0, [redacted-gpu-uuid], NVIDIA GeForce RTX 4070 SUPER, 610.62, 4, 12282, 11555, 443, 40, 38.03, 220.00, 2505, 2505, 10251, P2, 0\r\n"
+      },
+      "process": {
+        "cpu_percent": 10.6,
+        "pid": 19756,
+        "rss_bytes": 138317824,
+        "vms_bytes": 122363904
+      },
+      "runtime_processes": [
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 19.828125,
+            "user_s": 24.859375
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\ollama app.exe",
+          "io": {
+            "other_bytes": 4272993913,
+            "other_count": 271945,
+            "read_bytes": 3117384718,
+            "read_count": 6868,
+            "write_bytes": 6270334127,
+            "write_count": 700
+          },
+          "name": "ollama app.exe",
+          "num_handles": 447,
+          "num_threads": 21,
+          "pid": 17200,
+          "rss_bytes": 41517056,
+          "vms_bytes": 65527808
+        },
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 735.515625,
+            "user_s": 706.890625
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\ollama.exe",
+          "io": {
+            "other_bytes": 135004055061,
+            "other_count": 56237010,
+            "read_bytes": 197084142614,
+            "read_count": 6768793,
+            "write_bytes": 137916154401,
+            "write_count": 8882393
+          },
+          "name": "ollama.exe",
+          "num_handles": 569,
+          "num_threads": 28,
+          "pid": 27860,
+          "rss_bytes": 72667136,
+          "vms_bytes": 146255872
+        },
+        {
+          "cpu_percent": 790.2,
+          "cpu_times": {
+            "system_s": 557.203125,
+            "user_s": 10282.40625
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\lib\\ollama\\llama-server.exe",
+          "io": {
+            "other_bytes": 2098566,
+            "other_count": 121422,
+            "read_bytes": 29817395835,
+            "read_count": 33634,
+            "write_bytes": 99967,
+            "write_count": 1029
+          },
+          "name": "llama-server.exe",
+          "num_handles": 258,
+          "num_threads": 30,
+          "pid": 33760,
+          "rss_bytes": 20334051328,
+          "vms_bytes": 33566687232
+        }
+      ],
+      "stage": "background",
+      "timestamp_utc": "2026-09-08T10:02:48.912727+00:00",
+      "total_gpu_power_w": 38.03
+    },
+    {
+      "gpu": {
+        "availability": "available",
+        "devices": [
+          {
+            "driver_version": "610.62",
+            "extra_columns": [],
+            "fan_percent": 0.0,
+            "graphics_clock_mhz": 900.0,
+            "index": 0,
+            "memory_clock_mhz": 5001.0,
+            "memory_free_mib": 443.0,
+            "memory_total_mib": 12282.0,
+            "memory_used_mib": 11555.0,
+            "name": "NVIDIA GeForce RTX 4070 SUPER",
+            "power_draw_w": 29.44,
+            "power_limit_w": 220.0,
+            "pstate": "P3",
+            "raw_columns": [
+              "0",
+              "[redacted-gpu-uuid]",
+              "NVIDIA GeForce RTX 4070 SUPER",
+              "610.62",
+              "43",
+              "12282",
+              "11555",
+              "443",
+              "40",
+              "29.44",
+              "220.00",
+              "900",
+              "900",
+              "5001",
+              "P3",
+              "0"
+            ],
+            "raw_line": "0, [redacted-gpu-uuid], NVIDIA GeForce RTX 4070 SUPER, 610.62, 43, 12282, 11555, 443, 40, 29.44, 220.00, 900, 900, 5001, P3, 0",
+            "sm_clock_mhz": 900.0,
+            "temperature_c": 40.0,
+            "utilization_gpu_percent": 43.0,
+            "uuid": "[redacted-gpu-uuid]"
+          }
+        ]
+      },
+      "host": {
+        "cpu_frequency_mhz": 4201.0,
+        "cpu_percent": 66.2,
+        "cpu_percent_per_core": [
+          90.4,
+          94.0,
+          96.0,
+          100.0,
+          62.0,
+          46.0,
+          34.0,
+          74.0,
+          48.0,
+          76.0,
+          54.0,
+          88.0,
+          70.0,
+          30.8,
+          36.0,
+          60.8
+        ],
+        "disk_io": {
+          "read_bytes": 11596490502656,
+          "read_count": 21054363,
+          "read_time_ms": 85417,
+          "write_bytes": 1116377979904,
+          "write_count": 27873579,
+          "write_time_ms": 45245
+        },
+        "memory_available_bytes": 2008465408,
+        "memory_percent": 94.0,
+        "memory_total_bytes": 33462239232,
+        "memory_used_bytes": 31453773824
+      },
+      "monotonic_ns": 1169310449827300,
+      "nvidia_collector": {
+        "command": [
+          "nvidia-smi",
+          "--query-gpu=index,uuid,name,driver_version,utilization.gpu,memory.total,memory.used,memory.free,temperature.gpu,power.draw,power.limit,clocks.gr,clocks.sm,clocks.mem,pstate,fan.speed",
+          "--format=csv,noheader,nounits"
+        ],
+        "duration_ns": 417612600,
+        "error": null,
+        "returncode": 0,
+        "started_at_utc": "2026-09-08T10:02:49.652028+00:00",
+        "stderr_b64": "",
+        "stderr_text": "",
+        "stdout_b64": "MCwgW3JlZGFjdGVkLWdwdS11dWlkXSwgTlZJRElBIEdlRm9yY2UgUlRYIDQwNzAgU1VQRVIsIDYxMC42MiwgNDMsIDEyMjgyLCAxMTU1NSwgNDQzLCA0MCwgMjkuNDQsIDIyMC4wMCwgOTAwLCA5MDAsIDUwMDEsIFAzLCAwDQo=",
+        "stdout_text": "0, [redacted-gpu-uuid], NVIDIA GeForce RTX 4070 SUPER, 610.62, 43, 12282, 11555, 443, 40, 29.44, 220.00, 900, 900, 5001, P3, 0\r\n"
+      },
+      "process": {
+        "cpu_percent": 9.9,
+        "pid": 19756,
+        "rss_bytes": 138317824,
+        "vms_bytes": 122363904
+      },
+      "runtime_processes": [
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 19.828125,
+            "user_s": 24.859375
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\ollama app.exe",
+          "io": {
+            "other_bytes": 4272993913,
+            "other_count": 271945,
+            "read_bytes": 3117384718,
+            "read_count": 6868,
+            "write_bytes": 6270334127,
+            "write_count": 700
+          },
+          "name": "ollama app.exe",
+          "num_handles": 447,
+          "num_threads": 21,
+          "pid": 17200,
+          "rss_bytes": 41517056,
+          "vms_bytes": 65527808
+        },
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 735.515625,
+            "user_s": 706.890625
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\ollama.exe",
+          "io": {
+            "other_bytes": 135004055188,
+            "other_count": 56237011,
+            "read_bytes": 197084142614,
+            "read_count": 6768793,
+            "write_bytes": 137916154401,
+            "write_count": 8882393
+          },
+          "name": "ollama.exe",
+          "num_handles": 569,
+          "num_threads": 28,
+          "pid": 27860,
+          "rss_bytes": 72667136,
+          "vms_bytes": 146255872
+        },
+        {
+          "cpu_percent": 785.4,
+          "cpu_times": {
+            "system_s": 557.34375,
+            "user_s": 10288.234375
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\lib\\ollama\\llama-server.exe",
+          "io": {
+            "other_bytes": 2099654,
+            "other_count": 121486,
+            "read_bytes": 29817395835,
+            "read_count": 33634,
+            "write_bytes": 99967,
+            "write_count": 1029
+          },
+          "name": "llama-server.exe",
+          "num_handles": 258,
+          "num_threads": 30,
+          "pid": 33760,
+          "rss_bytes": 20334051328,
+          "vms_bytes": 33566687232
+        }
+      ],
+      "stage": "background",
+      "timestamp_utc": "2026-09-08T10:02:49.650894+00:00",
+      "total_gpu_power_w": 29.44
+    },
+    {
+      "gpu": {
+        "availability": "available",
+        "devices": [
+          {
+            "driver_version": "610.62",
+            "extra_columns": [],
+            "fan_percent": 0.0,
+            "graphics_clock_mhz": 750.0,
+            "index": 0,
+            "memory_clock_mhz": 5001.0,
+            "memory_free_mib": 443.0,
+            "memory_total_mib": 12282.0,
+            "memory_used_mib": 11555.0,
+            "name": "NVIDIA GeForce RTX 4070 SUPER",
+            "power_draw_w": 27.81,
+            "power_limit_w": 220.0,
+            "pstate": "P3",
+            "raw_columns": [
+              "0",
+              "[redacted-gpu-uuid]",
+              "NVIDIA GeForce RTX 4070 SUPER",
+              "610.62",
+              "33",
+              "12282",
+              "11555",
+              "443",
+              "40",
+              "27.81",
+              "220.00",
+              "750",
+              "750",
+              "5001",
+              "P3",
+              "0"
+            ],
+            "raw_line": "0, [redacted-gpu-uuid], NVIDIA GeForce RTX 4070 SUPER, 610.62, 33, 12282, 11555, 443, 40, 27.81, 220.00, 750, 750, 5001, P3, 0",
+            "sm_clock_mhz": 750.0,
+            "temperature_c": 40.0,
+            "utilization_gpu_percent": 33.0,
+            "uuid": "[redacted-gpu-uuid]"
+          }
+        ]
+      },
+      "host": {
+        "cpu_frequency_mhz": 4201.0,
+        "cpu_percent": 65.0,
+        "cpu_percent_per_core": [
+          87.2,
+          88.6,
+          93.2,
+          97.7,
+          57.8,
+          56.8,
+          40.9,
+          65.9,
+          54.5,
+          63.6,
+          84.1,
+          50.0,
+          75.0,
+          20.5,
+          38.6,
+          63.6
+        ],
+        "disk_io": {
+          "read_bytes": 11596490797568,
+          "read_count": 21054372,
+          "read_time_ms": 85417,
+          "write_bytes": 1116378377216,
+          "write_count": 27873606,
+          "write_time_ms": 45245
+        },
+        "memory_available_bytes": 2007080960,
+        "memory_percent": 94.0,
+        "memory_total_bytes": 33462239232,
+        "memory_used_bytes": 31455158272
+      },
+      "monotonic_ns": 1169311204319500,
+      "nvidia_collector": {
+        "command": [
+          "nvidia-smi",
+          "--query-gpu=index,uuid,name,driver_version,utilization.gpu,memory.total,memory.used,memory.free,temperature.gpu,power.draw,power.limit,clocks.gr,clocks.sm,clocks.mem,pstate,fan.speed",
+          "--format=csv,noheader,nounits"
+        ],
+        "duration_ns": 350636500,
+        "error": null,
+        "returncode": 0,
+        "started_at_utc": "2026-09-08T10:02:50.406327+00:00",
+        "stderr_b64": "",
+        "stderr_text": "",
+        "stdout_b64": "MCwgW3JlZGFjdGVkLWdwdS11dWlkXSwgTlZJRElBIEdlRm9yY2UgUlRYIDQwNzAgU1VQRVIsIDYxMC42MiwgMzMsIDEyMjgyLCAxMTU1NSwgNDQzLCA0MCwgMjcuODEsIDIyMC4wMCwgNzUwLCA3NTAsIDUwMDEsIFAzLCAwDQo=",
+        "stdout_text": "0, [redacted-gpu-uuid], NVIDIA GeForce RTX 4070 SUPER, 610.62, 33, 12282, 11555, 443, 40, 27.81, 220.00, 750, 750, 5001, P3, 0\r\n"
+      },
+      "process": {
+        "cpu_percent": 9.1,
+        "pid": 19756,
+        "rss_bytes": 138358784,
+        "vms_bytes": 122363904
+      },
+      "runtime_processes": [
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 19.828125,
+            "user_s": 24.859375
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\ollama app.exe",
+          "io": {
+            "other_bytes": 4272993913,
+            "other_count": 271945,
+            "read_bytes": 3117384718,
+            "read_count": 6868,
+            "write_bytes": 6270334127,
+            "write_count": 700
+          },
+          "name": "ollama app.exe",
+          "num_handles": 447,
+          "num_threads": 21,
+          "pid": 17200,
+          "rss_bytes": 41517056,
+          "vms_bytes": 65527808
+        },
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 735.515625,
+            "user_s": 706.890625
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\ollama.exe",
+          "io": {
+            "other_bytes": 135004055444,
+            "other_count": 56237013,
+            "read_bytes": 197084142614,
+            "read_count": 6768793,
+            "write_bytes": 137916154401,
+            "write_count": 8882393
+          },
+          "name": "ollama.exe",
+          "num_handles": 569,
+          "num_threads": 28,
+          "pid": 27860,
+          "rss_bytes": 72667136,
+          "vms_bytes": 146255872
+        },
+        {
+          "cpu_percent": 804.5,
+          "cpu_times": {
+            "system_s": 557.546875,
+            "user_s": 10293.765625
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\lib\\ollama\\llama-server.exe",
+          "io": {
+            "other_bytes": 2100614,
+            "other_count": 121544,
+            "read_bytes": 29817395835,
+            "read_count": 33634,
+            "write_bytes": 99967,
+            "write_count": 1029
+          },
+          "name": "llama-server.exe",
+          "num_handles": 258,
+          "num_threads": 30,
+          "pid": 33760,
+          "rss_bytes": 20334051328,
+          "vms_bytes": 33566687232
+        }
+      ],
+      "stage": "background",
+      "timestamp_utc": "2026-09-08T10:02:50.405385+00:00",
+      "total_gpu_power_w": 27.81
+    },
+    {
+      "gpu": {
+        "availability": "available",
+        "devices": [
+          {
+            "driver_version": "610.62",
+            "extra_columns": [],
+            "fan_percent": 0.0,
+            "graphics_clock_mhz": 540.0,
+            "index": 0,
+            "memory_clock_mhz": 5001.0,
+            "memory_free_mib": 443.0,
+            "memory_total_mib": 12282.0,
+            "memory_used_mib": 11555.0,
+            "name": "NVIDIA GeForce RTX 4070 SUPER",
+            "power_draw_w": 25.74,
+            "power_limit_w": 220.0,
+            "pstate": "P3",
+            "raw_columns": [
+              "0",
+              "[redacted-gpu-uuid]",
+              "NVIDIA GeForce RTX 4070 SUPER",
+              "610.62",
+              "0",
+              "12282",
+              "11555",
+              "443",
+              "40",
+              "25.74",
+              "220.00",
+              "540",
+              "540",
+              "5001",
+              "P3",
+              "0"
+            ],
+            "raw_line": "0, [redacted-gpu-uuid], NVIDIA GeForce RTX 4070 SUPER, 610.62, 0, 12282, 11555, 443, 40, 25.74, 220.00, 540, 540, 5001, P3, 0",
+            "sm_clock_mhz": 540.0,
+            "temperature_c": 40.0,
+            "utilization_gpu_percent": 0.0,
+            "uuid": "[redacted-gpu-uuid]"
+          }
+        ]
+      },
+      "host": {
+        "cpu_frequency_mhz": 4201.0,
+        "cpu_percent": 64.2,
+        "cpu_percent_per_core": [
+          91.8,
+          93.8,
+          97.9,
+          95.9,
+          45.8,
+          64.6,
+          58.3,
+          50.0,
+          37.5,
+          77.1,
+          66.7,
+          67.3,
+          62.5,
+          33.3,
+          35.4,
+          47.9
+        ],
+        "disk_io": {
+          "read_bytes": 11596490883584,
+          "read_count": 21054374,
+          "read_time_ms": 85417,
+          "write_bytes": 1116378377216,
+          "write_count": 27873606,
+          "write_time_ms": 45245
+        },
+        "memory_available_bytes": 2009395200,
+        "memory_percent": 94.0,
+        "memory_total_bytes": 33462239232,
+        "memory_used_bytes": 31452844032
+      },
+      "monotonic_ns": 1169311915954800,
+      "nvidia_collector": {
+        "command": [
+          "nvidia-smi",
+          "--query-gpu=index,uuid,name,driver_version,utilization.gpu,memory.total,memory.used,memory.free,temperature.gpu,power.draw,power.limit,clocks.gr,clocks.sm,clocks.mem,pstate,fan.speed",
+          "--format=csv,noheader,nounits"
+        ],
+        "duration_ns": 383626700,
+        "error": null,
+        "returncode": 0,
+        "started_at_utc": "2026-09-08T10:02:51.118439+00:00",
+        "stderr_b64": "",
+        "stderr_text": "",
+        "stdout_b64": "MCwgW3JlZGFjdGVkLWdwdS11dWlkXSwgTlZJRElBIEdlRm9yY2UgUlRYIDQwNzAgU1VQRVIsIDYxMC42MiwgMCwgMTIyODIsIDExNTU1LCA0NDMsIDQwLCAyNS43NCwgMjIwLjAwLCA1NDAsIDU0MCwgNTAwMSwgUDMsIDANCg==",
+        "stdout_text": "0, [redacted-gpu-uuid], NVIDIA GeForce RTX 4070 SUPER, 610.62, 0, 12282, 11555, 443, 40, 25.74, 220.00, 540, 540, 5001, P3, 0\r\n"
+      },
+      "process": {
+        "cpu_percent": 10.5,
+        "pid": 19756,
+        "rss_bytes": 138358784,
+        "vms_bytes": 122363904
+      },
+      "runtime_processes": [
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 19.828125,
+            "user_s": 24.859375
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\ollama app.exe",
+          "io": {
+            "other_bytes": 4272993913,
+            "other_count": 271945,
+            "read_bytes": 3117384718,
+            "read_count": 6868,
+            "write_bytes": 6270334127,
+            "write_count": 700
+          },
+          "name": "ollama app.exe",
+          "num_handles": 447,
+          "num_threads": 21,
+          "pid": 17200,
+          "rss_bytes": 41517056,
+          "vms_bytes": 65527808
+        },
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 735.515625,
+            "user_s": 706.890625
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\ollama.exe",
+          "io": {
+            "other_bytes": 135004055701,
+            "other_count": 56237015,
+            "read_bytes": 197084142706,
+            "read_count": 6768794,
+            "write_bytes": 137916154493,
+            "write_count": 8882394
+          },
+          "name": "ollama.exe",
+          "num_handles": 569,
+          "num_threads": 28,
+          "pid": 27860,
+          "rss_bytes": 72667136,
+          "vms_bytes": 146255872
+        },
+        {
+          "cpu_percent": 800.5,
+          "cpu_times": {
+            "system_s": 557.796875,
+            "user_s": 10299.484375
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\lib\\ollama\\llama-server.exe",
+          "io": {
+            "other_bytes": 2101750,
+            "other_count": 121611,
+            "read_bytes": 29817395835,
+            "read_count": 33634,
+            "write_bytes": 100059,
+            "write_count": 1030
+          },
+          "name": "llama-server.exe",
+          "num_handles": 258,
+          "num_threads": 30,
+          "pid": 33760,
+          "rss_bytes": 20334051328,
+          "vms_bytes": 33566687232
+        }
+      ],
+      "stage": "background",
+      "timestamp_utc": "2026-09-08T10:02:51.116978+00:00",
+      "total_gpu_power_w": 25.74
+    },
+    {
+      "gpu": {
+        "availability": "available",
+        "devices": [
+          {
+            "driver_version": "610.62",
+            "extra_columns": [],
+            "fan_percent": 0.0,
+            "graphics_clock_mhz": 435.0,
+            "index": 0,
+            "memory_clock_mhz": 5001.0,
+            "memory_free_mib": 443.0,
+            "memory_total_mib": 12282.0,
+            "memory_used_mib": 11555.0,
+            "name": "NVIDIA GeForce RTX 4070 SUPER",
+            "power_draw_w": 25.62,
+            "power_limit_w": 220.0,
+            "pstate": "P3",
+            "raw_columns": [
+              "0",
+              "[redacted-gpu-uuid]",
+              "NVIDIA GeForce RTX 4070 SUPER",
+              "610.62",
+              "1",
+              "12282",
+              "11555",
+              "443",
+              "40",
+              "25.62",
+              "220.00",
+              "435",
+              "435",
+              "5001",
+              "P3",
+              "0"
+            ],
+            "raw_line": "0, [redacted-gpu-uuid], NVIDIA GeForce RTX 4070 SUPER, 610.62, 1, 12282, 11555, 443, 40, 25.62, 220.00, 435, 435, 5001, P3, 0",
+            "sm_clock_mhz": 435.0,
+            "temperature_c": 40.0,
+            "utilization_gpu_percent": 1.0,
+            "uuid": "[redacted-gpu-uuid]"
+          }
+        ]
+      },
+      "host": {
+        "cpu_frequency_mhz": 4201.0,
+        "cpu_percent": 68.0,
+        "cpu_percent_per_core": [
+          92.2,
+          96.0,
+          100.0,
+          100.0,
+          50.0,
+          64.0,
+          40.0,
+          68.0,
+          64.0,
+          54.0,
+          84.0,
+          64.0,
+          82.0,
+          45.1,
+          40.0,
+          43.1
+        ],
+        "disk_io": {
+          "read_bytes": 11596491040256,
+          "read_count": 21054381,
+          "read_time_ms": 85417,
+          "write_bytes": 1116378542080,
+          "write_count": 27873626,
+          "write_time_ms": 45245
+        },
+        "memory_available_bytes": 2006663168,
+        "memory_percent": 94.0,
+        "memory_total_bytes": 33462239232,
+        "memory_used_bytes": 31455576064
+      },
+      "monotonic_ns": 1169312664131800,
+      "nvidia_collector": {
+        "command": [
+          "nvidia-smi",
+          "--query-gpu=index,uuid,name,driver_version,utilization.gpu,memory.total,memory.used,memory.free,temperature.gpu,power.draw,power.limit,clocks.gr,clocks.sm,clocks.mem,pstate,fan.speed",
+          "--format=csv,noheader,nounits"
+        ],
+        "duration_ns": 418050600,
+        "error": null,
+        "returncode": 0,
+        "started_at_utc": "2026-09-08T10:02:51.866531+00:00",
+        "stderr_b64": "",
+        "stderr_text": "",
+        "stdout_b64": "MCwgW3JlZGFjdGVkLWdwdS11dWlkXSwgTlZJRElBIEdlRm9yY2UgUlRYIDQwNzAgU1VQRVIsIDYxMC42MiwgMSwgMTIyODIsIDExNTU1LCA0NDMsIDQwLCAyNS42MiwgMjIwLjAwLCA0MzUsIDQzNSwgNTAwMSwgUDMsIDANCg==",
+        "stdout_text": "0, [redacted-gpu-uuid], NVIDIA GeForce RTX 4070 SUPER, 610.62, 1, 12282, 11555, 443, 40, 25.62, 220.00, 435, 435, 5001, P3, 0\r\n"
+      },
+      "process": {
+        "cpu_percent": 10.0,
+        "pid": 19756,
+        "rss_bytes": 138358784,
+        "vms_bytes": 122363904
+      },
+      "runtime_processes": [
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 19.828125,
+            "user_s": 24.859375
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\ollama app.exe",
+          "io": {
+            "other_bytes": 4272993913,
+            "other_count": 271945,
+            "read_bytes": 3117384718,
+            "read_count": 6868,
+            "write_bytes": 6270334127,
+            "write_count": 700
+          },
+          "name": "ollama app.exe",
+          "num_handles": 447,
+          "num_threads": 21,
+          "pid": 17200,
+          "rss_bytes": 41517056,
+          "vms_bytes": 65527808
+        },
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 735.515625,
+            "user_s": 706.890625
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\ollama.exe",
+          "io": {
+            "other_bytes": 135004055828,
+            "other_count": 56237016,
+            "read_bytes": 197084142706,
+            "read_count": 6768794,
+            "write_bytes": 137916154493,
+            "write_count": 8882394
+          },
+          "name": "ollama.exe",
+          "num_handles": 569,
+          "num_threads": 28,
+          "pid": 27860,
+          "rss_bytes": 72667136,
+          "vms_bytes": 146255872
+        },
+        {
+          "cpu_percent": 789.9,
+          "cpu_times": {
+            "system_s": 557.96875,
+            "user_s": 10305.25
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\lib\\ollama\\llama-server.exe",
+          "io": {
+            "other_bytes": 2102838,
+            "other_count": 121677,
+            "read_bytes": 29817395835,
+            "read_count": 33634,
+            "write_bytes": 100059,
+            "write_count": 1030
+          },
+          "name": "llama-server.exe",
+          "num_handles": 258,
+          "num_threads": 30,
+          "pid": 33760,
+          "rss_bytes": 20334051328,
+          "vms_bytes": 33566687232
+        }
+      ],
+      "stage": "background",
+      "timestamp_utc": "2026-09-08T10:02:51.865185+00:00",
+      "total_gpu_power_w": 25.62
+    },
+    {
+      "gpu": {
+        "availability": "available",
+        "devices": [
+          {
+            "driver_version": "610.62",
+            "extra_columns": [],
+            "fan_percent": 0.0,
+            "graphics_clock_mhz": 375.0,
+            "index": 0,
+            "memory_clock_mhz": 5001.0,
+            "memory_free_mib": 443.0,
+            "memory_total_mib": 12282.0,
+            "memory_used_mib": 11555.0,
+            "name": "NVIDIA GeForce RTX 4070 SUPER",
+            "power_draw_w": 25.56,
+            "power_limit_w": 220.0,
+            "pstate": "P3",
+            "raw_columns": [
+              "0",
+              "[redacted-gpu-uuid]",
+              "NVIDIA GeForce RTX 4070 SUPER",
+              "610.62",
+              "2",
+              "12282",
+              "11555",
+              "443",
+              "40",
+              "25.56",
+              "220.00",
+              "375",
+              "375",
+              "5001",
+              "P3",
+              "0"
+            ],
+            "raw_line": "0, [redacted-gpu-uuid], NVIDIA GeForce RTX 4070 SUPER, 610.62, 2, 12282, 11555, 443, 40, 25.56, 220.00, 375, 375, 5001, P3, 0",
+            "sm_clock_mhz": 375.0,
+            "temperature_c": 40.0,
+            "utilization_gpu_percent": 2.0,
+            "uuid": "[redacted-gpu-uuid]"
+          }
+        ]
+      },
+      "host": {
+        "cpu_frequency_mhz": 4201.0,
+        "cpu_percent": 65.5,
+        "cpu_percent_per_core": [
+          95.2,
+          93.0,
+          95.2,
+          95.2,
+          40.5,
+          69.0,
+          45.2,
+          65.1,
+          57.1,
+          61.9,
+          76.2,
+          64.3,
+          73.8,
+          31.0,
+          29.3,
+          54.8
+        ],
+        "disk_io": {
+          "read_bytes": 11596491105792,
+          "read_count": 21054382,
+          "read_time_ms": 85417,
+          "write_bytes": 1116378542080,
+          "write_count": 27873626,
+          "write_time_ms": 45245
+        },
+        "memory_available_bytes": 2011385856,
+        "memory_percent": 94.0,
+        "memory_total_bytes": 33462239232,
+        "memory_used_bytes": 31450853376
+      },
+      "monotonic_ns": 1169313390084900,
+      "nvidia_collector": {
+        "command": [
+          "nvidia-smi",
+          "--query-gpu=index,uuid,name,driver_version,utilization.gpu,memory.total,memory.used,memory.free,temperature.gpu,power.draw,power.limit,clocks.gr,clocks.sm,clocks.mem,pstate,fan.speed",
+          "--format=csv,noheader,nounits"
+        ],
+        "duration_ns": 343897400,
+        "error": null,
+        "returncode": 0,
+        "started_at_utc": "2026-09-08T10:02:52.592382+00:00",
+        "stderr_b64": "",
+        "stderr_text": "",
+        "stdout_b64": "MCwgW3JlZGFjdGVkLWdwdS11dWlkXSwgTlZJRElBIEdlRm9yY2UgUlRYIDQwNzAgU1VQRVIsIDYxMC42MiwgMiwgMTIyODIsIDExNTU1LCA0NDMsIDQwLCAyNS41NiwgMjIwLjAwLCAzNzUsIDM3NSwgNTAwMSwgUDMsIDANCg==",
+        "stdout_text": "0, [redacted-gpu-uuid], NVIDIA GeForce RTX 4070 SUPER, 610.62, 2, 12282, 11555, 443, 40, 25.56, 220.00, 375, 375, 5001, P3, 0\r\n"
+      },
+      "process": {
+        "cpu_percent": 4.8,
+        "pid": 19756,
+        "rss_bytes": 138358784,
+        "vms_bytes": 122363904
+      },
+      "runtime_processes": [
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 19.828125,
+            "user_s": 24.859375
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\ollama app.exe",
+          "io": {
+            "other_bytes": 4272993913,
+            "other_count": 271945,
+            "read_bytes": 3117384718,
+            "read_count": 6868,
+            "write_bytes": 6270334127,
+            "write_count": 700
+          },
+          "name": "ollama app.exe",
+          "num_handles": 447,
+          "num_threads": 21,
+          "pid": 17200,
+          "rss_bytes": 41517056,
+          "vms_bytes": 65527808
+        },
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 735.515625,
+            "user_s": 706.890625
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\ollama.exe",
+          "io": {
+            "other_bytes": 135004056077,
+            "other_count": 56237018,
+            "read_bytes": 197084142706,
+            "read_count": 6768794,
+            "write_bytes": 137916154493,
+            "write_count": 8882394
+          },
+          "name": "ollama.exe",
+          "num_handles": 569,
+          "num_threads": 28,
+          "pid": 27860,
+          "rss_bytes": 72667136,
+          "vms_bytes": 146255872
+        },
+        {
+          "cpu_percent": 782.6,
+          "cpu_times": {
+            "system_s": 558.078125,
+            "user_s": 10310.484375
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\lib\\ollama\\llama-server.exe",
+          "io": {
+            "other_bytes": 2103862,
+            "other_count": 121737,
+            "read_bytes": 29817395835,
+            "read_count": 33634,
+            "write_bytes": 100059,
+            "write_count": 1030
+          },
+          "name": "llama-server.exe",
+          "num_handles": 258,
+          "num_threads": 30,
+          "pid": 33760,
+          "rss_bytes": 20334051328,
+          "vms_bytes": 33566687232
+        }
+      ],
+      "stage": "background",
+      "timestamp_utc": "2026-09-08T10:02:52.591127+00:00",
+      "total_gpu_power_w": 25.56
+    },
+    {
+      "gpu": {
+        "availability": "available",
+        "devices": [
+          {
+            "driver_version": "610.62",
+            "extra_columns": [],
+            "fan_percent": 0.0,
+            "graphics_clock_mhz": 270.0,
+            "index": 0,
+            "memory_clock_mhz": 5001.0,
+            "memory_free_mib": 443.0,
+            "memory_total_mib": 12282.0,
+            "memory_used_mib": 11555.0,
+            "name": "NVIDIA GeForce RTX 4070 SUPER",
+            "power_draw_w": 26.97,
+            "power_limit_w": 220.0,
+            "pstate": "P3",
+            "raw_columns": [
+              "0",
+              "[redacted-gpu-uuid]",
+              "NVIDIA GeForce RTX 4070 SUPER",
+              "610.62",
+              "47",
+              "12282",
+              "11555",
+              "443",
+              "40",
+              "26.97",
+              "220.00",
+              "270",
+              "270",
+              "5001",
+              "P3",
+              "0"
+            ],
+            "raw_line": "0, [redacted-gpu-uuid], NVIDIA GeForce RTX 4070 SUPER, 610.62, 47, 12282, 11555, 443, 40, 26.97, 220.00, 270, 270, 5001, P3, 0",
+            "sm_clock_mhz": 270.0,
+            "temperature_c": 40.0,
+            "utilization_gpu_percent": 47.0,
+            "uuid": "[redacted-gpu-uuid]"
+          }
+        ]
+      },
+      "host": {
+        "cpu_frequency_mhz": 4201.0,
+        "cpu_percent": 64.2,
+        "cpu_percent_per_core": [
+          91.3,
+          84.4,
+          95.7,
+          95.6,
+          60.0,
+          47.8,
+          66.7,
+          35.6,
+          60.0,
+          59.6,
+          71.1,
+          75.6,
+          71.1,
+          23.9,
+          51.1,
+          39.1
+        ],
+        "disk_io": {
+          "read_bytes": 11596491122176,
+          "read_count": 21054383,
+          "read_time_ms": 85417,
+          "write_bytes": 1116378828800,
+          "write_count": 27873636,
+          "write_time_ms": 45245
+        },
+        "memory_available_bytes": 2013933568,
+        "memory_percent": 94.0,
+        "memory_total_bytes": 33462239232,
+        "memory_used_bytes": 31448305664
+      },
+      "monotonic_ns": 1169314089738500,
+      "nvidia_collector": {
+        "command": [
+          "nvidia-smi",
+          "--query-gpu=index,uuid,name,driver_version,utilization.gpu,memory.total,memory.used,memory.free,temperature.gpu,power.draw,power.limit,clocks.gr,clocks.sm,clocks.mem,pstate,fan.speed",
+          "--format=csv,noheader,nounits"
+        ],
+        "duration_ns": 356073300,
+        "error": null,
+        "returncode": 0,
+        "started_at_utc": "2026-09-08T10:02:53.291615+00:00",
+        "stderr_b64": "",
+        "stderr_text": "",
+        "stdout_b64": "MCwgW3JlZGFjdGVkLWdwdS11dWlkXSwgTlZJRElBIEdlRm9yY2UgUlRYIDQwNzAgU1VQRVIsIDYxMC42MiwgNDcsIDEyMjgyLCAxMTU1NSwgNDQzLCA0MCwgMjYuOTcsIDIyMC4wMCwgMjcwLCAyNzAsIDUwMDEsIFAzLCAwDQo=",
+        "stdout_text": "0, [redacted-gpu-uuid], NVIDIA GeForce RTX 4070 SUPER, 610.62, 47, 12282, 11555, 443, 40, 26.97, 220.00, 270, 270, 5001, P3, 0\r\n"
+      },
+      "process": {
+        "cpu_percent": 13.2,
+        "pid": 19756,
+        "rss_bytes": 138358784,
+        "vms_bytes": 122363904
+      },
+      "runtime_processes": [
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 19.828125,
+            "user_s": 24.859375
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\ollama app.exe",
+          "io": {
+            "other_bytes": 4272993913,
+            "other_count": 271945,
+            "read_bytes": 3117384718,
+            "read_count": 6868,
+            "write_bytes": 6270334127,
+            "write_count": 700
+          },
+          "name": "ollama app.exe",
+          "num_handles": 447,
+          "num_threads": 21,
+          "pid": 17200,
+          "rss_bytes": 41517056,
+          "vms_bytes": 65527808
+        },
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 735.515625,
+            "user_s": 706.890625
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\ollama.exe",
+          "io": {
+            "other_bytes": 135004058224,
+            "other_count": 56237023,
+            "read_bytes": 197084143270,
+            "read_count": 6768796,
+            "write_bytes": 137916155148,
+            "write_count": 8882397
+          },
+          "name": "ollama.exe",
+          "num_handles": 567,
+          "num_threads": 28,
+          "pid": 27860,
+          "rss_bytes": 72667136,
+          "vms_bytes": 146255872
+        },
+        {
+          "cpu_percent": 802.8,
+          "cpu_times": {
+            "system_s": 558.3125,
+            "user_s": 10315.6875
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\lib\\ollama\\llama-server.exe",
+          "io": {
+            "other_bytes": 2105014,
+            "other_count": 121802,
+            "read_bytes": 29817395835,
+            "read_count": 33634,
+            "write_bytes": 100623,
+            "write_count": 1036
+          },
+          "name": "llama-server.exe",
+          "num_handles": 257,
+          "num_threads": 30,
+          "pid": 33760,
+          "rss_bytes": 20334051328,
+          "vms_bytes": 33566687232
+        }
+      ],
+      "stage": "background",
+      "timestamp_utc": "2026-09-08T10:02:53.290785+00:00",
+      "total_gpu_power_w": 26.97
+    },
+    {
+      "gpu": {
+        "availability": "available",
+        "devices": [
+          {
+            "driver_version": "610.62",
+            "extra_columns": [],
+            "fan_percent": 0.0,
+            "graphics_clock_mhz": 240.0,
+            "index": 0,
+            "memory_clock_mhz": 5001.0,
+            "memory_free_mib": 443.0,
+            "memory_total_mib": 12282.0,
+            "memory_used_mib": 11555.0,
+            "name": "NVIDIA GeForce RTX 4070 SUPER",
+            "power_draw_w": 27.03,
+            "power_limit_w": 220.0,
+            "pstate": "P3",
+            "raw_columns": [
+              "0",
+              "[redacted-gpu-uuid]",
+              "NVIDIA GeForce RTX 4070 SUPER",
+              "610.62",
+              "3",
+              "12282",
+              "11555",
+              "443",
+              "40",
+              "27.03",
+              "220.00",
+              "240",
+              "240",
+              "5001",
+              "P3",
+              "0"
+            ],
+            "raw_line": "0, [redacted-gpu-uuid], NVIDIA GeForce RTX 4070 SUPER, 610.62, 3, 12282, 11555, 443, 40, 27.03, 220.00, 240, 240, 5001, P3, 0",
+            "sm_clock_mhz": 240.0,
+            "temperature_c": 40.0,
+            "utilization_gpu_percent": 3.0,
+            "uuid": "[redacted-gpu-uuid]"
+          }
+        ]
+      },
+      "host": {
+        "cpu_frequency_mhz": 4201.0,
+        "cpu_percent": 34.4,
+        "cpu_percent_per_core": [
+          57.7,
+          61.5,
+          65.4,
+          44.0,
+          34.6,
+          15.4,
+          26.9,
+          12.0,
+          42.3,
+          19.2,
+          44.4,
+          23.1,
+          56.0,
+          15.4,
+          12.0,
+          19.2
+        ],
+        "disk_io": {
+          "read_bytes": 11596492355072,
+          "read_count": 21054403,
+          "read_time_ms": 85417,
+          "write_bytes": 1116378898432,
+          "write_count": 27873645,
+          "write_time_ms": 45245
+        },
+        "memory_available_bytes": 2009137152,
+        "memory_percent": 94.0,
+        "memory_total_bytes": 33462239232,
+        "memory_used_bytes": 31453102080
+      },
+      "monotonic_ns": 1169314735675400,
+      "nvidia_collector": {
+        "command": [
+          "nvidia-smi",
+          "--query-gpu=index,uuid,name,driver_version,utilization.gpu,memory.total,memory.used,memory.free,temperature.gpu,power.draw,power.limit,clocks.gr,clocks.sm,clocks.mem,pstate,fan.speed",
+          "--format=csv,noheader,nounits"
+        ],
+        "duration_ns": 121234700,
+        "error": null,
+        "returncode": 0,
+        "started_at_utc": "2026-09-08T10:02:53.937136+00:00",
+        "stderr_b64": "",
+        "stderr_text": "",
+        "stdout_b64": "MCwgW3JlZGFjdGVkLWdwdS11dWlkXSwgTlZJRElBIEdlRm9yY2UgUlRYIDQwNzAgU1VQRVIsIDYxMC42MiwgMywgMTIyODIsIDExNTU1LCA0NDMsIDQwLCAyNy4wMywgMjIwLjAwLCAyNDAsIDI0MCwgNTAwMSwgUDMsIDANCg==",
+        "stdout_text": "0, [redacted-gpu-uuid], NVIDIA GeForce RTX 4070 SUPER, 610.62, 3, 12282, 11555, 443, 40, 27.03, 220.00, 240, 240, 5001, P3, 0\r\n"
+      },
+      "process": {
+        "cpu_percent": 15.2,
+        "pid": 19756,
+        "rss_bytes": 137875456,
+        "vms_bytes": 122306560
+      },
+      "runtime_processes": [
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 19.828125,
+            "user_s": 24.859375
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\ollama app.exe",
+          "io": {
+            "other_bytes": 4272993913,
+            "other_count": 271945,
+            "read_bytes": 3117384718,
+            "read_count": 6868,
+            "write_bytes": 6270334127,
+            "write_count": 700
+          },
+          "name": "ollama app.exe",
+          "num_handles": 447,
+          "num_threads": 21,
+          "pid": 17200,
+          "rss_bytes": 41517056,
+          "vms_bytes": 65527808
+        },
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 735.515625,
+            "user_s": 706.890625
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\ollama.exe",
+          "io": {
+            "other_bytes": 135004058224,
+            "other_count": 56237023,
+            "read_bytes": 197084143270,
+            "read_count": 6768796,
+            "write_bytes": 137916155148,
+            "write_count": 8882397
+          },
+          "name": "ollama.exe",
+          "num_handles": 567,
+          "num_threads": 28,
+          "pid": 27860,
+          "rss_bytes": 72667136,
+          "vms_bytes": 146255872
+        },
+        {
+          "cpu_percent": 237.5,
+          "cpu_times": {
+            "system_s": 558.609375,
+            "user_s": 10316.375
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\lib\\ollama\\llama-server.exe",
+          "io": {
+            "other_bytes": 2105478,
+            "other_count": 121831,
+            "read_bytes": 29817395835,
+            "read_count": 33634,
+            "write_bytes": 100623,
+            "write_count": 1036
+          },
+          "name": "llama-server.exe",
+          "num_handles": 257,
+          "num_threads": 30,
+          "pid": 33760,
+          "rss_bytes": 20334051328,
+          "vms_bytes": 33566687232
+        }
+      ],
+      "stage": "background",
+      "timestamp_utc": "2026-09-08T10:02:53.936746+00:00",
+      "total_gpu_power_w": 27.03
+    },
+    {
+      "case_id": "exp-000015-char-json-001-think-on-352",
+      "gpu": {
+        "availability": "available",
+        "devices": [
+          {
+            "driver_version": "610.62",
+            "extra_columns": [],
+            "fan_percent": 0.0,
+            "graphics_clock_mhz": 210.0,
+            "index": 0,
+            "memory_clock_mhz": 5001.0,
+            "memory_free_mib": 443.0,
+            "memory_total_mib": 12282.0,
+            "memory_used_mib": 11555.0,
+            "name": "NVIDIA GeForce RTX 4070 SUPER",
+            "power_draw_w": 21.38,
+            "power_limit_w": 220.0,
+            "pstate": "P3",
+            "raw_columns": [
+              "0",
+              "[redacted-gpu-uuid]",
+              "NVIDIA GeForce RTX 4070 SUPER",
+              "610.62",
+              "1",
+              "12282",
+              "11555",
+              "443",
+              "40",
+              "21.38",
+              "220.00",
+              "210",
+              "210",
+              "5001",
+              "P3",
+              "0"
+            ],
+            "raw_line": "0, [redacted-gpu-uuid], NVIDIA GeForce RTX 4070 SUPER, 610.62, 1, 12282, 11555, 443, 40, 21.38, 220.00, 210, 210, 5001, P3, 0",
+            "sm_clock_mhz": 210.0,
+            "temperature_c": 40.0,
+            "utilization_gpu_percent": 1.0,
+            "uuid": "[redacted-gpu-uuid]"
+          }
+        ]
+      },
+      "host": {
+        "cpu_frequency_mhz": 4201.0,
+        "cpu_percent": 68.0,
+        "cpu_percent_per_core": [
+          90.2,
+          93.4,
+          95.4,
+          95.2,
+          56.7,
+          58.1,
+          53.1,
+          58.4,
+          59.7,
+          62.0,
+          73.1,
+          72.0,
+          76.7,
+          44.8,
+          46.4,
+          52.8
+        ],
+        "disk_io": {
+          "read_bytes": 11596496496128,
+          "read_count": 21054472,
+          "read_time_ms": 85417,
+          "write_bytes": 1116380598272,
+          "write_count": 27873702,
+          "write_time_ms": 45245
+        },
+        "memory_available_bytes": 2005979136,
+        "memory_percent": 94.0,
+        "memory_total_bytes": 33462239232,
+        "memory_used_bytes": 31456260096
+      },
+      "monotonic_ns": 1169315582126700,
+      "nvidia_collector": {
+        "command": [
+          "nvidia-smi",
+          "--query-gpu=index,uuid,name,driver_version,utilization.gpu,memory.total,memory.used,memory.free,temperature.gpu,power.draw,power.limit,clocks.gr,clocks.sm,clocks.mem,pstate,fan.speed",
+          "--format=csv,noheader,nounits"
+        ],
+        "duration_ns": 153849700,
+        "error": null,
+        "returncode": 0,
+        "started_at_utc": "2026-09-08T10:02:54.783546+00:00",
+        "stderr_b64": "",
+        "stderr_text": "",
+        "stdout_b64": "MCwgW3JlZGFjdGVkLWdwdS11dWlkXSwgTlZJRElBIEdlRm9yY2UgUlRYIDQwNzAgU1VQRVIsIDYxMC42MiwgMSwgMTIyODIsIDExNTU1LCA0NDMsIDQwLCAyMS4zOCwgMjIwLjAwLCAyMTAsIDIxMCwgNTAwMSwgUDMsIDANCg==",
+        "stdout_text": "0, [redacted-gpu-uuid], NVIDIA GeForce RTX 4070 SUPER, 610.62, 1, 12282, 11555, 443, 40, 21.38, 220.00, 210, 210, 5001, P3, 0\r\n"
+      },
+      "process": {
+        "cpu_percent": 17.8,
+        "pid": 19756,
+        "rss_bytes": 138457088,
+        "vms_bytes": 122363904
+      },
+      "runtime_processes": [
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 19.828125,
+            "user_s": 24.859375
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\ollama app.exe",
+          "io": {
+            "other_bytes": 4272993913,
+            "other_count": 271945,
+            "read_bytes": 3117384718,
+            "read_count": 6868,
+            "write_bytes": 6270334127,
+            "write_count": 700
+          },
+          "name": "ollama app.exe",
+          "num_handles": 447,
+          "num_threads": 21,
+          "pid": 17200,
+          "rss_bytes": 41517056,
+          "vms_bytes": 65527808
+        },
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 735.515625,
+            "user_s": 706.890625
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\ollama.exe",
+          "io": {
+            "other_bytes": 135004058224,
+            "other_count": 56237023,
+            "read_bytes": 197084143270,
+            "read_count": 6768796,
+            "write_bytes": 137916155148,
+            "write_count": 8882397
+          },
+          "name": "ollama.exe",
+          "num_handles": 567,
+          "num_threads": 28,
+          "pid": 27860,
+          "rss_bytes": 72667136,
+          "vms_bytes": 146255872
+        },
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 558.609375,
+            "user_s": 10316.375
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\lib\\ollama\\llama-server.exe",
+          "io": {
+            "other_bytes": 2106518,
+            "other_count": 121896,
+            "read_bytes": 29817395835,
+            "read_count": 33634,
+            "write_bytes": 100623,
+            "write_count": 1036
+          },
+          "name": "llama-server.exe",
+          "num_handles": 257,
+          "num_threads": 30,
+          "pid": 33760,
+          "rss_bytes": 20334051328,
+          "vms_bytes": 33566687232
+        }
+      ],
+      "stage": "characterize",
+      "timestamp_utc": "2026-09-08T10:02:54.783202+00:00",
+      "total_gpu_power_w": 21.38
+    },
+    {
+      "case_id": "exp-000016-char-math-001-think-off-256",
+      "gpu": {
+        "availability": "available",
+        "devices": [
+          {
+            "driver_version": "610.62",
+            "extra_columns": [],
+            "fan_percent": 0.0,
+            "graphics_clock_mhz": 210.0,
+            "index": 0,
+            "memory_clock_mhz": 5001.0,
+            "memory_free_mib": 443.0,
+            "memory_total_mib": 12282.0,
+            "memory_used_mib": 11555.0,
+            "name": "NVIDIA GeForce RTX 4070 SUPER",
+            "power_draw_w": 21.38,
+            "power_limit_w": 220.0,
+            "pstate": "P3",
+            "raw_columns": [
+              "0",
+              "[redacted-gpu-uuid]",
+              "NVIDIA GeForce RTX 4070 SUPER",
+              "610.62",
+              "6",
+              "12282",
+              "11555",
+              "443",
+              "40",
+              "21.38",
+              "220.00",
+              "210",
+              "210",
+              "5001",
+              "P3",
+              "0"
+            ],
+            "raw_line": "0, [redacted-gpu-uuid], NVIDIA GeForce RTX 4070 SUPER, 610.62, 6, 12282, 11555, 443, 40, 21.38, 220.00, 210, 210, 5001, P3, 0",
+            "sm_clock_mhz": 210.0,
+            "temperature_c": 40.0,
+            "utilization_gpu_percent": 6.0,
+            "uuid": "[redacted-gpu-uuid]"
+          }
+        ]
+      },
+      "host": {
+        "cpu_frequency_mhz": 4201.0,
+        "cpu_percent": 27.6,
+        "cpu_percent_per_core": [
+          46.2,
+          23.1,
+          84.6,
+          23.1,
+          7.7,
+          7.7,
+          7.7,
+          7.7,
+          15.4,
+          23.1,
+          15.4,
+          15.4,
+          84.6,
+          15.4,
+          42.9,
+          21.4
+        ],
+        "disk_io": {
+          "read_bytes": 11596496840192,
+          "read_count": 21054478,
+          "read_time_ms": 85417,
+          "write_bytes": 1116380635136,
+          "write_count": 27873705,
+          "write_time_ms": 45245
+        },
+        "memory_available_bytes": 2002259968,
+        "memory_percent": 94.0,
+        "memory_total_bytes": 33462239232,
+        "memory_used_bytes": 31459979264
+      },
+      "monotonic_ns": 1169315790907300,
+      "nvidia_collector": {
+        "command": [
+          "nvidia-smi",
+          "--query-gpu=index,uuid,name,driver_version,utilization.gpu,memory.total,memory.used,memory.free,temperature.gpu,power.draw,power.limit,clocks.gr,clocks.sm,clocks.mem,pstate,fan.speed",
+          "--format=csv,noheader,nounits"
+        ],
+        "duration_ns": 158991600,
+        "error": null,
+        "returncode": 0,
+        "started_at_utc": "2026-09-08T10:02:54.992306+00:00",
+        "stderr_b64": "",
+        "stderr_text": "",
+        "stdout_b64": "MCwgW3JlZGFjdGVkLWdwdS11dWlkXSwgTlZJRElBIEdlRm9yY2UgUlRYIDQwNzAgU1VQRVIsIDYxMC42MiwgNiwgMTIyODIsIDExNTU1LCA0NDMsIDQwLCAyMS4zOCwgMjIwLjAwLCAyMTAsIDIxMCwgNTAwMSwgUDMsIDANCg==",
+        "stdout_text": "0, [redacted-gpu-uuid], NVIDIA GeForce RTX 4070 SUPER, 610.62, 6, 12282, 11555, 443, 40, 21.38, 220.00, 210, 210, 5001, P3, 0\r\n"
+      },
+      "process": {
+        "cpu_percent": 0.0,
+        "pid": 19756,
+        "rss_bytes": 138473472,
+        "vms_bytes": 122380288
+      },
+      "runtime_processes": [
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 19.828125,
+            "user_s": 24.859375
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\ollama app.exe",
+          "io": {
+            "other_bytes": 4272993913,
+            "other_count": 271945,
+            "read_bytes": 3117384718,
+            "read_count": 6868,
+            "write_bytes": 6270334127,
+            "write_count": 700
+          },
+          "name": "ollama app.exe",
+          "num_handles": 447,
+          "num_threads": 21,
+          "pid": 17200,
+          "rss_bytes": 41517056,
+          "vms_bytes": 65527808
+        },
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 735.515625,
+            "user_s": 706.890625
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\ollama.exe",
+          "io": {
+            "other_bytes": 135004058224,
+            "other_count": 56237023,
+            "read_bytes": 197084143270,
+            "read_count": 6768796,
+            "write_bytes": 137916155148,
+            "write_count": 8882397
+          },
+          "name": "ollama.exe",
+          "num_handles": 567,
+          "num_threads": 28,
+          "pid": 27860,
+          "rss_bytes": 72667136,
+          "vms_bytes": 146255872
+        },
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 558.609375,
+            "user_s": 10316.375
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\lib\\ollama\\llama-server.exe",
+          "io": {
+            "other_bytes": 2106790,
+            "other_count": 121913,
+            "read_bytes": 29817395835,
+            "read_count": 33634,
+            "write_bytes": 100623,
+            "write_count": 1036
+          },
+          "name": "llama-server.exe",
+          "num_handles": 257,
+          "num_threads": 30,
+          "pid": 33760,
+          "rss_bytes": 20334051328,
+          "vms_bytes": 33566687232
+        }
+      ],
+      "stage": "characterize",
+      "timestamp_utc": "2026-09-08T10:02:54.991988+00:00",
+      "total_gpu_power_w": 21.38
+    },
+    {
+      "gpu": {
+        "availability": "available",
+        "devices": [
+          {
+            "driver_version": "610.62",
+            "extra_columns": [],
+            "fan_percent": 0.0,
+            "graphics_clock_mhz": 210.0,
+            "index": 0,
+            "memory_clock_mhz": 5001.0,
+            "memory_free_mib": 443.0,
+            "memory_total_mib": 12282.0,
+            "memory_used_mib": 11555.0,
+            "name": "NVIDIA GeForce RTX 4070 SUPER",
+            "power_draw_w": 21.38,
+            "power_limit_w": 220.0,
+            "pstate": "P3",
+            "raw_columns": [
+              "0",
+              "[redacted-gpu-uuid]",
+              "NVIDIA GeForce RTX 4070 SUPER",
+              "610.62",
+              "6",
+              "12282",
+              "11555",
+              "443",
+              "40",
+              "21.38",
+              "220.00",
+              "210",
+              "210",
+              "5001",
+              "P3",
+              "0"
+            ],
+            "raw_line": "0, [redacted-gpu-uuid], NVIDIA GeForce RTX 4070 SUPER, 610.62, 6, 12282, 11555, 443, 40, 21.38, 220.00, 210, 210, 5001, P3, 0",
+            "sm_clock_mhz": 210.0,
+            "temperature_c": 40.0,
+            "utilization_gpu_percent": 6.0,
+            "uuid": "[redacted-gpu-uuid]"
+          }
+        ]
+      },
+      "host": {
+        "cpu_frequency_mhz": 4201.0,
+        "cpu_percent": 22.6,
+        "cpu_percent_per_core": [
+          36.9,
+          32.1,
+          48.8,
+          32.9,
+          9.9,
+          11.1,
+          32.1,
+          29.3,
+          12.3,
+          9.9,
+          17.3,
+          12.3,
+          22.0,
+          12.2,
+          18.5,
+          22.2
+        ],
+        "disk_io": {
+          "read_bytes": 11596496840192,
+          "read_count": 21054478,
+          "read_time_ms": 85417,
+          "write_bytes": 1116380635136,
+          "write_count": 27873705,
+          "write_time_ms": 45245
+        },
+        "memory_available_bytes": 1985515520,
+        "memory_percent": 94.1,
+        "memory_total_bytes": 33462239232,
+        "memory_used_bytes": 31476723712
+      },
+      "monotonic_ns": 1169315850557600,
+      "nvidia_collector": {
+        "command": [
+          "nvidia-smi",
+          "--query-gpu=index,uuid,name,driver_version,utilization.gpu,memory.total,memory.used,memory.free,temperature.gpu,power.draw,power.limit,clocks.gr,clocks.sm,clocks.mem,pstate,fan.speed",
+          "--format=csv,noheader,nounits"
+        ],
+        "duration_ns": 259406400,
+        "error": null,
+        "returncode": 0,
+        "started_at_utc": "2026-09-08T10:02:55.052121+00:00",
+        "stderr_b64": "",
+        "stderr_text": "",
+        "stdout_b64": "MCwgW3JlZGFjdGVkLWdwdS11dWlkXSwgTlZJRElBIEdlRm9yY2UgUlRYIDQwNzAgU1VQRVIsIDYxMC42MiwgNiwgMTIyODIsIDExNTU1LCA0NDMsIDQwLCAyMS4zOCwgMjIwLjAwLCAyMTAsIDIxMCwgNTAwMSwgUDMsIDANCg==",
+        "stdout_text": "0, [redacted-gpu-uuid], NVIDIA GeForce RTX 4070 SUPER, 610.62, 6, 12282, 11555, 443, 40, 21.38, 220.00, 210, 210, 5001, P3, 0\r\n"
+      },
+      "process": {
+        "cpu_percent": 9.7,
+        "pid": 19756,
+        "rss_bytes": 138522624,
+        "vms_bytes": 122486784
+      },
+      "runtime_processes": [
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 19.828125,
+            "user_s": 24.859375
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\ollama app.exe",
+          "io": {
+            "other_bytes": 4272993913,
+            "other_count": 271945,
+            "read_bytes": 3117384718,
+            "read_count": 6868,
+            "write_bytes": 6270334127,
+            "write_count": 700
+          },
+          "name": "ollama app.exe",
+          "num_handles": 447,
+          "num_threads": 21,
+          "pid": 17200,
+          "rss_bytes": 41517056,
+          "vms_bytes": 65527808
+        },
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 735.515625,
+            "user_s": 706.890625
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\ollama.exe",
+          "io": {
+            "other_bytes": 135004070112,
+            "other_count": 56237377,
+            "read_bytes": 197084161881,
+            "read_count": 6768846,
+            "write_bytes": 137916157841,
+            "write_count": 8882407
+          },
+          "name": "ollama.exe",
+          "num_handles": 569,
+          "num_threads": 28,
+          "pid": 27860,
+          "rss_bytes": 72667136,
+          "vms_bytes": 146255872
+        },
+        {
+          "cpu_percent": 346.7,
+          "cpu_times": {
+            "system_s": 558.703125,
+            "user_s": 10316.90625
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\lib\\ollama\\llama-server.exe",
+          "io": {
+            "other_bytes": 2107686,
+            "other_count": 121970,
+            "read_bytes": 29817395835,
+            "read_count": 33634,
+            "write_bytes": 103316,
+            "write_count": 1059
+          },
+          "name": "llama-server.exe",
+          "num_handles": 258,
+          "num_threads": 30,
+          "pid": 33760,
+          "rss_bytes": 20020006912,
+          "vms_bytes": 33249767424
+        }
+      ],
+      "stage": "background",
+      "timestamp_utc": "2026-09-08T10:02:55.051613+00:00",
+      "total_gpu_power_w": 21.38
+    },
+    {
+      "gpu": {
+        "availability": "available",
+        "devices": [
+          {
+            "driver_version": "610.62",
+            "extra_columns": [],
+            "fan_percent": 0.0,
+            "graphics_clock_mhz": 210.0,
+            "index": 0,
+            "memory_clock_mhz": 5001.0,
+            "memory_free_mib": 443.0,
+            "memory_total_mib": 12282.0,
+            "memory_used_mib": 11555.0,
+            "name": "NVIDIA GeForce RTX 4070 SUPER",
+            "power_draw_w": 21.48,
+            "power_limit_w": 220.0,
+            "pstate": "P3",
+            "raw_columns": [
+              "0",
+              "[redacted-gpu-uuid]",
+              "NVIDIA GeForce RTX 4070 SUPER",
+              "610.62",
+              "12",
+              "12282",
+              "11555",
+              "443",
+              "40",
+              "21.48",
+              "220.00",
+              "210",
+              "210",
+              "5001",
+              "P3",
+              "0"
+            ],
+            "raw_line": "0, [redacted-gpu-uuid], NVIDIA GeForce RTX 4070 SUPER, 610.62, 12, 12282, 11555, 443, 40, 21.48, 220.00, 210, 210, 5001, P3, 0",
+            "sm_clock_mhz": 210.0,
+            "temperature_c": 40.0,
+            "utilization_gpu_percent": 12.0,
+            "uuid": "[redacted-gpu-uuid]"
+          }
+        ]
+      },
+      "host": {
+        "cpu_frequency_mhz": 4201.0,
+        "cpu_percent": 68.1,
+        "cpu_percent_per_core": [
+          94.4,
+          88.1,
+          92.9,
+          95.2,
+          57.1,
+          63.4,
+          57.1,
+          48.8,
+          73.8,
+          42.9,
+          67.4,
+          73.8,
+          71.4,
+          45.2,
+          53.5,
+          59.5
+        ],
+        "disk_io": {
+          "read_bytes": 11596509029888,
+          "read_count": 21054686,
+          "read_time_ms": 85417,
+          "write_bytes": 1116380635136,
+          "write_count": 27873705,
+          "write_time_ms": 45245
+        },
+        "memory_available_bytes": 2344292352,
+        "memory_percent": 93.0,
+        "memory_total_bytes": 33462239232,
+        "memory_used_bytes": 31117946880
+      },
+      "monotonic_ns": 1169316435645100,
+      "nvidia_collector": {
+        "command": [
+          "nvidia-smi",
+          "--query-gpu=index,uuid,name,driver_version,utilization.gpu,memory.total,memory.used,memory.free,temperature.gpu,power.draw,power.limit,clocks.gr,clocks.sm,clocks.mem,pstate,fan.speed",
+          "--format=csv,noheader,nounits"
+        ],
+        "duration_ns": 329587000,
+        "error": null,
+        "returncode": 0,
+        "started_at_utc": "2026-09-08T10:02:55.637760+00:00",
+        "stderr_b64": "",
+        "stderr_text": "",
+        "stdout_b64": "MCwgW3JlZGFjdGVkLWdwdS11dWlkXSwgTlZJRElBIEdlRm9yY2UgUlRYIDQwNzAgU1VQRVIsIDYxMC42MiwgMTIsIDEyMjgyLCAxMTU1NSwgNDQzLCA0MCwgMjEuNDgsIDIyMC4wMCwgMjEwLCAyMTAsIDUwMDEsIFAzLCAwDQo=",
+        "stdout_text": "0, [redacted-gpu-uuid], NVIDIA GeForce RTX 4070 SUPER, 610.62, 12, 12282, 11555, 443, 40, 21.48, 220.00, 210, 210, 5001, P3, 0\r\n"
+      },
+      "process": {
+        "cpu_percent": 4.8,
+        "pid": 19756,
+        "rss_bytes": 138473472,
+        "vms_bytes": 122380288
+      },
+      "runtime_processes": [
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 19.828125,
+            "user_s": 24.859375
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\ollama app.exe",
+          "io": {
+            "other_bytes": 4272993913,
+            "other_count": 271945,
+            "read_bytes": 3117384718,
+            "read_count": 6868,
+            "write_bytes": 6270334127,
+            "write_count": 700
+          },
+          "name": "ollama app.exe",
+          "num_handles": 447,
+          "num_threads": 21,
+          "pid": 17200,
+          "rss_bytes": 41517056,
+          "vms_bytes": 65527808
+        },
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 735.515625,
+            "user_s": 706.890625
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\ollama.exe",
+          "io": {
+            "other_bytes": 135004070112,
+            "other_count": 56237377,
+            "read_bytes": 197084161881,
+            "read_count": 6768846,
+            "write_bytes": 137916157841,
+            "write_count": 8882407
+          },
+          "name": "ollama.exe",
+          "num_handles": 569,
+          "num_threads": 28,
+          "pid": 27860,
+          "rss_bytes": 72667136,
+          "vms_bytes": 146255872
+        },
+        {
+          "cpu_percent": 778.4,
+          "cpu_times": {
+            "system_s": 560.03125,
+            "user_s": 10320.703125
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\lib\\ollama\\llama-server.exe",
+          "io": {
+            "other_bytes": 2108534,
+            "other_count": 122023,
+            "read_bytes": 29817395835,
+            "read_count": 33634,
+            "write_bytes": 103316,
+            "write_count": 1059
+          },
+          "name": "llama-server.exe",
+          "num_handles": 258,
+          "num_threads": 30,
+          "pid": 33760,
+          "rss_bytes": 20021190656,
+          "vms_bytes": 33250914304
+        }
+      ],
+      "stage": "background",
+      "timestamp_utc": "2026-09-08T10:02:55.636655+00:00",
+      "total_gpu_power_w": 21.48
+    },
+    {
+      "gpu": {
+        "availability": "available",
+        "devices": [
+          {
+            "driver_version": "610.62",
+            "extra_columns": [],
+            "fan_percent": 0.0,
+            "graphics_clock_mhz": 2760.0,
+            "index": 0,
+            "memory_clock_mhz": 10251.0,
+            "memory_free_mib": 443.0,
+            "memory_total_mib": 12282.0,
+            "memory_used_mib": 11555.0,
+            "name": "NVIDIA GeForce RTX 4070 SUPER",
+            "power_draw_w": 46.85,
+            "power_limit_w": 220.0,
+            "pstate": "P2",
+            "raw_columns": [
+              "0",
+              "[redacted-gpu-uuid]",
+              "NVIDIA GeForce RTX 4070 SUPER",
+              "610.62",
+              "67",
+              "12282",
+              "11555",
+              "443",
+              "41",
+              "46.85",
+              "220.00",
+              "2760",
+              "2760",
+              "10251",
+              "P2",
+              "0"
+            ],
+            "raw_line": "0, [redacted-gpu-uuid], NVIDIA GeForce RTX 4070 SUPER, 610.62, 67, 12282, 11555, 443, 41, 46.85, 220.00, 2760, 2760, 10251, P2, 0",
+            "sm_clock_mhz": 2760.0,
+            "temperature_c": 41.0,
+            "utilization_gpu_percent": 67.0,
+            "uuid": "[redacted-gpu-uuid]"
+          }
+        ]
+      },
+      "host": {
+        "cpu_frequency_mhz": 4201.0,
+        "cpu_percent": 68.0,
+        "cpu_percent_per_core": [
+          93.6,
+          92.3,
+          89.7,
+          92.3,
+          68.4,
+          35.0,
+          52.5,
+          65.8,
+          51.3,
+          74.4,
+          87.5,
+          66.7,
+          76.9,
+          40.0,
+          52.6,
+          46.2
+        ],
+        "disk_io": {
+          "read_bytes": 11596509501440,
+          "read_count": 21054719,
+          "read_time_ms": 85417,
+          "write_bytes": 1116382117888,
+          "write_count": 27873742,
+          "write_time_ms": 45245
+        },
+        "memory_available_bytes": 2330812416,
+        "memory_percent": 93.0,
+        "memory_total_bytes": 33462239232,
+        "memory_used_bytes": 31131426816
+      },
+      "monotonic_ns": 1169317096449300,
+      "nvidia_collector": {
+        "command": [
+          "nvidia-smi",
+          "--query-gpu=index,uuid,name,driver_version,utilization.gpu,memory.total,memory.used,memory.free,temperature.gpu,power.draw,power.limit,clocks.gr,clocks.sm,clocks.mem,pstate,fan.speed",
+          "--format=csv,noheader,nounits"
+        ],
+        "duration_ns": 281328700,
+        "error": null,
+        "returncode": 0,
+        "started_at_utc": "2026-09-08T10:02:56.297996+00:00",
+        "stderr_b64": "",
+        "stderr_text": "",
+        "stdout_b64": "MCwgW3JlZGFjdGVkLWdwdS11dWlkXSwgTlZJRElBIEdlRm9yY2UgUlRYIDQwNzAgU1VQRVIsIDYxMC42MiwgNjcsIDEyMjgyLCAxMTU1NSwgNDQzLCA0MSwgNDYuODUsIDIyMC4wMCwgMjc2MCwgMjc2MCwgMTAyNTEsIFAyLCAwDQo=",
+        "stdout_text": "0, [redacted-gpu-uuid], NVIDIA GeForce RTX 4070 SUPER, 610.62, 67, 12282, 11555, 443, 41, 46.85, 220.00, 2760, 2760, 10251, P2, 0\r\n"
+      },
+      "process": {
+        "cpu_percent": 10.2,
+        "pid": 19756,
+        "rss_bytes": 138473472,
+        "vms_bytes": 122380288
+      },
+      "runtime_processes": [
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 19.828125,
+            "user_s": 24.859375
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\ollama app.exe",
+          "io": {
+            "other_bytes": 4272993913,
+            "other_count": 271945,
+            "read_bytes": 3117384718,
+            "read_count": 6868,
+            "write_bytes": 6270334127,
+            "write_count": 700
+          },
+          "name": "ollama app.exe",
+          "num_handles": 447,
+          "num_threads": 21,
+          "pid": 17200,
+          "rss_bytes": 41517056,
+          "vms_bytes": 65527808
+        },
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 735.515625,
+            "user_s": 706.890625
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\ollama.exe",
+          "io": {
+            "other_bytes": 135004070112,
+            "other_count": 56237377,
+            "read_bytes": 197084162204,
+            "read_count": 6768849,
+            "write_bytes": 137916158164,
+            "write_count": 8882410
+          },
+          "name": "ollama.exe",
+          "num_handles": 569,
+          "num_threads": 28,
+          "pid": 27860,
+          "rss_bytes": 72667136,
+          "vms_bytes": 146255872
+        },
+        {
+          "cpu_percent": 762.2,
+          "cpu_times": {
+            "system_s": 561.140625,
+            "user_s": 10324.1875
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\lib\\ollama\\llama-server.exe",
+          "io": {
+            "other_bytes": 2109318,
+            "other_count": 122072,
+            "read_bytes": 29817395835,
+            "read_count": 33634,
+            "write_bytes": 103639,
+            "write_count": 1062
+          },
+          "name": "llama-server.exe",
+          "num_handles": 258,
+          "num_threads": 30,
+          "pid": 33760,
+          "rss_bytes": 20180197376,
+          "vms_bytes": 33410260992
+        }
+      ],
+      "stage": "background",
+      "timestamp_utc": "2026-09-08T10:02:56.297521+00:00",
+      "total_gpu_power_w": 46.85
+    },
+    {
+      "gpu": {
+        "availability": "available",
+        "devices": [
+          {
+            "driver_version": "610.62",
+            "extra_columns": [],
+            "fan_percent": 0.0,
+            "graphics_clock_mhz": 2760.0,
+            "index": 0,
+            "memory_clock_mhz": 10251.0,
+            "memory_free_mib": 443.0,
+            "memory_total_mib": 12282.0,
+            "memory_used_mib": 11555.0,
+            "name": "NVIDIA GeForce RTX 4070 SUPER",
+            "power_draw_w": 55.68,
+            "power_limit_w": 220.0,
+            "pstate": "P2",
+            "raw_columns": [
+              "0",
+              "[redacted-gpu-uuid]",
+              "NVIDIA GeForce RTX 4070 SUPER",
+              "610.62",
+              "1",
+              "12282",
+              "11555",
+              "443",
+              "41",
+              "55.68",
+              "220.00",
+              "2760",
+              "2760",
+              "10251",
+              "P2",
+              "0"
+            ],
+            "raw_line": "0, [redacted-gpu-uuid], NVIDIA GeForce RTX 4070 SUPER, 610.62, 1, 12282, 11555, 443, 41, 55.68, 220.00, 2760, 2760, 10251, P2, 0",
+            "sm_clock_mhz": 2760.0,
+            "temperature_c": 41.0,
+            "utilization_gpu_percent": 1.0,
+            "uuid": "[redacted-gpu-uuid]"
+          }
+        ]
+      },
+      "host": {
+        "cpu_frequency_mhz": 4201.0,
+        "cpu_percent": 63.5,
+        "cpu_percent_per_core": [
+          97.5,
+          82.1,
+          92.3,
+          100.0,
+          52.5,
+          56.4,
+          61.5,
+          46.2,
+          53.8,
+          60.0,
+          82.1,
+          56.4,
+          77.5,
+          15.4,
+          40.0,
+          42.5
+        ],
+        "disk_io": {
+          "read_bytes": 11596509670400,
+          "read_count": 21054726,
+          "read_time_ms": 85417,
+          "write_bytes": 1116382184448,
+          "write_count": 27873750,
+          "write_time_ms": 45245
+        },
+        "memory_available_bytes": 2161823744,
+        "memory_percent": 93.5,
+        "memory_total_bytes": 33462239232,
+        "memory_used_bytes": 31300415488
+      },
+      "monotonic_ns": 1169317700547200,
+      "nvidia_collector": {
+        "command": [
+          "nvidia-smi",
+          "--query-gpu=index,uuid,name,driver_version,utilization.gpu,memory.total,memory.used,memory.free,temperature.gpu,power.draw,power.limit,clocks.gr,clocks.sm,clocks.mem,pstate,fan.speed",
+          "--format=csv,noheader,nounits"
+        ],
+        "duration_ns": 293366600,
+        "error": null,
+        "returncode": 0,
+        "started_at_utc": "2026-09-08T10:02:56.902404+00:00",
+        "stderr_b64": "",
+        "stderr_text": "",
+        "stdout_b64": "MCwgW3JlZGFjdGVkLWdwdS11dWlkXSwgTlZJRElBIEdlRm9yY2UgUlRYIDQwNzAgU1VQRVIsIDYxMC42MiwgMSwgMTIyODIsIDExNTU1LCA0NDMsIDQxLCA1NS42OCwgMjIwLjAwLCAyNzYwLCAyNzYwLCAxMDI1MSwgUDIsIDANCg==",
+        "stdout_text": "0, [redacted-gpu-uuid], NVIDIA GeForce RTX 4070 SUPER, 610.62, 1, 12282, 11555, 443, 41, 55.68, 220.00, 2760, 2760, 10251, P2, 0\r\n"
+      },
+      "process": {
+        "cpu_percent": 10.1,
+        "pid": 19756,
+        "rss_bytes": 138473472,
+        "vms_bytes": 122380288
+      },
+      "runtime_processes": [
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 19.828125,
+            "user_s": 24.859375
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\ollama app.exe",
+          "io": {
+            "other_bytes": 4272993913,
+            "other_count": 271945,
+            "read_bytes": 3117384718,
+            "read_count": 6868,
+            "write_bytes": 6270334127,
+            "write_count": 700
+          },
+          "name": "ollama app.exe",
+          "num_handles": 447,
+          "num_threads": 21,
+          "pid": 17200,
+          "rss_bytes": 41517056,
+          "vms_bytes": 65527808
+        },
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 735.515625,
+            "user_s": 706.890625
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\ollama.exe",
+          "io": {
+            "other_bytes": 135004070234,
+            "other_count": 56237378,
+            "read_bytes": 197084162204,
+            "read_count": 6768849,
+            "write_bytes": 137916158164,
+            "write_count": 8882410
+          },
+          "name": "ollama.exe",
+          "num_handles": 569,
+          "num_threads": 28,
+          "pid": 27860,
+          "rss_bytes": 72667136,
+          "vms_bytes": 146255872
+        },
+        {
+          "cpu_percent": 795.0,
+          "cpu_times": {
+            "system_s": 561.703125,
+            "user_s": 10328.703125
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\lib\\ollama\\llama-server.exe",
+          "io": {
+            "other_bytes": 2110182,
+            "other_count": 122124,
+            "read_bytes": 29817395835,
+            "read_count": 33634,
+            "write_bytes": 103639,
+            "write_count": 1062
+          },
+          "name": "llama-server.exe",
+          "num_handles": 258,
+          "num_threads": 30,
+          "pid": 33760,
+          "rss_bytes": 20183179264,
+          "vms_bytes": 33413251072
+        }
+      ],
+      "stage": "background",
+      "timestamp_utc": "2026-09-08T10:02:56.901596+00:00",
+      "total_gpu_power_w": 55.68
+    },
+    {
+      "gpu": {
+        "availability": "available",
+        "devices": [
+          {
+            "driver_version": "610.62",
+            "extra_columns": [],
+            "fan_percent": 0.0,
+            "graphics_clock_mhz": 2760.0,
+            "index": 0,
+            "memory_clock_mhz": 10251.0,
+            "memory_free_mib": 452.0,
+            "memory_total_mib": 12282.0,
+            "memory_used_mib": 11546.0,
+            "name": "NVIDIA GeForce RTX 4070 SUPER",
+            "power_draw_w": 50.2,
+            "power_limit_w": 220.0,
+            "pstate": "P2",
+            "raw_columns": [
+              "0",
+              "[redacted-gpu-uuid]",
+              "NVIDIA GeForce RTX 4070 SUPER",
+              "610.62",
+              "3",
+              "12282",
+              "11546",
+              "452",
+              "41",
+              "50.20",
+              "220.00",
+              "2760",
+              "2760",
+              "10251",
+              "P2",
+              "0"
+            ],
+            "raw_line": "0, [redacted-gpu-uuid], NVIDIA GeForce RTX 4070 SUPER, 610.62, 3, 12282, 11546, 452, 41, 50.20, 220.00, 2760, 2760, 10251, P2, 0",
+            "sm_clock_mhz": 2760.0,
+            "temperature_c": 41.0,
+            "utilization_gpu_percent": 3.0,
+            "uuid": "[redacted-gpu-uuid]"
+          }
+        ]
+      },
+      "host": {
+        "cpu_frequency_mhz": 4201.0,
+        "cpu_percent": 72.4,
+        "cpu_percent_per_core": [
+          95.8,
+          91.2,
+          94.8,
+          96.5,
+          66.7,
+          56.1,
+          75.4,
+          56.9,
+          70.2,
+          70.2,
+          77.2,
+          82.5,
+          64.9,
+          45.6,
+          51.7,
+          56.1
+        ],
+        "disk_io": {
+          "read_bytes": 11596509899776,
+          "read_count": 21054730,
+          "read_time_ms": 85417,
+          "write_bytes": 1116382225408,
+          "write_count": 27873756,
+          "write_time_ms": 45245
+        },
+        "memory_available_bytes": 2161610752,
+        "memory_percent": 93.5,
+        "memory_total_bytes": 33462239232,
+        "memory_used_bytes": 31300628480
+      },
+      "monotonic_ns": 1169318365792300,
+      "nvidia_collector": {
+        "command": [
+          "nvidia-smi",
+          "--query-gpu=index,uuid,name,driver_version,utilization.gpu,memory.total,memory.used,memory.free,temperature.gpu,power.draw,power.limit,clocks.gr,clocks.sm,clocks.mem,pstate,fan.speed",
+          "--format=csv,noheader,nounits"
+        ],
+        "duration_ns": 516325700,
+        "error": null,
+        "returncode": 0,
+        "started_at_utc": "2026-09-08T10:02:57.567297+00:00",
+        "stderr_b64": "",
+        "stderr_text": "",
+        "stdout_b64": "MCwgW3JlZGFjdGVkLWdwdS11dWlkXSwgTlZJRElBIEdlRm9yY2UgUlRYIDQwNzAgU1VQRVIsIDYxMC42MiwgMywgMTIyODIsIDExNTQ2LCA0NTIsIDQxLCA1MC4yMCwgMjIwLjAwLCAyNzYwLCAyNzYwLCAxMDI1MSwgUDIsIDANCg==",
+        "stdout_text": "0, [redacted-gpu-uuid], NVIDIA GeForce RTX 4070 SUPER, 610.62, 3, 12282, 11546, 452, 41, 50.20, 220.00, 2760, 2760, 10251, P2, 0\r\n"
+      },
+      "process": {
+        "cpu_percent": 10.6,
+        "pid": 19756,
+        "rss_bytes": 138100736,
+        "vms_bytes": 122228736
+      },
+      "runtime_processes": [
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 19.828125,
+            "user_s": 24.859375
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\ollama app.exe",
+          "io": {
+            "other_bytes": 4272993913,
+            "other_count": 271945,
+            "read_bytes": 3117384718,
+            "read_count": 6868,
+            "write_bytes": 6270334127,
+            "write_count": 700
+          },
+          "name": "ollama app.exe",
+          "num_handles": 447,
+          "num_threads": 21,
+          "pid": 17200,
+          "rss_bytes": 41517056,
+          "vms_bytes": 65527808
+        },
+        {
+          "cpu_percent": 1.8,
+          "cpu_times": {
+            "system_s": 735.515625,
+            "user_s": 706.90625
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\ollama.exe",
+          "io": {
+            "other_bytes": 135004070478,
+            "other_count": 56237380,
+            "read_bytes": 197084162204,
+            "read_count": 6768849,
+            "write_bytes": 137916158164,
+            "write_count": 8882410
+          },
+          "name": "ollama.exe",
+          "num_handles": 569,
+          "num_threads": 28,
+          "pid": 27860,
+          "rss_bytes": 72687616,
+          "vms_bytes": 146255872
+        },
+        {
+          "cpu_percent": 773.0,
+          "cpu_times": {
+            "system_s": 562.0625,
+            "user_s": 10335.109375
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\lib\\ollama\\llama-server.exe",
+          "io": {
+            "other_bytes": 2111574,
+            "other_count": 122207,
+            "read_bytes": 29817395835,
+            "read_count": 33634,
+            "write_bytes": 103639,
+            "write_count": 1062
+          },
+          "name": "llama-server.exe",
+          "num_handles": 258,
+          "num_threads": 30,
+          "pid": 33760,
+          "rss_bytes": 20183359488,
+          "vms_bytes": 33413398528
+        }
+      ],
+      "stage": "background",
+      "timestamp_utc": "2026-09-08T10:02:57.566860+00:00",
+      "total_gpu_power_w": 50.2
+    },
+    {
+      "gpu": {
+        "availability": "available",
+        "devices": [
+          {
+            "driver_version": "610.62",
+            "extra_columns": [],
+            "fan_percent": 0.0,
+            "graphics_clock_mhz": 2505.0,
+            "index": 0,
+            "memory_clock_mhz": 10251.0,
+            "memory_free_mib": 424.0,
+            "memory_total_mib": 12282.0,
+            "memory_used_mib": 11574.0,
+            "name": "NVIDIA GeForce RTX 4070 SUPER",
+            "power_draw_w": 46.75,
+            "power_limit_w": 220.0,
+            "pstate": "P2",
+            "raw_columns": [
+              "0",
+              "[redacted-gpu-uuid]",
+              "NVIDIA GeForce RTX 4070 SUPER",
+              "610.62",
+              "9",
+              "12282",
+              "11574",
+              "424",
+              "41",
+              "46.75",
+              "220.00",
+              "2505",
+              "2505",
+              "10251",
+              "P2",
+              "0"
+            ],
+            "raw_line": "0, [redacted-gpu-uuid], NVIDIA GeForce RTX 4070 SUPER, 610.62, 9, 12282, 11574, 424, 41, 46.75, 220.00, 2505, 2505, 10251, P2, 0",
+            "sm_clock_mhz": 2505.0,
+            "temperature_c": 41.0,
+            "utilization_gpu_percent": 9.0,
+            "uuid": "[redacted-gpu-uuid]"
+          }
+        ]
+      },
+      "host": {
+        "cpu_frequency_mhz": 4201.0,
+        "cpu_percent": 71.8,
+        "cpu_percent_per_core": [
+          97.5,
+          97.2,
+          94.4,
+          97.2,
+          55.6,
+          55.6,
+          66.7,
+          50.0,
+          69.4,
+          75.0,
+          78.4,
+          80.6,
+          91.7,
+          19.4,
+          41.7,
+          75.0
+        ],
+        "disk_io": {
+          "read_bytes": 11596514585600,
+          "read_count": 21054836,
+          "read_time_ms": 85417,
+          "write_bytes": 1116382323712,
+          "write_count": 27873764,
+          "write_time_ms": 45245
+        },
+        "memory_available_bytes": 2145538048,
+        "memory_percent": 93.6,
+        "memory_total_bytes": 33462239232,
+        "memory_used_bytes": 31316701184
+      },
+      "monotonic_ns": 1169319197351300,
+      "nvidia_collector": {
+        "command": [
+          "nvidia-smi",
+          "--query-gpu=index,uuid,name,driver_version,utilization.gpu,memory.total,memory.used,memory.free,temperature.gpu,power.draw,power.limit,clocks.gr,clocks.sm,clocks.mem,pstate,fan.speed",
+          "--format=csv,noheader,nounits"
+        ],
+        "duration_ns": 239581600,
+        "error": null,
+        "returncode": 0,
+        "started_at_utc": "2026-09-08T10:02:58.400290+00:00",
+        "stderr_b64": "",
+        "stderr_text": "",
+        "stdout_b64": "MCwgW3JlZGFjdGVkLWdwdS11dWlkXSwgTlZJRElBIEdlRm9yY2UgUlRYIDQwNzAgU1VQRVIsIDYxMC42MiwgOSwgMTIyODIsIDExNTc0LCA0MjQsIDQxLCA0Ni43NSwgMjIwLjAwLCAyNTA1LCAyNTA1LCAxMDI1MSwgUDIsIDANCg==",
+        "stdout_text": "0, [redacted-gpu-uuid], NVIDIA GeForce RTX 4070 SUPER, 610.62, 9, 12282, 11574, 424, 41, 46.75, 220.00, 2505, 2505, 10251, P2, 0\r\n"
+      },
+      "process": {
+        "cpu_percent": 14.1,
+        "pid": 19756,
+        "rss_bytes": 138186752,
+        "vms_bytes": 122339328
+      },
+      "runtime_processes": [
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 19.828125,
+            "user_s": 24.859375
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\ollama app.exe",
+          "io": {
+            "other_bytes": 4272993913,
+            "other_count": 271945,
+            "read_bytes": 3117384718,
+            "read_count": 6868,
+            "write_bytes": 6270334127,
+            "write_count": 700
+          },
+          "name": "ollama app.exe",
+          "num_handles": 447,
+          "num_threads": 21,
+          "pid": 17200,
+          "rss_bytes": 41517056,
+          "vms_bytes": 65527808
+        },
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 735.515625,
+            "user_s": 706.90625
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\ollama.exe",
+          "io": {
+            "other_bytes": 135004072546,
+            "other_count": 56237386,
+            "read_bytes": 197084162767,
+            "read_count": 6768853,
+            "write_bytes": 137916158818,
+            "write_count": 8882415
+          },
+          "name": "ollama.exe",
+          "num_handles": 567,
+          "num_threads": 28,
+          "pid": 27860,
+          "rss_bytes": 72687616,
+          "vms_bytes": 146255872
+        },
+        {
+          "cpu_percent": 774.1,
+          "cpu_times": {
+            "system_s": 562.484375,
+            "user_s": 10338.859375
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\lib\\ollama\\llama-server.exe",
+          "io": {
+            "other_bytes": 2112502,
+            "other_count": 122260,
+            "read_bytes": 29817395835,
+            "read_count": 33634,
+            "write_bytes": 104202,
+            "write_count": 1068
+          },
+          "name": "llama-server.exe",
+          "num_handles": 257,
+          "num_threads": 30,
+          "pid": 33760,
+          "rss_bytes": 20183400448,
+          "vms_bytes": 33413398528
+        }
+      ],
+      "stage": "background",
+      "timestamp_utc": "2026-09-08T10:02:58.398404+00:00",
+      "total_gpu_power_w": 46.75
+    },
+    {
+      "case_id": "exp-000016-char-math-001-think-off-256",
+      "gpu": {
+        "availability": "available",
+        "devices": [
+          {
+            "driver_version": "610.62",
+            "extra_columns": [],
+            "fan_percent": 0.0,
+            "graphics_clock_mhz": 2505.0,
+            "index": 0,
+            "memory_clock_mhz": 10251.0,
+            "memory_free_mib": 419.0,
+            "memory_total_mib": 12282.0,
+            "memory_used_mib": 11579.0,
+            "name": "NVIDIA GeForce RTX 4070 SUPER",
+            "power_draw_w": 46.75,
+            "power_limit_w": 220.0,
+            "pstate": "P2",
+            "raw_columns": [
+              "0",
+              "[redacted-gpu-uuid]",
+              "NVIDIA GeForce RTX 4070 SUPER",
+              "610.62",
+              "20",
+              "12282",
+              "11579",
+              "419",
+              "41",
+              "46.75",
+              "220.00",
+              "2505",
+              "2505",
+              "10251",
+              "P2",
+              "0"
+            ],
+            "raw_line": "0, [redacted-gpu-uuid], NVIDIA GeForce RTX 4070 SUPER, 610.62, 20, 12282, 11579, 419, 41, 46.75, 220.00, 2505, 2505, 10251, P2, 0",
+            "sm_clock_mhz": 2505.0,
+            "temperature_c": 41.0,
+            "utilization_gpu_percent": 20.0,
+            "uuid": "[redacted-gpu-uuid]"
+          }
+        ]
+      },
+      "host": {
+        "cpu_frequency_mhz": 4201.0,
+        "cpu_percent": 67.7,
+        "cpu_percent_per_core": [
+          94.9,
+          88.3,
+          90.9,
+          95.2,
+          58.9,
+          51.1,
+          60.3,
+          53.2,
+          63.2,
+          61.2,
+          74.4,
+          71.9,
+          73.7,
+          35.1,
+          48.9,
+          56.3
+        ],
+        "disk_io": {
+          "read_bytes": 11596515392512,
+          "read_count": 21054853,
+          "read_time_ms": 85417,
+          "write_bytes": 1116382659584,
+          "write_count": 27873777,
+          "write_time_ms": 45245
+        },
+        "memory_available_bytes": 2114818048,
+        "memory_percent": 93.7,
+        "memory_total_bytes": 33462239232,
+        "memory_used_bytes": 31347421184
+      },
+      "monotonic_ns": 1169319388162000,
+      "nvidia_collector": {
+        "command": [
+          "nvidia-smi",
+          "--query-gpu=index,uuid,name,driver_version,utilization.gpu,memory.total,memory.used,memory.free,temperature.gpu,power.draw,power.limit,clocks.gr,clocks.sm,clocks.mem,pstate,fan.speed",
+          "--format=csv,noheader,nounits"
+        ],
+        "duration_ns": 172310400,
+        "error": null,
+        "returncode": 0,
+        "started_at_utc": "2026-09-08T10:02:58.589656+00:00",
+        "stderr_b64": "",
+        "stderr_text": "",
+        "stdout_b64": "MCwgW3JlZGFjdGVkLWdwdS11dWlkXSwgTlZJRElBIEdlRm9yY2UgUlRYIDQwNzAgU1VQRVIsIDYxMC42MiwgMjAsIDEyMjgyLCAxMTU3OSwgNDE5LCA0MSwgNDYuNzUsIDIyMC4wMCwgMjUwNSwgMjUwNSwgMTAyNTEsIFAyLCAwDQo=",
+        "stdout_text": "0, [redacted-gpu-uuid], NVIDIA GeForce RTX 4070 SUPER, 610.62, 20, 12282, 11579, 419, 41, 46.75, 220.00, 2505, 2505, 10251, P2, 0\r\n"
+      },
+      "process": {
+        "cpu_percent": 25.6,
+        "pid": 19756,
+        "rss_bytes": 138252288,
+        "vms_bytes": 122462208
+      },
+      "runtime_processes": [
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 19.828125,
+            "user_s": 24.859375
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\ollama app.exe",
+          "io": {
+            "other_bytes": 4272993913,
+            "other_count": 271945,
+            "read_bytes": 3117384718,
+            "read_count": 6868,
+            "write_bytes": 6270334127,
+            "write_count": 700
+          },
+          "name": "ollama app.exe",
+          "num_handles": 447,
+          "num_threads": 21,
+          "pid": 17200,
+          "rss_bytes": 41517056,
+          "vms_bytes": 65527808
+        },
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 735.515625,
+            "user_s": 706.90625
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\ollama.exe",
+          "io": {
+            "other_bytes": 135004072546,
+            "other_count": 56237386,
+            "read_bytes": 197084162767,
+            "read_count": 6768853,
+            "write_bytes": 137916158818,
+            "write_count": 8882415
+          },
+          "name": "ollama.exe",
+          "num_handles": 567,
+          "num_threads": 28,
+          "pid": 27860,
+          "rss_bytes": 72687616,
+          "vms_bytes": 146255872
+        },
+        {
+          "cpu_percent": 376.3,
+          "cpu_times": {
+            "system_s": 562.625,
+            "user_s": 10339.15625
+          },
+          "exe": "C:\\<redacted-user-home>\\AppData\\Local\\Programs\\Ollama\\lib\\ollama\\llama-server.exe",
+          "io": {
+            "other_bytes": 2112646,
+            "other_count": 122269,
+            "read_bytes": 29817395835,
+            "read_count": 33634,
+            "write_bytes": 104202,
+            "write_count": 1068
+          },
+          "name": "llama-server.exe",
+          "num_handles": 257,
+          "num_threads": 30,
+          "pid": 33760,
+          "rss_bytes": 20183400448,
+          "vms_bytes": 33413398528
+        }
+      ],
+      "stage": "characterize",
+      "timestamp_utc": "2026-09-08T10:02:58.589236+00:00",
+      "total_gpu_power_w": 46.75
+    }
+  ]
+}

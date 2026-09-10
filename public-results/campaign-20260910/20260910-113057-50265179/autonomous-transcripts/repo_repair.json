@@ -1,0 +1,148 @@
+{
+  "messages": [
+    {
+      "content": "You are operating autonomously inside a deterministic simulation. Preserve the mission goal and current authoritative checkpoint across the entire growing transcript. At each turn choose the single best next action from the scenario's allowed actions. Return ONLY one JSON object with keys action, checkpoint, rationale, state. action and checkpoint must be strings. rationale may be concise; state may contain your compact working state. Never declare COMPLETE before the environment says all required verification is satisfied.",
+      "role": "system"
+    },
+    {
+      "content": "SCENARIO repo_repair: Repair a failing repository with the smallest evidence-backed change. Preserve tests and do not declare completion before verification. Initial authoritative checkpoint=BUILD-A. Allowed actions: INSPECT, HYPOTHESIZE, TEST, PATCH, DIAGNOSE, RETEST, AUDIT, COMPLETE.",
+      "role": "user"
+    },
+    {
+      "content": "TURN 1/8. ENVIRONMENT: A regression report arrives. No root cause is yet established. Choose the best next autonomous action now.",
+      "role": "user"
+    },
+    {
+      "content": "{\"action\":\"INSPECT\",\"checkpoint\":\"BUILD-A\",\"rationale\":\"Need to examine repository state and regression report\",\"state\":\"{}\"}",
+      "role": "assistant"
+    },
+    {
+      "content": "TURN 2/8. ENVIRONMENT: Inspection isolates one suspicious boundary condition but has not proven causality. Choose the best next autonomous action now.",
+      "role": "user"
+    },
+    {
+      "content": "{\"action\":\"HYPOTHESIZE\",\"checkpoint\":\"BUILD-A\",\"rationale\":\"Formulate potential root cause based on boundary condition\",\"state\":\"{}\"}",
+      "role": "assistant"
+    },
+    {
+      "content": "TURN 3/8. ENVIRONMENT: You have a reproducible failing fixture and must establish whether the hypothesis is real before editing. Choose the best next autonomous action now.",
+      "role": "user"
+    },
+    {
+      "content": "{\"action\":\"TEST\",\"checkpoint\":\"BUILD-A\",\"rationale\":\"Run tests to confirm hypothesis causes failure\",\"state\":\"{}\"}",
+      "role": "assistant"
+    },
+    {
+      "content": "TURN 4/8. ENVIRONMENT: The focused test proves the hypothesis. A minimal source change is now justified. Choose the best next autonomous action now.",
+      "role": "user"
+    },
+    {
+      "content": "{\"action\":\"PATCH\",\"checkpoint\":\"BUILD-A\",\"rationale\":\"Apply minimal evidence-backed change to fix boundary condition\",\"state\":\"{}\"}",
+      "role": "assistant"
+    },
+    {
+      "content": "TURN 5/8. ENVIRONMENT: AUTHORITATIVE UPDATE: checkpoint is now BUILD-B. The first patch still fails one independent fixture, so do not repeat the same patch blindly. Choose the best next autonomous action now.",
+      "role": "user"
+    },
+    {
+      "content": "{\"action\":\"DIAGNOSE\",\"checkpoint\":\"BUILD-B\",\"rationale\":\"Identify cause of remaining failing fixture\",\"state\":\"{}\"}",
+      "role": "assistant"
+    },
+    {
+      "content": "TURN 6/8. ENVIRONMENT: New evidence isolates the remaining defect and a corrected minimal patch is available; verify it against the focused tests. Choose the best next autonomous action now.",
+      "role": "user"
+    },
+    {
+      "content": "{\"action\":\"RETEST\",\"checkpoint\":\"BUILD-B\",\"rationale\":\"Verify new minimal patch against all focused tests\",\"state\":\"{}\"}",
+      "role": "assistant"
+    },
+    {
+      "content": "TURN 7/8. ENVIRONMENT: Focused tests pass. Check the broader acceptance contract for omitted regressions before completion. Choose the best next autonomous action now.",
+      "role": "user"
+    },
+    {
+      "content": "{\"action\":\"AUDIT\",\"checkpoint\":\"BUILD-B\",\"rationale\":\"Run full test suite to ensure no regressions\",\"state\":\"{}\"}",
+      "role": "assistant"
+    },
+    {
+      "content": "TURN 8/8. ENVIRONMENT: The full acceptance audit is green and no required evidence is missing. Choose the best next autonomous action now.",
+      "role": "user"
+    },
+    {
+      "content": "{\"action\":\"COMPLETE\",\"checkpoint\":\"BUILD-B\",\"rationale\":\"All tests passed and audit green; repository repaired\",\"state\":\"{}\"}",
+      "role": "assistant"
+    }
+  ],
+  "scenario": {
+    "allowed_actions": [
+      "INSPECT",
+      "HYPOTHESIZE",
+      "TEST",
+      "PATCH",
+      "DIAGNOSE",
+      "RETEST",
+      "AUDIT",
+      "COMPLETE"
+    ],
+    "brief": "Repair a failing repository with the smallest evidence-backed change. Preserve tests and do not declare completion before verification.",
+    "checkpoint": "BUILD-A",
+    "id": "repo_repair",
+    "steps": [
+      {
+        "event": "A regression report arrives. No root cause is yet established.",
+        "expected_action": "INSPECT",
+        "expected_checkpoint": "BUILD-A",
+        "injected_change": false
+      },
+      {
+        "event": "Inspection isolates one suspicious boundary condition but has not proven causality.",
+        "expected_action": "HYPOTHESIZE",
+        "expected_checkpoint": "BUILD-A",
+        "injected_change": false
+      },
+      {
+        "event": "You have a reproducible failing fixture and must establish whether the hypothesis is real before editing.",
+        "expected_action": "TEST",
+        "expected_checkpoint": "BUILD-A",
+        "injected_change": false
+      },
+      {
+        "event": "The focused test proves the hypothesis. A minimal source change is now justified.",
+        "expected_action": "PATCH",
+        "expected_checkpoint": "BUILD-A",
+        "injected_change": false
+      },
+      {
+        "event": "AUTHORITATIVE UPDATE: checkpoint is now BUILD-B. The first patch still fails one independent fixture, so do not repeat the same patch blindly.",
+        "expected_action": "DIAGNOSE",
+        "expected_checkpoint": "BUILD-B",
+        "injected_change": true
+      },
+      {
+        "event": "New evidence isolates the remaining defect and a corrected minimal patch is available; verify it against the focused tests.",
+        "expected_action": "RETEST",
+        "expected_checkpoint": "BUILD-B",
+        "injected_change": false
+      },
+      {
+        "event": "Focused tests pass. Check the broader acceptance contract for omitted regressions before completion.",
+        "expected_action": "AUDIT",
+        "expected_checkpoint": "BUILD-B",
+        "injected_change": false
+      },
+      {
+        "event": "The full acceptance audit is green and no required evidence is missing.",
+        "expected_action": "COMPLETE",
+        "expected_checkpoint": "BUILD-B",
+        "injected_change": false
+      }
+    ],
+    "tags": [
+      "planning",
+      "state_retention",
+      "constraint_update",
+      "self_verification"
+    ],
+    "title": "Repository repair under changing evidence"
+  }
+}

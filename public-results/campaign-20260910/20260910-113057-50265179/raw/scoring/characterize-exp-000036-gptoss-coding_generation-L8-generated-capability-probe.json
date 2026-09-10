@@ -1,0 +1,35 @@
+{
+  "checks": [
+    {
+      "name": "executable_tests",
+      "pass": true
+    }
+  ],
+  "evidence": {
+    "executed_source_sha256": "f7e155b1813c2ec756116a13e507500fe8cf9fbcf8b0f673df1a976793aef9ce",
+    "extracted_source": "def bucket(value):\n    if value < 3:\n        return 0\n    if value >= 30:\n        return 10\n    # value is between 3 and 29 inclusive\n    # bucket index = (value - 3) // 3 + 1\n    return (value - 3) // 3 + 1\n\n# Test cases\nif __name__ == \"__main__\":\n    for v in range(0, 35):\n        print(v, bucket(v))\n",
+    "invocation_sha256": "ab21474369dd789a96a6c8bbca9fca57f74c12102f2370538d71fcb82dd4214a",
+    "raw_response": "def bucket(value):\n    if value < 3:\n        return 0\n    if value >= 30:\n        return 10\n    # value is between 3 and 29 inclusive\n    # bucket index = (value - 3) // 3 + 1\n    return (value - 3) // 3 + 1\n\n# Test cases\nif __name__ == \"__main__\":\n    for v in range(0, 35):\n        print(v, bucket(v))",
+    "safety_rejection": null,
+    "subprocess": {
+      "command": [
+        "C:\\Users\\Matt\\compute-cost\\.venv\\Scripts\\python.exe",
+        "-I",
+        "-S",
+        "C:\\Users\\Matt\\AppData\\Local\\Temp\\compute-cost-case-upyu76id\\case.py"
+      ],
+      "duration_ns": 24142400,
+      "error": null,
+      "returncode": 0,
+      "started_at_utc": "2026-09-10T15:33:01.370191+00:00",
+      "stderr_b64": "",
+      "stderr_text": "",
+      "stdout_b64": "MCAwDQoxIDANCjIgMA0KMyAxDQo0IDENCjUgMQ0KNiAyDQo3IDINCjggMg0KOSAzDQoxMCAzDQoxMSAzDQoxMiA0DQoxMyA0DQoxNCA0DQoxNSA1DQoxNiA1DQoxNyA1DQoxOCA2DQoxOSA2DQoyMCA2DQoyMSA3DQoyMiA3DQoyMyA3DQoyNCA4DQoyNSA4DQoyNiA4DQoyNyA5DQoyOCA5DQoyOSA5DQozMCAxMA0KMzEgMTANCjMyIDEwDQozMyAxMA0KMzQgMTANCg==",
+      "stdout_text": "0 0\r\n1 0\r\n2 0\r\n3 1\r\n4 1\r\n5 1\r\n6 2\r\n7 2\r\n8 2\r\n9 3\r\n10 3\r\n11 3\r\n12 4\r\n13 4\r\n14 4\r\n15 5\r\n16 5\r\n17 5\r\n18 6\r\n19 6\r\n20 6\r\n21 7\r\n22 7\r\n23 7\r\n24 8\r\n25 8\r\n26 8\r\n27 9\r\n28 9\r\n29 9\r\n30 10\r\n31 10\r\n32 10\r\n33 10\r\n34 10\r\n"
+    },
+    "test_source": "assert bucket(0) == 0\nassert bucket(3) == 1\nassert bucket(6) == 2\nassert bucket(9) == 3\nassert bucket(12) == 4\nassert bucket(15) == 5\nassert bucket(18) == 6\nassert bucket(21) == 7\nassert bucket(24) == 8\nassert bucket(27) == 9\nassert bucket(31) == 10",
+    "test_source_sha256": "5a52fec9d18c074bd4038cddfa02be06cb5a22b00ac32819fd3e81e109d87061"
+  },
+  "score": 1.0,
+  "status": "SCORED"
+}

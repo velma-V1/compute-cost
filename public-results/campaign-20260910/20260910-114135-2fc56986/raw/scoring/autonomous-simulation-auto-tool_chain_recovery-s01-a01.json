@@ -1,0 +1,42 @@
+{
+  "checks": [
+    {
+      "name": "valid_json",
+      "pass": true
+    },
+    {
+      "name": "required:action",
+      "pass": true
+    },
+    {
+      "name": "required:checkpoint",
+      "pass": true
+    },
+    {
+      "actual": "SEARCH",
+      "expected": "SEARCH",
+      "name": "value:action",
+      "pass": true
+    },
+    {
+      "actual": "TOOL-A",
+      "expected": "TOOL-A",
+      "name": "value:checkpoint",
+      "pass": true
+    }
+  ],
+  "evidence": {
+    "parsed": {
+      "action": "SEARCH",
+      "checkpoint": "TOOL-A",
+      "rationale": "The scenario states we need a record for 'Mira' but lack an identifier. SEARCH is the only allowed action that can discover identifiers or records without prior knowledge.",
+      "state": {
+        "status": "searching_for_identifier",
+        "target": "Mira"
+      }
+    },
+    "raw_response": "{\n  \"action\": \"SEARCH\",\n  \"checkpoint\": \"TOOL-A\",\n  \"rationale\": \"The scenario states we need a record for 'Mira' but lack an identifier. SEARCH is the only allowed action that can discover identifiers or records without prior knowledge.\",\n  \"state\": {\"target\": \"Mira\", \"status\": \"searching_for_identifier\"}\n}"
+  },
+  "score": 1.0,
+  "status": "SCORED"
+}

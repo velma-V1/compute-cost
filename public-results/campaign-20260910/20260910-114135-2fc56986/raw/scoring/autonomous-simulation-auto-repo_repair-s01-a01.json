@@ -1,0 +1,43 @@
+{
+  "checks": [
+    {
+      "name": "valid_json",
+      "pass": true
+    },
+    {
+      "name": "required:action",
+      "pass": true
+    },
+    {
+      "name": "required:checkpoint",
+      "pass": true
+    },
+    {
+      "actual": "INSPECT",
+      "expected": "INSPECT",
+      "name": "value:action",
+      "pass": true
+    },
+    {
+      "actual": "BUILD-A",
+      "expected": "BUILD-A",
+      "name": "value:checkpoint",
+      "pass": true
+    }
+  ],
+  "evidence": {
+    "parsed": {
+      "action": "INSPECT",
+      "checkpoint": "BUILD-A",
+      "rationale": "No root cause is established; inspecting the repository and regression report is required to identify the failure before hypothesizing or patching.",
+      "state": {
+        "checkpoint": "BUILD-A",
+        "status": "initializing_investigation",
+        "turn": 1
+      }
+    },
+    "raw_response": "{\n\"action\": \"INSPECT\",\n\"checkpoint\": \"BUILD-A\",\n\"rationale\": \"No root cause is established; inspecting the repository and regression report is required to identify the failure before hypothesizing or patching.\",\n\"state\": {\"turn\": 1, \"status\": \"initializing_investigation\", \"checkpoint\": \"BUILD-A\"}\n}"
+  },
+  "score": 1.0,
+  "status": "SCORED"
+}

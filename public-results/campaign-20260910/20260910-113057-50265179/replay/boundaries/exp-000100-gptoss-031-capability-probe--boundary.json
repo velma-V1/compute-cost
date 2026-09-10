@@ -1,0 +1,1791 @@
+{
+  "benchmark_version": "gpt-oss-20b-capability-v1",
+  "boundary": {
+    "boundary_repeats": 2,
+    "family_id": "memory_compression_summary_fidelity",
+    "level": 3,
+    "role": "upper_transition",
+    "transition_bracket": {
+      "lower_label": "reliable",
+      "lower_level": 2,
+      "upper_label": "failure",
+      "upper_level": 3
+    }
+  },
+  "case": {
+    "capabilities_required": [
+      "memory_compression_summary_fidelity"
+    ],
+    "capability_map": {
+      "capabilities_required": [
+        "memory_compression_summary_fidelity"
+      ],
+      "difficulty": {
+        "dimensions": {
+          "compression_ratio": 2,
+          "fact_count": 4,
+          "priority_constraints": 1,
+          "relationship_count": 0
+        },
+        "level": 3
+      },
+      "family_id": "memory_compression_summary_fidelity",
+      "recovery_eligible": true,
+      "robustness_eligible": true,
+      "rubric_version": "memory-fidelity-v1",
+      "taxonomy_version": "capability-taxonomy-v1"
+    },
+    "category": "memory_compression_summary_fidelity",
+    "compound": false,
+    "difficulty": {
+      "dimensions": {
+        "compression_ratio": 2,
+        "fact_count": 4,
+        "priority_constraints": 1,
+        "relationship_count": 0
+      },
+      "level": 3,
+      "rubric_version": "memory-fidelity-v1"
+    },
+    "difficulty_level": 3,
+    "expected": {
+      "mode": "offline",
+      "model": "Nova",
+      "owner": "Rae",
+      "retries": 2
+    },
+    "family_id": "memory_compression_summary_fidelity",
+    "id": "gptoss-031",
+    "prompt": "Facts: owner=Rae; model=Nova; retries=2; mode=offline. Return a compact JSON object preserving all four facts exactly.",
+    "recovery_eligible": true,
+    "required": [
+      "owner",
+      "model",
+      "retries",
+      "mode"
+    ],
+    "robustness_eligible": true,
+    "scorer": "json",
+    "scorer_version": "1",
+    "suite_version": "gpt-oss-20b-capability-v1",
+    "tags": [],
+    "taxonomy_version": "capability-taxonomy-v1",
+    "timeout_s": 120
+  },
+  "classification": {
+    "basis": "structured output was not valid JSON",
+    "measurement_kind": "DERIVED",
+    "result_class": "FORMAT_FAILURE",
+    "valid_for_capability": true
+  },
+  "evidence_key": "exp-000100-gptoss-031-capability-probe",
+  "evidence_refs": {
+    "request": {
+      "bytes": 269,
+      "case_id": "exp-000100-gptoss-031-capability-probe",
+      "path": "raw/runtime/requests/000103-characterize-exp-000100-gptoss-031-capability-probe.bin",
+      "producer": "runtime-adapter",
+      "sha256": "7e45f4bfc9338f0e9ba9b4924c6c2a02f7ca32e680285a3ccb7ce7a2a7f4e1f4",
+      "stage": "characterize"
+    },
+    "request_id": "000103-characterize-exp-000100-gptoss-031-capability-probe",
+    "response": {
+      "bytes": 6077,
+      "case_id": "exp-000100-gptoss-031-capability-probe",
+      "path": "raw/runtime/responses/000103-characterize-exp-000100-gptoss-031-capability-probe.bin",
+      "producer": "runtime-adapter",
+      "sha256": "5e5c095c263351ac540f1dcae31c6160d1cba7d3c687f62a7af975e59a89bcd5",
+      "stage": "characterize"
+    },
+    "streams": [
+      {
+        "bytes": 143,
+        "case_id": "exp-000100-gptoss-031-capability-probe",
+        "path": "raw/runtime/streams/000103-characterize-exp-000100-gptoss-031-capability-probe/000000.bin",
+        "producer": "runtime-stream",
+        "sha256": "92ba3e8a23e3c0c1efb6240d405c6d5a72fa458699530273bd6f211fc933eb78",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 144,
+        "case_id": "exp-000100-gptoss-031-capability-probe",
+        "path": "raw/runtime/streams/000103-characterize-exp-000100-gptoss-031-capability-probe/000001.bin",
+        "producer": "runtime-stream",
+        "sha256": "6ee14127638268a25398f1fc529c8f31e411d7775007b16874bb731d49a8f726",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 144,
+        "case_id": "exp-000100-gptoss-031-capability-probe",
+        "path": "raw/runtime/streams/000103-characterize-exp-000100-gptoss-031-capability-probe/000002.bin",
+        "producer": "runtime-stream",
+        "sha256": "ad957422f2e76768d93239a4f1c8c5a1518af59f3dd9f11acd91501894e84a25",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 145,
+        "case_id": "exp-000100-gptoss-031-capability-probe",
+        "path": "raw/runtime/streams/000103-characterize-exp-000100-gptoss-031-capability-probe/000003.bin",
+        "producer": "runtime-stream",
+        "sha256": "5eb6f1bdf4367582376050d38e6021c6fab1f93d3e284cd50a498de1fcf1800d",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 143,
+        "case_id": "exp-000100-gptoss-031-capability-probe",
+        "path": "raw/runtime/streams/000103-characterize-exp-000100-gptoss-031-capability-probe/000004.bin",
+        "producer": "runtime-stream",
+        "sha256": "b3b77ea8b6f50079edfa5aef65e3a5b88640cdcc4676392d83b5e8da46652866",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 145,
+        "case_id": "exp-000100-gptoss-031-capability-probe",
+        "path": "raw/runtime/streams/000103-characterize-exp-000100-gptoss-031-capability-probe/000005.bin",
+        "producer": "runtime-stream",
+        "sha256": "6631308b37f70a6f5f2b31e40c6492ad43cb13f0ee18f0a223d31b45cdf2c812",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 145,
+        "case_id": "exp-000100-gptoss-031-capability-probe",
+        "path": "raw/runtime/streams/000103-characterize-exp-000100-gptoss-031-capability-probe/000006.bin",
+        "producer": "runtime-stream",
+        "sha256": "ff7cd09bbaa399215b6c35b84745d4da0d6cb52dabaff32c43f9a42377111a13",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 140,
+        "case_id": "exp-000100-gptoss-031-capability-probe",
+        "path": "raw/runtime/streams/000103-characterize-exp-000100-gptoss-031-capability-probe/000007.bin",
+        "producer": "runtime-stream",
+        "sha256": "21e9dbfc2b36a61355fe6cb36e5063ea6c796338cf416f6bbd7610d5651d0462",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 128,
+        "case_id": "exp-000100-gptoss-031-capability-probe",
+        "path": "raw/runtime/streams/000103-characterize-exp-000100-gptoss-031-capability-probe/000008.bin",
+        "producer": "runtime-stream",
+        "sha256": "ea7895d42eb29950577f36b23f5284783f143400a46a39b80005c73009376b18",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 129,
+        "case_id": "exp-000100-gptoss-031-capability-probe",
+        "path": "raw/runtime/streams/000103-characterize-exp-000100-gptoss-031-capability-probe/000009.bin",
+        "producer": "runtime-stream",
+        "sha256": "1065f7065a80ddaaf96ab22d16f65446751e20b01f27981cb8fa9d658723b992",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 127,
+        "case_id": "exp-000100-gptoss-031-capability-probe",
+        "path": "raw/runtime/streams/000103-characterize-exp-000100-gptoss-031-capability-probe/000010.bin",
+        "producer": "runtime-stream",
+        "sha256": "f1fd9ea9ce8405de5b6885ca1f1d4d22a90fa4468ed7d4efa5478c66aebeb534",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 128,
+        "case_id": "exp-000100-gptoss-031-capability-probe",
+        "path": "raw/runtime/streams/000103-characterize-exp-000100-gptoss-031-capability-probe/000011.bin",
+        "producer": "runtime-stream",
+        "sha256": "359479b3f7df1ebd6a50398a51bac5d80c025dba29f7d8ed6a5611db3f02c9b5",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 126,
+        "case_id": "exp-000100-gptoss-031-capability-probe",
+        "path": "raw/runtime/streams/000103-characterize-exp-000100-gptoss-031-capability-probe/000012.bin",
+        "producer": "runtime-stream",
+        "sha256": "a0244d6a0cde5823ff796fb073d52e3bba85f2b6e57c72927c9c9ee3b5a1a4ec",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 127,
+        "case_id": "exp-000100-gptoss-031-capability-probe",
+        "path": "raw/runtime/streams/000103-characterize-exp-000100-gptoss-031-capability-probe/000013.bin",
+        "producer": "runtime-stream",
+        "sha256": "2c5c3f4452b6988b09b777988e2bb9306958da055a78fc9c8ddc687d6910f16d",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 130,
+        "case_id": "exp-000100-gptoss-031-capability-probe",
+        "path": "raw/runtime/streams/000103-characterize-exp-000100-gptoss-031-capability-probe/000014.bin",
+        "producer": "runtime-stream",
+        "sha256": "64192c5606bb6a6882caad25020f860c86ab2963e82eb7cab8e6dbf21b9d7a8c",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 128,
+        "case_id": "exp-000100-gptoss-031-capability-probe",
+        "path": "raw/runtime/streams/000103-characterize-exp-000100-gptoss-031-capability-probe/000015.bin",
+        "producer": "runtime-stream",
+        "sha256": "f296787e4aa0aebd48ab4f139d8d7752ffaa1f55518a2a4fd7d60d67fe30d413",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 128,
+        "case_id": "exp-000100-gptoss-031-capability-probe",
+        "path": "raw/runtime/streams/000103-characterize-exp-000100-gptoss-031-capability-probe/000016.bin",
+        "producer": "runtime-stream",
+        "sha256": "a8429b65e3dc8c7d5ea0efa421f1de42f4095d02cf096d01aa2520fa6aec697b",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 126,
+        "case_id": "exp-000100-gptoss-031-capability-probe",
+        "path": "raw/runtime/streams/000103-characterize-exp-000100-gptoss-031-capability-probe/000017.bin",
+        "producer": "runtime-stream",
+        "sha256": "5912be81790ee765f10c031af0ed320244796b7edb3c3f3a811d2a51885d8a69",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 127,
+        "case_id": "exp-000100-gptoss-031-capability-probe",
+        "path": "raw/runtime/streams/000103-characterize-exp-000100-gptoss-031-capability-probe/000018.bin",
+        "producer": "runtime-stream",
+        "sha256": "d40e8f0beae3884c74d4391453abfcb59a054eec1d6ac638362050eb63c9df1f",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 130,
+        "case_id": "exp-000100-gptoss-031-capability-probe",
+        "path": "raw/runtime/streams/000103-characterize-exp-000100-gptoss-031-capability-probe/000019.bin",
+        "producer": "runtime-stream",
+        "sha256": "958b43c8eff8b3ffc441fab4c2fea08c160b15e55129082e2b125b868a3c2123",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 126,
+        "case_id": "exp-000100-gptoss-031-capability-probe",
+        "path": "raw/runtime/streams/000103-characterize-exp-000100-gptoss-031-capability-probe/000020.bin",
+        "producer": "runtime-stream",
+        "sha256": "c1dd17b6dd1ec5aa60355b0c079bc34e50fa01669cc2de5c0ee7d58b4d520958",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 128,
+        "case_id": "exp-000100-gptoss-031-capability-probe",
+        "path": "raw/runtime/streams/000103-characterize-exp-000100-gptoss-031-capability-probe/000021.bin",
+        "producer": "runtime-stream",
+        "sha256": "d2bbca67f6bc7d1b04d699356819bde23542c94217c8c4ce6ede800f152259d3",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 130,
+        "case_id": "exp-000100-gptoss-031-capability-probe",
+        "path": "raw/runtime/streams/000103-characterize-exp-000100-gptoss-031-capability-probe/000022.bin",
+        "producer": "runtime-stream",
+        "sha256": "057202da2acd1ddd8f0b19e6026e0b0d0d6a65fd9c4c625a9e7ccb7b33f6c989",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 128,
+        "case_id": "exp-000100-gptoss-031-capability-probe",
+        "path": "raw/runtime/streams/000103-characterize-exp-000100-gptoss-031-capability-probe/000023.bin",
+        "producer": "runtime-stream",
+        "sha256": "6675dbbf7ee300a9160e2797468b6742d0e28b4472c10786f15f80e397c721bc",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 128,
+        "case_id": "exp-000100-gptoss-031-capability-probe",
+        "path": "raw/runtime/streams/000103-characterize-exp-000100-gptoss-031-capability-probe/000024.bin",
+        "producer": "runtime-stream",
+        "sha256": "a6297f804699646eb3fb46f06fd8f0ac556bf110c8bf3001e4bfeb4ff4541d35",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 129,
+        "case_id": "exp-000100-gptoss-031-capability-probe",
+        "path": "raw/runtime/streams/000103-characterize-exp-000100-gptoss-031-capability-probe/000025.bin",
+        "producer": "runtime-stream",
+        "sha256": "a14d6d84ccf0a0fa3e4673dfa0ab4c750f083cb33de1969a4af33be5071e0b03",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 130,
+        "case_id": "exp-000100-gptoss-031-capability-probe",
+        "path": "raw/runtime/streams/000103-characterize-exp-000100-gptoss-031-capability-probe/000026.bin",
+        "producer": "runtime-stream",
+        "sha256": "aacf818dca55a86fb09e0f4e1e335296bf90d1954fa2b4bf8d402bcc25557eca",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 125,
+        "case_id": "exp-000100-gptoss-031-capability-probe",
+        "path": "raw/runtime/streams/000103-characterize-exp-000100-gptoss-031-capability-probe/000027.bin",
+        "producer": "runtime-stream",
+        "sha256": "c88855a3b6b39ddca063e6087706e998b1ffa2b99a6790aa31cba247038144c8",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 128,
+        "case_id": "exp-000100-gptoss-031-capability-probe",
+        "path": "raw/runtime/streams/000103-characterize-exp-000100-gptoss-031-capability-probe/000028.bin",
+        "producer": "runtime-stream",
+        "sha256": "c8f53a76d387408ddc171ae5b10eca3f363eec76ac0ababbb78a20c9cf51a9e4",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 127,
+        "case_id": "exp-000100-gptoss-031-capability-probe",
+        "path": "raw/runtime/streams/000103-characterize-exp-000100-gptoss-031-capability-probe/000029.bin",
+        "producer": "runtime-stream",
+        "sha256": "cbe48d48e974e4b466ba85f618fc2ec0b4e5e0858c1416beeaefcf012e4b6a80",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 130,
+        "case_id": "exp-000100-gptoss-031-capability-probe",
+        "path": "raw/runtime/streams/000103-characterize-exp-000100-gptoss-031-capability-probe/000030.bin",
+        "producer": "runtime-stream",
+        "sha256": "667b7ab5175b2c03c37eb5d6eb8f089f0f470f2d281f331a04133a5dabc8b5ff",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 128,
+        "case_id": "exp-000100-gptoss-031-capability-probe",
+        "path": "raw/runtime/streams/000103-characterize-exp-000100-gptoss-031-capability-probe/000031.bin",
+        "producer": "runtime-stream",
+        "sha256": "d7e18458b3faf4aeaf6bd94f69ab18913ecf381ca176fa3608ce2765bc0542c1",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 126,
+        "case_id": "exp-000100-gptoss-031-capability-probe",
+        "path": "raw/runtime/streams/000103-characterize-exp-000100-gptoss-031-capability-probe/000032.bin",
+        "producer": "runtime-stream",
+        "sha256": "227548c185d82cd15fb1d449d64341a689edfcb57dbf7eac8899f7c3b43085c0",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 125,
+        "case_id": "exp-000100-gptoss-031-capability-probe",
+        "path": "raw/runtime/streams/000103-characterize-exp-000100-gptoss-031-capability-probe/000033.bin",
+        "producer": "runtime-stream",
+        "sha256": "688fd0eb7bc89aa54b745398751e36cb454e6cc0f3759d1af390fd1ad7f69ed7",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 128,
+        "case_id": "exp-000100-gptoss-031-capability-probe",
+        "path": "raw/runtime/streams/000103-characterize-exp-000100-gptoss-031-capability-probe/000034.bin",
+        "producer": "runtime-stream",
+        "sha256": "c1a001f9c823c30182ac20b2938743d067618129106357e96dc697662036ad5b",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 126,
+        "case_id": "exp-000100-gptoss-031-capability-probe",
+        "path": "raw/runtime/streams/000103-characterize-exp-000100-gptoss-031-capability-probe/000035.bin",
+        "producer": "runtime-stream",
+        "sha256": "db8be65b064413bad8be9f8b6e0606925ff2e195cd953ae0ebb561999d310909",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 128,
+        "case_id": "exp-000100-gptoss-031-capability-probe",
+        "path": "raw/runtime/streams/000103-characterize-exp-000100-gptoss-031-capability-probe/000036.bin",
+        "producer": "runtime-stream",
+        "sha256": "1b6430d8aeede5dd2a4c0680791f7938491221051f21bf9d757e2a54659ac2b8",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 129,
+        "case_id": "exp-000100-gptoss-031-capability-probe",
+        "path": "raw/runtime/streams/000103-characterize-exp-000100-gptoss-031-capability-probe/000037.bin",
+        "producer": "runtime-stream",
+        "sha256": "146c41e9e25cfcdcb441e415ba3f173f5f3ac87f0c69fb95d9c77f18b9c3038a",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 128,
+        "case_id": "exp-000100-gptoss-031-capability-probe",
+        "path": "raw/runtime/streams/000103-characterize-exp-000100-gptoss-031-capability-probe/000038.bin",
+        "producer": "runtime-stream",
+        "sha256": "f365ff1001c0cb3f883ad5c6e721b78f58257400016eb84c4641d8f5ebe8c3e1",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 127,
+        "case_id": "exp-000100-gptoss-031-capability-probe",
+        "path": "raw/runtime/streams/000103-characterize-exp-000100-gptoss-031-capability-probe/000039.bin",
+        "producer": "runtime-stream",
+        "sha256": "0036b9065380e3d8e0535e80a962667a907435fbe57948bbba1bdc6b7e0b0477",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 132,
+        "case_id": "exp-000100-gptoss-031-capability-probe",
+        "path": "raw/runtime/streams/000103-characterize-exp-000100-gptoss-031-capability-probe/000040.bin",
+        "producer": "runtime-stream",
+        "sha256": "39e6db13ae3af4d11240c78eb4feefb058a78d0e7d1904d279410224f67d07ad",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 129,
+        "case_id": "exp-000100-gptoss-031-capability-probe",
+        "path": "raw/runtime/streams/000103-characterize-exp-000100-gptoss-031-capability-probe/000041.bin",
+        "producer": "runtime-stream",
+        "sha256": "c1ef8f0f53f822d4f2129ad91df781f07f593d368309a872d3c04d6a5b45eef5",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 128,
+        "case_id": "exp-000100-gptoss-031-capability-probe",
+        "path": "raw/runtime/streams/000103-characterize-exp-000100-gptoss-031-capability-probe/000042.bin",
+        "producer": "runtime-stream",
+        "sha256": "a3c289d300123b48297c0081095732360848b450f64d1fdcd5bdd5cb3b521950",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 128,
+        "case_id": "exp-000100-gptoss-031-capability-probe",
+        "path": "raw/runtime/streams/000103-characterize-exp-000100-gptoss-031-capability-probe/000043.bin",
+        "producer": "runtime-stream",
+        "sha256": "20971c993a81382b76f310187b02db56d2d694a0623663287a0b80e22760e311",
+        "stage": "characterize"
+      },
+      {
+        "bytes": 323,
+        "case_id": "exp-000100-gptoss-031-capability-probe",
+        "path": "raw/runtime/streams/000103-characterize-exp-000100-gptoss-031-capability-probe/000044.bin",
+        "producer": "runtime-stream",
+        "sha256": "73601ac596e9169cea7ad7f0c9189ec424fba7b831473280e1cb07c87fc1e8e3",
+        "stage": "characterize"
+      }
+    ]
+  },
+  "experiment": {
+    "changed_variable": "difficulty_level",
+    "context_request": null,
+    "difficulty_level": 3,
+    "experiment_id": "exp-000100-gptoss-031-capability-probe",
+    "generation_budget": 256,
+    "hypothesis": "bisect difficulty pass/fail bracket",
+    "parent_experiment_id": "exp-000099-gptoss-memory_compression_summary_fidelity-L5-generated-capability-probe",
+    "prompt_variant": "base",
+    "reasoning_effort": "low",
+    "recovery_level": null,
+    "seed": 42,
+    "task_family": "memory_compression_summary_fidelity",
+    "task_id": "memory_compression_summary_fidelity",
+    "temperature": 0.0,
+    "thinking_mode": true
+  },
+  "generation": {
+    "http_status": 200,
+    "metrics": {
+      "eval_count": 54,
+      "eval_duration_ns": 840075000,
+      "load_duration_ns": 4838200,
+      "prompt_eval_count": 97,
+      "prompt_eval_duration_ns": 178187000,
+      "total_duration_ns": 1029496100
+    },
+    "normalized": {
+      "done": true,
+      "done_reason": "stop",
+      "text": "```json\n{\n  \"owner\": \"Rae\",\n  \"model\": \"Nova\",\n  \"retries\": 2,\n  \"mode\": \"offline\"\n}\n```",
+      "thinking": "Need JSON with those key-value pairs.",
+      "tool_calls": []
+    },
+    "ok": true,
+    "phase_metrics": {
+      "answer_chars": 88,
+      "answer_chunks": 36,
+      "answer_span_ns": 548957300,
+      "measurement_kind": "MEASURED",
+      "thinking_chars": 37,
+      "thinking_chunks": 8,
+      "thinking_span_ns": 112111600,
+      "time_to_first_answer_ns": 483619900,
+      "time_to_first_thinking_ns": 258243400
+    },
+    "raw_response_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDYuNDA5NDMzNloiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiIiwidGhpbmtpbmciOiJOZWVkIn0sImRvbmUiOmZhbHNlfQp7Im1vZGVsIjoiZ3B0LW9zczoyMGIiLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTozNTowNi40MjQ4NDUyWiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiIiLCJ0aGlua2luZyI6IiBKU09OIn0sImRvbmUiOmZhbHNlfQp7Im1vZGVsIjoiZ3B0LW9zczoyMGIiLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTozNTowNi40NDA4ODc3WiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiIiLCJ0aGlua2luZyI6IiB3aXRoIn0sImRvbmUiOmZhbHNlfQp7Im1vZGVsIjoiZ3B0LW9zczoyMGIiLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTozNTowNi40NTY2ODczWiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiIiLCJ0aGlua2luZyI6IiB0aG9zZSJ9LCJkb25lIjpmYWxzZX0KeyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDYuNDcxOTEzM1oiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiIiwidGhpbmtpbmciOiIga2V5In0sImRvbmUiOmZhbHNlfQp7Im1vZGVsIjoiZ3B0LW9zczoyMGIiLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTozNTowNi40ODgzMDYxWiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiIiLCJ0aGlua2luZyI6Ii12YWx1ZSJ9LCJkb25lIjpmYWxzZX0KeyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDYuNTA0ODcwNFoiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiIiwidGhpbmtpbmciOiIgcGFpcnMifSwiZG9uZSI6ZmFsc2V9CnsibW9kZWwiOiJncHQtb3NzOjIwYiIsImNyZWF0ZWRfYXQiOiIyMDI2LTA5LTEwVDE1OjM1OjA2LjUyMTczOTRaIiwibWVzc2FnZSI6eyJyb2xlIjoiYXNzaXN0YW50IiwiY29udGVudCI6IiIsInRoaW5raW5nIjoiLiJ9LCJkb25lIjpmYWxzZX0KeyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDYuNjM0OTc4MloiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiYGBgIn0sImRvbmUiOmZhbHNlfQp7Im1vZGVsIjoiZ3B0LW9zczoyMGIiLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTozNTowNi42NDk5OTk2WiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiJqc29uIn0sImRvbmUiOmZhbHNlfQp7Im1vZGVsIjoiZ3B0LW9zczoyMGIiLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTozNTowNi42NjY0NzQ1WiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiJcbiJ9LCJkb25lIjpmYWxzZX0KeyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDYuNjgxNjQxMVoiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50Ijoie1xuIn0sImRvbmUiOmZhbHNlfQp7Im1vZGVsIjoiZ3B0LW9zczoyMGIiLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTozNTowNi42OTY0NzY4WiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiIgIn0sImRvbmUiOmZhbHNlfQp7Im1vZGVsIjoiZ3B0LW9zczoyMGIiLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTozNTowNi43MTEwNDlaIiwibWVzc2FnZSI6eyJyb2xlIjoiYXNzaXN0YW50IiwiY29udGVudCI6IiBcIiJ9LCJkb25lIjpmYWxzZX0KeyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDYuNzI1OTk5OVoiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50Ijoib3duZXIifSwiZG9uZSI6ZmFsc2V9CnsibW9kZWwiOiJncHQtb3NzOjIwYiIsImNyZWF0ZWRfYXQiOiIyMDI2LTA5LTEwVDE1OjM1OjA2Ljc0MTI4MTNaIiwibWVzc2FnZSI6eyJyb2xlIjoiYXNzaXN0YW50IiwiY29udGVudCI6IlwiOiJ9LCJkb25lIjpmYWxzZX0KeyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDYuNzU3MDQ5NVoiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiIFwiIn0sImRvbmUiOmZhbHNlfQp7Im1vZGVsIjoiZ3B0LW9zczoyMGIiLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTozNTowNi43NzIxMDM4WiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiJSIn0sImRvbmUiOmZhbHNlfQp7Im1vZGVsIjoiZ3B0LW9zczoyMGIiLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTozNTowNi43ODgyMjU5WiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiJhZSJ9LCJkb25lIjpmYWxzZX0KeyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDYuNzk4NTQ1NloiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiXCIsXG4ifSwiZG9uZSI6ZmFsc2V9CnsibW9kZWwiOiJncHQtb3NzOjIwYiIsImNyZWF0ZWRfYXQiOiIyMDI2LTA5LTEwVDE1OjM1OjA2LjgyMDMzOTJaIiwibWVzc2FnZSI6eyJyb2xlIjoiYXNzaXN0YW50IiwiY29udGVudCI6IiAifSwiZG9uZSI6ZmFsc2V9CnsibW9kZWwiOiJncHQtb3NzOjIwYiIsImNyZWF0ZWRfYXQiOiIyMDI2LTA5LTEwVDE1OjM1OjA2LjgzNDU5OTFaIiwibWVzc2FnZSI6eyJyb2xlIjoiYXNzaXN0YW50IiwiY29udGVudCI6IiBcIiJ9LCJkb25lIjpmYWxzZX0KeyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDYuODUxODMzMloiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoibW9kZWwifSwiZG9uZSI6ZmFsc2V9CnsibW9kZWwiOiJncHQtb3NzOjIwYiIsImNyZWF0ZWRfYXQiOiIyMDI2LTA5LTEwVDE1OjM1OjA2Ljg2NjgyMjJaIiwibWVzc2FnZSI6eyJyb2xlIjoiYXNzaXN0YW50IiwiY29udGVudCI6IlwiOiJ9LCJkb25lIjpmYWxzZX0KeyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDYuODgyNDI1OVoiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiIFwiIn0sImRvbmUiOmZhbHNlfQp7Im1vZGVsIjoiZ3B0LW9zczoyMGIiLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTozNTowNi44OTY4MDU0WiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiJOb3ZhIn0sImRvbmUiOmZhbHNlfQp7Im1vZGVsIjoiZ3B0LW9zczoyMGIiLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTozNTowNi45MTM0MDU5WiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiJcIixcbiJ9LCJkb25lIjpmYWxzZX0KeyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDYuOTMwNTIyWiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiIgIn0sImRvbmUiOmZhbHNlfQp7Im1vZGVsIjoiZ3B0LW9zczoyMGIiLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTozNTowNi45NDUyNzg3WiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiIgXCIifSwiZG9uZSI6ZmFsc2V9CnsibW9kZWwiOiJncHQtb3NzOjIwYiIsImNyZWF0ZWRfYXQiOiIyMDI2LTA5LTEwVDE1OjM1OjA2Ljk1OTk4MjJaIiwibWVzc2FnZSI6eyJyb2xlIjoiYXNzaXN0YW50IiwiY29udGVudCI6InJlIn0sImRvbmUiOmZhbHNlfQp7Im1vZGVsIjoiZ3B0LW9zczoyMGIiLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTozNTowNi45NzcxNjk3WiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiJ0cmllcyJ9LCJkb25lIjpmYWxzZX0KeyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDYuOTkzMDQyOFoiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiXCI6In0sImRvbmUiOmZhbHNlfQp7Im1vZGVsIjoiZ3B0LW9zczoyMGIiLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTozNTowNy4wMTA3MjA5WiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiIgIn0sImRvbmUiOmZhbHNlfQp7Im1vZGVsIjoiZ3B0LW9zczoyMGIiLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTozNTowNy4wMjUzNDFaIiwibWVzc2FnZSI6eyJyb2xlIjoiYXNzaXN0YW50IiwiY29udGVudCI6IjIifSwiZG9uZSI6ZmFsc2V9CnsibW9kZWwiOiJncHQtb3NzOjIwYiIsImNyZWF0ZWRfYXQiOiIyMDI2LTA5LTEwVDE1OjM1OjA3LjA0MTQ3NzFaIiwibWVzc2FnZSI6eyJyb2xlIjoiYXNzaXN0YW50IiwiY29udGVudCI6IixcbiJ9LCJkb25lIjpmYWxzZX0KeyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDcuMDU5MzI0MVoiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiICJ9LCJkb25lIjpmYWxzZX0KeyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDcuMDc0NDQwMVoiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiIFwiIn0sImRvbmUiOmZhbHNlfQp7Im1vZGVsIjoiZ3B0LW9zczoyMGIiLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTozNTowNy4wODk3NzMxWiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiJtb2RlIn0sImRvbmUiOmZhbHNlfQp7Im1vZGVsIjoiZ3B0LW9zczoyMGIiLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTozNTowNy4xMDYxMTM4WiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiJcIjoifSwiZG9uZSI6ZmFsc2V9CnsibW9kZWwiOiJncHQtb3NzOjIwYiIsImNyZWF0ZWRfYXQiOiIyMDI2LTA5LTEwVDE1OjM1OjA3LjEyMTU1NloiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiIFwiIn0sImRvbmUiOmZhbHNlfQp7Im1vZGVsIjoiZ3B0LW9zczoyMGIiLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTozNTowNy4xMzgyMjk4WiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiJvZmZsaW5lIn0sImRvbmUiOmZhbHNlfQp7Im1vZGVsIjoiZ3B0LW9zczoyMGIiLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTozNTowNy4xNTQxMjM1WiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiJcIlxuIn0sImRvbmUiOmZhbHNlfQp7Im1vZGVsIjoiZ3B0LW9zczoyMGIiLCJjcmVhdGVkX2F0IjoiMjAyNi0wOS0xMFQxNTozNTowNy4xNjkyMTc2WiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiJ9XG4ifSwiZG9uZSI6ZmFsc2V9CnsibW9kZWwiOiJncHQtb3NzOjIwYiIsImNyZWF0ZWRfYXQiOiIyMDI2LTA5LTEwVDE1OjM1OjA3LjE4Mzk2OTdaIiwibWVzc2FnZSI6eyJyb2xlIjoiYXNzaXN0YW50IiwiY29udGVudCI6ImBgYCJ9LCJkb25lIjpmYWxzZX0KeyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDcuMTk4NDQ2WiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiIifSwiZG9uZSI6dHJ1ZSwiZG9uZV9yZWFzb24iOiJzdG9wIiwidG90YWxfZHVyYXRpb24iOjEwMjk0OTYxMDAsImxvYWRfZHVyYXRpb24iOjQ4MzgyMDAsInByb21wdF9ldmFsX2NvdW50Ijo5NywicHJvbXB0X2V2YWxfY2FjaGVkX2NvdW50IjowLCJwcm9tcHRfZXZhbF9kdXJhdGlvbiI6MTc4MTg3MDAwLCJldmFsX2NvdW50Ijo1NCwiZXZhbF9kdXJhdGlvbiI6ODQwMDc1MDAwfQo=",
+    "request": {
+      "body_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwibWVzc2FnZXMiOlt7InJvbGUiOiJ1c2VyIiwiY29udGVudCI6IkZhY3RzOiBvd25lcj1SYWU7IG1vZGVsPU5vdmE7IHJldHJpZXM9MjsgbW9kZT1vZmZsaW5lLiBSZXR1cm4gYSBjb21wYWN0IEpTT04gb2JqZWN0IHByZXNlcnZpbmcgYWxsIGZvdXIgZmFjdHMgZXhhY3RseS4ifV0sInN0cmVhbSI6dHJ1ZSwib3B0aW9ucyI6eyJ0ZW1wZXJhdHVyZSI6MC4wLCJzZWVkIjo0MiwibnVtX3ByZWRpY3QiOjI1Nn0sInRoaW5rIjoibG93In0=",
+      "body_text": "{\"model\":\"gpt-oss:20b\",\"messages\":[{\"role\":\"user\",\"content\":\"Facts: owner=Rae; model=Nova; retries=2; mode=offline. Return a compact JSON object preserving all four facts exactly.\"}],\"stream\":true,\"options\":{\"temperature\":0.0,\"seed\":42,\"num_predict\":256},\"think\":\"low\"}",
+      "method": "POST",
+      "started_at_utc": "2026-09-10T15:35:06.151492+00:00",
+      "started_monotonic_ns": 53182869244600,
+      "stream": true,
+      "timeout_s": 120.0,
+      "url": "http://127.0.0.1:11434/api/chat"
+    },
+    "response_headers": {
+      "connection": "close",
+      "content-type": "application/x-ndjson",
+      "date": "Thu, 10 Sep 2026 15:35:06 GMT",
+      "transfer-encoding": "chunked"
+    },
+    "stream_events": [
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:06.4094336Z",
+          "done": false,
+          "message": {
+            "content": "",
+            "role": "assistant",
+            "thinking": "Need"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDYuNDA5NDMzNloiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiIiwidGhpbmtpbmciOiJOZWVkIn0sImRvbmUiOmZhbHNlfQo=",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:06.4094336Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\",\"thinking\":\"Need\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:06.409736+00:00",
+        "received_monotonic_ns": 53183127488000,
+        "sequence": 0
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:06.4248452Z",
+          "done": false,
+          "message": {
+            "content": "",
+            "role": "assistant",
+            "thinking": " JSON"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDYuNDI0ODQ1MloiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiIiwidGhpbmtpbmciOiIgSlNPTiJ9LCJkb25lIjpmYWxzZX0K",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:06.4248452Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\",\"thinking\":\" JSON\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:06.424962+00:00",
+        "received_monotonic_ns": 53183142715400,
+        "sequence": 1
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:06.4408877Z",
+          "done": false,
+          "message": {
+            "content": "",
+            "role": "assistant",
+            "thinking": " with"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDYuNDQwODg3N1oiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiIiwidGhpbmtpbmciOiIgd2l0aCJ9LCJkb25lIjpmYWxzZX0K",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:06.4408877Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\",\"thinking\":\" with\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:06.441035+00:00",
+        "received_monotonic_ns": 53183158787700,
+        "sequence": 2
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:06.4566873Z",
+          "done": false,
+          "message": {
+            "content": "",
+            "role": "assistant",
+            "thinking": " those"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDYuNDU2Njg3M1oiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiIiwidGhpbmtpbmciOiIgdGhvc2UifSwiZG9uZSI6ZmFsc2V9Cg==",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:06.4566873Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\",\"thinking\":\" those\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:06.457014+00:00",
+        "received_monotonic_ns": 53183174766200,
+        "sequence": 3
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:06.4719133Z",
+          "done": false,
+          "message": {
+            "content": "",
+            "role": "assistant",
+            "thinking": " key"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDYuNDcxOTEzM1oiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiIiwidGhpbmtpbmciOiIga2V5In0sImRvbmUiOmZhbHNlfQo=",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:06.4719133Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\",\"thinking\":\" key\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:06.472031+00:00",
+        "received_monotonic_ns": 53183189783700,
+        "sequence": 4
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:06.4883061Z",
+          "done": false,
+          "message": {
+            "content": "",
+            "role": "assistant",
+            "thinking": "-value"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDYuNDg4MzA2MVoiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiIiwidGhpbmtpbmciOiItdmFsdWUifSwiZG9uZSI6ZmFsc2V9Cg==",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:06.4883061Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\",\"thinking\":\"-value\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:06.488446+00:00",
+        "received_monotonic_ns": 53183206198600,
+        "sequence": 5
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:06.5048704Z",
+          "done": false,
+          "message": {
+            "content": "",
+            "role": "assistant",
+            "thinking": " pairs"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDYuNTA0ODcwNFoiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiIiwidGhpbmtpbmciOiIgcGFpcnMifSwiZG9uZSI6ZmFsc2V9Cg==",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:06.5048704Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\",\"thinking\":\" pairs\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:06.506059+00:00",
+        "received_monotonic_ns": 53183223811100,
+        "sequence": 6
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:06.5217394Z",
+          "done": false,
+          "message": {
+            "content": "",
+            "role": "assistant",
+            "thinking": "."
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDYuNTIxNzM5NFoiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiIiwidGhpbmtpbmciOiIuIn0sImRvbmUiOmZhbHNlfQo=",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:06.5217394Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\",\"thinking\":\".\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:06.521847+00:00",
+        "received_monotonic_ns": 53183239599600,
+        "sequence": 7
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:06.6349782Z",
+          "done": false,
+          "message": {
+            "content": "```",
+            "role": "assistant"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDYuNjM0OTc4MloiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiYGBgIn0sImRvbmUiOmZhbHNlfQo=",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:06.6349782Z\",\"message\":{\"role\":\"assistant\",\"content\":\"```\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:06.635112+00:00",
+        "received_monotonic_ns": 53183352864500,
+        "sequence": 8
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:06.6499996Z",
+          "done": false,
+          "message": {
+            "content": "json",
+            "role": "assistant"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDYuNjQ5OTk5NloiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoianNvbiJ9LCJkb25lIjpmYWxzZX0K",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:06.6499996Z\",\"message\":{\"role\":\"assistant\",\"content\":\"json\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:06.650120+00:00",
+        "received_monotonic_ns": 53183367872900,
+        "sequence": 9
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:06.6664745Z",
+          "done": false,
+          "message": {
+            "content": "\n",
+            "role": "assistant"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDYuNjY2NDc0NVoiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiXG4ifSwiZG9uZSI6ZmFsc2V9Cg==",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:06.6664745Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\\n\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:06.666586+00:00",
+        "received_monotonic_ns": 53183384339400,
+        "sequence": 10
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:06.6816411Z",
+          "done": false,
+          "message": {
+            "content": "{\n",
+            "role": "assistant"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDYuNjgxNjQxMVoiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50Ijoie1xuIn0sImRvbmUiOmZhbHNlfQo=",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:06.6816411Z\",\"message\":{\"role\":\"assistant\",\"content\":\"{\\n\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:06.681750+00:00",
+        "received_monotonic_ns": 53183399503100,
+        "sequence": 11
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:06.6964768Z",
+          "done": false,
+          "message": {
+            "content": " ",
+            "role": "assistant"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDYuNjk2NDc2OFoiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiICJ9LCJkb25lIjpmYWxzZX0K",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:06.6964768Z\",\"message\":{\"role\":\"assistant\",\"content\":\" \"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:06.696593+00:00",
+        "received_monotonic_ns": 53183414346800,
+        "sequence": 12
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:06.711049Z",
+          "done": false,
+          "message": {
+            "content": " \"",
+            "role": "assistant"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDYuNzExMDQ5WiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiIgXCIifSwiZG9uZSI6ZmFsc2V9Cg==",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:06.711049Z\",\"message\":{\"role\":\"assistant\",\"content\":\" \\\"\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:06.711156+00:00",
+        "received_monotonic_ns": 53183428908700,
+        "sequence": 13
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:06.7259999Z",
+          "done": false,
+          "message": {
+            "content": "owner",
+            "role": "assistant"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDYuNzI1OTk5OVoiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50Ijoib3duZXIifSwiZG9uZSI6ZmFsc2V9Cg==",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:06.7259999Z\",\"message\":{\"role\":\"assistant\",\"content\":\"owner\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:06.726183+00:00",
+        "received_monotonic_ns": 53183443936800,
+        "sequence": 14
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:06.7412813Z",
+          "done": false,
+          "message": {
+            "content": "\":",
+            "role": "assistant"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDYuNzQxMjgxM1oiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiXCI6In0sImRvbmUiOmZhbHNlfQo=",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:06.7412813Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\\\":\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:06.741384+00:00",
+        "received_monotonic_ns": 53183459136900,
+        "sequence": 15
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:06.7570495Z",
+          "done": false,
+          "message": {
+            "content": " \"",
+            "role": "assistant"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDYuNzU3MDQ5NVoiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiIFwiIn0sImRvbmUiOmZhbHNlfQo=",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:06.7570495Z\",\"message\":{\"role\":\"assistant\",\"content\":\" \\\"\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:06.757177+00:00",
+        "received_monotonic_ns": 53183474929700,
+        "sequence": 16
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:06.7721038Z",
+          "done": false,
+          "message": {
+            "content": "R",
+            "role": "assistant"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDYuNzcyMTAzOFoiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiUiJ9LCJkb25lIjpmYWxzZX0K",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:06.7721038Z\",\"message\":{\"role\":\"assistant\",\"content\":\"R\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:06.772493+00:00",
+        "received_monotonic_ns": 53183490246800,
+        "sequence": 17
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:06.7882259Z",
+          "done": false,
+          "message": {
+            "content": "ae",
+            "role": "assistant"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDYuNzg4MjI1OVoiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiYWUifSwiZG9uZSI6ZmFsc2V9Cg==",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:06.7882259Z\",\"message\":{\"role\":\"assistant\",\"content\":\"ae\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:06.788320+00:00",
+        "received_monotonic_ns": 53183506074000,
+        "sequence": 18
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:06.7985456Z",
+          "done": false,
+          "message": {
+            "content": "\",\n",
+            "role": "assistant"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDYuNzk4NTQ1NloiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiXCIsXG4ifSwiZG9uZSI6ZmFsc2V9Cg==",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:06.7985456Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\\\",\\n\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:06.803899+00:00",
+        "received_monotonic_ns": 53183521653000,
+        "sequence": 19
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:06.8203392Z",
+          "done": false,
+          "message": {
+            "content": " ",
+            "role": "assistant"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDYuODIwMzM5MloiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiICJ9LCJkb25lIjpmYWxzZX0K",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:06.8203392Z\",\"message\":{\"role\":\"assistant\",\"content\":\" \"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:06.820428+00:00",
+        "received_monotonic_ns": 53183538181400,
+        "sequence": 20
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:06.8345991Z",
+          "done": false,
+          "message": {
+            "content": " \"",
+            "role": "assistant"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDYuODM0NTk5MVoiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiIFwiIn0sImRvbmUiOmZhbHNlfQo=",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:06.8345991Z\",\"message\":{\"role\":\"assistant\",\"content\":\" \\\"\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:06.836462+00:00",
+        "received_monotonic_ns": 53183554215700,
+        "sequence": 21
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:06.8518332Z",
+          "done": false,
+          "message": {
+            "content": "model",
+            "role": "assistant"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDYuODUxODMzMloiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoibW9kZWwifSwiZG9uZSI6ZmFsc2V9Cg==",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:06.8518332Z\",\"message\":{\"role\":\"assistant\",\"content\":\"model\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:06.851923+00:00",
+        "received_monotonic_ns": 53183569676800,
+        "sequence": 22
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:06.8668222Z",
+          "done": false,
+          "message": {
+            "content": "\":",
+            "role": "assistant"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDYuODY2ODIyMloiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiXCI6In0sImRvbmUiOmZhbHNlfQo=",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:06.8668222Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\\\":\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:06.867195+00:00",
+        "received_monotonic_ns": 53183584948200,
+        "sequence": 23
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:06.8824259Z",
+          "done": false,
+          "message": {
+            "content": " \"",
+            "role": "assistant"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDYuODgyNDI1OVoiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiIFwiIn0sImRvbmUiOmZhbHNlfQo=",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:06.8824259Z\",\"message\":{\"role\":\"assistant\",\"content\":\" \\\"\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:06.882521+00:00",
+        "received_monotonic_ns": 53183600274700,
+        "sequence": 24
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:06.8968054Z",
+          "done": false,
+          "message": {
+            "content": "Nova",
+            "role": "assistant"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDYuODk2ODA1NFoiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiTm92YSJ9LCJkb25lIjpmYWxzZX0K",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:06.8968054Z\",\"message\":{\"role\":\"assistant\",\"content\":\"Nova\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:06.897827+00:00",
+        "received_monotonic_ns": 53183615580300,
+        "sequence": 25
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:06.9134059Z",
+          "done": false,
+          "message": {
+            "content": "\",\n",
+            "role": "assistant"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDYuOTEzNDA1OVoiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiXCIsXG4ifSwiZG9uZSI6ZmFsc2V9Cg==",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:06.9134059Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\\\",\\n\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:06.913503+00:00",
+        "received_monotonic_ns": 53183631256900,
+        "sequence": 26
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:06.930522Z",
+          "done": false,
+          "message": {
+            "content": " ",
+            "role": "assistant"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDYuOTMwNTIyWiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiIgIn0sImRvbmUiOmZhbHNlfQo=",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:06.930522Z\",\"message\":{\"role\":\"assistant\",\"content\":\" \"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:06.930619+00:00",
+        "received_monotonic_ns": 53183648372600,
+        "sequence": 27
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:06.9452787Z",
+          "done": false,
+          "message": {
+            "content": " \"",
+            "role": "assistant"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDYuOTQ1Mjc4N1oiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiIFwiIn0sImRvbmUiOmZhbHNlfQo=",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:06.9452787Z\",\"message\":{\"role\":\"assistant\",\"content\":\" \\\"\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:06.950928+00:00",
+        "received_monotonic_ns": 53183668682200,
+        "sequence": 28
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:06.9599822Z",
+          "done": false,
+          "message": {
+            "content": "re",
+            "role": "assistant"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDYuOTU5OTgyMloiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoicmUifSwiZG9uZSI6ZmFsc2V9Cg==",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:06.9599822Z\",\"message\":{\"role\":\"assistant\",\"content\":\"re\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:06.961618+00:00",
+        "received_monotonic_ns": 53183679371400,
+        "sequence": 29
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:06.9771697Z",
+          "done": false,
+          "message": {
+            "content": "tries",
+            "role": "assistant"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDYuOTc3MTY5N1oiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoidHJpZXMifSwiZG9uZSI6ZmFsc2V9Cg==",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:06.9771697Z\",\"message\":{\"role\":\"assistant\",\"content\":\"tries\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:06.977273+00:00",
+        "received_monotonic_ns": 53183695027300,
+        "sequence": 30
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:06.9930428Z",
+          "done": false,
+          "message": {
+            "content": "\":",
+            "role": "assistant"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDYuOTkzMDQyOFoiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiXCI6In0sImRvbmUiOmZhbHNlfQo=",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:06.9930428Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\\\":\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:06.993281+00:00",
+        "received_monotonic_ns": 53183711035100,
+        "sequence": 31
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:07.0107209Z",
+          "done": false,
+          "message": {
+            "content": " ",
+            "role": "assistant"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDcuMDEwNzIwOVoiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiICJ9LCJkb25lIjpmYWxzZX0K",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:07.0107209Z\",\"message\":{\"role\":\"assistant\",\"content\":\" \"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:07.010832+00:00",
+        "received_monotonic_ns": 53183728585800,
+        "sequence": 32
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:07.025341Z",
+          "done": false,
+          "message": {
+            "content": "2",
+            "role": "assistant"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDcuMDI1MzQxWiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiIyIn0sImRvbmUiOmZhbHNlfQo=",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:07.025341Z\",\"message\":{\"role\":\"assistant\",\"content\":\"2\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:07.026009+00:00",
+        "received_monotonic_ns": 53183743762800,
+        "sequence": 33
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:07.0414771Z",
+          "done": false,
+          "message": {
+            "content": ",\n",
+            "role": "assistant"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDcuMDQxNDc3MVoiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiLFxuIn0sImRvbmUiOmZhbHNlfQo=",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:07.0414771Z\",\"message\":{\"role\":\"assistant\",\"content\":\",\\n\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:07.041565+00:00",
+        "received_monotonic_ns": 53183759319400,
+        "sequence": 34
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:07.0593241Z",
+          "done": false,
+          "message": {
+            "content": " ",
+            "role": "assistant"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDcuMDU5MzI0MVoiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiICJ9LCJkb25lIjpmYWxzZX0K",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:07.0593241Z\",\"message\":{\"role\":\"assistant\",\"content\":\" \"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:07.059421+00:00",
+        "received_monotonic_ns": 53183777174500,
+        "sequence": 35
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:07.0744401Z",
+          "done": false,
+          "message": {
+            "content": " \"",
+            "role": "assistant"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDcuMDc0NDQwMVoiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiIFwiIn0sImRvbmUiOmZhbHNlfQo=",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:07.0744401Z\",\"message\":{\"role\":\"assistant\",\"content\":\" \\\"\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:07.074527+00:00",
+        "received_monotonic_ns": 53183792280900,
+        "sequence": 36
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:07.0897731Z",
+          "done": false,
+          "message": {
+            "content": "mode",
+            "role": "assistant"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDcuMDg5NzczMVoiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoibW9kZSJ9LCJkb25lIjpmYWxzZX0K",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:07.0897731Z\",\"message\":{\"role\":\"assistant\",\"content\":\"mode\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:07.089883+00:00",
+        "received_monotonic_ns": 53183807636700,
+        "sequence": 37
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:07.1061138Z",
+          "done": false,
+          "message": {
+            "content": "\":",
+            "role": "assistant"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDcuMTA2MTEzOFoiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiXCI6In0sImRvbmUiOmZhbHNlfQo=",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:07.1061138Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\\\":\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:07.106304+00:00",
+        "received_monotonic_ns": 53183824055500,
+        "sequence": 38
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:07.121556Z",
+          "done": false,
+          "message": {
+            "content": " \"",
+            "role": "assistant"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDcuMTIxNTU2WiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiIgXCIifSwiZG9uZSI6ZmFsc2V9Cg==",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:07.121556Z\",\"message\":{\"role\":\"assistant\",\"content\":\" \\\"\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:07.121678+00:00",
+        "received_monotonic_ns": 53183839431200,
+        "sequence": 39
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:07.1382298Z",
+          "done": false,
+          "message": {
+            "content": "offline",
+            "role": "assistant"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDcuMTM4MjI5OFoiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50Ijoib2ZmbGluZSJ9LCJkb25lIjpmYWxzZX0K",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:07.1382298Z\",\"message\":{\"role\":\"assistant\",\"content\":\"offline\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:07.138368+00:00",
+        "received_monotonic_ns": 53183856120500,
+        "sequence": 40
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:07.1541235Z",
+          "done": false,
+          "message": {
+            "content": "\"\n",
+            "role": "assistant"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDcuMTU0MTIzNVoiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiXCJcbiJ9LCJkb25lIjpmYWxzZX0K",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:07.1541235Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\\\"\\n\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:07.154265+00:00",
+        "received_monotonic_ns": 53183872016100,
+        "sequence": 41
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:07.1692176Z",
+          "done": false,
+          "message": {
+            "content": "}\n",
+            "role": "assistant"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDcuMTY5MjE3NloiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoifVxuIn0sImRvbmUiOmZhbHNlfQo=",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:07.1692176Z\",\"message\":{\"role\":\"assistant\",\"content\":\"}\\n\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:07.169333+00:00",
+        "received_monotonic_ns": 53183887085700,
+        "sequence": 42
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:07.1839697Z",
+          "done": false,
+          "message": {
+            "content": "```",
+            "role": "assistant"
+          },
+          "model": "gpt-oss:20b"
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDcuMTgzOTY5N1oiLCJtZXNzYWdlIjp7InJvbGUiOiJhc3Npc3RhbnQiLCJjb250ZW50IjoiYGBgIn0sImRvbmUiOmZhbHNlfQo=",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:07.1839697Z\",\"message\":{\"role\":\"assistant\",\"content\":\"```\"},\"done\":false}\n",
+        "received_at_utc": "2026-09-10T15:35:07.184069+00:00",
+        "received_monotonic_ns": 53183901821800,
+        "sequence": 43
+      },
+      {
+        "parse_error": null,
+        "parsed": {
+          "created_at": "2026-09-10T15:35:07.198446Z",
+          "done": true,
+          "done_reason": "stop",
+          "eval_count": 54,
+          "eval_duration": 840075000,
+          "load_duration": 4838200,
+          "message": {
+            "content": "",
+            "role": "assistant"
+          },
+          "model": "gpt-oss:20b",
+          "prompt_eval_cached_count": 0,
+          "prompt_eval_count": 97,
+          "prompt_eval_duration": 178187000,
+          "total_duration": 1029496100
+        },
+        "raw_b64": "eyJtb2RlbCI6ImdwdC1vc3M6MjBiIiwiY3JlYXRlZF9hdCI6IjIwMjYtMDktMTBUMTU6MzU6MDcuMTk4NDQ2WiIsIm1lc3NhZ2UiOnsicm9sZSI6ImFzc2lzdGFudCIsImNvbnRlbnQiOiIifSwiZG9uZSI6dHJ1ZSwiZG9uZV9yZWFzb24iOiJzdG9wIiwidG90YWxfZHVyYXRpb24iOjEwMjk0OTYxMDAsImxvYWRfZHVyYXRpb24iOjQ4MzgyMDAsInByb21wdF9ldmFsX2NvdW50Ijo5NywicHJvbXB0X2V2YWxfY2FjaGVkX2NvdW50IjowLCJwcm9tcHRfZXZhbF9kdXJhdGlvbiI6MTc4MTg3MDAwLCJldmFsX2NvdW50Ijo1NCwiZXZhbF9kdXJhdGlvbiI6ODQwMDc1MDAwfQo=",
+        "raw_text": "{\"model\":\"gpt-oss:20b\",\"created_at\":\"2026-09-10T15:35:07.198446Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\"},\"done\":true,\"done_reason\":\"stop\",\"total_duration\":1029496100,\"load_duration\":4838200,\"prompt_eval_count\":97,\"prompt_eval_cached_count\":0,\"prompt_eval_duration\":178187000,\"eval_count\":54,\"eval_duration\":840075000}\n",
+        "received_at_utc": "2026-09-10T15:35:07.198854+00:00",
+        "received_monotonic_ns": 53183916606300,
+        "sequence": 44
+      }
+    ],
+    "timing": {
+      "client_ended_monotonic_ns": 53183917462900,
+      "client_latency_ns": 1048237900,
+      "client_started_monotonic_ns": 53182869225000,
+      "first_event_latency_ns": 258243400,
+      "last_event_latency_ns": 1047361700
+    }
+  },
+  "invocation": {
+    "messages": [
+      {
+        "content": "Facts: owner=Rae; model=Nova; retries=2; mode=offline. Return a compact JSON object preserving all four facts exactly.",
+        "role": "user"
+      }
+    ],
+    "model": "gpt-oss:20b",
+    "options": {
+      "num_predict": 256,
+      "seed": 42,
+      "temperature": 0.0
+    },
+    "request_fields": {
+      "think": "low"
+    },
+    "stream": true
+  },
+  "model": "gpt-oss:20b",
+  "resolved_config": {
+    "autonomous_simulation": {
+      "enabled": true,
+      "generation_budget": 512,
+      "max_generation_budget": 2048,
+      "scenario_count": 6,
+      "steps_per_scenario": 8
+    },
+    "capability_campaign": {
+      "anchor_level": 2,
+      "boundary_repeats": 2,
+      "generation_budget": 256,
+      "jump": 3,
+      "max_experiments_per_family": 6,
+      "reasoning_effort": null,
+      "reliable_threshold": 0.9,
+      "thinking_mode": false,
+      "unstable_threshold": 0.4
+    },
+    "characterization": {
+      "boundary_repeats": 3,
+      "generation_budget_granularity": 32,
+      "initial_generation_budget": 256,
+      "max_experiments_per_task": 12,
+      "max_generation_budget": 2048,
+      "min_generation_budget": 32,
+      "think_off_generation_budget": 256
+    },
+    "compound_lab": {
+      "boundary_repeats": 3,
+      "enabled": false,
+      "jump": 2,
+      "max_compounds": 6,
+      "max_experiments_per_compound": 16
+    },
+    "cost": {
+      "electricity_configured": false,
+      "electricity_per_kwh": 0.0
+    },
+    "evidence": {
+      "retain_raw_collectors": true,
+      "retain_stream_chunks": true
+    },
+    "generation": {
+      "max_tokens": 256,
+      "seed": 42,
+      "temperature": 0.0
+    },
+    "limits": {
+      "consecutive_context_failures": 2,
+      "context_schedule": [
+        4096,
+        8192,
+        16384,
+        32768
+      ],
+      "host_ram_percent": 95.0,
+      "max_model_calls_per_run": 360,
+      "request_timeout_s": 120,
+      "sustained_iterations": 8,
+      "vram_percent": 98.0
+    },
+    "reasoning_curves": {
+      "enabled": false,
+      "repeats": 3
+    },
+    "recovery_lab": {
+      "enabled": false,
+      "max_attempts_per_candidate": 6,
+      "max_level": "R7",
+      "repeats": 3
+    },
+    "robustness_lab": {
+      "enabled": false,
+      "max_attempts_per_perturbation": 4,
+      "max_perturbations_per_family": 2,
+      "repeats": 2
+    },
+    "runtime": {
+      "endpoint": "http://127.0.0.1:11434"
+    },
+    "telemetry": {
+      "interval_s": 0.25,
+      "nvidia": true
+    }
+  },
+  "schema_version": 2,
+  "scoring": {
+    "checks": [
+      {
+        "name": "valid_json",
+        "pass": false
+      }
+    ],
+    "evidence": {
+      "parse_error": {
+        "message": "Expecting value: line 1 column 1 (char 0)",
+        "type": "JSONDecodeError"
+      },
+      "parsed": null,
+      "raw_response": "```json\n{\n  \"owner\": \"Rae\",\n  \"model\": \"Nova\",\n  \"retries\": 2,\n  \"mode\": \"offline\"\n}\n```"
+    },
+    "score": 0.0,
+    "status": "SCORED"
+  },
+  "source_experiment_id": "exp-000100-gptoss-031-capability-probe",
+  "stage": "characterize",
+  "telemetry_for_experiment": [
+    {
+      "case_id": "exp-000100-gptoss-031-capability-probe",
+      "gpu": {
+        "availability": "available",
+        "devices": [
+          {
+            "driver_version": "610.62",
+            "extra_columns": [],
+            "fan_percent": 30.0,
+            "graphics_clock_mhz": 2745.0,
+            "index": 0,
+            "memory_clock_mhz": 10251.0,
+            "memory_free_mib": 534.0,
+            "memory_total_mib": 12282.0,
+            "memory_used_mib": 11464.0,
+            "name": "NVIDIA GeForce RTX 4070 SUPER",
+            "power_draw_w": 87.05,
+            "power_limit_w": 220.0,
+            "pstate": "P2",
+            "raw_columns": [
+              "0",
+              "GPU-e3df9a98-2412-6865-26e5-b5a284aa9138",
+              "NVIDIA GeForce RTX 4070 SUPER",
+              "610.62",
+              "1",
+              "12282",
+              "11464",
+              "534",
+              "40",
+              "87.05",
+              "220.00",
+              "2745",
+              "2745",
+              "10251",
+              "P2",
+              "30"
+            ],
+            "raw_line": "0, GPU-e3df9a98-2412-6865-26e5-b5a284aa9138, NVIDIA GeForce RTX 4070 SUPER, 610.62, 1, 12282, 11464, 534, 40, 87.05, 220.00, 2745, 2745, 10251, P2, 30",
+            "sm_clock_mhz": 2745.0,
+            "temperature_c": 40.0,
+            "utilization_gpu_percent": 1.0,
+            "uuid": "GPU-e3df9a98-2412-6865-26e5-b5a284aa9138"
+          }
+        ]
+      },
+      "host": {
+        "cpu_frequency_mhz": 4201.0,
+        "cpu_percent": 39.6,
+        "cpu_percent_per_core": [
+          55.6,
+          87.5,
+          88.9,
+          50.0,
+          33.3,
+          25.0,
+          12.5,
+          33.3,
+          33.3,
+          37.5,
+          44.4,
+          44.4,
+          11.1,
+          44.4,
+          0.0,
+          33.3
+        ],
+        "disk_io": {
+          "read_bytes": 220440037888,
+          "read_count": 1667669,
+          "read_time_ms": 1547,
+          "write_bytes": 102873056768,
+          "write_count": 946247,
+          "write_time_ms": 1277
+        },
+        "memory_available_bytes": 19317444608,
+        "memory_percent": 42.3,
+        "memory_total_bytes": 33462239232,
+        "memory_used_bytes": 14144794624
+      },
+      "monotonic_ns": 53182806154500,
+      "nvidia_collector": {
+        "command": [
+          "nvidia-smi",
+          "--query-gpu=index,uuid,name,driver_version,utilization.gpu,memory.total,memory.used,memory.free,temperature.gpu,power.draw,power.limit,clocks.gr,clocks.sm,clocks.mem,pstate,fan.speed",
+          "--format=csv,noheader,nounits"
+        ],
+        "duration_ns": 38564000,
+        "error": null,
+        "returncode": 0,
+        "started_at_utc": "2026-09-10T15:35:06.088607+00:00",
+        "stderr_b64": "",
+        "stderr_text": "",
+        "stdout_b64": "MCwgR1BVLWUzZGY5YTk4LTI0MTItNjg2NS0yNmU1LWI1YTI4NGFhOTEzOCwgTlZJRElBIEdlRm9yY2UgUlRYIDQwNzAgU1VQRVIsIDYxMC42MiwgMSwgMTIyODIsIDExNDY0LCA1MzQsIDQwLCA4Ny4wNSwgMjIwLjAwLCAyNzQ1LCAyNzQ1LCAxMDI1MSwgUDIsIDMwDQo=",
+        "stdout_text": "0, GPU-e3df9a98-2412-6865-26e5-b5a284aa9138, NVIDIA GeForce RTX 4070 SUPER, 610.62, 1, 12282, 11464, 534, 40, 87.05, 220.00, 2745, 2745, 10251, P2, 30\r\n"
+      },
+      "process": {
+        "cpu_percent": 22.9,
+        "pid": 16108,
+        "rss_bytes": 163287040,
+        "vms_bytes": 147746816
+      },
+      "runtime_processes": [
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 240.609375,
+            "user_s": 1196.875
+          },
+          "exe": "C:\\Users\\Matt\\AppData\\Local\\Programs\\Ollama\\lib\\ollama\\llama-server.exe",
+          "io": {
+            "other_bytes": 1494222,
+            "other_count": 66146,
+            "read_bytes": 14000777513,
+            "read_count": 43835,
+            "write_bytes": 630400,
+            "write_count": 6047
+          },
+          "name": "llama-server.exe",
+          "num_handles": 264,
+          "num_threads": 30,
+          "pid": 5388,
+          "rss_bytes": 5259759616,
+          "vms_bytes": 16141824000
+        },
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 3.640625,
+            "user_s": 3.4375
+          },
+          "exe": "C:\\Users\\Matt\\AppData\\Local\\Programs\\Ollama\\ollama app.exe",
+          "io": {
+            "other_bytes": 1290829790,
+            "other_count": 71122,
+            "read_bytes": 783228744,
+            "read_count": 1691,
+            "write_bytes": 1574405889,
+            "write_count": 36
+          },
+          "name": "ollama app.exe",
+          "num_handles": 421,
+          "num_threads": 20,
+          "pid": 20892,
+          "rss_bytes": 53469184,
+          "vms_bytes": 62980096
+        },
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 114.671875,
+            "user_s": 101.953125
+          },
+          "exe": "C:\\Users\\Matt\\AppData\\Local\\Programs\\Ollama\\ollama.exe",
+          "io": {
+            "other_bytes": 41030275780,
+            "other_count": 5654335,
+            "read_bytes": 66014423928,
+            "read_count": 2141022,
+            "write_bytes": 74288735303,
+            "write_count": 4611751
+          },
+          "name": "ollama.exe",
+          "num_handles": 519,
+          "num_threads": 26,
+          "pid": 21316,
+          "rss_bytes": 166293504,
+          "vms_bytes": 198905856
+        }
+      ],
+      "stage": "characterize",
+      "timestamp_utc": "2026-09-10T15:35:06.088394+00:00",
+      "total_gpu_power_w": 87.05
+    },
+    {
+      "case_id": "exp-000100-gptoss-031-capability-probe",
+      "gpu": {
+        "availability": "available",
+        "devices": [
+          {
+            "driver_version": "610.62",
+            "extra_columns": [],
+            "fan_percent": 30.0,
+            "graphics_clock_mhz": 2745.0,
+            "index": 0,
+            "memory_clock_mhz": 10251.0,
+            "memory_free_mib": 534.0,
+            "memory_total_mib": 12282.0,
+            "memory_used_mib": 11464.0,
+            "name": "NVIDIA GeForce RTX 4070 SUPER",
+            "power_draw_w": 93.06,
+            "power_limit_w": 220.0,
+            "pstate": "P2",
+            "raw_columns": [
+              "0",
+              "GPU-e3df9a98-2412-6865-26e5-b5a284aa9138",
+              "NVIDIA GeForce RTX 4070 SUPER",
+              "610.62",
+              "50",
+              "12282",
+              "11464",
+              "534",
+              "44",
+              "93.06",
+              "220.00",
+              "2745",
+              "2745",
+              "10251",
+              "P2",
+              "30"
+            ],
+            "raw_line": "0, GPU-e3df9a98-2412-6865-26e5-b5a284aa9138, NVIDIA GeForce RTX 4070 SUPER, 610.62, 50, 12282, 11464, 534, 44, 93.06, 220.00, 2745, 2745, 10251, P2, 30",
+            "sm_clock_mhz": 2745.0,
+            "temperature_c": 44.0,
+            "utilization_gpu_percent": 50.0,
+            "uuid": "GPU-e3df9a98-2412-6865-26e5-b5a284aa9138"
+          }
+        ]
+      },
+      "host": {
+        "cpu_frequency_mhz": 4201.0,
+        "cpu_percent": 52.5,
+        "cpu_percent_per_core": [
+          54.5,
+          67.1,
+          83.5,
+          69.4,
+          55.3,
+          46.4,
+          46.5,
+          49.4,
+          52.4,
+          58.1,
+          54.8,
+          64.0,
+          31.4,
+          18.8,
+          40.0,
+          48.8
+        ],
+        "disk_io": {
+          "read_bytes": 220440054272,
+          "read_count": 1667673,
+          "read_time_ms": 1547,
+          "write_bytes": 102874912256,
+          "write_count": 946307,
+          "write_time_ms": 1277
+        },
+        "memory_available_bytes": 19170938880,
+        "memory_percent": 42.7,
+        "memory_total_bytes": 33462239232,
+        "memory_used_bytes": 14291300352
+      },
+      "monotonic_ns": 53184125439100,
+      "nvidia_collector": {
+        "command": [
+          "nvidia-smi",
+          "--query-gpu=index,uuid,name,driver_version,utilization.gpu,memory.total,memory.used,memory.free,temperature.gpu,power.draw,power.limit,clocks.gr,clocks.sm,clocks.mem,pstate,fan.speed",
+          "--format=csv,noheader,nounits"
+        ],
+        "duration_ns": 46012400,
+        "error": null,
+        "returncode": 0,
+        "started_at_utc": "2026-09-10T15:35:07.407909+00:00",
+        "stderr_b64": "",
+        "stderr_text": "",
+        "stdout_b64": "MCwgR1BVLWUzZGY5YTk4LTI0MTItNjg2NS0yNmU1LWI1YTI4NGFhOTEzOCwgTlZJRElBIEdlRm9yY2UgUlRYIDQwNzAgU1VQRVIsIDYxMC42MiwgNTAsIDEyMjgyLCAxMTQ2NCwgNTM0LCA0NCwgOTMuMDYsIDIyMC4wMCwgMjc0NSwgMjc0NSwgMTAyNTEsIFAyLCAzMA0K",
+        "stdout_text": "0, GPU-e3df9a98-2412-6865-26e5-b5a284aa9138, NVIDIA GeForce RTX 4070 SUPER, 610.62, 50, 12282, 11464, 534, 44, 93.06, 220.00, 2745, 2745, 10251, P2, 30\r\n"
+      },
+      "process": {
+        "cpu_percent": 17.7,
+        "pid": 16108,
+        "rss_bytes": 164147200,
+        "vms_bytes": 148979712
+      },
+      "runtime_processes": [
+        {
+          "cpu_percent": 494.8,
+          "cpu_times": {
+            "system_s": 241.859375,
+            "user_s": 1204.03125
+          },
+          "exe": "C:\\Users\\Matt\\AppData\\Local\\Programs\\Ollama\\lib\\ollama\\llama-server.exe",
+          "io": {
+            "other_bytes": 1501918,
+            "other_count": 66517,
+            "read_bytes": 14000777513,
+            "read_count": 43835,
+            "write_bytes": 641129,
+            "write_count": 6152
+          },
+          "name": "llama-server.exe",
+          "num_handles": 264,
+          "num_threads": 30,
+          "pid": 5388,
+          "rss_bytes": 5270880256,
+          "vms_bytes": 16152965120
+        },
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 3.640625,
+            "user_s": 3.4375
+          },
+          "exe": "C:\\Users\\Matt\\AppData\\Local\\Programs\\Ollama\\ollama app.exe",
+          "io": {
+            "other_bytes": 1290829790,
+            "other_count": 71122,
+            "read_bytes": 783228744,
+            "read_count": 1691,
+            "write_bytes": 1574405889,
+            "write_count": 36
+          },
+          "name": "ollama app.exe",
+          "num_handles": 421,
+          "num_threads": 20,
+          "pid": 20892,
+          "rss_bytes": 53469184,
+          "vms_bytes": 62980096
+        },
+        {
+          "cpu_percent": 0.0,
+          "cpu_times": {
+            "system_s": 114.671875,
+            "user_s": 101.96875
+          },
+          "exe": "C:\\Users\\Matt\\AppData\\Local\\Programs\\Ollama\\ollama.exe",
+          "io": {
+            "other_bytes": 41030298059,
+            "other_count": 5654772,
+            "read_bytes": 66014452442,
+            "read_count": 2141079,
+            "write_bytes": 74288746123,
+            "write_count": 4611765
+          },
+          "name": "ollama.exe",
+          "num_handles": 519,
+          "num_threads": 26,
+          "pid": 21316,
+          "rss_bytes": 166293504,
+          "vms_bytes": 198905856
+        }
+      ],
+      "stage": "characterize",
+      "timestamp_utc": "2026-09-10T15:35:07.407673+00:00",
+      "total_gpu_power_w": 93.06
+    }
+  ]
+}
