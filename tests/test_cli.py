@@ -48,14 +48,15 @@ def test_default_config_declares_bounded_capability_campaign_controls():
     assert campaign == {
         "anchor_level": 2,
         "jump": 3,
-        "boundary_repeats": 5,
-        "max_experiments_per_family": 24,
-        "thinking_mode": True,
-        "reasoning_effort": "medium",
+        "boundary_repeats": 2,
+        "max_experiments_per_family": 2,
+        "thinking_mode": False,
+        "reasoning_effort": None,
         "generation_budget": 256,
         "reliable_threshold": 0.90,
         "unstable_threshold": 0.40,
     }
+    assert cfg["limits"]["max_model_calls_per_run"] == 120
 
 
 def test_parser_supports_sequential_characterization_campaign():
