@@ -1,9 +1,9 @@
 """Frontier-local GPT-OSS reasoning-effort characterization.
 
-The base capability campaign establishes a MEDIUM-effort frontier.  This module
-spends additional calls only where they can change an operating decision:
-LOW at the reliable floor to test whether cost can be reduced, and HIGH at the
-first failing level to test whether capability can be extended.
+The base capability campaign may establish a model-specific LOW or MEDIUM
+frontier. This module spends additional calls only where they can change an
+operating decision: a lower effort only when it is actually lower than the
+baseline, and HIGH at the first failing level to test capability extension.
 """
 
 from __future__ import annotations
@@ -19,7 +19,7 @@ EFFORT_ORDER = ("low", "medium", "high")
 
 
 def select_reasoning_targets(frontiers: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
-    """Select only non-dominated effort probes from baseline MEDIUM frontiers."""
+    """Select non-dominated effort probes around the baseline frontier."""
     selected: dict[str, list[dict[str, Any]]] = {}
     for family_id, frontier in sorted((frontiers.get("families") or {}).items()):
         targets: list[dict[str, Any]] = []
@@ -83,8 +83,6 @@ def _base_parent(
         if spec.task_family != family_id and spec.task_id != family_id:
             continue
         if spec.difficulty_level != level:
-            continue
-        if spec.reasoning_effort not in {None, "medium"}:
             continue
         if row.get("classification", {}).get("valid_for_capability") is not True:
             continue
@@ -182,7 +180,7 @@ def run_reasoning_curves(
     *,
     sequence_start: int = 0,
 ) -> list[dict[str, Any]]:
-    """Execute replicated LOW/HIGH probes only at selected frontier levels."""
+    """Execute replicated effort probes only when they differ from baseline."""
     assert runner.store is not None
     cfg = runner.config.get("reasoning_curves", {})
     if cfg.get("enabled") is False:
@@ -214,6 +212,21 @@ def run_reasoning_curves(
                         "effort": effort,
                         "purpose": purpose,
                         "reason": "MISSING_FIXTURE_OR_BASE_PARENT",
+                    },
+                )
+                continue
+
+            if parent.reasoning_effort == effort:
+                runner.store.append_jsonl(
+                    "reasoning-events.jsonl",
+                    {
+                        "event": "target_skipped",
+                        "timestamp_utc": runner._utc(),
+                        "family_id": family_id,
+                        "level": level,
+                        "effort": effort,
+                        "purpose": purpose,
+                        "reason": "ALREADY_BASELINE_EFFORT",
                     },
                 )
                 continue
@@ -386,10 +399,10 @@ def build_reasoning_curves(
             "gpt_oss_think_control": list(EFFORT_ORDER),
             "thinking_disabled": False,
             "generation_budget_is_thinking_budget": False,
-            "baseline_effort": "medium",
-            "low_probe": "cost reduction at the baseline reliable floor",
+            "baseline_effort": "model-specific",
+            "low_probe": "cost reduction only when LOW is below the baseline effort",
             "high_probe": "frontier extension at the baseline first failing level",
-            "frontier_mutation": "effort probes do not rewrite the baseline MEDIUM capability frontier",
+            "frontier_mutation": "effort probes do not rewrite the baseline capability frontier",
         },
         "reliability_policy": {
             "repeats": repeats,
