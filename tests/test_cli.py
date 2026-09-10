@@ -56,8 +56,13 @@ def test_default_config_declares_bounded_capability_campaign_controls():
         "reliable_threshold": 0.90,
         "unstable_threshold": 0.40,
     }
-    assert cfg["limits"]["max_model_calls_per_run"] == 360
-    assert cfg["limits"]["max_model_calls_per_run"] < 400
+    assert cfg["limits"]["max_model_calls_per_run"] == 700
+    assert cfg["full_comparability"] == {
+        "enabled": True,
+        "fixed_levels": [2, 5, 8, 10],
+        "hard_call_limit": 700,
+        "protect_fixed_core": True,
+    }
     assert cfg["autonomous_simulation"] == {
         "enabled": True,
         "scenario_count": 6,
