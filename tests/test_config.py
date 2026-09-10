@@ -11,7 +11,7 @@ def test_default_config_contains_safe_bounded_run_settings():
     assert config["limits"]["request_timeout_s"] > 0
     assert config["limits"]["context_schedule"]
     assert config["limits"]["sustained_iterations"] > 0
-    assert config["limits"]["max_model_calls_per_run"] == 3000
+    assert config["limits"]["max_model_calls_per_run"] == 120
     assert config["cost"]["electricity_configured"] is False
 
     characterization = config["characterization"]
@@ -24,19 +24,19 @@ def test_default_config_contains_safe_bounded_run_settings():
     assert characterization["think_off_generation_budget"] == 256
 
     recovery = config["recovery_lab"]
-    assert recovery["enabled"] is True
+    assert recovery["enabled"] is False
     assert recovery["repeats"] == 3
     assert recovery["max_level"] == "R7"
     assert recovery["max_attempts_per_candidate"] == 6
 
     robustness = config["robustness_lab"]
-    assert robustness["enabled"] is True
+    assert robustness["enabled"] is False
     assert robustness["repeats"] == 2
     assert robustness["max_perturbations_per_family"] == 2
     assert robustness["max_attempts_per_perturbation"] == 4
 
     compound = config["compound_lab"]
-    assert compound["enabled"] is True
+    assert compound["enabled"] is False
     assert compound["jump"] == 2
     assert compound["boundary_repeats"] == 3
     assert compound["max_experiments_per_compound"] == 16
