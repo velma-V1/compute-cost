@@ -682,7 +682,8 @@ def _calibration(campaign: _Campaign, deadline: float) -> None:
         campaign.partitions["DISCOVERY"],
         min(int(cfg["calibration_anchor_count"]), len(campaign.partitions["DISCOVERY"])),
     )
-    scores_by_family: dict[str, list[float]] = defaultdict(list)
+    scores_by_fixture: dict[str, list[float]] = defaultdict(list)
+    family_by_fixture: dict[str, str] = {}
     repeats = int(cfg["calibration_repeats"])
     for repeat in range(repeats):
         for case in anchors:
@@ -690,19 +691,35 @@ def _calibration(campaign: _Campaign, deadline: float) -> None:
                 break
             record = campaign.baseline(case, deadline, calibration=True)
             if record is not None:
-                scores_by_family[_family(case)].append(float(record["score"]))
+                fixture_id = _fixture_id(case)
+                scores_by_fixture[fixture_id].append(float(record["score"]))
+                family_by_fixture[fixture_id] = _family(case)
         if not campaign.can_start(deadline):
             break
 
+    deviations_by_family: dict[str, list[float]] = defaultdict(list)
+    fixture_stats: dict[str, Any] = {}
+    for fixture_id, values in sorted(scores_by_fixture.items()):
+        center = float(median(values)) if values else 0.0
+        deviations = [value - center for value in values]
+        family = family_by_fixture[fixture_id]
+        deviations_by_family[family].extend(deviations)
+        fixture_stats[fixture_id] = {
+            "family_id": family,
+            "n": len(values),
+            "median_score": center,
+            "mad": _mad(values),
+        }
+
     sigmas: list[float] = []
     families: dict[str, Any] = {}
-    for family, values in sorted(scores_by_family.items()):
-        sigma = max(EPSILON_NOISE, 1.4826 * _mad(values))
+    for family, deviations in sorted(deviations_by_family.items()):
+        raw_mad = _mad(deviations)
+        sigma = max(EPSILON_NOISE, 1.4826 * raw_mad)
         sigmas.append(sigma)
         families[family] = {
-            "n": len(values),
-            "median_score": float(median(values)) if values else None,
-            "mad": _mad(values),
+            "n": len(deviations),
+            "centered_mad": raw_mad,
             "noise_sigma": sigma,
         }
     campaign.noise_sigma = max(EPSILON_NOISE, float(median(sigmas)) if sigmas else EPSILON_NOISE)
@@ -713,6 +730,8 @@ def _calibration(campaign: _Campaign, deadline: float) -> None:
             "global_noise_sigma": campaign.noise_sigma,
             "epsilon_floor": EPSILON_NOISE,
             "families": families,
+            "fixtures": fixture_stats,
+            "estimator": "1.4826 * MAD(within-fixture repeat deviations), floored by epsilon",
         },
         producer="test1",
         stage="calibration",
