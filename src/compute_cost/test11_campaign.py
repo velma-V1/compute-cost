@@ -495,44 +495,85 @@ def _single_recipe(ingredient_id: str, *, dose: float = 0.5, representation: str
 
 def build_recipe_variants(ingredient_ids: list[str], cfg: dict[str, Any]) -> list[dict[str, Any]]:
     ids = list(dict.fromkeys(ingredient_ids))[: max(2, int(cfg["max_recipe_ingredients"]))]
-    result = []
-    for ingredient_id in ids:
-        for dose in (0.5, 1.0):
-            for placement in ("system", "suffix", "prefix"):
-                result.append(_single_recipe(ingredient_id, dose=dose, placement=placement))
+    result: list[dict[str, Any]] = []
+
+    # Single-ingredient factorial: each promoted ingredient is still challenged
+    # across the dimensions Test 1 showed mattered.
+    for dose, representation, placement in itertools.product(
+        (0.5, 1.0, 2.0),
+        ("prose", "bullets", "schema"),
+        ("system", "suffix", "prefix", "middle"),
+    ):
+        for ingredient_id in ids:
+            result.append(_single_recipe(
+                ingredient_id,
+                dose=dose,
+                representation=representation,
+                placement=placement,
+            ))
+
+    # Pairs and recurrence: A+B, B+A, ABA, BAB, AAB, ABB under mixed
+    # placement and asymmetric dose schedules.
+    placement_patterns = (
+        ("system", "suffix"),
+        ("prefix", "suffix"),
+        ("system", "middle"),
+        ("suffix", "system"),
+    )
+    dose_patterns = ((0.5, 0.5), (0.5, 1.0), (1.0, 0.5))
     for a, b in itertools.combinations(ids[:8], 2):
         sequences = ([a, b], [b, a], [a, b, a], [b, a, b], [a, a, b], [a, b, b])
         for sequence in sequences:
-            for representation in ("prose", "bullets"):
-                steps = [
-                    {
-                        "ingredient_id": value,
-                        "dose": 0.5 if index == 0 else 1.0,
-                        "representation": representation,
-                        "placement": "system" if index == 0 else "suffix",
-                    }
-                    for index, value in enumerate(sequence)
-                ]
-                recipe = {"mode": "ordered_recurrence", "steps": steps}
-                recipe["recipe_id"] = _recipe_id(recipe)
-                result.append(recipe)
+            for representation in ("prose", "bullets", "schema"):
+                for placements in placement_patterns:
+                    for doses in dose_patterns:
+                        steps = []
+                        for index, value in enumerate(sequence):
+                            steps.append({
+                                "ingredient_id": value,
+                                "dose": doses[index % len(doses)],
+                                "representation": representation,
+                                "placement": placements[index % len(placements)],
+                            })
+                        recipe = {
+                            "mode": "ordered_recurrence",
+                            "steps": steps,
+                            "placement_pattern": list(placements),
+                            "dose_pattern": list(doses),
+                        }
+                        recipe["recipe_id"] = _recipe_id(recipe)
+                        result.append(recipe)
+
+    # Triple permutations catch interactions that a pair graph cannot reveal.
     for triple in itertools.combinations(ids[:6], 3):
-        for order in (triple, tuple(reversed(triple))):
+        for order in itertools.permutations(triple):
             recipe = {
                 "mode": "triple",
                 "steps": [
-                    {"ingredient_id": value, "dose": 0.5, "representation": "prose", "placement": "system"}
-                    for value in order
+                    {
+                        "ingredient_id": value,
+                        "dose": 0.5 if index < 2 else 1.0,
+                        "representation": "prose" if index != 1 else "bullets",
+                        "placement": ("system", "suffix", "prefix")[index],
+                    }
+                    for index, value in enumerate(order)
                 ],
             }
             recipe["recipe_id"] = _recipe_id(recipe)
             result.append(recipe)
-    dense = ids[: min(6, len(ids))]
+
+    # Dense recipe plus leave-one-out and leave-two-out knockouts.
+    dense = ids[: min(8, len(ids))]
     if dense:
         full = {
             "mode": "dense",
             "steps": [
-                {"ingredient_id": value, "dose": 0.5, "representation": "bullets", "placement": "system"}
+                {
+                    "ingredient_id": value,
+                    "dose": 0.5,
+                    "representation": "bullets",
+                    "placement": "system",
+                }
                 for value in dense
             ],
         }
@@ -542,10 +583,18 @@ def build_recipe_variants(ingredient_ids: list[str], cfg: dict[str, Any]) -> lis
             recipe = copy.deepcopy(full)
             recipe["mode"] = "knockout"
             recipe["steps"] = [step for step in recipe["steps"] if step["ingredient_id"] != remove]
-            recipe["knocked_out"] = remove
+            recipe["knocked_out"] = [remove]
             recipe["recipe_id"] = _recipe_id(recipe)
             result.append(recipe)
-    unique = {}
+        for remove_pair in itertools.combinations(dense, 2):
+            recipe = copy.deepcopy(full)
+            recipe["mode"] = "double_knockout"
+            recipe["steps"] = [step for step in recipe["steps"] if step["ingredient_id"] not in remove_pair]
+            recipe["knocked_out"] = list(remove_pair)
+            recipe["recipe_id"] = _recipe_id(recipe)
+            result.append(recipe)
+
+    unique: dict[str, dict[str, Any]] = {}
     for recipe in result:
         unique.setdefault(recipe["recipe_id"], recipe)
     return list(unique.values())
@@ -848,12 +897,20 @@ def phase_ingredient_screen(campaign: Test11Campaign, deadline: float) -> dict[s
     # Broad bank: every ingredient gets low-dose/system, low-dose/suffix and
     # standard-dose/system attempts before repetitions begin.
     variants = []
-    for row in campaign.bank_list:
-        variants.extend([
-            _single_recipe(row["id"], dose=0.5, placement="system"),
-            _single_recipe(row["id"], dose=0.5, placement="suffix"),
-            _single_recipe(row["id"], dose=1.0, placement="system"),
-        ])
+    # Dimension-first ordering guarantees every ingredient receives a first
+    # attempt before any ingredient receives its next factorial condition.
+    for dose, representation, placement in itertools.product(
+        (0.5, 1.0, 2.0),
+        ("prose", "bullets", "schema"),
+        ("system", "suffix", "prefix", "middle"),
+    ):
+        for row in campaign.bank_list:
+            variants.append(_single_recipe(
+                row["id"],
+                dose=dose,
+                representation=representation,
+                placement=placement,
+            ))
     cursor = 0
     while variants and cases and campaign.can_start(deadline):
         recipe = variants[cursor % len(variants)]
