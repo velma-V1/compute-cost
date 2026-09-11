@@ -65,6 +65,8 @@ RULES = (
     "truncation is not equivalent to wrong-answer capability harm",
     "binary paired outcomes use rescue/regression statistics",
     "generation budget is an explicit experimental factor",
+    "prompt-length placebo controls separate semantic ingredient effects from added-text overhead",
+    "residual failures are assigned to prompt recipe system tool data fine-tuning or unresolved ownership",
     "conditional rescue may promote even when global median delta is zero",
     "ingredient vocabulary expands beyond Test 1 and includes failure-derived candidates",
     "recipe tests vary order recurrence density knockout dose representation placement seed and budget",
@@ -186,6 +188,7 @@ REQUIRED_OUTPUTS = (
     "ingredient-variant-map.json",
     "headroom-map.json",
     "baseline-stability-map.json",
+    "prompt-overhead-placebo-map.json",
     "binary-effect-map.json",
     "conditional-rescue-map.json",
     "recipe-factorial-atlas.json",
@@ -199,6 +202,8 @@ REQUIRED_OUTPUTS = (
     "system-operator-atlas.json",
     "capability-value-per-cost.json",
     "hard-case-leverage-map.json",
+    "residual-failure-ownership.json",
+    "fine-tuning-readiness-map.json",
     "test1.1-priority-queue.json",
     "test1.1-uncertainty-ledger.json",
     "corrective-handoff.json",
@@ -400,6 +405,20 @@ def _render(item: dict[str, Any], dose: float, representation: str) -> str:
 
 
 def build_recipe_messages(case: dict[str, Any], bank: dict[str, dict[str, Any]], recipe: dict[str, Any]) -> list[dict[str, str]]:
+    if recipe.get("mode") == "length_placebo":
+        prompt = str(case["prompt"])
+        text = str(recipe.get("placebo_text") or "")
+        placement = str(recipe.get("placement") or "system")
+        if placement == "system":
+            return [{"role":"system","content":text},{"role":"user","content":prompt}]
+        if placement == "suffix":
+            return [{"role":"user","content":prompt + "\n\n" + text}]
+        if placement == "prefix":
+            return [{"role":"user","content":text + "\n\n" + prompt}]
+        words = prompt.split()
+        pivot = max(1, len(words)//2)
+        merged = " ".join(words[:pivot]) + "\n\n" + text + "\n\n" + " ".join(words[pivot:])
+        return [{"role":"user","content":merged}]
     buckets = {"system": [], "prefix": [], "middle": [], "suffix": []}
     for step in recipe.get("steps") or []:
         item = bank[str(step["ingredient_id"])]
@@ -424,6 +443,23 @@ def build_recipe_messages(case: dict[str, Any], bank: dict[str, dict[str, Any]],
         prompt = prompt + "\n\nADDITIONAL CONTROL:\n" + suffix
     messages.append({"role": "user", "content": prompt})
     return messages
+
+
+def _placebo_recipe(target_chars: int, *, placement: str = "system") -> dict[str, Any]:
+    sentence = "This experimental note adds no task requirement; solve the original task exactly as written."
+    parts = []
+    while len("\n".join(parts)) < max(1, int(target_chars)):
+        parts.append(sentence)
+    text = "\n".join(parts)[: max(1, int(target_chars))]
+    recipe = {
+        "mode": "length_placebo",
+        "steps": [],
+        "placebo_text": text,
+        "placement": placement,
+        "target_chars": int(target_chars),
+    }
+    recipe["recipe_id"] = _recipe_id(recipe)
+    return recipe
 
 
 def _wilson(successes: int, total: int, z: float = 1.6448536269514722) -> list[float]:
@@ -670,6 +706,7 @@ class Test11Campaign:
         self.sequence = 0
         self.phase_assertions: list[dict[str, Any]] = []
         self.promoted_ids: list[str] = []
+        self.promoted_variants: list[dict[str, Any]] = []
         self.promoted_recipes: list[dict[str, Any]] = []
 
     def partition_name(self, case: dict[str, Any]) -> str:
@@ -795,6 +832,16 @@ class Test11Campaign:
             "generation_budget": int(budget),
             "seed": int(seed),
             "recipe": copy.deepcopy(recipe),
+            "recipe_step_count": len((recipe or {}).get("steps") or []),
+            "recipe_text_chars": (
+                len(str((recipe or {}).get("placebo_text") or ""))
+                if (recipe or {}).get("mode") == "length_placebo"
+                else sum(
+                    len(_render(self.bank[str(step["ingredient_id"])], float(step.get("dose", 1.0)), str(step.get("representation", "prose"))))
+                    for step in ((recipe or {}).get("steps") or [])
+                    if str(step.get("ingredient_id")) in self.bank
+                )
+            ),
             "evidence_refs": copy.deepcopy(row.get("evidence_refs") or {}),
         }
         self.rows.append(result)
@@ -959,7 +1006,9 @@ def phase_headroom(campaign: Test11Campaign, deadline: float) -> dict[str, Any]:
             seed = seeds[repeat % len(seeds)]
             attempted.add(_fixture_id(case))
             campaign.control(case, deadline, budget=base_budget, seed=seed, force=True)
-    # If source headroom work ends early, consume the rest with low-risk recipe tests.
+    # Measure added-text overhead directly before attributing regressions to semantics.
+    placebo_map = _run_prompt_overhead_placebos(campaign, deadline)
+    # If source headroom/placebo work ends early, consume the rest with low-risk recipe tests.
     reserve = build_recipe_variants([row["id"] for row in campaign.bank_list[:8]], campaign.cfg)
     _run_recipe_reserve(campaign, deadline, reserve, "headroom_recipe_reserve", attempted)
     campaign.positive_work("headroom_recalibration", start, attempted, "source fail/pass headroom + repeated current controls + recipe reserve")
@@ -970,6 +1019,7 @@ def phase_headroom(campaign: Test11Campaign, deadline: float) -> dict[str, Any]:
     return {
         "source_fail_count": len(fail),
         "source_pass_count": len(passed),
+        "prompt_overhead_placebo": placebo_map,
         "fixtures": {
             fixture_id: {
                 "n": len(values),
@@ -1025,6 +1075,41 @@ def phase_ingredient_screen(campaign: Test11Campaign, deadline: float) -> dict[s
     _run_recipe_reserve(campaign, deadline, campaign.promoted_recipes, "ingredient_recipe_reserve", attempted)
     campaign.positive_work("ingredient_harvest_screen", start, attempted, "80+ seed/dynamic ingredients x placement/dose x headroom strata; leftover time -> recipe tests")
     return {"ingredients": summary, "variants": variant_summary}
+
+
+def _run_prompt_overhead_placebos(campaign: Test11Campaign, deadline: float) -> dict[str, Any]:
+    attempted = set()
+    fail, passed = _source_headroom(campaign)
+    cases = fail + passed
+    if not cases:
+        cases = _balanced_cases(campaign.partitions["DISCOVERY"], min(64, len(campaign.partitions["DISCOVERY"])))
+    rows_before = len(campaign.rows)
+    targets = (64, 128, 256, 512, 1024)
+    placements = ("system", "suffix", "prefix", "middle")
+    seeds = [int(v) for v in campaign.cfg["seeds"]]
+    cursor = 0
+    max_trials = len(cases) * len(targets) * len(placements)
+    while cases and campaign.can_start(deadline) and cursor < max_trials:
+        target = targets[(cursor // max(1, len(cases))) % len(targets)]
+        placement = placements[(cursor // max(1, len(cases) * len(targets))) % len(placements)]
+        case = cases[cursor % len(cases)]
+        seed = seeds[(cursor // max(1, len(cases))) % len(seeds)]
+        recipe = _placebo_recipe(target, placement=placement)
+        attempted.add(_fixture_id(case))
+        campaign.treatment(
+            case, deadline, phase="prompt_overhead_placebo",
+            recipe=recipe,
+            budget=int(campaign.cfg["base_generation_budget"]),
+            seed=seed,
+            kind="length_placebo",
+        )
+        cursor += 1
+    rows = [row for row in campaign.rows[rows_before:] if row.get("kind") == "length_placebo"]
+    return _group_binary(
+        rows,
+        campaign.cfg,
+        lambda row: f"chars={row.get('recipe_text_chars',0)}|place={row['recipe'].get('placement')}",
+    )
 
 
 def phase_recipe_factorial(campaign: Test11Campaign, deadline: float) -> dict[str, Any]:
@@ -1318,6 +1403,79 @@ def _priority_queue(atlas: dict[str, Any], generalization: dict[str, Any], confi
     return result
 
 
+def _residual_failure_ownership(
+    campaign: Test11Campaign,
+    atlas: dict[str, Any],
+    operators: dict[str, Any],
+    capability_value: dict[str, Any],
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    unresolved = capability_value.get("unresolved_hard_failures", []) if isinstance(capability_value, dict) else []
+    by_fixture: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for row in campaign.rows:
+        by_fixture[str(row.get("fixture_id"))].append(row)
+
+    ownership = {}
+    finetune = {}
+    for item in unresolved:
+        fixture_id = str(item["fixture_id"])
+        rows = by_fixture.get(fixture_id, [])
+        capability_failures = [
+            row for row in rows
+            if float(row.get("score", 0.0)) < 1.0
+            and str((row.get("classification") or {}).get("result_class") or "") in CAPABILITY_FAILURE_CLASSES
+        ]
+        truncations = [
+            row for row in rows
+            if str((row.get("classification") or {}).get("result_class") or "") in TRUNCATION_CLASSES
+        ]
+        rescued_by_recipe = any(
+            row.get("kind") in {"recipe_reserve","generalization","hard_case_leverage","ingredient_screen"}
+            and float(row.get("control_score",0.0)) < 1.0
+            and float(row.get("score",0.0)) >= 1.0
+            for row in rows
+        )
+        rescued_by_operator = any(
+            row.get("kind") == "system_operator"
+            and float(row.get("control_score",0.0)) < 1.0
+            and float(row.get("score",0.0)) >= 1.0
+            for row in rows
+        )
+        family = str(item.get("family_id") or "")
+        if rescued_by_recipe:
+            owner = "RECIPE_SOLVABLE"
+        elif rescued_by_operator:
+            owner = "SYSTEM_SOLVABLE"
+        elif truncations and not capability_failures:
+            owner = "BUDGET_OR_COMPLETION_SOLVABLE"
+        elif "tool" in family.lower():
+            owner = "TOOL_OR_MODEL_UNRESOLVED"
+        elif len(capability_failures) >= 3:
+            owner = "FINE_TUNING_CANDIDATE"
+        else:
+            owner = "INSUFFICIENT_EVIDENCE"
+        record = {
+            **copy.deepcopy(item),
+            "owner": owner,
+            "capability_failure_observations": len(capability_failures),
+            "truncation_observations": len(truncations),
+            "rescued_by_recipe": rescued_by_recipe,
+            "rescued_by_operator": rescued_by_operator,
+        }
+        ownership[fixture_id] = record
+        if owner == "FINE_TUNING_CANDIDATE":
+            finetune[fixture_id] = {
+                **record,
+                "qualification": {
+                    "recurrent_current_run_failure": len(capability_failures) >= 3,
+                    "prompt_recipe_owner_tested": True,
+                    "system_operator_owner_tested": True,
+                    "budget_truncation_separated": True,
+                    "protected_partitions_excluded": True,
+                },
+            }
+    return {"schema_version":1,"fixtures":ownership}, {"schema_version":1,"candidates":finetune}
+
+
 def write_outputs(
     campaign: Test11Campaign,
     headroom: dict[str, Any],
@@ -1328,6 +1486,7 @@ def write_outputs(
     budget_map: dict[str, Any],
     confirmation: dict[str, Any],
     capability_value: dict[str, Any],
+    placebo_map: dict[str, Any],
 ) -> None:
     store = campaign.runner.store
     assert store is not None
@@ -1361,6 +1520,7 @@ def write_outputs(
     store.write_json("ingredient-variant-map.json", {"schema_version":1,"variants":variant_screen}, producer="test1.1", stage="report")
     store.write_json("headroom-map.json", headroom, producer="test1.1", stage="report")
     store.write_json("baseline-stability-map.json", {"schema_version":1,"fixtures":headroom.get("fixtures",{})}, producer="test1.1", stage="report")
+    store.write_json("prompt-overhead-placebo-map.json", {"schema_version":1,"effects":placebo_map}, producer="test1.1", stage="report")
     store.write_json("binary-effect-map.json", {"schema_version":1,"ingredient_screen":identity_screen,"ingredient_variants":variant_screen,"recipes":atlas}, producer="test1.1", stage="report")
     store.write_json("conditional-rescue-map.json", {"schema_version":1,"ingredients":{k:v for k,v in identity_screen.items() if v.get("rescues",0)>0},"ingredient_variants":{k:v for k,v in variant_screen.items() if v.get("rescues",0)>0},"recipes":{k:v for k,v in atlas.items() if v.get("rescues",0)>0}}, producer="test1.1", stage="report")
     store.write_json("recipe-factorial-atlas.json", {"schema_version":1,"recipes":atlas}, producer="test1.1", stage="report")
@@ -1374,6 +1534,9 @@ def write_outputs(
     store.write_json("system-operator-atlas.json", {"schema_version":1,"operators":operators}, producer="test1.1", stage="report")
     store.write_json("capability-value-per-cost.json", _capability_value_per_cost(atlas, operators), producer="test1.1", stage="report")
     store.write_json("hard-case-leverage-map.json", capability_value, producer="test1.1", stage="report")
+    residual_ownership, fine_tuning_readiness = _residual_failure_ownership(campaign, atlas, operators, capability_value)
+    store.write_json("residual-failure-ownership.json", residual_ownership, producer="test1.1", stage="report")
+    store.write_json("fine-tuning-readiness-map.json", fine_tuning_readiness, producer="test1.1", stage="report")
     store.write_json("test1.1-priority-queue.json", {"schema_version":1,"queue":queue}, producer="test1.1", stage="report")
     store.write_json("test1.1-uncertainty-ledger.json", {"schema_version":1,"unknowns":unknowns}, producer="test1.1", stage="report")
     store.write_json("corrective-handoff.json", {"schema_version":1,"source_test1_run":campaign.source.get("run_id"),"priority_queue":queue,"ingredient_ids":campaign.promoted_ids,"recipe_count":len(atlas),"protected_partitions_exposed":False}, producer="test1.1", stage="report")
@@ -1455,5 +1618,6 @@ def run_test11_campaign(
         results.get("budget", {}),
         results.get("confirmation", {}),
         results.get("capability_value", {}),
+        (results.get("headroom", {}) or {}).get("prompt_overhead_placebo", {}),
     )
     return campaign.rows
