@@ -1371,7 +1371,7 @@ def _recipe_maps(atlas: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any],
     for recipe_id, summary in atlas.items():
         recipe = summary.get("recipe") or {}
         mode = recipe.get("mode")
-        if mode == "knockout":
+        if mode in {"knockout", "double_knockout"}:
             knockout[recipe_id] = summary
         if mode == "ordered_recurrence" and len(recipe.get("steps") or []) >= 3:
             recurrence[recipe_id] = summary
@@ -1409,16 +1409,31 @@ def _residual_failure_ownership(
     operators: dict[str, Any],
     capability_value: dict[str, Any],
 ) -> tuple[dict[str, Any], dict[str, Any]]:
-    unresolved = capability_value.get("unresolved_hard_failures", []) if isinstance(capability_value, dict) else []
     by_fixture: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for row in campaign.rows:
-        by_fixture[str(row.get("fixture_id"))].append(row)
+        fixture_id = str(row.get("fixture_id") or "")
+        if fixture_id:
+            by_fixture[fixture_id].append(row)
 
-    ownership = {}
-    finetune = {}
-    for item in unresolved:
-        fixture_id = str(item["fixture_id"])
-        rows = by_fixture.get(fixture_id, [])
+    fixture_records: dict[str, dict[str, Any]] = {}
+    phenotype_members: dict[str, list[str]] = defaultdict(list)
+
+    for fixture_id, rows in sorted(by_fixture.items()):
+        controls = [row for row in rows if row.get("kind") == "control"]
+        if not controls or not any(float(row.get("score", 0.0)) < 1.0 for row in controls):
+            continue
+
+        family = str(rows[0].get("family_id") or "unknown")
+        result_classes = [
+            str((row.get("classification") or {}).get("result_class") or "")
+            for row in rows
+            if float(row.get("score", 0.0)) < 1.0
+        ]
+        class_counts: dict[str, int] = defaultdict(int)
+        for value in result_classes:
+            class_counts[value] += 1
+        dominant_class = max(class_counts, key=class_counts.get) if class_counts else "UNKNOWN"
+
         capability_failures = [
             row for row in rows
             if float(row.get("score", 0.0)) < 1.0
@@ -1429,51 +1444,109 @@ def _residual_failure_ownership(
             if str((row.get("classification") or {}).get("result_class") or "") in TRUNCATION_CLASSES
         ]
         rescued_by_recipe = any(
-            row.get("kind") in {"recipe_reserve","generalization","hard_case_leverage","ingredient_screen"}
-            and float(row.get("control_score",0.0)) < 1.0
-            and float(row.get("score",0.0)) >= 1.0
+            row.get("kind") in {
+                "recipe_reserve",
+                "generalization",
+                "hard_case_leverage",
+                "ingredient_screen",
+                "budget_factorial",
+            }
+            and float(row.get("control_score", 0.0)) < 1.0
+            and float(row.get("score", 0.0)) >= 1.0
             for row in rows
         )
         rescued_by_operator = any(
             row.get("kind") == "system_operator"
-            and float(row.get("control_score",0.0)) < 1.0
-            and float(row.get("score",0.0)) >= 1.0
+            and float(row.get("control_score", 0.0)) < 1.0
+            and float(row.get("score", 0.0)) >= 1.0
             for row in rows
         )
-        family = str(item.get("family_id") or "")
-        if rescued_by_recipe:
-            owner = "RECIPE_SOLVABLE"
-        elif rescued_by_operator:
-            owner = "SYSTEM_SOLVABLE"
-        elif truncations and not capability_failures:
-            owner = "BUDGET_OR_COMPLETION_SOLVABLE"
-        elif "tool" in family.lower():
-            owner = "TOOL_OR_MODEL_UNRESOLVED"
-        elif len(capability_failures) >= 3:
-            owner = "FINE_TUNING_CANDIDATE"
-        else:
-            owner = "INSUFFICIENT_EVIDENCE"
-        record = {
-            **copy.deepcopy(item),
-            "owner": owner,
+        budget_rescue = any(
+            int(row.get("generation_budget", 0)) > int(campaign.cfg["base_generation_budget"])
+            and float(row.get("control_score", 0.0)) < 1.0
+            and float(row.get("score", 0.0)) >= 1.0
+            for row in rows
+        )
+        phenotype = f"{family}|{dominant_class}"
+        phenotype_members[phenotype].append(fixture_id)
+        fixture_records[fixture_id] = {
+            "fixture_id": fixture_id,
+            "family_id": family,
+            "dominant_failure_class": dominant_class,
+            "phenotype_id": phenotype,
+            "difficulty_level": max(int(row.get("difficulty_level", 0)) for row in rows),
             "capability_failure_observations": len(capability_failures),
             "truncation_observations": len(truncations),
             "rescued_by_recipe": rescued_by_recipe,
             "rescued_by_operator": rescued_by_operator,
+            "rescued_by_larger_budget": budget_rescue,
         }
-        ownership[fixture_id] = record
+
+    phenotype_records: dict[str, dict[str, Any]] = {}
+    fine_tuning_candidates: dict[str, dict[str, Any]] = {}
+    for phenotype, fixture_ids in sorted(phenotype_members.items()):
+        records = [fixture_records[value] for value in fixture_ids]
+        unresolved = [
+            row for row in records
+            if not row["rescued_by_recipe"]
+            and not row["rescued_by_operator"]
+            and not row["rescued_by_larger_budget"]
+        ]
+        independent_unresolved = len(unresolved)
+        family, result_class = phenotype.split("|", 1)
+
+        if not unresolved:
+            owner = "RECOVERED_BEFORE_FINE_TUNING"
+        elif result_class in TRUNCATION_CLASSES:
+            owner = "BUDGET_OR_COMPLETION_SOLVABLE"
+        elif "tool" in family.lower() and result_class == "TOOL_FAILURE":
+            owner = "TOOL_OR_MODEL_UNRESOLVED"
+        elif independent_unresolved >= 3 and result_class in CAPABILITY_FAILURE_CLASSES:
+            owner = "FINE_TUNING_CANDIDATE"
+        else:
+            owner = "INSUFFICIENT_EVIDENCE"
+
+        record = {
+            "phenotype_id": phenotype,
+            "family_id": family,
+            "dominant_failure_class": result_class,
+            "independent_fixture_count": len(fixture_ids),
+            "independent_unresolved_fixture_count": independent_unresolved,
+            "fixture_ids": sorted(fixture_ids),
+            "unresolved_fixture_ids": sorted(row["fixture_id"] for row in unresolved),
+            "owner": owner,
+            "prompt_recipe_recovery_tested": any(row["rescued_by_recipe"] for row in records) or bool(atlas),
+            "system_operator_recovery_tested": any(row["rescued_by_operator"] for row in records) or bool(operators),
+            "budget_recovery_tested": any(row["rescued_by_larger_budget"] for row in records) or bool(campaign.cfg.get("generation_budgets")),
+        }
+        phenotype_records[phenotype] = record
+
         if owner == "FINE_TUNING_CANDIDATE":
-            finetune[fixture_id] = {
-                **record,
+            fine_tuning_candidates[phenotype] = {
+                **copy.deepcopy(record),
                 "qualification": {
-                    "recurrent_current_run_failure": len(capability_failures) >= 3,
-                    "prompt_recipe_owner_tested": True,
-                    "system_operator_owner_tested": True,
+                    "recurrent": independent_unresolved >= 3,
+                    "independent": independent_unresolved >= 3,
+                    "observable_failure_class": result_class in CAPABILITY_FAILURE_CLASSES,
+                    "prompt_recipe_owner_tested": bool(atlas),
+                    "system_operator_owner_tested": bool(operators),
                     "budget_truncation_separated": True,
                     "protected_partitions_excluded": True,
+                    "next_action": "TEST3_FINE_TUNING_QUALIFICATION",
                 },
             }
-    return {"schema_version":1,"fixtures":ownership}, {"schema_version":1,"candidates":finetune}
+
+    return (
+        {
+            "schema_version": 1,
+            "fixtures": fixture_records,
+            "phenotypes": phenotype_records,
+        },
+        {
+            "schema_version": 1,
+            "candidates": fine_tuning_candidates,
+        },
+    )
 
 
 def write_outputs(
