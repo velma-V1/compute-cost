@@ -11,6 +11,8 @@ from compute_cost.test1_campaign import ACTIVE_SECONDS, HARD_SECONDS, partition_
 from compute_cost.test11_campaign import (
     NEW_SEED_INGREDIENTS,
     Test11Campaign,
+    _placebo_recipe,
+    _residual_failure_ownership,
     _run_recipe_reserve,
     binary_effect_summary,
     build_ingredient_bank,
@@ -47,6 +49,28 @@ def test_test11_plan_is_exactly_seven_hours_and_uses_recipe_sink():
     assert plan["unused_time_sink"] == "MORE_RECIPE_TESTS"
     assert set(plan["prohibited_partitions"]) == {"TEST2_BLIND", "TEST3_PROTECTED"}
     assert plan["seed_ingredient_count"] >= 80
+
+def test_test11_plan_contains_decision_useful_outputs_not_frontier_fantasy():
+    plan = build_test11_plan(_cases(), test1_run="test1-source")
+    outputs = set(plan["required_outputs"])
+
+    assert "prompt-overhead-placebo-map.json" in outputs
+    assert "capability-value-per-cost.json" in outputs
+    assert "hard-case-leverage-map.json" in outputs
+    assert "residual-failure-ownership.json" in outputs
+    assert "fine-tuning-readiness-map.json" in outputs
+    assert "frontier-gap-map.json" not in outputs
+    assert all("frontier" not in name.lower() for name in outputs)
+
+
+def test_placebo_recipe_is_explicitly_nonsemantic_and_length_matched():
+    recipe = _placebo_recipe(256, placement="system")
+
+    assert recipe["mode"] == "length_placebo"
+    assert recipe["target_chars"] == 256
+    assert len(recipe["placebo_text"]) == 256
+    assert recipe["placement"] == "system"
+
 
 
 def test_test11_expands_beyond_original_ingredient_bank():
@@ -197,6 +221,106 @@ def test_recipe_reserve_repeats_instead_of_exhausting_queue_early():
 
     assert campaign.calls == 7
     assert attempted == {"fixture-0000"}
+
+
+def test_fine_tuning_requires_three_independent_unresolved_fixtures():
+    cases = _cases(20)
+    config = load_config()
+
+    class _Runner:
+        def __init__(self):
+            self.config = config
+            self.store = None
+        def _utc(self):
+            return "2026-09-11T00:00:00Z"
+
+    campaign = Test11Campaign(_Runner(), cases, synthetic_test1_source(cases))
+    target_cases = cases[:3]
+    campaign.rows = []
+    for case in target_cases:
+        fixture_id = case["id"]
+        family = "reasoning_family"
+        campaign.rows.append({
+            "kind": "control",
+            "fixture_id": fixture_id,
+            "family_id": family,
+            "difficulty_level": 6,
+            "score": 0.0,
+            "control_score": 0.0,
+            "generation_budget": 256,
+            "classification": {"result_class": "ANSWER_WRONG"},
+        })
+        campaign.rows.append({
+            "kind": "ingredient_screen",
+            "fixture_id": fixture_id,
+            "family_id": family,
+            "difficulty_level": 6,
+            "score": 0.0,
+            "control_score": 0.0,
+            "generation_budget": 256,
+            "classification": {"result_class": "ANSWER_WRONG"},
+        })
+
+    ownership, readiness = _residual_failure_ownership(
+        campaign,
+        atlas={"REC": {"classification": "NO_RESCUE_SIGNAL"}},
+        operators={"OP": {"classification": "NO_RESCUE_SIGNAL"}},
+        capability_value={},
+    )
+
+    candidates = readiness["candidates"]
+    assert len(candidates) == 1
+    candidate = next(iter(candidates.values()))
+    assert candidate["independent_unresolved_fixture_count"] == 3
+    assert candidate["qualification"]["recurrent"] is True
+    assert candidate["qualification"]["independent"] is True
+
+
+def test_two_independent_failures_do_not_qualify_for_fine_tuning():
+    cases = _cases(20)
+    config = load_config()
+
+    class _Runner:
+        def __init__(self):
+            self.config = config
+            self.store = None
+        def _utc(self):
+            return "2026-09-11T00:00:00Z"
+
+    campaign = Test11Campaign(_Runner(), cases, synthetic_test1_source(cases))
+    campaign.rows = []
+    for case in cases[:2]:
+        campaign.rows.extend([
+            {
+                "kind": "control",
+                "fixture_id": case["id"],
+                "family_id": "reasoning_family",
+                "difficulty_level": 6,
+                "score": 0.0,
+                "control_score": 0.0,
+                "generation_budget": 256,
+                "classification": {"result_class": "ANSWER_WRONG"},
+            },
+            {
+                "kind": "ingredient_screen",
+                "fixture_id": case["id"],
+                "family_id": "reasoning_family",
+                "difficulty_level": 6,
+                "score": 0.0,
+                "control_score": 0.0,
+                "generation_budget": 256,
+                "classification": {"result_class": "ANSWER_WRONG"},
+            },
+        ])
+
+    _, readiness = _residual_failure_ownership(
+        campaign,
+        atlas={"REC": {"classification": "NO_RESCUE_SIGNAL"}},
+        operators={"OP": {"classification": "NO_RESCUE_SIGNAL"}},
+        capability_value={},
+    )
+
+    assert readiness["candidates"] == {}
 
 
 class _Runtime:
