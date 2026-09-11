@@ -1252,6 +1252,19 @@ def _build_model_limit_and_finetuning(
         recovery_by_phenotype[str(row.get("phenotype_id"))].append(row)
 
     failures: dict[str, list[dict[str, Any]]] = defaultdict(list)
+
+    # Start with every Test-1 failure so a source phenotype cannot disappear
+    # merely because Test 2 successfully recovers it.
+    for source_row in (campaign.handoff.get("failures") or {}).get("failures", []) or []:
+        fixture_id = source_row.get("fixture_id")
+        if not isinstance(fixture_id, str) or fixture_id not in campaign.case_by_id:
+            continue
+        source_copy = copy.deepcopy(source_row)
+        source_copy.setdefault("family_id", _family(campaign.case_by_id[fixture_id]))
+        source_copy.setdefault("partition", campaign._partition(campaign.case_by_id[fixture_id]))
+        source_copy["source_run"] = campaign.handoff.get("run_id")
+        failures[_phenotype_id(source_copy)].append(source_copy)
+
     for row in campaign.rows:
         if row.get("partition") == "TEST3_PROTECTED":
             continue
@@ -1333,6 +1346,7 @@ def _build_model_limit_and_finetuning(
             "recovery_evidence": copy.deepcopy(recoveries),
             "observable_target": observable_target,
             "negative_transfer_evidence_available": negative_transfer_available,
+            "source_test1_run": campaign.handoff.get("run_id"),
         }
         limits[phenotype] = entry
 
