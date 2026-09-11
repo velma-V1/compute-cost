@@ -48,7 +48,7 @@ PHASES = (
     ("system_operator_scout", 60 * 60),
     ("conditional_rescue_generalization", 45 * 60),
     ("truncation_budget_disentanglement", 35 * 60),
-    ("frontier_gap_challenge", 25 * 60),
+    ("capability_value_challenge", 25 * 60),
     ("confirmation_handoff", 15 * 60),
     ("recipe_reserve", 10 * 60),
 )
@@ -183,6 +183,7 @@ SYSTEM_OPERATORS: tuple[dict[str, str], ...] = (
 REQUIRED_OUTPUTS = (
     "test1.1-source-audit.json",
     "ingredient-harvest-registry.json",
+    "ingredient-variant-map.json",
     "headroom-map.json",
     "baseline-stability-map.json",
     "binary-effect-map.json",
@@ -196,8 +197,8 @@ REQUIRED_OUTPUTS = (
     "truncation-causality-map.json",
     "negative-transfer-map-1.1.json",
     "system-operator-atlas.json",
-    "capability-complexity-frontier.json",
-    "frontier-gap-map.json",
+    "capability-value-per-cost.json",
+    "hard-case-leverage-map.json",
     "test1.1-priority-queue.json",
     "test1.1-uncertainty-ledger.json",
     "corrective-handoff.json",
@@ -842,44 +843,86 @@ def _source_headroom(campaign: Test11Campaign, partition: str = "DISCOVERY") -> 
 
 def _screen_summary(campaign: Test11Campaign, phase: str) -> dict[str, Any]:
     rows = [row for row in campaign.rows if row["phase"] == phase and row.get("recipe")]
-    return _group_binary(rows, campaign.cfg, lambda row: str((row["recipe"]["steps"][0]["ingredient_id"] if len(row["recipe"]["steps"]) == 1 else row["recipe"]["recipe_id"])))
+    return _group_binary(
+        rows,
+        campaign.cfg,
+        lambda row: str(row["recipe"]["steps"][0]["ingredient_id"])
+        if len(row["recipe"]["steps"]) == 1
+        else str(row["recipe"]["recipe_id"]),
+    )
 
 
-def _select_promoted(summary: dict[str, Any], campaign: Test11Campaign) -> list[str]:
+def _variant_summary(campaign: Test11Campaign, phase: str) -> dict[str, Any]:
+    rows = [
+        row for row in campaign.rows
+        if row["phase"] == phase
+        and row.get("recipe")
+        and len((row["recipe"].get("steps") or [])) == 1
+    ]
+    return _group_binary(
+        rows,
+        campaign.cfg,
+        lambda row: (
+            f"{row['recipe']['steps'][0]['ingredient_id']}"
+            f"|dose={row['recipe']['steps'][0]['dose']}"
+            f"|rep={row['recipe']['steps'][0]['representation']}"
+            f"|place={row['recipe']['steps'][0]['placement']}"
+        ),
+    )
+
+
+def _select_promoted(
+    ingredient_summary: dict[str, Any],
+    variant_summary: dict[str, Any],
+    campaign: Test11Campaign,
+) -> list[str]:
+    rank_value = {
+        "STRONG_CONDITIONAL_RESCUE": 5,
+        "PROMISING_CONDITIONAL_RESCUE": 4,
+        "TRUNCATION_SENSITIVE": 2,
+        "UNCERTAIN": 1,
+        "NO_RESCUE_SIGNAL": 0,
+        "CAPABILITY_HARM": -10,
+    }
+    best_by_ingredient: dict[str, tuple[float, dict[str, Any]]] = {}
+    for key, value in variant_summary.items():
+        ingredient_id = key.split("|", 1)[0]
+        score = (
+            rank_value.get(str(value.get("classification")), 0) * 100
+            + float(value.get("rescue_rate", 0.0)) * 20
+            - float(value.get("capability_regression_rate", 0.0)) * 40
+            - float(value.get("regression_rate", 0.0)) * 5
+        )
+        current = best_by_ingredient.get(ingredient_id)
+        if current is None or score > current[0]:
+            best_by_ingredient[ingredient_id] = (score, copy.deepcopy(value))
+
     ranked = []
-    for key, value in summary.items():
-        recipe = value.get("recipe") or {}
-        steps = recipe.get("steps") or []
-        if len(steps) != 1:
-            continue
-        ingredient_id = str(steps[0]["ingredient_id"])
-        rank = {
-            "STRONG_CONDITIONAL_RESCUE": 5,
-            "PROMISING_CONDITIONAL_RESCUE": 4,
-            "TRUNCATION_SENSITIVE": 2,
-            "UNCERTAIN": 1,
-            "NO_RESCUE_SIGNAL": 0,
-            "CAPABILITY_HARM": -10,
-        }.get(str(value.get("classification")), 0)
-        score = rank * 100 + float(value.get("rescue_rate", 0.0)) * 10 - float(value.get("capability_regression_rate", 0.0)) * 20
-        ranked.append((score, ingredient_id))
+    for ingredient_id, (score, variant) in best_by_ingredient.items():
+        overall = ingredient_summary.get(ingredient_id) or {}
+        score += 0.1 * float(overall.get("rescue_rate", 0.0))
+        ranked.append((score, ingredient_id, variant))
     ranked.sort(reverse=True)
-    selected = []
+
+    selected: list[str] = []
+    selected_variants: list[dict[str, Any]] = []
     seen_families = set()
-    for _, ingredient_id in ranked:
+    for _, ingredient_id, variant in ranked:
         family = campaign.bank[ingredient_id]["family"]
         if family not in seen_families or len(selected) < 8:
             selected.append(ingredient_id)
+            selected_variants.append(variant)
             seen_families.add(family)
         if len(selected) >= int(campaign.cfg["max_promoted_ingredients"]):
             break
+
     if len(selected) < 8:
-        # Never allow a sparse classifier to starve the recipe lab.
         for row in campaign.bank_list:
             if row["id"] not in selected:
                 selected.append(row["id"])
             if len(selected) >= max(8, int(campaign.cfg["max_promoted_ingredients"])):
                 break
+    campaign.promoted_variants = selected_variants
     return selected
 
 
@@ -893,9 +936,9 @@ def _run_recipe_reserve(campaign: Test11Campaign, deadline: float, recipes: list
     # Intentional infinite reservoir bounded only by wall-clock/call budget.
     while cases and recipes and campaign.can_start(deadline):
         recipe = recipes[cursor % len(recipes)]
-        case = cases[(cursor // len(recipes)) % len(cases)]
-        seed = seeds[(cursor // max(1, len(recipes) * len(cases))) % len(seeds)]
-        budget = budgets[(cursor // max(1, len(recipes) * len(cases) * len(seeds))) % len(budgets)]
+        case = cases[(cursor + (cursor // max(1, len(recipes)))) % len(cases)]
+        seed = seeds[(cursor // max(1, len(cases))) % len(seeds)]
+        budget = budgets[(cursor // max(1, len(cases) * len(seeds))) % len(budgets)]
         attempted.add(_fixture_id(case))
         campaign.treatment(case, deadline, phase=phase, recipe=recipe, budget=budget, seed=seed, kind="recipe_reserve")
         cursor += 1
@@ -966,21 +1009,22 @@ def phase_ingredient_screen(campaign: Test11Campaign, deadline: float) -> dict[s
     cursor = 0
     while variants and cases and campaign.can_start(deadline):
         recipe = variants[cursor % len(variants)]
-        case = cases[(cursor // len(variants)) % len(cases)]
-        seed = seeds[(cursor // max(1, len(variants) * len(cases))) % len(seeds)]
+        case = cases[cursor % len(cases)]
+        seed = seeds[(cursor // max(1, len(cases))) % len(seeds)]
         attempted.add(_fixture_id(case))
         campaign.treatment(case, deadline, phase="ingredient_harvest_screen", recipe=recipe, budget=int(campaign.cfg["base_generation_budget"]), seed=seed, kind="ingredient_screen")
         cursor += 1
 
     summary = _screen_summary(campaign, "ingredient_harvest_screen")
-    campaign.promoted_ids = _select_promoted(summary, campaign)
+    variant_summary = _variant_summary(campaign, "ingredient_harvest_screen")
+    campaign.promoted_ids = _select_promoted(summary, variant_summary, campaign)
     campaign.promoted_recipes = build_recipe_variants(campaign.promoted_ids, campaign.cfg)
 
     # If the full ingredient matrix happens to exhaust before deadline, all
     # remaining phase time becomes more recipe tests.
     _run_recipe_reserve(campaign, deadline, campaign.promoted_recipes, "ingredient_recipe_reserve", attempted)
     campaign.positive_work("ingredient_harvest_screen", start, attempted, "80+ seed/dynamic ingredients x placement/dose x headroom strata; leftover time -> recipe tests")
-    return summary
+    return {"ingredients": summary, "variants": variant_summary}
 
 
 def phase_recipe_factorial(campaign: Test11Campaign, deadline: float) -> dict[str, Any]:
@@ -1039,77 +1083,141 @@ def phase_system_operators(campaign: Test11Campaign, deadline: float) -> dict[st
     return _group_binary(rows, campaign.cfg, lambda row: str((row.get("recipe") or {}).get("operator_id") or "unknown"))
 
 
-def _complexity_frontier(atlas: dict[str, Any], operators: dict[str, Any]) -> dict[str, Any]:
+def _capability_value_per_cost(atlas: dict[str, Any], operators: dict[str, Any]) -> dict[str, Any]:
     candidates = []
     for key, summary in atlas.items():
         recipe = summary.get("recipe") or {}
         steps = recipe.get("steps") or []
         complexity = max(1, len(steps))
-        calls = 1
-        value = (
-            float(summary.get("rescue_rate", 0.0))
-            - 2.0 * float(summary.get("capability_regression_rate", 0.0))
-            - 0.02 * complexity
-        )
-        candidates.append({"kind":"prompt_recipe","key":key,"value_score":value,"complexity_units":complexity,"model_calls":calls,"summary":summary})
+        model_calls = 1
+        rescue = float(summary.get("rescue_rate", 0.0))
+        cap_reg = float(summary.get("capability_regression_rate", 0.0))
+        trunc_reg = max(0.0, float(summary.get("regression_rate", 0.0)) - cap_reg)
+        value = rescue - 2.0 * cap_reg - 0.25 * trunc_reg
+        candidates.append({
+            "kind": "prompt_recipe",
+            "key": key,
+            "rescue_rate": rescue,
+            "capability_regression_rate": cap_reg,
+            "truncation_regression_rate": trunc_reg,
+            "complexity_units": complexity,
+            "model_calls": model_calls,
+            "value_score": value,
+            "value_per_call": value / model_calls,
+            "value_per_complexity_unit": value / complexity,
+            "summary": summary,
+        })
     for key, summary in operators.items():
         complexity = 2
-        calls = 2
-        value = (
-            float(summary.get("rescue_rate", 0.0))
-            - 2.0 * float(summary.get("capability_regression_rate", 0.0))
-            - 0.03 * complexity
-            - 0.03 * (calls - 1)
-        )
-        candidates.append({"kind":"system_operator","key":key,"value_score":value,"complexity_units":complexity,"model_calls":calls,"summary":summary})
-    candidates.sort(key=lambda row: (row["value_score"], -row["complexity_units"], -row["model_calls"]), reverse=True)
-    best = []
-    best_value = -999.0
-    for row in sorted(candidates, key=lambda r: (r["complexity_units"], r["model_calls"], -r["value_score"])):
-        if row["value_score"] > best_value:
-            best.append(row)
-            best_value = row["value_score"]
-    return {"schema_version":1,"candidates":candidates,"pareto_like_frontier":best}
+        model_calls = 2
+        rescue = float(summary.get("rescue_rate", 0.0))
+        cap_reg = float(summary.get("capability_regression_rate", 0.0))
+        trunc_reg = max(0.0, float(summary.get("regression_rate", 0.0)) - cap_reg)
+        value = rescue - 2.0 * cap_reg - 0.25 * trunc_reg
+        candidates.append({
+            "kind": "system_operator",
+            "key": key,
+            "rescue_rate": rescue,
+            "capability_regression_rate": cap_reg,
+            "truncation_regression_rate": trunc_reg,
+            "complexity_units": complexity,
+            "model_calls": model_calls,
+            "value_score": value,
+            "value_per_call": value / model_calls,
+            "value_per_complexity_unit": value / complexity,
+            "summary": summary,
+        })
+    candidates.sort(
+        key=lambda row: (
+            row["value_score"],
+            row["value_per_call"],
+            row["value_per_complexity_unit"],
+        ),
+        reverse=True,
+    )
+    return {
+        "schema_version": 1,
+        "objective": "maximize measured rescue while minimizing capability regression, truncation, model calls, and system complexity",
+        "candidates": candidates,
+        "best_by_raw_value": candidates[:25],
+        "best_by_value_per_call": sorted(candidates, key=lambda row: row["value_per_call"], reverse=True)[:25],
+        "best_by_value_per_complexity_unit": sorted(candidates, key=lambda row: row["value_per_complexity_unit"], reverse=True)[:25],
+    }
 
 
-def phase_frontier_gap(campaign: Test11Campaign, deadline: float, atlas: dict[str, Any], operators: dict[str, Any]) -> dict[str, Any]:
+def phase_capability_value(campaign: Test11Campaign, deadline: float, atlas: dict[str, Any]) -> dict[str, Any]:
     start = len(campaign.rows)
     attempted = set()
-    recipes = _top_recipes(atlas, campaign, 8)
+    recipes = _top_recipes(atlas, campaign, 12)
     hard_cases = sorted(
         campaign.partitions["VALIDATION"],
-        key=lambda case: (-int(case.get("difficulty_level",0)), _family(case), _fixture_id(case)),
+        key=lambda case: (-int(case.get("difficulty_level", 0)), _family(case), _fixture_id(case)),
     )
     cursor = 0
     while hard_cases and recipes and campaign.can_start(deadline):
-        case = hard_cases[(cursor // len(recipes)) % len(hard_cases)]
+        case = hard_cases[cursor % len(hard_cases)]
         recipe = recipes[cursor % len(recipes)]
+        seed = int(campaign.cfg["seeds"][cursor % len(campaign.cfg["seeds"])])
+        budget = 512 if int(case.get("difficulty_level", 0)) >= 7 else int(campaign.cfg["base_generation_budget"])
         attempted.add(_fixture_id(case))
-        campaign.treatment(case, deadline, phase="frontier_gap_challenge", recipe=recipe, budget=512, seed=42 + (cursor % 3), kind="frontier_gap")
+        campaign.treatment(
+            case,
+            deadline,
+            phase="capability_value_challenge",
+            recipe=recipe,
+            budget=budget,
+            seed=seed,
+            kind="hard_case_leverage",
+        )
         cursor += 1
-        if cursor >= len(hard_cases) * len(recipes):
+        if cursor >= len(hard_cases) * len(recipes) * len(campaign.cfg["seeds"]):
             break
-    _run_recipe_reserve(campaign, deadline, recipes, "frontier_gap_recipe_reserve", attempted)
-    campaign.positive_work("frontier_gap_challenge", start, attempted, "highest-difficulty validation fixtures + top recipes; explicit frontier target gap")
+
+    _run_recipe_reserve(campaign, deadline, recipes, "capability_value_recipe_reserve", attempted)
+    campaign.positive_work(
+        "capability_value_challenge",
+        start,
+        attempted,
+        "highest-difficulty validation fixtures; measure observed rescue/regression and identify unresolved model-owned failures",
+    )
     rows = [row for row in campaign.rows[start:] if row.get("recipe")]
     by_family = defaultdict(list)
     for row in rows:
         by_family[str(row["family_id"])].append(row)
-    targets = {}
+
+    families = {}
+    unresolved = []
     for family, values in by_family.items():
-        pass_rate = sum(1 for row in values if float(row.get("score",0.0)) >= 1.0) / len(values)
-        targets[family] = {
+        controls_failed = sum(1 for row in values if float(row.get("control_score", 0.0)) < 1.0)
+        rescues = sum(1 for row in values if float(row.get("control_score", 0.0)) < 1.0 and float(row.get("score", 0.0)) > float(row.get("control_score", 0.0)))
+        cap_regressions = sum(
+            1 for row in values
+            if float(row.get("control_score", 0.0)) >= 1.0
+            and float(row.get("score", 0.0)) < float(row.get("control_score", 0.0))
+            and str((row.get("classification") or {}).get("result_class") or "") in CAPABILITY_FAILURE_CLASSES
+        )
+        families[family] = {
             "n": len(values),
-            "observed_pass_rate": pass_rate,
-            "shipping_target_pass_rate": 0.95,
-            "gap_to_target": max(0.0, 0.95 - pass_rate),
-            "reference_frontier_model": "NOT_MEASURED",
+            "control_failure_trials": controls_failed,
+            "rescues": rescues,
+            "rescue_rate_on_failures": rescues / controls_failed if controls_failed else 0.0,
+            "capability_regressions": cap_regressions,
         }
+        for row in values:
+            if float(row.get("control_score", 0.0)) < 1.0 and float(row.get("score", 0.0)) < 1.0:
+                unresolved.append({
+                    "fixture_id": row["fixture_id"],
+                    "family_id": row["family_id"],
+                    "difficulty_level": row["difficulty_level"],
+                    "recipe_id": (row.get("recipe") or {}).get("recipe_id"),
+                    "result_class": (row.get("classification") or {}).get("result_class"),
+                    "next_question": "does another recipe/operator recover this, or is it a model-owned fine-tuning candidate?",
+                })
     return {
-        "schema_version":1,
-        "status":"TARGET_GAP_ONLY_UNTIL_REFERENCE_FRONTIER_RUN_EXISTS",
-        "families":targets,
-        "warning":"A 0.95 shipping target is not evidence of frontier equivalence. Frontier equivalence requires a separately measured reference-model run on the same protected protocol.",
+        "schema_version": 1,
+        "families": families,
+        "unresolved_hard_failures": unresolved,
+        "interpretation": "Measured GPT-20B leverage only. No frontier-model equivalence claim is made by Test 1.1.",
     }
 
 
@@ -1219,7 +1327,7 @@ def write_outputs(
     generalization: dict[str, Any],
     budget_map: dict[str, Any],
     confirmation: dict[str, Any],
-    frontier_gap: dict[str, Any],
+    capability_value: dict[str, Any],
 ) -> None:
     store = campaign.runner.store
     assert store is not None
@@ -1247,11 +1355,14 @@ def write_outputs(
         "source_negative_rows":len(campaign.source.get("negative_rows",[])),
         "source_truncation_rows":len(campaign.source.get("truncation_rows",[])),
     }, producer="test1.1", stage="report")
-    store.write_json("ingredient-harvest-registry.json", {"schema_version":1,"ingredient_count":len(campaign.bank_list),"ingredients":campaign.bank_list,"promoted_ids":campaign.promoted_ids,"screen":ingredient_summary}, producer="test1.1", stage="report")
+    identity_screen = ingredient_summary.get("ingredients", {}) if isinstance(ingredient_summary, dict) else {}
+    variant_screen = ingredient_summary.get("variants", {}) if isinstance(ingredient_summary, dict) else {}
+    store.write_json("ingredient-harvest-registry.json", {"schema_version":1,"ingredient_count":len(campaign.bank_list),"ingredients":campaign.bank_list,"promoted_ids":campaign.promoted_ids,"screen":identity_screen}, producer="test1.1", stage="report")
+    store.write_json("ingredient-variant-map.json", {"schema_version":1,"variants":variant_screen}, producer="test1.1", stage="report")
     store.write_json("headroom-map.json", headroom, producer="test1.1", stage="report")
     store.write_json("baseline-stability-map.json", {"schema_version":1,"fixtures":headroom.get("fixtures",{})}, producer="test1.1", stage="report")
-    store.write_json("binary-effect-map.json", {"schema_version":1,"ingredient_screen":ingredient_summary,"recipes":atlas}, producer="test1.1", stage="report")
-    store.write_json("conditional-rescue-map.json", {"schema_version":1,"ingredients":{k:v for k,v in ingredient_summary.items() if v.get("rescues",0)>0},"recipes":{k:v for k,v in atlas.items() if v.get("rescues",0)>0}}, producer="test1.1", stage="report")
+    store.write_json("binary-effect-map.json", {"schema_version":1,"ingredient_screen":identity_screen,"ingredient_variants":variant_screen,"recipes":atlas}, producer="test1.1", stage="report")
+    store.write_json("conditional-rescue-map.json", {"schema_version":1,"ingredients":{k:v for k,v in identity_screen.items() if v.get("rescues",0)>0},"ingredient_variants":{k:v for k,v in variant_screen.items() if v.get("rescues",0)>0},"recipes":{k:v for k,v in atlas.items() if v.get("rescues",0)>0}}, producer="test1.1", stage="report")
     store.write_json("recipe-factorial-atlas.json", {"schema_version":1,"recipes":atlas}, producer="test1.1", stage="report")
     store.write_json("recipe-knockout-map.json", {"schema_version":1,"recipes":knockout}, producer="test1.1", stage="report")
     store.write_json("recipe-recurrence-map.json", {"schema_version":1,"recipes":recurrence}, producer="test1.1", stage="report")
@@ -1261,8 +1372,8 @@ def write_outputs(
     store.write_json("truncation-causality-map.json", {"schema_version":1,"effects":budget_map,"truncation_classes":sorted(TRUNCATION_CLASSES)}, producer="test1.1", stage="report")
     store.write_json("negative-transfer-map-1.1.json", {"schema_version":1,"recipes":{k:v for k,v in atlas.items() if v.get("capability_regressions",0)>0}}, producer="test1.1", stage="report")
     store.write_json("system-operator-atlas.json", {"schema_version":1,"operators":operators}, producer="test1.1", stage="report")
-    store.write_json("capability-complexity-frontier.json", _complexity_frontier(atlas, operators), producer="test1.1", stage="report")
-    store.write_json("frontier-gap-map.json", frontier_gap, producer="test1.1", stage="report")
+    store.write_json("capability-value-per-cost.json", _capability_value_per_cost(atlas, operators), producer="test1.1", stage="report")
+    store.write_json("hard-case-leverage-map.json", capability_value, producer="test1.1", stage="report")
     store.write_json("test1.1-priority-queue.json", {"schema_version":1,"queue":queue}, producer="test1.1", stage="report")
     store.write_json("test1.1-uncertainty-ledger.json", {"schema_version":1,"unknowns":unknowns}, producer="test1.1", stage="report")
     store.write_json("corrective-handoff.json", {"schema_version":1,"source_test1_run":campaign.source.get("run_id"),"priority_queue":queue,"ingredient_ids":campaign.promoted_ids,"recipe_count":len(atlas),"protected_partitions_exposed":False}, producer="test1.1", stage="report")
@@ -1302,8 +1413,8 @@ def run_test11_campaign(
             results["generalization"] = phase_generalization(campaign, deadline, results.get("atlas", {}))
         elif phase_name == "truncation_budget_disentanglement":
             results["budget"] = phase_truncation(campaign, deadline, results.get("atlas", {}))
-        elif phase_name == "frontier_gap_challenge":
-            results["frontier_gap"] = phase_frontier_gap(campaign, deadline, results.get("atlas", {}), results.get("operators", {}))
+        elif phase_name == "capability_value_challenge":
+            results["capability_value"] = phase_capability_value(campaign, deadline, results.get("atlas", {}))
         elif phase_name == "confirmation_handoff":
             results["confirmation"] = phase_confirmation(campaign, deadline, results.get("atlas", {}), results.get("generalization", {}))
         elif phase_name == "recipe_reserve":
@@ -1343,6 +1454,6 @@ def run_test11_campaign(
         results.get("generalization", {}),
         results.get("budget", {}),
         results.get("confirmation", {}),
-        results.get("frontier_gap", {}),
+        results.get("capability_value", {}),
     )
     return campaign.rows
