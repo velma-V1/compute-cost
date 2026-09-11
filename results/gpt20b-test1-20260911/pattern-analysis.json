@@ -1,0 +1,162 @@
+{
+  "headline_findings": [
+    {
+      "evidence": {
+        "baseline_pass": 2580,
+        "baseline_pass_rate": 0.848963,
+        "observations": 3039
+      },
+      "finding": "84.9% of observations inherited a passing baseline, leaving no positive score headroom. Global median treatment effects therefore strongly favor zero or negative classifications.",
+      "id": "P1-CEILING-HEADROOM-CONFOUND",
+      "severity": "HIGH"
+    },
+    {
+      "evidence": {
+        "NO_FINAL_ANSWER": 1,
+        "THINK_TRUNCATED": 48
+      },
+      "finding": "48 of 49 negative deltas are THINK_TRUNCATED and the remaining one is NO_FINAL_ANSWER. Observed treatment harm is overwhelmingly a completion/token-budget effect, not evidence of incorrect reasoning.",
+      "id": "P2-TRUNCATION-CONFOUND",
+      "severity": "CRITICAL"
+    },
+    {
+      "evidence": {
+        "0.5": {
+          "zero": 432
+        },
+        "1.0": {
+          "negative": 9,
+          "zero": 423
+        },
+        "2.0": {
+          "negative": 12,
+          "zero": 420
+        }
+      },
+      "finding": "In the controlled dose/representation/placement phase, dose 0.5 produced zero regressions in 432 trials; dose 1.0 produced 9 and dose 2.0 produced 12.",
+      "id": "P3-LOW-DOSE-SAFETY",
+      "severity": "HIGH"
+    },
+    {
+      "evidence": {
+        "middle": {
+          "negative": 12,
+          "zero": 312
+        },
+        "prefix": {
+          "negative": 6,
+          "zero": 318
+        },
+        "suffix": {
+          "negative": 3,
+          "zero": 321
+        },
+        "system": {
+          "zero": 324
+        }
+      },
+      "finding": "System placement was inert/safest (0 regressions/324), followed by suffix (3), prefix (6), and middle (12).",
+      "id": "P4-PLACEMENT-GRADIENT",
+      "severity": "HIGH"
+    },
+    {
+      "evidence": {
+        "bullets": {
+          "negative": 4,
+          "zero": 428
+        },
+        "prose": {
+          "negative": 4,
+          "zero": 428
+        },
+        "schema": {
+          "negative": 13,
+          "zero": 419
+        }
+      },
+      "finding": "Schema representation caused 13 regressions in 432 controlled trials versus 4 each for prose and bullets.",
+      "id": "P5-SCHEMA-TRUNCATION",
+      "severity": "MEDIUM"
+    },
+    {
+      "evidence": {
+        "baseline_fail": {
+          "positive": 2,
+          "zero": 2
+        },
+        "baseline_pass": {
+          "zero": 12
+        }
+      },
+      "finding": "ING-011 (tool_argument_validation) was labeled NULL by the global median classifier, yet it rescued 2 of 4 baseline-failing discovery fixtures and caused 0 regressions among 12 baseline-passing fixtures.",
+      "id": "P6-MISSED-CONDITIONAL-RESCUE",
+      "severity": "CRITICAL"
+    },
+    {
+      "evidence": {
+        "higher_order_candidates": 0,
+        "negative_observations": 49,
+        "positive_observations": 12,
+        "test2_priority_queue": 0,
+        "uncertainty_items": 0
+      },
+      "finding": "The Test-2 priority queue, higher-order candidate queue, and uncertainty ledger are all empty despite 12 positive and 49 negative nonzero observations. Localized signals were lost by aggregation/classification.",
+      "id": "P7-EMPTY-HANDOFF",
+      "severity": "CRITICAL"
+    },
+    {
+      "evidence": {
+        "active_elapsed_hours": 2.8034922932499953,
+        "active_elapsed_seconds": 10092.572255699983,
+        "planned_active_seconds": 24600,
+        "utilization": 0.41026716486585296
+      },
+      "finding": "Test 1 consumed about 2h48m of active experimental time, not the planned 6h50m, because finite candidate loops exhausted and confirmation had no candidates.",
+      "id": "P8-WALL-CLOCK-UNDERUSE",
+      "severity": "HIGH"
+    },
+    {
+      "evidence": {
+        "family_sigma_unique": [
+          0.05
+        ],
+        "global_noise_sigma": 0.05,
+        "score_domain": [
+          0.0,
+          1.0
+        ]
+      },
+      "finding": "All calibrated family MADs are zero and noise sigma is the 0.05 floor. With binary 0/1 scores, one -1 swing equals -20 sigma and can force HARMFUL classification even when the median delta is zero.",
+      "id": "P9-BINARY-NOISE-MISMATCH",
+      "severity": "HIGH"
+    }
+  ],
+  "localized_positive_signals": {
+    "broad_discovery_ING011": {
+      "baseline_fail": {
+        "positive": 2,
+        "zero": 2
+      },
+      "baseline_pass": {
+        "zero": 12
+      }
+    },
+    "by_family": {
+      "coding_generation": 10,
+      "context_retrieval": 2
+    },
+    "interpretation": "Positive evidence is concentrated in coding_generation and context_retrieval; it is promising but not yet independent/generalized.",
+    "positive_observation_count": 12
+  },
+  "recommended_harness_corrections": [
+    "Stratify treatment effects by baseline headroom: rescue rate on baseline failures and regression rate on baseline passes.",
+    "Separate completion/truncation outcomes from correctness/capability outcomes.",
+    "Use paired Bernoulli/binomial confidence for binary pass/fail scores instead of MAD-normalized median alone.",
+    "Treat generation budget as an explicit factor; rerun truncation-sensitive treatments with sufficient budget before calling them harmful.",
+    "Promote conditional rescue signals to Test-2 even when global median delta is zero.",
+    "Use unused wall-clock budget for replication/generalization of localized signals instead of ending the campaign early."
+  ],
+  "schema_version": 1,
+  "source_run": "test1-20260911-112554-e0d1049f",
+  "test2_interpretation_warning": "Because the frozen Test-1 handoff queue is empty, any Test-2 fallback recipe selection must not be interpreted as Test-1-discovered optimum. In particular, ING-011 is a missed conditional rescue signal."
+}
