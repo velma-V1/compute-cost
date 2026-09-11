@@ -111,11 +111,21 @@ def execute_experiment(
     spec: ExperimentSpec,
     *,
     parent: ExperimentSpec | None = None,
+    messages_override: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
-    """Execute one fully specified model call while preserving unique raw evidence."""
+    """Execute one fully specified model call while preserving unique raw evidence.
+
+    messages_override is an explicit experimental surface used by controlled
+    prompt-treatment campaigns. Existing callers omit it and retain historical
+    behavior exactly.
+    """
     assert runner.store is not None
     _validate_lineage(parent, spec)
-    messages = [{"role": "user", "content": str(case["prompt"])}]
+    messages = (
+        copy.deepcopy(messages_override)
+        if messages_override is not None
+        else [{"role": "user", "content": str(case["prompt"])}]
+    )
     options = runner._generation_options(
         case,
         {
