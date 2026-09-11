@@ -21,6 +21,7 @@ from typing import Any, Callable, Iterable
 
 from .characterization import execute_experiment
 from .experiments import ExperimentSpec, make_experiment_id
+from .evidence import EvidenceStore
 from .test1_campaign import (
     ACTIVE_SECONDS,
     HARD_SECONDS,
@@ -233,6 +234,9 @@ def load_test1_handoff(
     run_dir = results_root / run_id
     if not run_dir.is_dir():
         raise ValueError(f"Test-1 run does not exist: {run_id}")
+    manifest_problems = EvidenceStore(results_root, run_id).verify_manifest()
+    if manifest_problems:
+        raise ValueError(f"Test-1 evidence manifest verification failed: {manifest_problems}")
     missing = [name for name in REQUIRED_TEST1_FILES if not (run_dir / name).is_file()]
     if missing:
         raise ValueError(f"Test-1 handoff incomplete; missing: {missing}")
@@ -923,6 +927,16 @@ def phase_failure_recovery(campaign: Test2Campaign, deadline: float) -> dict[str
             "success_rate": rate,
             "status": status,
             "fixture_ids": sorted({_fixture_id(campaign.case_by_id[row["fixture_id"]]) for row in rows}),
+            "experiment_ids": [
+                str(row.get("experiment_id"))
+                for row in rows
+                if row.get("experiment_id")
+            ],
+            "source_failure_refs": sorted({
+                str(row.get("source_key"))
+                for row in rows
+                if row.get("source_key")
+            }),
         }
         family = rows[0].get("family_id")
         phenotype_registry.setdefault(phenotype, {
@@ -1228,37 +1242,76 @@ def phase_blind(
 def _build_model_limit_and_finetuning(
     campaign: Test2Campaign,
     recovery: dict[str, Any],
+    negative_transfer: dict[str, Any],
 ) -> tuple[dict[str, Any], list[dict[str, Any]], list[dict[str, Any]]]:
     matrix = recovery.get("matrix") or {}
-    recovered_phenotypes = {
-        row["phenotype_id"]
-        for row in matrix.values()
-        if row.get("status") == "GENERAL_RECOVERY"
-    }
+    recovery_by_phenotype: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for row in matrix.values():
+        recovery_by_phenotype[str(row.get("phenotype_id"))].append(row)
 
     failures: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for row in campaign.rows:
         if row.get("partition") == "TEST3_PROTECTED":
             continue
         classification = row.get("classification") or {}
-        if classification.get("valid_for_capability") is not True:
-            continue
         if classification.get("result_class") == "ANSWER_CORRECT":
             continue
-        phenotype = _phenotype_id(row)
-        failures[phenotype].append(row)
+        failures[_phenotype_id(row)].append(row)
 
     min_failures = int(campaign.cfg["fine_tuning_min_independent_failures"])
     limits: dict[str, Any] = {}
     finetune: list[dict[str, Any]] = []
     dataset: list[dict[str, Any]] = []
+    negative_transfer_available = bool(negative_transfer)
+
     for phenotype, rows in sorted(failures.items()):
         fixture_ids = sorted({str(row["fixture_id"]) for row in rows})
         family_ids = sorted({str(row["family_id"]) for row in rows})
-        if phenotype in recovered_phenotypes:
-            owner = "RECIPE_SOLVABLE"
+        result_classes = sorted({
+            str((row.get("classification") or {}).get("result_class"))
+            for row in rows
+        })
+        valid_rows = [
+            row for row in rows
+            if (row.get("classification") or {}).get("valid_for_capability") is True
+        ]
+        invalid_rows = [row for row in rows if row not in valid_rows]
+        recoveries = recovery_by_phenotype.get(phenotype, [])
+        general = [row for row in recoveries if row.get("status") == "GENERAL_RECOVERY"]
+        best_general = max(
+            general,
+            key=lambda row: float(row.get("success_rate", 0.0)),
+            default=None,
+        )
+        cases = [campaign.case_by_id.get(fixture_id) for fixture_id in fixture_ids]
+        observable_target = all(
+            case is not None and case.get("scorer") is not None and "expected" in case
+            for case in cases
+        )
+        levels = [
+            int(case.get("difficulty_level", 0))
+            for case in cases
+            if case is not None
+        ]
+
+        if invalid_rows and not valid_rows:
+            toolish = any("tool" in family.lower() for family in family_ids)
+            owner = "TOOL_SOLVABLE" if toolish else "SYSTEM_SOLVABLE"
+        elif not observable_target:
+            owner = "DATA_SOLVABLE"
+        elif best_general is not None:
+            recipe_len = len((best_general.get("recipe") or {}).get("ingredient_ids") or [])
+            owner = "PROMPT_SOLVABLE" if recipe_len <= 1 else "RECIPE_SOLVABLE"
         elif len(fixture_ids) >= min_failures:
-            owner = "FINE_TUNING_CANDIDATE"
+            # Recurrent residual failures at the extreme edge are retained as a
+            # measured base-model capability limit rather than automatically
+            # converted into training data. Lower/mid-level recurrent failures
+            # are the scientifically useful Test-3 fine-tuning candidates.
+            owner = (
+                "MODEL_CAPABILITY_LIMIT"
+                if levels and min(levels) >= 9
+                else "FINE_TUNING_CANDIDATE"
+            )
         else:
             owner = "INSUFFICIENT_EVIDENCE"
 
@@ -1268,17 +1321,19 @@ def _build_model_limit_and_finetuning(
             "independent_fixture_count": len(fixture_ids),
             "fixture_ids": fixture_ids,
             "family_ids": family_ids,
-            "result_classes": sorted({
-                str((row.get("classification") or {}).get("result_class"))
-                for row in rows
-            }),
+            "difficulty_levels": sorted(levels),
+            "result_classes": result_classes,
             "experiment_ids": [
                 str(row.get("experiment_id"))
                 for row in rows
                 if row.get("experiment_id")
             ],
+            "recovery_evidence": copy.deepcopy(recoveries),
+            "observable_target": observable_target,
+            "negative_transfer_evidence_available": negative_transfer_available,
         }
         limits[phenotype] = entry
+
         if owner == "FINE_TUNING_CANDIDATE":
             package = {
                 **copy.deepcopy(entry),
@@ -1286,10 +1341,13 @@ def _build_model_limit_and_finetuning(
                     "recurrent": True,
                     "independent": len(fixture_ids) >= min_failures,
                     "model_owned": True,
-                    "cheaper_recipe_owner_resolved": True,
+                    "prior_generalization_evidence": len(fixture_ids) >= min_failures,
+                    "cheaper_prompt_recipe_owner_resolved": best_general is None,
+                    "tool_system_owner_resolved": not invalid_rows,
+                    "observable_target": observable_target,
                     "protected_fixtures_excluded": True,
-                    "observable_target_required": True,
-                    "negative_transfer_evidence_required": True,
+                    "negative_transfer_evidence_available": negative_transfer_available,
+                    "leakage_safe_partitioning": True,
                 },
                 "next_action": "TEST3_FINE_TUNING_QUALIFICATION",
             }
@@ -1302,11 +1360,17 @@ def _build_model_limit_and_finetuning(
                     "phenotype_id": phenotype,
                     "fixture_id": fixture_id,
                     "family_id": _family(case),
+                    "difficulty_level": int(case.get("difficulty_level", 0)),
                     "prompt": case.get("prompt"),
                     "expected": copy.deepcopy(case.get("expected")),
                     "scorer": case.get("scorer"),
                     "partition": campaign._partition(case),
                     "train_eligible": campaign._partition(case) in {"DISCOVERY", "VALIDATION"},
+                    "source_experiment_ids": [
+                        str(row.get("experiment_id"))
+                        for row in rows
+                        if row.get("fixture_id") == fixture_id and row.get("experiment_id")
+                    ],
                 })
     return {"phenotypes": limits}, finetune, dataset
 
@@ -1387,6 +1451,16 @@ def _build_finalization_contract(
         if row.get("boundary_class") == "NEGATIVE_TRANSFER"
     ]
 
+    ingredient_index = {item["id"]: item for item in INGREDIENTS}
+    primary_recipe = primary.get("recipe") or {}
+    rendered_parts = []
+    for ingredient_id in primary_recipe.get("ingredient_ids") or []:
+        definition = ingredient_index.get(str(ingredient_id))
+        if definition is None:
+            continue
+        rendered_parts.append(str(definition.get("full") or definition.get("short") or ""))
+    rendered_control_text = "\n".join(rendered_parts)
+
     exact_model = {
         "model": str(campaign.runner.model),
         "thinking_mode": bool(campaign.cfg["thinking_mode"]),
@@ -1413,6 +1487,14 @@ def _build_finalization_contract(
         "status": "PROVISIONAL_PENDING_TEST3_AND_FINAL_ACCEPTANCE",
         "base_model": str(campaign.runner.model),
         "primary_recipe": copy.deepcopy(primary),
+        "rendered_primary_control_text": rendered_control_text,
+        "rendering_rule": {
+            "ingredient_order_is_semantic": True,
+            "placement": primary_recipe.get("placement"),
+            "representation": primary_recipe.get("representation"),
+            "dose": primary_recipe.get("dose"),
+            "recurrence_count": len(primary_recipe.get("ingredient_ids") or []),
+        },
         "alternate_minimal_recipes": copy.deepcopy(recipes[1:]),
         "ingredient_definitions": copy.deepcopy(list(INGREDIENTS)),
         "recovery_policies": general_recoveries,
@@ -1445,6 +1527,11 @@ def _build_finalization_contract(
         },
         "model_configuration": exact_model,
         "latency_resource_envelope": copy.deepcopy(latency),
+        "resource_evidence": {
+            "telemetry": "telemetry.jsonl",
+            "hardware": "hardware.json",
+            "raw_runtime_exchanges": "raw/runtime/exchanges/",
+        },
         "unresolved_model_owned_failures": copy.deepcopy(finetune),
         "rollback_configuration": copy.deepcopy(rollback),
         "acceptance_gates": {
@@ -1562,7 +1649,11 @@ def write_test2_outputs(
         stage="report",
     )
 
-    limits, finetune, dataset = _build_model_limit_and_finetuning(campaign, recovery)
+    limits, finetune, dataset = _build_model_limit_and_finetuning(
+        campaign,
+        recovery,
+        negative_transfer,
+    )
     store.write_json(
         "model-limit-registry.json",
         {"schema_version": 1, **limits},
