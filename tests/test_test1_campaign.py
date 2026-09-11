@@ -4,6 +4,8 @@ import json
 from pathlib import Path
 
 from compute_cost.config import load_config
+from compute_cost.capability_suite import normalize_capability_suite, validate_capability_suite
+from compute_cost.gpt_oss_calibration import materialize_gpt_oss_suite
 from compute_cost.runner import BenchmarkRunner
 from compute_cost.test1_campaign import (
     ACTIVE_SECONDS,
@@ -158,3 +160,25 @@ def test_runner_dry_run_materializes_plan_with_zero_model_calls(tmp_path: Path):
     ]
     assert any(row["type"] == "TEST1_DRY_RUN_COMPLETE" for row in events)
     assert not any(row["type"] == "RUN_FAILED" for row in events)
+
+
+def test_real_materialized_gpt20b_suite_supports_all_four_frozen_partitions():
+    root = Path(__file__).resolve().parents[1]
+    seed = json.loads((root / "benchmarks" / "gpt-oss-20b-capability-v1.json").read_text(encoding="utf-8"))
+    taxonomy = json.loads((root / "benchmarks" / "capability-taxonomy-v1.json").read_text(encoding="utf-8"))
+    validate_capability_suite(seed, taxonomy)
+    suite = materialize_gpt_oss_suite(seed, taxonomy)
+    validate_capability_suite(suite, taxonomy)
+    suite = normalize_capability_suite(suite)
+
+    plan = build_test1_plan(suite["cases"])
+    validate_test1_plan(plan)
+
+    assert len(suite["cases"]) >= 400
+    assert all(plan["partition_counts"][name] > 0 for name in (
+        "DISCOVERY",
+        "VALIDATION",
+        "TEST2_BLIND",
+        "TEST3_PROTECTED",
+    ))
+    assert sum(plan["partition_counts"].values()) == len(suite["cases"])
