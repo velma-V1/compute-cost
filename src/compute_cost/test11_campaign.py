@@ -42,13 +42,15 @@ from .test1_campaign import (
 CALL_START_CUTOFF_SECONDS = ACTIVE_SECONDS
 
 PHASES = (
-    ("headroom_recalibration", 45 * 60),
-    ("ingredient_harvest_screen", 100 * 60),
-    ("recipe_factorial", 100 * 60),
-    ("conditional_rescue_generalization", 70 * 60),
-    ("truncation_budget_disentanglement", 45 * 60),
-    ("confirmation_handoff", 30 * 60),
-    ("recipe_reserve", 20 * 60),
+    ("headroom_recalibration", 35 * 60),
+    ("ingredient_harvest_screen", 90 * 60),
+    ("recipe_factorial", 95 * 60),
+    ("system_operator_scout", 60 * 60),
+    ("conditional_rescue_generalization", 45 * 60),
+    ("truncation_budget_disentanglement", 35 * 60),
+    ("frontier_gap_challenge", 25 * 60),
+    ("confirmation_handoff", 15 * 60),
+    ("recipe_reserve", 10 * 60),
 )
 
 TRUNCATION_CLASSES = {"THINK_TRUNCATED", "ANSWER_TRUNCATED", "NO_FINAL_ANSWER"}
@@ -163,6 +165,21 @@ NEW_SEED_INGREDIENTS: tuple[dict[str, Any], ...] = (
     {"id":"ING-080","family":"coding_generation","label":"minimal_correct_patch","short":"Prefer the smallest correct patch.","full":"Prefer the smallest implementation change that satisfies the specification without introducing unrelated behavior."},
 )
 
+SYSTEM_OPERATORS: tuple[dict[str, str], ...] = (
+    {"id":"OP-001","label":"verify_repair","instruction":"Review the candidate answer against the task. If anything is wrong, correct it. Return only the best final answer."},
+    {"id":"OP-002","label":"constraint_repair","instruction":"Audit the candidate answer only for missed or violated task constraints. Repair any violation and return only the corrected final answer."},
+    {"id":"OP-003","label":"counterexample_repair","instruction":"Try one strong counterexample against the candidate answer. If it fails, repair it. Return only the final answer."},
+    {"id":"OP-004","label":"independent_recompute","instruction":"Independently solve the task without trusting the candidate answer, compare the results, then return the answer supported by the stronger reasoning."},
+    {"id":"OP-005","label":"format_repair","instruction":"Check the candidate answer against the exact requested output format and repair only formatting or contract violations. Return only the corrected output."},
+    {"id":"OP-006","label":"tool_argument_repair","instruction":"For tool-like output, validate tool choice, required arguments, argument values/types, and dependencies. Repair errors and return only the corrected call/output."},
+    {"id":"OP-007","label":"state_reconciliation","instruction":"Reconcile the candidate answer with the latest authoritative state in the task and remove any dependence on obsolete or contradictory state."},
+    {"id":"OP-008","label":"evidence_repair","instruction":"Remove unsupported claims from the candidate answer and repair it using only evidence supplied or directly derivable from the task."},
+    {"id":"OP-009","label":"minimal_repair","instruction":"Locate the single most likely material defect in the candidate answer and change only what is necessary to fix it."},
+    {"id":"OP-010","label":"concise_repair","instruction":"Repair the candidate answer while using the shortest reasoning path that preserves correctness and enough output budget to finish."},
+    {"id":"OP-011","label":"ambiguity_adjudication","instruction":"Check whether the candidate answer depends on one interpretation of an ambiguous task. Compare plausible interpretations and return the answer best supported by explicit evidence."},
+    {"id":"OP-012","label":"stop_or_escalate","instruction":"Decide whether the candidate answer is already sufficiently supported. If yes, return it unchanged. If not, perform exactly one targeted correction and return the result."},
+)
+
 REQUIRED_OUTPUTS = (
     "test1.1-source-audit.json",
     "ingredient-harvest-registry.json",
@@ -178,6 +195,9 @@ REQUIRED_OUTPUTS = (
     "family-generalization-map.json",
     "truncation-causality-map.json",
     "negative-transfer-map-1.1.json",
+    "system-operator-atlas.json",
+    "capability-complexity-frontier.json",
+    "frontier-gap-map.json",
     "test1.1-priority-queue.json",
     "test1.1-uncertainty-ledger.json",
     "corrective-handoff.json",
@@ -699,6 +719,7 @@ class Test11Campaign:
             "score": float(score) if valid and isinstance(score, (int, float)) and not isinstance(score, bool) else 0.0,
             "classification": copy.deepcopy(row.get("classification") or {}),
             "experiment_id": spec.experiment_id,
+            "response_text": str(row.get("response_text") or ""),
         }
         self.controls[key] = record
         self._record(case, row, phase="control", kind="control", recipe=None, control_score=record["score"], budget=budget, seed=seed)
@@ -720,6 +741,37 @@ class Test11Campaign:
         finally:
             self._progress(label, False)
         return self._record(case, row, phase=phase, kind=kind, recipe=recipe, control_score=float(control["score"]), budget=budget, seed=seed)
+
+    def operator_treatment(self, case: dict[str, Any], deadline: float, *, operator: dict[str, str], budget: int, seed: int) -> dict[str, Any] | None:
+        self.assert_allowed(case)
+        control = self.control(case, deadline, budget=budget, seed=seed)
+        if control is None or not self.can_start(deadline):
+            return None
+        candidate = str(control.get("response_text") or "")
+        if not candidate:
+            return None
+        self.sequence += 1
+        op_id = str(operator["id"])
+        spec = _spec(self.sequence, case, f"operator-{op_id}-b{budget}-s{seed}", self.cfg, budget=budget, seed=seed + 1000, baseline=False)
+        messages = [
+            {"role":"user","content":str(case["prompt"])},
+            {"role":"assistant","content":candidate},
+            {"role":"user","content":str(operator["instruction"])},
+        ]
+        label = f"test1.1 operator {_fixture_id(case)} {op_id}"
+        self._progress(label, True)
+        try:
+            row = execute_experiment(self.runner, case, spec, parent=None, messages_override=messages)
+        finally:
+            self._progress(label, False)
+        recipe = {
+            "recipe_id": "SYS-" + op_id,
+            "mode": "system_operator",
+            "operator_id": op_id,
+            "operator_label": operator["label"],
+            "model_calls_per_observation": 2,
+        }
+        return self._record(case, row, phase="system_operator_scout", kind="system_operator", recipe=recipe, control_score=float(control["score"]), budget=budget, seed=seed)
 
     def _record(self, case: dict[str, Any], row: dict[str, Any], *, phase: str, kind: str, recipe: dict[str, Any] | None, control_score: float, budget: int, seed: int) -> dict[str, Any]:
         score = row.get("score")
@@ -956,6 +1008,111 @@ def _top_recipes(atlas: dict[str, Any], campaign: Test11Campaign, limit: int) ->
     return result or campaign.promoted_recipes[:limit]
 
 
+def phase_system_operators(campaign: Test11Campaign, deadline: float) -> dict[str, Any]:
+    start = len(campaign.rows)
+    attempted = set()
+    fail, passed = _source_headroom(campaign)
+    cases = fail + passed
+    if not cases:
+        cases = _balanced_cases(campaign.partitions["DISCOVERY"], len(campaign.partitions["DISCOVERY"]))
+    seeds = [int(v) for v in campaign.cfg["seeds"]]
+    cursor = 0
+    while cases and campaign.can_start(deadline):
+        operator = SYSTEM_OPERATORS[cursor % len(SYSTEM_OPERATORS)]
+        case = cases[(cursor // len(SYSTEM_OPERATORS)) % len(cases)]
+        seed = seeds[(cursor // max(1, len(SYSTEM_OPERATORS) * len(cases))) % len(seeds)]
+        attempted.add(_fixture_id(case))
+        campaign.operator_treatment(
+            case,
+            deadline,
+            operator=operator,
+            budget=int(campaign.cfg["base_generation_budget"]),
+            seed=seed,
+        )
+        cursor += 1
+        if cursor >= len(SYSTEM_OPERATORS) * len(cases) * len(seeds):
+            break
+    # Any unused operator-scout time becomes additional prompt-recipe tests.
+    _run_recipe_reserve(campaign, deadline, campaign.promoted_recipes, "operator_recipe_reserve", attempted)
+    campaign.positive_work("system_operator_scout", start, attempted, "12 multi-call operator strategies + prompt-recipe reserve")
+    rows = [row for row in campaign.rows[start:] if row.get("kind") == "system_operator"]
+    return _group_binary(rows, campaign.cfg, lambda row: str((row.get("recipe") or {}).get("operator_id") or "unknown"))
+
+
+def _complexity_frontier(atlas: dict[str, Any], operators: dict[str, Any]) -> dict[str, Any]:
+    candidates = []
+    for key, summary in atlas.items():
+        recipe = summary.get("recipe") or {}
+        steps = recipe.get("steps") or []
+        complexity = max(1, len(steps))
+        calls = 1
+        value = (
+            float(summary.get("rescue_rate", 0.0))
+            - 2.0 * float(summary.get("capability_regression_rate", 0.0))
+            - 0.02 * complexity
+        )
+        candidates.append({"kind":"prompt_recipe","key":key,"value_score":value,"complexity_units":complexity,"model_calls":calls,"summary":summary})
+    for key, summary in operators.items():
+        complexity = 2
+        calls = 2
+        value = (
+            float(summary.get("rescue_rate", 0.0))
+            - 2.0 * float(summary.get("capability_regression_rate", 0.0))
+            - 0.03 * complexity
+            - 0.03 * (calls - 1)
+        )
+        candidates.append({"kind":"system_operator","key":key,"value_score":value,"complexity_units":complexity,"model_calls":calls,"summary":summary})
+    candidates.sort(key=lambda row: (row["value_score"], -row["complexity_units"], -row["model_calls"]), reverse=True)
+    best = []
+    best_value = -999.0
+    for row in sorted(candidates, key=lambda r: (r["complexity_units"], r["model_calls"], -r["value_score"])):
+        if row["value_score"] > best_value:
+            best.append(row)
+            best_value = row["value_score"]
+    return {"schema_version":1,"candidates":candidates,"pareto_like_frontier":best}
+
+
+def phase_frontier_gap(campaign: Test11Campaign, deadline: float, atlas: dict[str, Any], operators: dict[str, Any]) -> dict[str, Any]:
+    start = len(campaign.rows)
+    attempted = set()
+    recipes = _top_recipes(atlas, campaign, 8)
+    hard_cases = sorted(
+        campaign.partitions["VALIDATION"],
+        key=lambda case: (-int(case.get("difficulty_level",0)), _family(case), _fixture_id(case)),
+    )
+    cursor = 0
+    while hard_cases and recipes and campaign.can_start(deadline):
+        case = hard_cases[(cursor // len(recipes)) % len(hard_cases)]
+        recipe = recipes[cursor % len(recipes)]
+        attempted.add(_fixture_id(case))
+        campaign.treatment(case, deadline, phase="frontier_gap_challenge", recipe=recipe, budget=512, seed=42 + (cursor % 3), kind="frontier_gap")
+        cursor += 1
+        if cursor >= len(hard_cases) * len(recipes):
+            break
+    _run_recipe_reserve(campaign, deadline, recipes, "frontier_gap_recipe_reserve", attempted)
+    campaign.positive_work("frontier_gap_challenge", start, attempted, "highest-difficulty validation fixtures + top recipes; explicit frontier target gap")
+    rows = [row for row in campaign.rows[start:] if row.get("recipe")]
+    by_family = defaultdict(list)
+    for row in rows:
+        by_family[str(row["family_id"])].append(row)
+    targets = {}
+    for family, values in by_family.items():
+        pass_rate = sum(1 for row in values if float(row.get("score",0.0)) >= 1.0) / len(values)
+        targets[family] = {
+            "n": len(values),
+            "observed_pass_rate": pass_rate,
+            "shipping_target_pass_rate": 0.95,
+            "gap_to_target": max(0.0, 0.95 - pass_rate),
+            "reference_frontier_model": "NOT_MEASURED",
+        }
+    return {
+        "schema_version":1,
+        "status":"TARGET_GAP_ONLY_UNTIL_REFERENCE_FRONTIER_RUN_EXISTS",
+        "families":targets,
+        "warning":"A 0.95 shipping target is not evidence of frontier equivalence. Frontier equivalence requires a separately measured reference-model run on the same protected protocol.",
+    }
+
+
 def phase_generalization(campaign: Test11Campaign, deadline: float, atlas: dict[str, Any]) -> dict[str, Any]:
     start = len(campaign.rows)
     attempted = set()
@@ -1058,9 +1215,11 @@ def write_outputs(
     headroom: dict[str, Any],
     ingredient_summary: dict[str, Any],
     atlas: dict[str, Any],
+    operators: dict[str, Any],
     generalization: dict[str, Any],
     budget_map: dict[str, Any],
     confirmation: dict[str, Any],
+    frontier_gap: dict[str, Any],
 ) -> None:
     store = campaign.runner.store
     assert store is not None
@@ -1101,6 +1260,9 @@ def write_outputs(
     store.write_json("family-generalization-map.json", {"schema_version":1,"effects":generalization}, producer="test1.1", stage="report")
     store.write_json("truncation-causality-map.json", {"schema_version":1,"effects":budget_map,"truncation_classes":sorted(TRUNCATION_CLASSES)}, producer="test1.1", stage="report")
     store.write_json("negative-transfer-map-1.1.json", {"schema_version":1,"recipes":{k:v for k,v in atlas.items() if v.get("capability_regressions",0)>0}}, producer="test1.1", stage="report")
+    store.write_json("system-operator-atlas.json", {"schema_version":1,"operators":operators}, producer="test1.1", stage="report")
+    store.write_json("capability-complexity-frontier.json", _complexity_frontier(atlas, operators), producer="test1.1", stage="report")
+    store.write_json("frontier-gap-map.json", frontier_gap, producer="test1.1", stage="report")
     store.write_json("test1.1-priority-queue.json", {"schema_version":1,"queue":queue}, producer="test1.1", stage="report")
     store.write_json("test1.1-uncertainty-ledger.json", {"schema_version":1,"unknowns":unknowns}, producer="test1.1", stage="report")
     store.write_json("corrective-handoff.json", {"schema_version":1,"source_test1_run":campaign.source.get("run_id"),"priority_queue":queue,"ingredient_ids":campaign.promoted_ids,"recipe_count":len(atlas),"protected_partitions_exposed":False}, producer="test1.1", stage="report")
@@ -1134,10 +1296,14 @@ def run_test11_campaign(
             results["ingredients"] = phase_ingredient_screen(campaign, deadline)
         elif phase_name == "recipe_factorial":
             results["atlas"] = phase_recipe_factorial(campaign, deadline)
+        elif phase_name == "system_operator_scout":
+            results["operators"] = phase_system_operators(campaign, deadline)
         elif phase_name == "conditional_rescue_generalization":
             results["generalization"] = phase_generalization(campaign, deadline, results.get("atlas", {}))
         elif phase_name == "truncation_budget_disentanglement":
             results["budget"] = phase_truncation(campaign, deadline, results.get("atlas", {}))
+        elif phase_name == "frontier_gap_challenge":
+            results["frontier_gap"] = phase_frontier_gap(campaign, deadline, results.get("atlas", {}), results.get("operators", {}))
         elif phase_name == "confirmation_handoff":
             results["confirmation"] = phase_confirmation(campaign, deadline, results.get("atlas", {}), results.get("generalization", {}))
         elif phase_name == "recipe_reserve":
@@ -1173,8 +1339,10 @@ def run_test11_campaign(
         results.get("headroom", {}),
         results.get("ingredients", {}),
         results.get("atlas", {}),
+        results.get("operators", {}),
         results.get("generalization", {}),
         results.get("budget", {}),
         results.get("confirmation", {}),
+        results.get("frontier_gap", {}),
     )
     return campaign.rows
