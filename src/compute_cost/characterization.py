@@ -155,6 +155,7 @@ def execute_experiment(
         "classification": classification,
         "score": scoring.get("score"),
         "status": scoring.get("status"),
+        "response_text": response if generation.get("ok", False) else "",
         "metrics": copy.deepcopy(generation.get("metrics") or {}),
         "timing": copy.deepcopy(generation.get("timing") or {}),
         "phase_metrics": copy.deepcopy(generation.get("phase_metrics") or {}),
