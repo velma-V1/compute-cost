@@ -25,8 +25,8 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "expected_calls": 4300,
         "safety_call_cap": 10000,
         "generation_budget": 256,
-        "thinking_mode": False,
-        "reasoning_effort": None,
+        "thinking_mode": True,
+        "reasoning_effort": "medium",
         "calibration_anchor_count": 64,
         "calibration_repeats": 5,
         "discovery_min_observations": 16,
@@ -59,7 +59,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "unstable_threshold": 0.40,
     },
     "reasoning_curves": {
-        "enabled": False,
+        "enabled": True,
         "repeats": 3,
     },
     "recovery_lab": {
