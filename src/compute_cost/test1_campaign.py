@@ -23,7 +23,7 @@ from .experiments import ExperimentSpec, make_experiment_id
 
 ACTIVE_SECONDS = 6 * 3600 + 50 * 60
 HARD_SECONDS = 7 * 3600
-CALL_START_CUTOFF_SECONDS = 6 * 3600 + 45 * 60
+CALL_START_CUTOFF_SECONDS = ACTIVE_SECONDS
 EPSILON_NOISE = 0.05
 
 PHASES = (
@@ -1166,19 +1166,23 @@ def run_test1_campaign(
         started_monotonic=started_monotonic,
     )
 
-    runner.store.write_json("test1-plan.json", plan, producer="test1", stage="preflight")
-    runner.store.write_json(
-        "fixture-partitions.json",
-        {
-            "schema_version": 1,
-            "partitions": {
-                name: [_fixture_id(case) for case in rows]
-                for name, rows in campaign.partitions.items()
+    plan_path = runner.store.run_dir / "test1-plan.json"
+    if not plan_path.is_file():
+        runner.store.write_json("test1-plan.json", plan, producer="test1", stage="preflight")
+    partitions_path = runner.store.run_dir / "fixture-partitions.json"
+    if not partitions_path.is_file():
+        runner.store.write_json(
+            "fixture-partitions.json",
+            {
+                "schema_version": 1,
+                "partitions": {
+                    name: [_fixture_id(case) for case in rows]
+                    for name, rows in campaign.partitions.items()
+                },
             },
-        },
-        producer="test1",
-        stage="preflight",
-    )
+            producer="test1",
+            stage="preflight",
+        )
 
     carry = 0.0
     discovery: dict[str, dict[str, Any]] = {}
