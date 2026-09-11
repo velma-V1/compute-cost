@@ -5,6 +5,7 @@ from __future__ import annotations
 import copy
 import json
 import traceback
+import time
 import uuid
 from datetime import datetime
 from pathlib import Path
@@ -508,6 +509,7 @@ class BenchmarkRunner(_CoreBenchmarkRunner):
         dry_run: bool = False,
     ) -> Path:
         """Run the frozen seven-hour GPT-20B Test-1 campaign."""
+        campaign_started_monotonic = time.monotonic()
         test_cfg = self.config.get("test1_campaign") or {}
         expected_calls = int(test_cfg.get("expected_calls", 4300))
         safety_cap = int(test_cfg.get("safety_call_cap", 10000))
@@ -639,6 +641,7 @@ class BenchmarkRunner(_CoreBenchmarkRunner):
                 self,
                 self.suite.get("cases", []) or [],
                 baseline_run=baseline_run,
+                started_monotonic=campaign_started_monotonic,
             )
             physical_calls = self._model_call_counts.get(store.run_id, 0)
             self._event(
