@@ -5,6 +5,7 @@ from __future__ import annotations
 import copy
 import json
 import traceback
+import time
 import uuid
 from datetime import datetime
 from pathlib import Path
@@ -18,6 +19,7 @@ from .hardware import collect_hardware_snapshot
 from .progress import ProgressDisplay
 from .report import build_summary, render_report
 from .run_synthesis import build_cost_value_outputs as _build_cost_value_outputs
+from .test1_campaign import build_test1_plan, partition_cases, run_test1_campaign, validate_test1_plan
 from .runner_core import BenchmarkRunner as _CoreBenchmarkRunner
 from .runner_core import build_context_case
 
@@ -489,6 +491,181 @@ class BenchmarkRunner(_CoreBenchmarkRunner):
             self._event(
                 "RUN_FAILED",
                 failure="CAPABILITY_CHARACTERIZATION_ERROR",
+                error_type=type(exc).__name__,
+                error=str(exc),
+            )
+            return self._finalize_run()
+        finally:
+            if self.progress is not None and not self._progress_stopped:
+                self.progress.stop_live(newline=True)
+                self._progress_stopped = True
+
+    def gpt20b_test1(
+        self,
+        model: str,
+        *,
+        pull: bool = False,
+        baseline_run: str | None = None,
+        dry_run: bool = False,
+    ) -> Path:
+        """Run the frozen seven-hour GPT-20B Test-1 campaign."""
+        campaign_started_monotonic = time.monotonic()
+        test_cfg = self.config.get("test1_campaign") or {}
+        expected_calls = int(test_cfg.get("expected_calls", 4300))
+        safety_cap = int(test_cfg.get("safety_call_cap", 10000))
+        limits = self.config.setdefault("limits", {})
+        limits["max_model_calls_per_run"] = max(
+            int(limits.get("max_model_calls_per_run", 3000)),
+            safety_cap,
+        )
+
+        self.progress = self._progress_factory(expected_calls + 2)
+        self._progress_preflight_complete = False
+        self._progress_stopped = False
+        self.progress.start("preflight")
+        self.progress.start_live()
+
+        self.model = model
+        run_id = f"test1-{datetime.now().strftime('%Y%m%d-%H%M%S')}-{uuid.uuid4().hex[:8]}"
+        self.store = EvidenceStore(self.results_root, run_id)
+        store = self.store
+        store.write_json("resolved-config.json", self.config, producer="runner", stage="preflight")
+        store.write_json("benchmark-snapshot.json", self.suite, producer="runner", stage="preflight")
+        plan = build_test1_plan(self.suite.get("cases", []) or [])
+        validate_test1_plan(plan)
+        store.write_json("test1-plan.json", plan, producer="test1", stage="preflight")
+        store.write_json(
+            "fixture-partitions.json",
+            {
+                "schema_version": 1,
+                "partitions": {
+                    name: [str(case.get("id")) for case in rows]
+                    for name, rows in partition_cases(self.suite.get("cases", []) or []).items()
+                },
+            },
+            producer="test1",
+            stage="preflight",
+        )
+        self._event(
+            "RUN_START",
+            model=model,
+            benchmark_version=self.suite.get("benchmark_version"),
+            mode="gpt20b-test1-dry-run" if dry_run else "gpt20b-test1",
+            baseline_run=baseline_run,
+        )
+
+        if dry_run:
+            self._progress_complete("preflight")
+            self._progress_preflight_complete = True
+            self._event(
+                "TEST1_DRY_RUN_COMPLETE",
+                model=model,
+                planned_wall_seconds=plan["wall_clock_seconds"],
+                planned_active_seconds=plan["active_model_seconds"],
+                ingredient_count=plan["ingredient_count"],
+            )
+            return self._finalize_run()
+
+        self._start_telemetry()
+        try:
+            hardware = self.hardware_collector()
+            store.write_json("hardware.json", hardware, producer="hardware", stage="preflight")
+
+            version = self.runtime.version()
+            version_refs = self._persist_control_exchange("runtime-version", version)
+            tags = self.runtime.list_models()
+            tags_refs = self._persist_control_exchange("model-list", tags)
+            available = (
+                self.runtime.model_available_in(tags, model)
+                if hasattr(self.runtime, "model_available_in")
+                else self.runtime.is_model_available(model)
+            )
+
+            pull_refs = None
+            if not available and pull:
+                pull_result = self.runtime.pull(model)
+                pull_refs = self._persist_control_exchange("model-pull", pull_result)
+                tags = self.runtime.list_models()
+                tags_refs = self._persist_control_exchange("model-list-after-pull", tags)
+                available = (
+                    self.runtime.model_available_in(tags, model)
+                    if hasattr(self.runtime, "model_available_in")
+                    else self.runtime.is_model_available(model)
+                )
+
+            if not available:
+                store.write_json(
+                    "runtime.json",
+                    {
+                        "model": model,
+                        "available": False,
+                        "version": version.get("parsed"),
+                        "model_size_bytes": None,
+                        "evidence_refs": {
+                            "version": version_refs,
+                            "tags": tags_refs,
+                            "pull": pull_refs,
+                        },
+                    },
+                    producer="runner",
+                    stage="preflight",
+                )
+                self._event("RUN_FAILED", failure="MODEL_NOT_FOUND", model=model)
+                return self._finalize_run()
+
+            info = self.runtime.model_info(model)
+            info_refs = self._persist_control_exchange("model-info", info)
+            store.write_json(
+                "runtime.json",
+                {
+                    "model": model,
+                    "available": True,
+                    "version": version.get("parsed"),
+                    "model_size_bytes": self._find_model_size(tags, model),
+                    "model_info": info.get("parsed"),
+                    "evidence_refs": {
+                        "version": version_refs,
+                        "tags": tags_refs,
+                        "show": info_refs,
+                        "pull": pull_refs,
+                    },
+                },
+                producer="runner",
+                stage="preflight",
+            )
+            self._event("PREFLIGHT_COMPLETE", model=model, mode="gpt20b-test1")
+            self._progress_complete("preflight")
+            self._progress_preflight_complete = True
+
+            rows = run_test1_campaign(
+                self,
+                self.suite.get("cases", []) or [],
+                baseline_run=baseline_run,
+                started_monotonic=campaign_started_monotonic,
+            )
+            physical_calls = self._model_call_counts.get(store.run_id, 0)
+            self._event(
+                "TEST1_COMPLETE",
+                model=model,
+                observations=len(rows),
+                physical_model_calls=physical_calls,
+                baseline_run=baseline_run,
+            )
+            return self._finalize_run()
+        except Exception as exc:
+            store.write_json(
+                "raw/runner-failure.json",
+                {
+                    "type": type(exc).__name__,
+                    "message": str(exc),
+                    "traceback": traceback.format_exc(),
+                },
+                producer="runner",
+                stage="fatal",
+            )
+            self._event(
+                "RUN_FAILED",
+                failure="TEST1_ERROR",
                 error_type=type(exc).__name__,
                 error=str(exc),
             )

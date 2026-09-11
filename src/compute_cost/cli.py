@@ -76,6 +76,17 @@ def build_parser() -> argparse.ArgumentParser:
     capability.add_argument("--taxonomy", default=str(DEFAULT_CAPABILITY_TAXONOMY_PATH))
     capability.add_argument("--pull", action="store_true", help="Pull the model if it is not already local.")
 
+    test1 = sub.add_parser(
+        "gpt20b-test1",
+        help="Run the frozen seven-hour GPT-20B discovery and interaction campaign.",
+    )
+    test1.add_argument("--model", default="gpt-oss:20b")
+    test1.add_argument("--suite", default=str(DEFAULT_CAPABILITY_SUITE_PATH))
+    test1.add_argument("--taxonomy", default=str(DEFAULT_CAPABILITY_TAXONOMY_PATH))
+    test1.add_argument("--baseline-run", default=None, help="Optional prior GPT-20B capability run ID used as historical baseline evidence.")
+    test1.add_argument("--pull", action="store_true", help="Pull the model if it is not already local.")
+    test1.add_argument("--dry-run", action="store_true", help="Validate and materialize the complete plan with zero model calls.")
+
     showdown = sub.add_parser(
         "capability-showdown",
         help="Run the same capability campaign across the fixed four-model showdown roster.",
@@ -214,6 +225,22 @@ def main(argv: Sequence[str] | None = None) -> int:
         suite = normalize_capability_suite(suite)
         runner = BenchmarkRunner(runtime, config, suite, results_root=results_root)
         run_dir = runner.capability_characterize(args.model, pull=bool(args.pull))
+        print(json.dumps({"run_id": run_dir.name, "run_dir": str(run_dir)}, indent=2))
+        return 0
+
+    if args.command == "gpt20b-test1":
+        taxonomy = _load_taxonomy(args.taxonomy)
+        validate_capability_suite(suite, taxonomy)
+        suite = materialize_gpt_oss_suite(suite, taxonomy)
+        validate_capability_suite(suite, taxonomy)
+        suite = normalize_capability_suite(suite)
+        runner = BenchmarkRunner(runtime, config, suite, results_root=results_root)
+        run_dir = runner.gpt20b_test1(
+            args.model,
+            pull=bool(args.pull),
+            baseline_run=args.baseline_run,
+            dry_run=bool(args.dry_run),
+        )
         print(json.dumps({"run_id": run_dir.name, "run_dir": str(run_dir)}, indent=2))
         return 0
 
