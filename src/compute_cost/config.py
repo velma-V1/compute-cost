@@ -36,6 +36,23 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "confirmation_candidates": 24,
         "bootstrap_samples": 500,
     },
+    "test2_campaign": {
+        "expected_calls": 4100,
+        "safety_call_cap": 10000,
+        "generation_budget": 256,
+        "thinking_mode": False,
+        "reasoning_effort": None,
+        "bootstrap_samples": 500,
+        "top_recipes": 12,
+        "max_recovery_recipes": 8,
+        "negative_transfer_recipes": 8,
+        "blind_recipes": 4,
+        "control_interval": 12,
+        "fine_tuning_min_independent_failures": 3,
+        "general_recovery_threshold": 0.80,
+        "partial_recovery_threshold": 0.60,
+        "acceptance_latency_ratio": 1.25,
+    },
     "cost": {"electricity_per_kwh": 0.0, "electricity_configured": False},
     "evidence": {"retain_stream_chunks": True, "retain_raw_collectors": True},
     "characterization": {
@@ -111,6 +128,44 @@ def _validate_limits(config: dict[str, Any]) -> None:
     max_calls = limits.get("max_model_calls_per_run")
     if not isinstance(max_calls, int) or isinstance(max_calls, bool) or max_calls <= 0:
         raise ValueError("limits.max_model_calls_per_run must be a positive integer")
+
+
+def _validate_test2_campaign(config: dict[str, Any]) -> None:
+    c = config.get("test2_campaign")
+    if not isinstance(c, dict):
+        raise ValueError("test2_campaign config must be a table")
+    for name in (
+        "expected_calls",
+        "safety_call_cap",
+        "generation_budget",
+        "bootstrap_samples",
+        "top_recipes",
+        "max_recovery_recipes",
+        "negative_transfer_recipes",
+        "blind_recipes",
+        "control_interval",
+        "fine_tuning_min_independent_failures",
+    ):
+        value = c.get(name)
+        if not isinstance(value, int) or isinstance(value, bool) or value <= 0:
+            raise ValueError(f"test2_campaign.{name} must be a positive integer")
+    if not isinstance(c.get("thinking_mode"), bool):
+        raise ValueError("test2_campaign.thinking_mode must be bool")
+    effort = c.get("reasoning_effort")
+    if c["thinking_mode"] and effort not in {"low", "medium", "high"}:
+        raise ValueError("test2_campaign.reasoning_effort must be low/medium/high when thinking is enabled")
+    if not c["thinking_mode"] and effort is not None:
+        raise ValueError("test2_campaign.reasoning_effort must be None when thinking is disabled")
+    for name in (
+        "general_recovery_threshold",
+        "partial_recovery_threshold",
+        "acceptance_latency_ratio",
+    ):
+        value = c.get(name)
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or float(value) <= 0:
+            raise ValueError(f"test2_campaign.{name} must be positive numeric")
+    if not 0 < float(c["partial_recovery_threshold"]) <= float(c["general_recovery_threshold"]) <= 1:
+        raise ValueError("test2 recovery thresholds must satisfy 0 < partial <= general <= 1")
 
 
 def _validate_characterization(config: dict[str, Any]) -> None:
@@ -254,6 +309,7 @@ def load_config(
             config["cost"]["electricity_configured"] = True
 
     _validate_limits(config)
+    _validate_test2_campaign(config)
     _validate_characterization(config)
     _validate_capability_campaign(config)
     _validate_reasoning_curves(config)
