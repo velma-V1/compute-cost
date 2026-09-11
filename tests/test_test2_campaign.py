@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 
 from compute_cost.config import load_config
+from compute_cost.evidence import EvidenceStore
 from compute_cost.runner import BenchmarkRunner
 from compute_cost.test2_campaign import (
     ACTIVE_SECONDS,
@@ -70,8 +71,8 @@ def _write_json(path: Path, value) -> None:
 
 
 def _materialize_test1_handoff(root: Path, run_id: str, cases: list[dict]) -> Path:
-    run = root / run_id
-    run.mkdir(parents=True)
+    store = EvidenceStore(root, run_id)
+    run = store.run_dir
     partitions = partition_cases(cases)
     partition_payload = {
         "schema_version": 1,
@@ -80,17 +81,18 @@ def _materialize_test1_handoff(root: Path, run_id: str, cases: list[dict]) -> Pa
             for name, rows in partitions.items()
         },
     }
-    _write_json(run / "test1-plan.json", {"schema_version": 1})
-    _write_json(run / "fixture-partitions.json", partition_payload)
-    _write_json(run / "noise-model.json", {"global_noise_sigma": 0.1, "families": {}})
-    _write_json(run / "ingredient-registry.json", synthetic_test1_handoff(cases)["ingredient_registry"])
-    _write_json(run / "pair-interaction-graph.json", {"edges": {}})
-    _write_json(run / "directional-order-graph.json", {"edges": {}})
-    _write_json(run / "higher-order-candidate-queue.json", {"candidates": []})
-    _write_json(run / "failure-registry.json", {"failures": []})
-    _write_json(run / "negative-effect-registry.json", {"effects": []})
-    _write_json(run / "uncertainty-ledger.json", {"unknowns": []})
-    _write_json(run / "test2-priority-queue.json", synthetic_test1_handoff(cases)["priority_queue"])
+    store.write_json("test1-plan.json", {"schema_version": 1}, producer="test", stage="test")
+    store.write_json("fixture-partitions.json", partition_payload, producer="test", stage="test")
+    store.write_json("noise-model.json", {"global_noise_sigma": 0.1, "families": {}}, producer="test", stage="test")
+    store.write_json("ingredient-registry.json", synthetic_test1_handoff(cases)["ingredient_registry"], producer="test", stage="test")
+    store.write_json("pair-interaction-graph.json", {"edges": {}}, producer="test", stage="test")
+    store.write_json("directional-order-graph.json", {"edges": {}}, producer="test", stage="test")
+    store.write_json("higher-order-candidate-queue.json", {"candidates": []}, producer="test", stage="test")
+    store.write_json("failure-registry.json", {"failures": []}, producer="test", stage="test")
+    store.write_json("negative-effect-registry.json", {"effects": []}, producer="test", stage="test")
+    store.write_json("uncertainty-ledger.json", {"unknowns": []}, producer="test", stage="test")
+    store.write_json("test2-priority-queue.json", synthetic_test1_handoff(cases)["priority_queue"], producer="test", stage="test")
+    store.finalize_manifest(metadata={"mode": "test"})
     return run
 
 
@@ -100,7 +102,13 @@ def test_test1_handoff_rejects_partition_drift(tmp_path: Path):
     payload = json.loads((run / "fixture-partitions.json").read_text(encoding="utf-8"))
     moved = payload["partitions"]["TEST3_PROTECTED"].pop()
     payload["partitions"]["DISCOVERY"].append(moved)
-    _write_json(run / "fixture-partitions.json", payload)
+    # Rebuild a valid manifest around the intentionally drifted partition so
+    # this test reaches the semantic partition-drift guard rather than failing
+    # earlier on integrity.
+    store = EvidenceStore(tmp_path, "source")
+    record = store.write_json("fixture-partitions.json", payload, producer="test", stage="test")
+    assert record["sha256"]
+    store.finalize_manifest(metadata={"mode": "test-drift"})
 
     with pytest.raises(ValueError, match="partition drift"):
         load_test1_handoff(tmp_path, "source", cases)
