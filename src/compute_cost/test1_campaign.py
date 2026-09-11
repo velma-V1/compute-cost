@@ -482,12 +482,13 @@ class _Campaign:
         *,
         baseline_run: str | None,
         clock: Callable[[], float],
+        started_monotonic: float | None = None,
     ) -> None:
         self.runner = runner
         self.cases = cases
         self.clock = clock
         self.cfg = _cfg(runner.config)
-        self.start = clock()
+        self.start = clock() if started_monotonic is None else float(started_monotonic)
         self.call_start_cutoff = self.start + CALL_START_CUTOFF_SECONDS
         self.active_end = self.start + ACTIVE_SECONDS
         self.partitions = partition_cases(cases)
@@ -990,7 +991,7 @@ def _confirmation(
             treatment_label="confirm-" + "-".join(ingredients),
         )
         index += 1
-        if index >= len(pools) * max(1, min(20, len(validation))):
+        if index >= len(pools) * max(1, len(validation)):
             break
 
     def key(row: dict[str, Any]) -> str:
@@ -1151,12 +1152,19 @@ def run_test1_campaign(
     *,
     baseline_run: str | None = None,
     clock: Callable[[], float] = time.monotonic,
+    started_monotonic: float | None = None,
 ) -> list[dict[str, Any]]:
     """Execute the frozen Test-1 campaign without touching protected partitions."""
     assert runner.store is not None
     plan = build_test1_plan(cases)
     validate_test1_plan(plan)
-    campaign = _Campaign(runner, cases, baseline_run=baseline_run, clock=clock)
+    campaign = _Campaign(
+        runner,
+        cases,
+        baseline_run=baseline_run,
+        clock=clock,
+        started_monotonic=started_monotonic,
+    )
 
     runner.store.write_json("test1-plan.json", plan, producer="test1", stage="preflight")
     runner.store.write_json(
