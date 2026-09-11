@@ -469,6 +469,8 @@ def _spec(
 
 
 class Test2Campaign:
+    __test__ = False
+
     def __init__(
         self,
         runner: Any,
