@@ -1,8 +1,10 @@
 """Test 1.2 tuning/compile run.
 
 Consumes a completed Test 1.2 collection run and compiles a model-specific
-adaptive harness in <= 6h15m. VALIDATION is used for tuning/confirmation;
-TEST2_BLIND and TEST3_PROTECTED remain untouched.
+adaptive harness in <= 6h15m. VALIDATION is used for tuning and policy lock;
+TEST2_BLIND and TEST3_PROTECTED are then used exactly once for immutable final
+acceptance. The two Test 1.2 runs are the complete model-onboarding decision
+for Inverted; no later characterization test is required.
 """
 
 from __future__ import annotations
@@ -26,6 +28,7 @@ from .test12_campaign import (
     Test12Campaign,
     _cost_value_frontier,
     _group_summary,
+    _intervention_fingerprint,
     _rank_mechanisms,
     build_intervention_bank,
     fresh_model_source,
@@ -36,12 +39,14 @@ TUNING_HARD_SECONDS = (6 * 60 * 60) + (15 * 60)
 TUNING_ACTIVE_SECONDS = 6 * 60 * 60
 
 TUNING_PHASES = (
-    ("validation_baseline", 30 * 60),
-    ("candidate_harness_screen", 75 * 60),
-    ("successive_halving", 90 * 60),
-    ("routing_and_boundary_tuning", 75 * 60),
-    ("residual_failure_replay", 60 * 60),
-    ("final_harness_confirmation", 30 * 60),
+    ("validation_baseline", 25 * 60),
+    ("candidate_harness_screen", 65 * 60),
+    ("successive_halving", 75 * 60),
+    ("routing_and_boundary_tuning", 60 * 60),
+    ("residual_failure_replay", 45 * 60),
+    ("final_validation_lock", 30 * 60),
+    ("test2_blind_acceptance", 30 * 60),
+    ("test3_protected_acceptance", 30 * 60),
 )
 
 REQUIRED_COLLECTION_FILES = (
@@ -109,6 +114,10 @@ REQUIRED_TUNING_OUTPUTS = (
     "fine-tuning-training-corpus.jsonl",
     "fine-tuning-qualification.json",
     "model-harness-card.json",
+    "test1.2-final-acceptance.json",
+    "integration-capability-contract.json",
+    "inverted-model-integration-package.json",
+    "test1.2-terminal-handoff.json",
 )
 
 DEFAULT_TUNING_CONFIG = {
@@ -296,10 +305,20 @@ def build_tuning_plan(cases: list[dict[str, Any]], *, collection_run: str) -> di
         "wall_clock_seconds": TUNING_HARD_SECONDS,
         "active_model_seconds": TUNING_ACTIVE_SECONDS,
         "phases": [{"name": n, "seconds": s} for n, s in TUNING_PHASES],
-        "allowed_partitions": ["VALIDATION"],
-        "prohibited_partitions": ["DISCOVERY", "TEST2_BLIND", "TEST3_PROTECTED"],
+        "allowed_partitions": ["VALIDATION", "TEST2_BLIND", "TEST3_PROTECTED"],
+        "prohibited_partitions": ["DISCOVERY"],
+        "phase_partition_policy": {
+            "validation_baseline": "VALIDATION",
+            "candidate_harness_screen": "VALIDATION",
+            "successive_halving": "VALIDATION",
+            "routing_and_boundary_tuning": "VALIDATION",
+            "residual_failure_replay": "VALIDATION",
+            "final_validation_lock": "VALIDATION",
+            "test2_blind_acceptance": "TEST2_BLIND",
+            "test3_protected_acceptance": "TEST3_PROTECTED",
+        },
         "partition_counts": {name: len(rows) for name, rows in parts.items()},
-        "objective": "compile the smallest adaptive harness that maximizes validated capability gain and minimizes regressions, model calls, tokens, and latency",
+        "objective": "finish model onboarding inside the two-run ceiling: optimize on VALIDATION, freeze the winner, perform immutable blind/protected acceptance, and emit the final Inverted integration package",
         "required_capability_families": list(TEST2_CAPABILITY_FAMILIES),
         "required_capability_family_count": len(TEST2_CAPABILITY_FAMILIES),
         "observed_validation_families": sorted({_family(case) for case in parts["VALIDATION"]}),
@@ -307,6 +326,15 @@ def build_tuning_plan(cases: list[dict[str, Any]], *, collection_run: str) -> di
             set(TEST2_CAPABILITY_FAMILIES) - {_family(case) for case in parts["VALIDATION"]}
         ),
         "per_family_non_regression_required": True,
+        "blind_acceptance_is_tuning_input": False,
+        "protected_acceptance_is_tuning_input": False,
+        "winner_locked_before_holdouts": True,
+        "no_additional_characterization_test_required": True,
+        "terminal_decisions": [
+            "FULL_INVERTED_INTEGRATION",
+            "CONSTRAINED_CAPABILITY_SCOPED_INTEGRATION",
+            "REJECT_MODEL_ADDITION",
+        ],
         "required_outputs": list(REQUIRED_TUNING_OUTPUTS),
         "total_two_run_hard_ceiling_seconds": TUNING_HARD_SECONDS + COLLECTION_HARD_SECONDS,
     }
@@ -317,10 +345,22 @@ def validate_tuning_plan(plan: dict[str, Any]) -> None:
         raise ValueError("tuning hard ceiling must be 6h15m")
     if sum(int(row["seconds"]) for row in plan["phases"]) != TUNING_ACTIVE_SECONDS:
         raise ValueError("tuning active phases must total six hours")
-    if plan["allowed_partitions"] != ["VALIDATION"]:
-        raise ValueError("tuning may use VALIDATION only")
-    if set(plan["prohibited_partitions"]) != {"DISCOVERY","TEST2_BLIND","TEST3_PROTECTED"}:
-        raise ValueError("tuning partition contract changed")
+    if plan["allowed_partitions"] != ["VALIDATION", "TEST2_BLIND", "TEST3_PROTECTED"]:
+        raise ValueError("tuning/acceptance must use VALIDATION then TEST2_BLIND then TEST3_PROTECTED")
+    if set(plan["prohibited_partitions"]) != {"DISCOVERY"}:
+        raise ValueError("tuning/acceptance may never reopen DISCOVERY")
+    expected_phase_partitions = {
+        "validation_baseline": "VALIDATION",
+        "candidate_harness_screen": "VALIDATION",
+        "successive_halving": "VALIDATION",
+        "routing_and_boundary_tuning": "VALIDATION",
+        "residual_failure_replay": "VALIDATION",
+        "final_validation_lock": "VALIDATION",
+        "test2_blind_acceptance": "TEST2_BLIND",
+        "test3_protected_acceptance": "TEST3_PROTECTED",
+    }
+    if plan.get("phase_partition_policy") != expected_phase_partitions:
+        raise ValueError("tuning/acceptance phase partition policy drifted")
     if int(plan["total_two_run_hard_ceiling_seconds"]) >= 14 * 60 * 60:
         raise ValueError("two-run model-to-harness compiler exceeds 14-hour target")
     if int(plan.get("required_capability_family_count", 0)) != 40:
@@ -332,6 +372,12 @@ def validate_tuning_plan(plan: dict[str, Any]) -> None:
         )
     if plan.get("per_family_non_regression_required") is not True:
         raise ValueError("tuning must enforce per-family non-regression")
+    if plan.get("winner_locked_before_holdouts") is not True:
+        raise ValueError("winner must be frozen before blind/protected acceptance")
+    if plan.get("blind_acceptance_is_tuning_input") is not False or plan.get("protected_acceptance_is_tuning_input") is not False:
+        raise ValueError("blind/protected acceptance may never tune or select the policy")
+    if plan.get("no_additional_characterization_test_required") is not True:
+        raise ValueError("Test 1.2 must be terminal for model onboarding")
 
 
 def _candidate_registry(collection: dict[str, Any], limit: int) -> list[dict[str, Any]]:
@@ -622,6 +668,8 @@ class TuningRun:
         self.active_end=self.start+TUNING_ACTIVE_SECONDS
         self.parts=partition_test12_cases(cases)
         self.validation=self.parts["VALIDATION"]
+        self.test2_blind=self.parts["TEST2_BLIND"]
+        self.test3_protected=self.parts["TEST3_PROTECTED"]
         self.cfg={**DEFAULT_TUNING_CONFIG, **copy.deepcopy((runner.config.get("test12_tuning") or {}))}
         source=fresh_model_source(cases)
         source["baselines"]={}
@@ -637,6 +685,12 @@ class TuningRun:
         self.campaign.interventions=collected
         self.campaign.intervention_by_id={str(row["id"]):row for row in collected}
         self.rows=[]
+        self.router_cache: dict[tuple[str, int], tuple[str, dict[str, Any] | None]] = {}
+        self.treatment_cache: dict[tuple[str, int, str], dict[str, Any]] = {}
+        self.reuse_counters = {
+            "router_decisions_reused": 0,
+            "treatment_trials_reused": 0,
+        }
 
     def can_start(self, deadline: float) -> bool:
         return self.clock() < min(deadline,self.active_end)
@@ -645,6 +699,11 @@ class TuningRun:
         return self.campaign.control(case,deadline,seed=seed,force=False)
 
     def _router_choice(self, case: dict[str,Any], deadline: float, seed: int) -> tuple[str,dict[str,Any]|None]:
+        cache_key = (_fixture_id(case), int(seed))
+        if cache_key in self.router_cache:
+            self.reuse_counters["router_decisions_reused"] += 1
+            choice, aux = self.router_cache[cache_key]
+            return choice, copy.deepcopy(aux)
         aux=self.campaign._aux(
             case,deadline,stage="compiled-router",
             messages=[{"role":"user","content":str(case["prompt"])+"\n\nClassify with exactly one token: TOOL, STATE, EVIDENCE, FORMAT, PLAN, VERIFY, DIRECT."}],
@@ -653,7 +712,36 @@ class TuningRun:
         )
         if aux is None:
             return "DIRECT",None
-        return self.campaign._router_choice(str(aux.get("text") or "")),aux
+        choice = self.campaign._router_choice(str(aux.get("text") or ""))
+        self.router_cache[cache_key] = (choice, copy.deepcopy(aux))
+        return choice,aux
+
+    def _treatment_trial(
+        self,
+        selected: dict[str, Any],
+        case: dict[str, Any],
+        deadline: float,
+        *,
+        seed: int,
+    ) -> dict[str, Any] | None:
+        cache_key = (
+            _fixture_id(case),
+            int(seed),
+            _intervention_fingerprint(selected),
+        )
+        if cache_key in self.treatment_cache:
+            self.reuse_counters["treatment_trials_reused"] += 1
+            return copy.deepcopy(self.treatment_cache[cache_key])
+        trial = self.campaign.treatment(
+            case,
+            deadline,
+            phase="test1.2_tuning",
+            intervention=selected,
+            seed=seed,
+        )
+        if trial is not None:
+            self.treatment_cache[cache_key] = copy.deepcopy(trial)
+        return trial
 
     def run_policy(self, policy: dict[str,Any], case: dict[str,Any], deadline: float, *, seed: int) -> dict[str,Any]|None:
         control=self.baseline(case,deadline,seed)
@@ -693,7 +781,7 @@ class TuningRun:
                     "selected_intervention_id":None,
                 }
             else:
-                trial=self.campaign.treatment(case,deadline,phase="test1.2_tuning",intervention=selected,seed=seed)
+                trial=self._treatment_trial(selected,case,deadline,seed=seed)
                 if trial is None:
                     return None
                 calls=int(trial.get("model_calls_per_application") or 0)+(1 if router_aux else 0)
@@ -706,6 +794,8 @@ class TuningRun:
                     "selected_intervention_id":selected.get("id"),
                     "trial":trial,
                 }
+        row["partition"] = self.campaign.partition_name(case)
+        row["evidence_reuse_counters"] = copy.deepcopy(self.reuse_counters)
         self.rows.append(row)
         self.runner.store.append_jsonl("test1.2-tuning-observations.jsonl",row)
         return row
@@ -713,6 +803,11 @@ class TuningRun:
 
 def _balanced_validation(run: TuningRun, n: int) -> list[dict[str,Any]]:
     return _balanced_cases(run.validation,min(n,len(run.validation)))
+
+
+def _balanced_partition(cases: list[dict[str, Any]], n: int | None = None) -> list[dict[str, Any]]:
+    limit = len(cases) if n is None else min(int(n), len(cases))
+    return _balanced_cases(cases, limit)
 
 
 def _evaluate(run: TuningRun, policies: list[dict[str,Any]], cases: list[dict[str,Any]], deadline: float, *, seeds: list[int]) -> dict[str,Any]:
