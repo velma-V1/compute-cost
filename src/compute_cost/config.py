@@ -36,6 +36,27 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "confirmation_candidates": 24,
         "bootstrap_samples": 500,
     },
+    "test11_campaign": {
+        "expected_calls": 5200,
+        "safety_call_cap": 12000,
+        "thinking_mode": False,
+        "reasoning_effort": None,
+        "base_generation_budget": 256,
+        "generation_budgets": [256, 512, 1024, 2048],
+        "seeds": [42, 43, 44],
+        "headroom_fail_fixtures": 48,
+        "headroom_pass_fixtures": 48,
+        "headroom_repeats": 3,
+        "promotion_min_rescue_trials": 4,
+        "promotion_min_pass_sentinels": 8,
+        "promotion_rescue_rate": 0.25,
+        "promotion_max_capability_regression_rate": 0.10,
+        "max_promoted_ingredients": 16,
+        "max_recipe_ingredients": 8,
+        "confirmation_recipes": 16,
+        "minimum_phase_observations": 16,
+        "minimum_active_utilization": 0.90,
+    },
     "test2_campaign": {
         "expected_calls": 4100,
         "safety_call_cap": 10000,
@@ -128,6 +149,54 @@ def _validate_limits(config: dict[str, Any]) -> None:
     max_calls = limits.get("max_model_calls_per_run")
     if not isinstance(max_calls, int) or isinstance(max_calls, bool) or max_calls <= 0:
         raise ValueError("limits.max_model_calls_per_run must be a positive integer")
+
+
+def _validate_test11_campaign(config: dict[str, Any]) -> None:
+    c = config.get("test11_campaign")
+    if not isinstance(c, dict):
+        raise ValueError("test11_campaign config must be a table")
+    for name in (
+        "expected_calls",
+        "safety_call_cap",
+        "base_generation_budget",
+        "headroom_fail_fixtures",
+        "headroom_pass_fixtures",
+        "headroom_repeats",
+        "promotion_min_rescue_trials",
+        "promotion_min_pass_sentinels",
+        "max_promoted_ingredients",
+        "max_recipe_ingredients",
+        "confirmation_recipes",
+        "minimum_phase_observations",
+    ):
+        value = c.get(name)
+        if not isinstance(value, int) or isinstance(value, bool) or value <= 0:
+            raise ValueError(f"test11_campaign.{name} must be a positive integer")
+    for name in ("generation_budgets", "seeds"):
+        values = c.get(name)
+        if not isinstance(values, list) or not values or any(not isinstance(v, int) or isinstance(v, bool) or v <= 0 for v in values):
+            raise ValueError(f"test11_campaign.{name} must be a non-empty list of positive integers")
+    if not isinstance(c.get("thinking_mode"), bool):
+        raise ValueError("test11_campaign.thinking_mode must be bool")
+    effort = c.get("reasoning_effort")
+    if c["thinking_mode"] and effort not in {"low", "medium", "high"}:
+        raise ValueError("test11_campaign.reasoning_effort must be low/medium/high when thinking is enabled")
+    if not c["thinking_mode"] and effort is not None:
+        raise ValueError("test11_campaign.reasoning_effort must be None when thinking is disabled")
+    for name in (
+        "promotion_rescue_rate",
+        "promotion_max_capability_regression_rate",
+        "minimum_active_utilization",
+    ):
+        value = c.get(name)
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            raise ValueError(f"test11_campaign.{name} must be numeric")
+    if not 0.0 < float(c["promotion_rescue_rate"]) <= 1.0:
+        raise ValueError("test11_campaign.promotion_rescue_rate must be in (0,1]")
+    if not 0.0 <= float(c["promotion_max_capability_regression_rate"]) <= 1.0:
+        raise ValueError("test11_campaign.promotion_max_capability_regression_rate must be in [0,1]")
+    if not 0.0 < float(c["minimum_active_utilization"]) <= 1.0:
+        raise ValueError("test11_campaign.minimum_active_utilization must be in (0,1]")
 
 
 def _validate_test2_campaign(config: dict[str, Any]) -> None:
@@ -309,6 +378,7 @@ def load_config(
             config["cost"]["electricity_configured"] = True
 
     _validate_limits(config)
+    _validate_test11_campaign(config)
     _validate_test2_campaign(config)
     _validate_characterization(config)
     _validate_capability_campaign(config)

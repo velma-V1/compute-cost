@@ -82,3 +82,32 @@ def test_paths_cannot_escape_run_directory(tmp_path: Path):
 
     with pytest.raises(ValueError):
         store.write_raw("../escape.txt", b"no")
+
+
+def test_selective_manifest_verification_checks_only_requested_artifacts(tmp_path: Path):
+    store = EvidenceStore(tmp_path, "run-selective")
+    store.write_raw("consumed/a.bin", b"alpha")
+    store.write_raw("retained/unrelated.bin", b"beta")
+    store.finalize_manifest()
+
+    # Corrupt an unrelated retained artifact. Selective verification should not
+    # re-read it because downstream Test 1.1 does not consume it.
+    (store.run_dir / "retained/unrelated.bin").write_bytes(b"changed")
+
+    assert store.verify_manifest_paths(("consumed/a.bin",)) == []
+
+
+def test_selective_manifest_verification_rejects_consumed_artifact_corruption(tmp_path: Path):
+    store = EvidenceStore(tmp_path, "run-selective")
+    store.write_raw("consumed/a.bin", b"alpha")
+    store.write_raw("retained/unrelated.bin", b"beta")
+    store.finalize_manifest()
+
+    (store.run_dir / "consumed/a.bin").write_bytes(b"changed")
+
+    problems = store.verify_manifest_paths(("consumed/a.bin",))
+    assert any(
+        problem["path"] == "consumed/a.bin"
+        and problem["problem"] == "sha256_mismatch"
+        for problem in problems
+    )
