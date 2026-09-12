@@ -8,6 +8,7 @@ from compute_cost.test12_campaign import (
     COLLECTION_HARD_SECONDS,
     Test12Campaign,
     _estimated_physical_calls,
+    _family_surface_gap_queue,
     _source_headroom,
     CONTROL_GRAMMAR,
     CORE_INTERVENTIONS,
@@ -1094,3 +1095,36 @@ def test_exact_duplicate_treatment_is_skipped_without_spending_another_call(monk
     assert len(calls) == 2  # one matched control + one treatment
     assert campaign.efficiency_counters["exact_duplicate_treatments_skipped"] == 1
     assert campaign.efficiency_counters["estimated_duplicate_physical_calls_avoided"] == 1
+
+
+
+def test_gap_first_reserve_targets_missing_family_surface_pairs_before_replication():
+    class Runner:
+        config = load_config()
+
+    cases = _cases()
+    campaign = Test12Campaign(
+        Runner(),
+        cases,
+        fresh_model_source(cases),
+        clock=lambda: 0.0,
+        started_monotonic=0.0,
+    )
+
+    initial = _family_surface_gap_queue(campaign)
+    assert len(initial) == len(TEST2_CAPABILITY_FAMILIES) * len(FAMILY_CONTROL_SURFACES)
+    assert {family for family, _, _, _ in initial} == set(TEST2_CAPABILITY_FAMILIES)
+
+    family, category, case, intervention = initial[0]
+    campaign.rows.append({
+        "family_id": family,
+        "fixture_id": case["id"],
+        "intervention_id": intervention["id"],
+        "intervention_category": category,
+        "score": 1.0,
+        "control_score": 0.0,
+    })
+
+    remaining = _family_surface_gap_queue(campaign)
+    assert len(remaining) == len(initial) - 1
+    assert (family, category) not in {(f, c) for f, c, _, _ in remaining}
