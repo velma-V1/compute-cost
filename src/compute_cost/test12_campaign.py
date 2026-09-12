@@ -1046,6 +1046,9 @@ class Test12Campaign:
             "estimated_runway_dead_end_calls_avoided": 0,
             "partial_controller_dead_ends": 0,
             "physical_calls_spent_without_scored_result": 0,
+            "single_call_runway_skips": 0,
+            "mid_controller_runway_stops": 0,
+            "estimated_single_calls_avoided": 0,
         }
 
     def _trial_signature(
@@ -1115,6 +1118,10 @@ class Test12Campaign:
             return self.controls[key]
         if not self.can_start(deadline):
             return None
+        if not self._has_runway(deadline, 1):
+            self.efficiency_counters["single_call_runway_skips"] += 1
+            self.efficiency_counters["estimated_single_calls_avoided"] += 1
+            return None
         self.sequence += 1
         spec = _spec(self.sequence, case, f"control-s{seed}", self.cfg, None, seed=seed, baseline=True)
         label = f"test1.2 control {_fixture_id(case)} s{seed}"
@@ -1150,6 +1157,10 @@ class Test12Campaign:
         call_index: int,
     ) -> dict[str, Any] | None:
         if not self.can_start(deadline):
+            return None
+        if not self._has_runway(deadline, 1):
+            self.efficiency_counters["single_call_runway_skips"] += 1
+            self.efficiency_counters["estimated_single_calls_avoided"] += 1
             return None
         self.sequence += 1
         effort = intervention.get("reasoning_effort")
@@ -1229,11 +1240,14 @@ class Test12Campaign:
         candidate = str(control.get("response_text") or "")
         aux: list[dict[str, Any]] = []
         messages: list[dict[str, str]]
+        controller_aborted = False
         final_instruction = str(intervention.get("instruction") or intervention.get("final_instruction") or "")
 
         def add_aux(stage: str, msgs: list[dict[str, str]]) -> str:
+            nonlocal controller_aborted
             row = self._aux(case, deadline, stage=stage, messages=msgs, intervention=intervention, seed=seed, call_index=len(aux)+1)
             if row is None:
+                controller_aborted = True
                 return ""
             aux.append(row)
             return str(row.get("text") or "")
@@ -1417,7 +1431,16 @@ class Test12Campaign:
         else:
             raise ValueError(f"unknown Test 1.2 intervention mode: {mode}")
 
-        if not self.can_start(deadline):
+        if controller_aborted:
+            self.efficiency_counters["mid_controller_runway_stops"] += 1
+            if aux:
+                self.efficiency_counters["partial_controller_dead_ends"] += 1
+                self.efficiency_counters["physical_calls_spent_without_scored_result"] += len(aux)
+            return None
+        if not self.can_start(deadline) or not self._has_runway(deadline, 1):
+            if self.can_start(deadline):
+                self.efficiency_counters["single_call_runway_skips"] += 1
+                self.efficiency_counters["estimated_single_calls_avoided"] += 1
             if aux:
                 self.efficiency_counters["partial_controller_dead_ends"] += 1
                 self.efficiency_counters["physical_calls_spent_without_scored_result"] += len(aux)
@@ -2182,6 +2205,10 @@ def phase_real_tool_execution(campaign: Test12Campaign, deadline: float) -> dict
             for step in range(1, int(case["max_steps"]) + 1):
                 if not campaign.can_start(deadline):
                     break
+                if not campaign._has_runway(deadline, 1):
+                    campaign.efficiency_counters["single_call_runway_skips"] += 1
+                    campaign.efficiency_counters["estimated_single_calls_avoided"] += 1
+                    break
                 campaign.sequence += 1
                 options = campaign.runner._generation_options(
                     {"id":case["id"],"prompt":case["prompt"]},
@@ -2199,6 +2226,10 @@ def phase_real_tool_execution(campaign: Test12Campaign, deadline: float) -> dict
                     )
                 finally:
                     campaign._progress(label, False)
+                timing = copy.deepcopy(generation.get("timing") or {})
+                latency_ns = timing.get("client_latency_ns")
+                if isinstance(latency_ns, (int, float)) and not isinstance(latency_ns, bool):
+                    campaign._observe_call_latency(float(latency_ns) / 1_000_000_000.0)
                 text=str((generation.get("normalized") or {}).get("text") or "")
                 action=parse_action(text)
                 event={
@@ -2206,7 +2237,7 @@ def phase_real_tool_execution(campaign: Test12Campaign, deadline: float) -> dict
                     "model_text":text,
                     "action":action,
                     "metrics":copy.deepcopy(generation.get("metrics") or {}),
-                    "timing":copy.deepcopy(generation.get("timing") or {}),
+                    "timing":timing,
                     "evidence_refs":refs,
                 }
                 if action is None:
@@ -3406,8 +3437,67 @@ def phase_negative_transfer(
     return _group_summary(rows, campaign.cfg, lambda row: str(row["intervention_id"]))
 
 
+def _family_surface_gap_queue(
+    campaign: Test12Campaign,
+) -> list[tuple[str, str, dict[str, Any], dict[str, Any]]]:
+    observed = {
+        (str(row.get("family_id")), str(row.get("intervention_category")))
+        for row in campaign.rows
+        if row.get("intervention_id") not in {None, "CONTROL"}
+    }
+    representatives = _representative_by_category(campaign)
+    by_family: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for case in campaign.partitions["DISCOVERY"]:
+        family = _family(case)
+        if family in TEST2_CAPABILITY_FAMILIES:
+            by_family[family].append(case)
+
+    missing_count = {
+        family: sum(
+            1 for category in FAMILY_CONTROL_SURFACES
+            if (family, category) not in observed and category in representatives
+        )
+        for family in TEST2_CAPABILITY_FAMILIES
+    }
+    queue: list[tuple[str, str, dict[str, Any], dict[str, Any]]] = []
+    for family in sorted(TEST2_CAPABILITY_FAMILIES, key=lambda value: (-missing_count[value], value)):
+        pool = by_family.get(family) or []
+        if not pool:
+            continue
+        probes = _family_boundary_cases(campaign, family, pool)
+        case = probes[-1] if probes else max(
+            pool,
+            key=lambda row: (int(row.get("difficulty_level", 0)), _fixture_id(row)),
+        )
+        for category in FAMILY_CONTROL_SURFACES:
+            if (family, category) in observed:
+                continue
+            intervention = representatives.get(category)
+            if intervention is not None:
+                queue.append((family, category, case, intervention))
+    return queue
+
+
 def phase_reserve(campaign: Test12Campaign, deadline: float, summary: dict[str, Any]) -> dict[str, Any]:
     start = len(campaign.rows)
+    rows: list[dict[str, Any]] = []
+
+    # First spend reserve seconds on missing family x mandatory-surface evidence.
+    # This converts incomplete breadth into usable manufacturing coverage before
+    # paying for another replicate of an already-measured combination.
+    for family, category, case, intervention in _family_surface_gap_queue(campaign):
+        if not campaign.can_start(deadline):
+            break
+        row = campaign.treatment(
+            case,
+            deadline,
+            phase="uncertainty_reserve_gap_fill",
+            intervention=intervention,
+            seed=int(campaign.cfg["seeds"][0]),
+        )
+        if row is not None:
+            rows.append(row)
+
     uncertain = [
         campaign.intervention_by_id[key]
         for key, value in summary.items()
@@ -3416,8 +3506,21 @@ def phase_reserve(campaign: Test12Campaign, deadline: float, summary: dict[str, 
     best = _rank_mechanisms(summary, campaign, 12)
     interventions = list({row["id"]: row for row in [*uncertain, *best]}.values()) or campaign.interventions[:12]
     cases = _coverage_cases(campaign, "DISCOVERY")
-    rows = _matrix(campaign, deadline, phase="uncertainty_reserve", interventions=interventions, cases=cases)
-    campaign.positive_work("uncertainty_reserve", start, "uncertainty reduction and replication only")
+    if campaign.can_start(deadline):
+        rows.extend(
+            _matrix(
+                campaign,
+                deadline,
+                phase="uncertainty_reserve",
+                interventions=interventions,
+                cases=cases,
+            )
+        )
+    campaign.positive_work(
+        "uncertainty_reserve",
+        start,
+        "fill missing family x mandatory-surface evidence first, then reduce residual uncertainty",
+    )
     return _group_summary(rows, campaign.cfg, lambda row: str(row["intervention_id"]))
 
 
@@ -3498,6 +3601,7 @@ def _efficiency_audit(campaign: Test12Campaign) -> dict[str, Any]:
     avoided = (
         campaign.efficiency_counters["estimated_duplicate_physical_calls_avoided"]
         + campaign.efficiency_counters["estimated_runway_dead_end_calls_avoided"]
+        + campaign.efficiency_counters["estimated_single_calls_avoided"]
     )
     return {
         "schema_version": 1,
