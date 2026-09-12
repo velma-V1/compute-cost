@@ -41,6 +41,7 @@ from .test12_campaign import (
 from .test12_tuning import (
     build_tuning_plan,
     load_collection,
+    load_tuning_recovery,
     run_test12_tuning,
     validate_tuning_plan,
 )
@@ -1269,6 +1270,7 @@ class BenchmarkRunner(_CoreBenchmarkRunner):
         collection_run: str,
         pull: bool = False,
         dry_run: bool = False,
+        resume_run: str | None = None,
     ) -> Path:
         """Tune/compile a model-specific harness from a completed Test-1.2 collection run."""
         tune_cfg = self.config.get("test12_tuning") or {}
@@ -1287,11 +1289,71 @@ class BenchmarkRunner(_CoreBenchmarkRunner):
         self.progress.start_live()
 
         self.model = model
-        run_id = f"test1.2-tune-{datetime.now().strftime('%Y%m%d-%H%M%S')}-{uuid.uuid4().hex[:8]}"
+        if dry_run and resume_run:
+            raise ValueError("dry-run cannot resume an existing Test 1.2 tuning run")
+
+        resume_state: dict[str, Any] | None = None
+        if resume_run:
+            run_id = str(resume_run)
+            run_dir = self.results_root / run_id
+            if not run_dir.is_dir():
+                raise ValueError(f"Test 1.2 tuning resume run does not exist: {run_id}")
+            resume_state = load_tuning_recovery(run_dir)
+            checkpoint = resume_state.get("checkpoint") or {}
+            checkpoint_model = checkpoint.get("model")
+            if checkpoint_model and checkpoint_model != model:
+                raise ValueError(
+                    f"resume model mismatch: checkpoint={checkpoint_model} requested={model}"
+                )
+            checkpoint_collection = checkpoint.get("collection_run")
+            if checkpoint_collection and checkpoint_collection != collection_run:
+                raise ValueError(
+                    "resume collection source changed; this is a new onboarding event, not recovery"
+                )
+            snapshot_path = run_dir / "benchmark-snapshot.json"
+            if snapshot_path.is_file():
+                prior_suite = json.loads(snapshot_path.read_text(encoding="utf-8"))
+                if prior_suite != self.suite:
+                    raise ValueError(
+                        "resume benchmark snapshot changed; this is a new onboarding event, not recovery"
+                    )
+        else:
+            run_id = f"test1.2-tune-{datetime.now().strftime('%Y%m%d-%H%M%S')}-{uuid.uuid4().hex[:8]}"
+
         self.store = EvidenceStore(self.results_root, run_id)
         store = self.store
-        store.write_json("resolved-config.json", self.config, producer="runner", stage="preflight")
-        store.write_json("benchmark-snapshot.json", self.suite, producer="runner", stage="preflight")
+        if resume_state:
+            checkpoint = resume_state.get("checkpoint") or {}
+            self._model_call_counts[run_id] = int(
+                checkpoint.get("physical_model_calls_used") or 0
+            )
+            self._request_seq = 2_000_000 + self._model_call_counts[run_id]
+            self._telemetry_seq = 2_000_000 + len(
+                (store.run_dir / "telemetry.jsonl").read_text(
+                    encoding="utf-8", errors="ignore"
+                ).splitlines()
+            ) if (store.run_dir / "telemetry.jsonl").is_file() else 2_000_000
+            store.append_jsonl("test1.2-tuning-recovery-ledger.jsonl", {
+                "schema_version": 1,
+                "event": "RESUME_REQUESTED",
+                "timestamp_utc": self._utc(),
+                "same_run_id": run_id,
+                "valid_policy_observations_restored": len(resume_state.get("rows") or []),
+                "damaged_policy_records_quarantined": len(resume_state.get("issues") or []),
+                "issues": copy.deepcopy(resume_state.get("issues") or []),
+                "active_seconds_used_before_resume": float(
+                    checkpoint.get("active_seconds_used") or 0.0
+                ),
+                "physical_model_calls_used_before_resume": int(
+                    checkpoint.get("physical_model_calls_used") or 0
+                ),
+                "winner_lock_sha256": checkpoint.get("winner_lock_sha256"),
+                "full_rerun": False,
+            })
+        else:
+            store.write_json("resolved-config.json", self.config, producer="runner", stage="preflight")
+            store.write_json("benchmark-snapshot.json", self.suite, producer="runner", stage="preflight")
+
         plan = build_tuning_plan(self.suite.get("cases", []) or [], collection_run=collection_run)
         validate_tuning_plan(plan)
         store.write_json("test1.2-tuning-plan.json", plan, producer="test1.2-tuning", stage="preflight")
@@ -1308,11 +1370,18 @@ class BenchmarkRunner(_CoreBenchmarkRunner):
             stage="preflight",
         )
         self._event(
-            "RUN_START",
+            "RUN_RESUME" if resume_state else "RUN_START",
             model=model,
             benchmark_version=self.suite.get("benchmark_version"),
-            mode="gpt20b-test1.2-tune-dry-run" if dry_run else "gpt20b-test1.2-tune",
+            mode=(
+                "gpt20b-test1.2-tune-resume"
+                if resume_state
+                else "gpt20b-test1.2-tune-dry-run"
+                if dry_run
+                else "gpt20b-test1.2-tune"
+            ),
             collection_run=collection_run,
+            resume_run=run_id if resume_state else None,
         )
 
         if dry_run:
@@ -1420,6 +1489,7 @@ class BenchmarkRunner(_CoreBenchmarkRunner):
                 self.suite.get("cases", []) or [],
                 collection_run=collection_run,
                 started_monotonic=started,
+                resume_state=resume_state,
             )
             physical_calls = self._model_call_counts.get(store.run_id, 0)
             self._event(
@@ -1441,11 +1511,38 @@ class BenchmarkRunner(_CoreBenchmarkRunner):
                 producer="runner",
                 stage="fatal",
             )
+            checkpoint_path = store.run_dir / "test1.2-tuning-recovery-checkpoint.json"
+            checkpoint = {}
+            if checkpoint_path.is_file():
+                try:
+                    checkpoint = json.loads(checkpoint_path.read_text(encoding="utf-8"))
+                except Exception:
+                    checkpoint = {}
+            checkpoint.update({
+                "schema_version": 1,
+                "recovery_policy": "NO_FULL_RERUN_ATOMIC_RESUME",
+                "state": "PAUSED_RECOVERABLE",
+                "run_id": store.run_id,
+                "model": model,
+                "collection_run": collection_run,
+                "physical_model_calls_used": int(
+                    self._model_call_counts.get(store.run_id, 0)
+                ),
+                "full_rerun_allowed": False,
+            })
+            store.write_json(
+                "test1.2-tuning-recovery-checkpoint.json",
+                checkpoint,
+                producer="runner",
+                stage="recovery-checkpoint",
+            )
             self._event(
-                "RUN_FAILED",
-                failure="TEST12_TUNING_ERROR",
+                "TEST12_TUNING_PAUSED_RECOVERABLE",
                 error_type=type(exc).__name__,
                 error=str(exc),
+                resume_run=store.run_id,
+                winner_lock_sha256=checkpoint.get("winner_lock_sha256"),
+                full_rerun_required=False,
             )
             return self._finalize_run()
         finally:
