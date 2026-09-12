@@ -233,6 +233,8 @@ RULES = (
     "unmeasured baseline cases remain UNKNOWN and must never be silently counted as failures",
     "multi-call controllers and individual calls may start only when measured latency indicates enough runway to reach a scored result before the current deadline",
     "information-gain reserve fills missing capability-family x mandatory-control-surface evidence before spending time on additional replication",
+    "full campaign reruns are prohibited recovery behavior; valid atomic evidence survives interruption and only missing/damaged atomic work may be replayed",
+    "recovery must preserve the original run id, elapsed active-time budget, completed phase ledger, completed trial signatures, and physical-call safety count",
     "frontier-gap labs measure adaptive search, metamorphic robustness, calibrated abstention, evolving memory, reflection transfer, tool-chaos recovery, and dependency-aware tool scheduling",
     "second-gap labs measure untrusted-data authority separation, reward-hacking resistance, value-of-information clarification, governance-safe compaction/resume, belief-state reasoning, semantic transactions, and dynamic cost replanning",
     "model-building refinery products are deterministic post-processing only: they may add no model/runtime calls and no active-test phase seconds",
@@ -319,6 +321,7 @@ REQUIRED_OUTPUTS = (
     "test1.2-priority-queue.json",
     "test1.2-uncertainty-ledger.json",
     "test1.2-efficiency-audit.json",
+    "test1.2-recovery-checkpoint.json",
     "test1.2-handoff.json",
     "tuning-example-corpus.jsonl",
     "harness-policy-blueprint.json",
@@ -598,6 +601,64 @@ def _read_jsonl(path: Path) -> list[dict[str, Any]]:
     return rows
 
 
+def _row_integrity_hash(row: dict[str, Any]) -> str:
+    stable = {key: value for key, value in row.items() if key != "observation_sha256"}
+    payload = json.dumps(stable, sort_keys=True, separators=(",", ":"), default=str)
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def load_test12_recovery(run_dir: Path) -> dict[str, Any]:
+    """Load only valid atomic evidence from an interrupted Test 1.2 run."""
+    checkpoint_path = run_dir / "test1.2-recovery-checkpoint.json"
+    checkpoint = (
+        json.loads(checkpoint_path.read_text(encoding="utf-8"))
+        if checkpoint_path.is_file() else {}
+    )
+    rows: list[dict[str, Any]] = []
+    issues: list[dict[str, Any]] = []
+    observations = run_dir / "test1.2-observations.jsonl"
+    if observations.is_file():
+        for line_number, raw in enumerate(
+            observations.read_text(encoding="utf-8", errors="replace").splitlines(),
+            start=1,
+        ):
+            if not raw.strip():
+                continue
+            try:
+                row = json.loads(raw)
+            except json.JSONDecodeError as exc:
+                issues.append({
+                    "line": line_number,
+                    "problem": "MALFORMED_JSONL_ATOMIC_RECORD",
+                    "detail": str(exc),
+                })
+                continue
+            if not isinstance(row, dict):
+                issues.append({"line": line_number, "problem": "NON_OBJECT_ATOMIC_RECORD"})
+                continue
+            expected = row.get("observation_sha256")
+            if expected and expected != _row_integrity_hash(row):
+                issues.append({
+                    "line": line_number,
+                    "problem": "ATOMIC_RECORD_HASH_MISMATCH",
+                    "fixture_id": row.get("fixture_id"),
+                    "intervention_id": row.get("intervention_id"),
+                    "seed": row.get("seed"),
+                })
+                continue
+            rows.append(row)
+
+    assertions = _read_jsonl(run_dir / "positive-work-assertions-1.2.jsonl")
+    phase_events = _read_jsonl(run_dir / "test1.2-phase-events.jsonl")
+    return {
+        "checkpoint": checkpoint,
+        "rows": rows,
+        "phase_assertions": assertions,
+        "phase_events": phase_events,
+        "issues": issues,
+    }
+
+
 def partition_test12_cases(
     cases: list[dict[str, Any]],
 ) -> dict[str, list[dict[str, Any]]]:
@@ -714,6 +775,9 @@ def build_test12_plan(cases: list[dict[str, Any]], *, seed_run: str | None = Non
             "explicit_exact_repeat_escape_hatch": "allow_exact_repeat",
             "unknown_baseline_is_failure": False,
             "reserve_family_surface_gap_first": True,
+            "full_rerun_recovery_prohibited": True,
+            "same_run_id_resume_required": True,
+            "atomic_evidence_salvage_required": True,
             "adaptive_rule": "adapt replication depth only after mandatory breadth; never skip a declared control family or phase",
         },
         "required_outputs": list(REQUIRED_OUTPUTS),
@@ -1031,13 +1095,20 @@ class Test12Campaign:
         *,
         clock: Callable[[], float] = time.monotonic,
         started_monotonic: float | None = None,
+        resume_state: dict[str, Any] | None = None,
     ) -> None:
         self.runner = runner
         self.cases = cases
         self.source = source
         self.cfg = _cfg(runner.config)
         self.clock = clock
-        self.start = clock() if started_monotonic is None else float(started_monotonic)
+        self.resume_state = copy.deepcopy(resume_state or {})
+        checkpoint = self.resume_state.get("checkpoint") or {}
+        elapsed_before_resume = max(0.0, float(checkpoint.get("active_seconds_used") or 0.0))
+        if self.resume_state:
+            self.start = clock() - elapsed_before_resume
+        else:
+            self.start = clock() if started_monotonic is None else float(started_monotonic)
         self.active_end = self.start + ACTIVE_SECONDS
         self.call_start_cutoff = self.start + CALL_START_CUTOFF_SECONDS
         self.partitions = partition_test12_cases(cases)
@@ -1046,11 +1117,24 @@ class Test12Campaign:
         self.intervention_by_id = {str(row["id"]): row for row in self.interventions}
         self.allowed_partitions = {"DISCOVERY"}
         self.controls: dict[tuple[str, int], dict[str, Any]] = {}
-        self.rows: list[dict[str, Any]] = []
-        self.sequence = 0
-        self.phase_assertions: list[dict[str, Any]] = []
-        self.phase_events: list[dict[str, Any]] = []
+        self.rows: list[dict[str, Any]] = copy.deepcopy(self.resume_state.get("rows") or [])
+        self.sequence = 1_000_000 + len(self.rows) if self.resume_state else 0
+        self.phase_assertions: list[dict[str, Any]] = copy.deepcopy(
+            self.resume_state.get("phase_assertions") or []
+        )
+        self.phase_events: list[dict[str, Any]] = copy.deepcopy(
+            self.resume_state.get("phase_events") or []
+        )
+        self.completed_phases: set[str] = {
+            str(row.get("phase"))
+            for row in self.phase_events
+            if row.get("phase")
+        }
+        self.current_phase: str | None = None
+        self.current_phase_started: float | None = None
+        self.current_phase_elapsed_base = 0.0
         self.completed_treatment_signatures: set[tuple[str, int, str]] = set()
+        self.completed_treatment_ids: set[tuple[str, int, str]] = set()
         self.call_latency_seconds: list[float] = []
         self.efficiency_counters: dict[str, int] = {
             "exact_duplicate_treatments_skipped": 0,
@@ -1064,6 +1148,92 @@ class Test12Campaign:
             "estimated_single_calls_avoided": 0,
             "explicit_exact_repeats_executed": 0,
         }
+        for key, value in (checkpoint.get("efficiency_counters") or {}).items():
+            if key in self.efficiency_counters:
+                self.efficiency_counters[key] = int(value)
+
+        self._restore_atomic_evidence()
+
+    def _restore_atomic_evidence(self) -> None:
+        for row in self.rows:
+            fixture_id = str(row.get("fixture_id") or "")
+            seed = int(row.get("seed") or 0)
+            intervention_id = str(row.get("intervention_id") or "")
+            wall_seconds = float((row.get("cost") or {}).get("wall_seconds") or 0.0)
+            if wall_seconds > 0:
+                self._observe_call_latency(wall_seconds)
+            if intervention_id == "CONTROL":
+                self.controls[(fixture_id, seed)] = {
+                    "score": float(row.get("score") or 0.0),
+                    "classification": copy.deepcopy(row.get("classification") or {}),
+                    "response_text": str(row.get("treatment_response_text") or ""),
+                    "experiment_id": row.get("experiment_id"),
+                    "metrics": {
+                        "prompt_eval_count": float((row.get("control_cost") or {}).get("prompt_tokens_observed") or 0),
+                        "eval_count": float((row.get("control_cost") or {}).get("output_tokens_observed") or 0),
+                    },
+                    "timing": {
+                        "client_latency_ns": int(
+                            float((row.get("control_cost") or {}).get("wall_seconds") or 0.0)
+                            * 1_000_000_000
+                        )
+                    },
+                }
+                continue
+            if fixture_id and intervention_id:
+                self.completed_treatment_ids.add((fixture_id, seed, intervention_id))
+                intervention = self.intervention_by_id.get(intervention_id)
+                if intervention is not None:
+                    self.completed_treatment_signatures.add(
+                        self._trial_signature(self.case_by_id.get(fixture_id, {"id": fixture_id}), intervention, seed)
+                    )
+
+    def _phase_elapsed_seconds(self) -> float:
+        if self.current_phase_started is None:
+            return float(self.current_phase_elapsed_base)
+        return float(self.current_phase_elapsed_base) + max(
+            0.0, self.clock() - self.current_phase_started
+        )
+
+    def _write_recovery_checkpoint(self, *, state: str = "ACTIVE") -> None:
+        store = getattr(self.runner, "store", None)
+        if store is None:
+            return
+        run_id = getattr(store, "run_id", None)
+        physical_calls = int(
+            getattr(self.runner, "_model_call_counts", {}).get(run_id, 0)
+        ) if run_id else 0
+        checkpoint = {
+            "schema_version": 1,
+            "recovery_policy": "NO_FULL_RERUN_ATOMIC_RESUME",
+            "state": state,
+            "run_id": run_id,
+            "model": getattr(self.runner, "model", None),
+            "active_seconds_used": min(
+                float(ACTIVE_SECONDS),
+                max(0.0, self.clock() - self.start),
+            ),
+            "active_seconds_remaining": max(
+                0.0,
+                float(ACTIVE_SECONDS) - max(0.0, self.clock() - self.start),
+            ),
+            "physical_model_calls_used": physical_calls,
+            "completed_observations": len(self.rows),
+            "completed_phases": sorted(self.completed_phases),
+            "current_phase": self.current_phase,
+            "current_phase_elapsed_seconds": self._phase_elapsed_seconds(),
+            "efficiency_counters": copy.deepcopy(self.efficiency_counters),
+            "last_experiment_id": (
+                self.rows[-1].get("experiment_id") if self.rows else None
+            ),
+            "full_rerun_allowed": False,
+        }
+        store.write_json(
+            "test1.2-recovery-checkpoint.json",
+            checkpoint,
+            producer="test1.2",
+            stage="recovery-checkpoint",
+        )
 
     def _trial_signature(
         self,
@@ -1237,7 +1407,8 @@ class Test12Campaign:
         signature = self._trial_signature(case, intervention, seed)
         estimated_calls = _estimated_physical_calls(intervention)
         allow_exact_repeat = bool(intervention.get("allow_exact_repeat"))
-        if signature in self.completed_treatment_signatures:
+        restored_id = (_fixture_id(case), int(seed), str(intervention.get("id") or ""))
+        if signature in self.completed_treatment_signatures or restored_id in self.completed_treatment_ids:
             if not allow_exact_repeat:
                 self.efficiency_counters["exact_duplicate_treatments_skipped"] += 1
                 self.efficiency_counters["estimated_duplicate_physical_calls_avoided"] += estimated_calls
@@ -1563,8 +1734,10 @@ class Test12Campaign:
             },
             "evidence_refs": copy.deepcopy(row.get("evidence_refs") or {}),
         }
+        result["observation_sha256"] = _row_integrity_hash(result)
         self.rows.append(result)
         self.runner.store.append_jsonl("test1.2-observations.jsonl", result)
+        self._write_recovery_checkpoint()
         return result
 
     def positive_work(self, phase: str, start_index: int, expected_coverage: str) -> None:
@@ -4293,6 +4466,7 @@ def run_test12_campaign(
     seed_run: str | None = None,
     clock: Callable[[], float] = time.monotonic,
     started_monotonic: float | None = None,
+    resume_state: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     assert runner.store is not None
     source = (
@@ -4300,18 +4474,38 @@ def run_test12_campaign(
         if seed_run
         else fresh_model_source(cases)
     )
-    campaign = Test12Campaign(runner, cases, source, clock=clock, started_monotonic=started_monotonic)
+    campaign = Test12Campaign(
+        runner,
+        cases,
+        source,
+        clock=clock,
+        started_monotonic=started_monotonic,
+        resume_state=resume_state,
+    )
     plan = build_test12_plan(cases, seed_run=seed_run)
     validate_test12_plan(plan)
     if not (runner.store.run_dir / "test1.2-plan.json").is_file():
         runner.store.write_json("test1.2-plan.json", plan, producer="test1.2", stage="preflight")
 
     results: dict[str, Any] = {}
-    phase_start = campaign.clock()
+    resume_checkpoint = (resume_state or {}).get("checkpoint") or {}
+    resume_phase = str(resume_checkpoint.get("current_phase") or "")
+    resume_phase_elapsed = float(
+        resume_checkpoint.get("current_phase_elapsed_seconds") or 0.0
+    )
     for phase_name, seconds in PHASES:
-        deadline = min(campaign.active_end, phase_start + seconds)
-        before = len(campaign.rows)
+        if phase_name in campaign.completed_phases:
+            continue
+        phase_elapsed_before = (
+            resume_phase_elapsed if phase_name == resume_phase else 0.0
+        )
+        remaining_phase_seconds = max(0.0, float(seconds) - phase_elapsed_before)
         actual_started = campaign.clock()
+        campaign.current_phase = phase_name
+        campaign.current_phase_started = actual_started
+        campaign.current_phase_elapsed_base = phase_elapsed_before
+        deadline = min(campaign.active_end, actual_started + remaining_phase_seconds)
+        before = len(campaign.rows)
         counters_before = copy.deepcopy(campaign.efficiency_counters)
         run_id = getattr(runner.store, "run_id", None)
         physical_before = int(getattr(runner, "_model_call_counts", {}).get(run_id, 0)) if run_id else 0
@@ -4380,13 +4574,14 @@ def run_test12_campaign(
         }
         phase_event = {
             "phase":phase_name,
-            "scheduled_started_monotonic":phase_start,
+            "scheduled_started_monotonic":actual_started - phase_elapsed_before,
             "actual_started_monotonic":actual_started,
             "ended_monotonic":ended,
             "deadline_monotonic":deadline,
-            "scheduled_window_seconds":max(0.0, deadline - phase_start),
+            "scheduled_window_seconds":float(seconds),
+            "resumed_phase_elapsed_seconds":phase_elapsed_before,
             "available_window_seconds_at_actual_start":max(0.0, deadline - actual_started),
-            "inherited_headroom_seconds":max(0.0, phase_start - actual_started),
+            "inherited_headroom_seconds":0.0,
             "actual_elapsed_seconds":max(0.0, ended - actual_started),
             "deadline_overrun_seconds":max(0.0, ended - deadline),
             "observations_added":len(campaign.rows)-before,
@@ -4396,7 +4591,13 @@ def run_test12_campaign(
         }
         campaign.phase_events.append(copy.deepcopy(phase_event))
         runner.store.append_jsonl("test1.2-phase-events.jsonl", phase_event)
-        phase_start = deadline
+        campaign.completed_phases.add(phase_name)
+        campaign.current_phase = None
+        campaign.current_phase_started = None
+        campaign.current_phase_elapsed_base = 0.0
+        campaign._write_recovery_checkpoint()
+        if not campaign.can_start(campaign.active_end):
+            break
         if ended >= campaign.active_end:
             break
 
@@ -4414,4 +4615,5 @@ def run_test12_campaign(
         results["reserve"] = _merge_summaries(results.get("reserve",{}), extra)
 
     write_outputs(campaign, results)
+    campaign._write_recovery_checkpoint(state="COLLECTION_COMPLETE")
     return campaign.rows
