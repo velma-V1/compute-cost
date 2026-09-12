@@ -1114,6 +1114,16 @@ class Test12Campaign:
         self.partitions = partition_test12_cases(cases)
         self.case_by_id = {_fixture_id(case): case for case in cases}
         self.interventions = build_intervention_bank(source, max_source_recipes=int(self.cfg["max_source_recipes"]))
+        checkpoint_interventions = [
+            copy.deepcopy(row)
+            for row in (checkpoint.get("interventions") or [])
+            if isinstance(row, dict) and row.get("id")
+        ]
+        merged_interventions = {
+            str(row["id"]): copy.deepcopy(row)
+            for row in [*self.interventions, *checkpoint_interventions]
+        }
+        self.interventions = list(merged_interventions.values())
         self.intervention_by_id = {str(row["id"]): row for row in self.interventions}
         self.allowed_partitions = {"DISCOVERY"}
         self.controls: dict[tuple[str, int], dict[str, Any]] = {}
@@ -1130,6 +1140,9 @@ class Test12Campaign:
             for row in self.phase_events
             if row.get("phase")
         }
+        self.phase_results: dict[str, Any] = copy.deepcopy(
+            checkpoint.get("phase_results") or {}
+        )
         self.current_phase: str | None = None
         self.current_phase_started: float | None = None
         self.current_phase_elapsed_base = 0.0
@@ -1220,6 +1233,8 @@ class Test12Campaign:
             "physical_model_calls_used": physical_calls,
             "completed_observations": len(self.rows),
             "completed_phases": sorted(self.completed_phases),
+            "phase_results": copy.deepcopy(self.phase_results),
+            "interventions": copy.deepcopy(self.interventions),
             "current_phase": self.current_phase,
             "current_phase_elapsed_seconds": self._phase_elapsed_seconds(),
             "efficiency_counters": copy.deepcopy(self.efficiency_counters),
@@ -4487,7 +4502,7 @@ def run_test12_campaign(
     if not (runner.store.run_dir / "test1.2-plan.json").is_file():
         runner.store.write_json("test1.2-plan.json", plan, producer="test1.2", stage="preflight")
 
-    results: dict[str, Any] = {}
+    results: dict[str, Any] = copy.deepcopy(campaign.phase_results)
     resume_checkpoint = (resume_state or {}).get("checkpoint") or {}
     resume_phase = str(resume_checkpoint.get("current_phase") or "")
     resume_phase_elapsed = float(
@@ -4592,6 +4607,7 @@ def run_test12_campaign(
         campaign.phase_events.append(copy.deepcopy(phase_event))
         runner.store.append_jsonl("test1.2-phase-events.jsonl", phase_event)
         campaign.completed_phases.add(phase_name)
+        campaign.phase_results = copy.deepcopy(results)
         campaign.current_phase = None
         campaign.current_phase_started = None
         campaign.current_phase_elapsed_base = 0.0
@@ -4613,6 +4629,8 @@ def run_test12_campaign(
         )
         extra = phase_reserve(campaign, campaign.active_end, combined)
         results["reserve"] = _merge_summaries(results.get("reserve",{}), extra)
+        campaign.phase_results = copy.deepcopy(results)
+        campaign._write_recovery_checkpoint()
 
     write_outputs(campaign, results)
     campaign._write_recovery_checkpoint(state="COLLECTION_COMPLETE")
