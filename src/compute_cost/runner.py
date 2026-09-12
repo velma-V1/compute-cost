@@ -805,6 +805,7 @@ class BenchmarkRunner(_CoreBenchmarkRunner):
                     "source_positive_rows": len(source.get("positive_rows", [])),
                     "source_negative_rows": len(source.get("negative_rows", [])),
                     "source_truncation_rows": len(source.get("truncation_rows", [])),
+                    "source_integrity": copy.deepcopy(source.get("source_integrity") or {}),
                     "expanded_ingredient_count": len(build_ingredient_bank(source)),
                 },
                 producer="test1.1",
