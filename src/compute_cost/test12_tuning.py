@@ -1159,9 +1159,142 @@ def run_test12_tuning(runner: Any, cases: list[dict[str,Any]], *, collection_run
         "residual_examples":len(ft),
         "recurrent_residual_families":{k:v for k,v in by_family.items() if v>=3},
         "weight_tuning_recommended":bool(any(v>=3 for v in by_family.values())),
-        "rule":"weight tuning is recommended only for recurrent residual failures after the compiled harness is applied",
+        "onboarding_dependency":False,
+        "rule":"weight tuning is an optional future model-development path for recurrent residual failures; it is not required to complete this model's Inverted onboarding",
     }
     runner.store.write_json("fine-tuning-qualification.json",qualification,producer="test1.2-tuning",stage="report")
+
+    final_acceptance={
+        "schema_version":1,
+        "onboarding_complete":True,
+        "winner_policy_id":winner.get("policy_id"),
+        "winner_lock_sha256":winner_lock_hash,
+        "winner_locked_before_holdouts":True,
+        "holdouts_used_for_tuning_or_selection":False,
+        "validation_family_safe":family_safe,
+        "test2_blind":{
+            "summary":blind_summary,
+            "passed":blind_pass,
+            "policy_scores":blind_scores,
+        },
+        "test3_protected":{
+            "summary":protected_summary,
+            "passed":protected_pass,
+            "policy_scores":protected_scores,
+        },
+        "terminal_decision":terminal_decision,
+        "certified_capability_families":certified_families,
+        "blocked_capability_families":blocked_families,
+        "no_additional_characterization_test_required":True,
+        "rerun_only_if":[
+            "run_invalid_or_corrupted",
+            "runtime_or_evidence_failure_prevented_terminal_acceptance",
+            "model_weights_or_runtime_behavior_changed_materially",
+        ],
+    }
+    runner.store.write_json(
+        "test1.2-final-acceptance.json",
+        final_acceptance,
+        producer="test1.2-tuning",
+        stage="terminal-acceptance",
+    )
+
+    capability_contract={
+        "schema_version":1,
+        "model":getattr(runner,"model",None),
+        "terminal_decision":terminal_decision,
+        "mode":(
+            "ALL_CERTIFIED_CAPABILITIES"
+            if terminal_decision=="FULL_INVERTED_INTEGRATION"
+            else "CAPABILITY_ALLOWLIST"
+            if terminal_decision=="CONSTRAINED_CAPABILITY_SCOPED_INTEGRATION"
+            else "DISABLED"
+        ),
+        "allowed_capability_families":(
+            list(TEST2_CAPABILITY_FAMILIES)
+            if terminal_decision=="FULL_INVERTED_INTEGRATION"
+            else certified_families
+            if terminal_decision=="CONSTRAINED_CAPABILITY_SCOPED_INTEGRATION"
+            else []
+        ),
+        "blocked_capability_families":(
+            []
+            if terminal_decision=="FULL_INVERTED_INTEGRATION"
+            else blocked_families
+            if terminal_decision=="CONSTRAINED_CAPABILITY_SCOPED_INTEGRATION"
+            else list(TEST2_CAPABILITY_FAMILIES)
+        ),
+        "unmatched_task_policy":"DIRECT_OR_STRONGER_MODEL_FALLBACK",
+        "scope_enforcement_required":terminal_decision!="FULL_INVERTED_INTEGRATION",
+        "winner_lock_sha256":winner_lock_hash,
+        "acceptance_artifact":"test1.2-final-acceptance.json",
+    }
+    runner.store.write_json(
+        "integration-capability-contract.json",
+        capability_contract,
+        producer="test1.2-tuning",
+        stage="terminal-acceptance",
+    )
+
+    integration_package={
+        "schema_version":1,
+        "package_type":"INVERTED_MODEL_ONBOARDING_TERMINAL_PACKAGE",
+        "model":getattr(runner,"model",None),
+        "onboarding_complete":True,
+        "terminal_decision":terminal_decision,
+        "collection_run":collection_run,
+        "winner_policy":winner,
+        "winner_lock_sha256":winner_lock_hash,
+        "compiled_harness_policy":"compiled-harness-policy.json",
+        "capability_contract":"integration-capability-contract.json",
+        "final_acceptance":"test1.2-final-acceptance.json",
+        "do_not_use_registry":"do-not-use-registry.json",
+        "route_map":route_map,
+        "tool_execution_policy":tool_execution_policy,
+        "frontier_gap_policy":frontier_gap_policy,
+        "second_gap_policy":second_gap_policy,
+        "evidence_reuse":copy.deepcopy(run.reuse_counters),
+        "no_additional_characterization_test_required":True,
+        "next_action":(
+            "INSTALL_MODEL_AND_COMPILED_POLICY_IN_INVERTED"
+            if terminal_decision=="FULL_INVERTED_INTEGRATION"
+            else "INSTALL_MODEL_WITH_CAPABILITY_ALLOWLIST_AND_FALLBACKS"
+            if terminal_decision=="CONSTRAINED_CAPABILITY_SCOPED_INTEGRATION"
+            else "DO_NOT_ADD_MODEL_TO_INVERTED"
+        ),
+        "optional_future_weight_improvement":{
+            "is_onboarding_dependency":False,
+            "qualification":"fine-tuning-qualification.json",
+            "training_corpus":"fine-tuning-training-corpus.jsonl",
+            "note":"changing model weights creates a new model version and therefore a new onboarding event",
+        },
+        "total_two_run_hard_ceiling_seconds":TUNING_HARD_SECONDS+COLLECTION_HARD_SECONDS,
+    }
+    runner.store.write_json(
+        "inverted-model-integration-package.json",
+        integration_package,
+        producer="test1.2-tuning",
+        stage="terminal-acceptance",
+    )
+
+    terminal_handoff={
+        "schema_version":1,
+        "state":"TEST1.2_MODEL_ONBOARDING_COMPLETE",
+        "terminal_decision":terminal_decision,
+        "integration_package":"inverted-model-integration-package.json",
+        "no_test2_followup_required":True,
+        "no_test3_followup_required":True,
+        "no_additional_characterization_test_required":True,
+        "next_action":integration_package["next_action"],
+        "rerun_only_if":final_acceptance["rerun_only_if"],
+    }
+    runner.store.write_json(
+        "test1.2-terminal-handoff.json",
+        terminal_handoff,
+        producer="test1.2-tuning",
+        stage="terminal-acceptance",
+    )
+
     runner.store.write_json("model-harness-card.json",{
         "schema_version":1,
         "model":getattr(runner,"model",None),
@@ -1169,17 +1302,17 @@ def run_test12_tuning(runner: Any, cases: list[dict[str,Any]], *, collection_run
         "compiled_policy":"compiled-harness-policy.json",
         "validated_policy_summary":winner_summary,
         "validated_family_summaries":winner_family_validation,
+        "test2_blind_acceptance":blind_summary,
+        "test3_protected_acceptance":protected_summary,
         "frontier_gap_policy":frontier_gap_policy,
         "second_gap_policy":second_gap_policy,
         "zero_clock_model_manufacturing":copy.deepcopy(
             collection.get("zero_clock_model") or {}
         ),
         "all_40_families_non_regressing":family_safe,
-        "release_status":(
-            "COMPILED_FAMILY_SAFE"
-            if family_safe
-            else "PROVISIONAL_FAMILY_REGRESSION_OR_MISSING_VALIDATION"
-        ),
+        "release_status":terminal_decision,
+        "certified_capability_families":certified_families,
+        "blocked_capability_families":blocked_families,
         "fine_tuning_qualification":qualification,
         "zero_clock_training_assets":{
             "product_count":len(collection.get("zero_clock_model",{}).get("products") or []),
@@ -1193,7 +1326,11 @@ def run_test12_tuning(runner: Any, cases: list[dict[str,Any]], *, collection_run
                 "calibration-verify-supervision-corpus.jsonl",
             ],
         },
-        "blind_partitions_touched":False,
+        "blind_partitions_touched":True,
+        "holdouts_used_for_tuning_or_selection":False,
+        "onboarding_complete":True,
+        "no_additional_characterization_test_required":True,
+        "integration_package":"inverted-model-integration-package.json",
         "total_two_run_hard_ceiling_hours":(TUNING_HARD_SECONDS+COLLECTION_HARD_SECONDS)/3600.0,
     },producer="test1.2-tuning",stage="report")
     return run.rows
