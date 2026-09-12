@@ -11,6 +11,7 @@ from compute_cost.test12_campaign import (
     PROMPT_PRIMITIVES,
     build_intervention_bank,
     build_test12_plan,
+    capability_frontier_cover,
     fresh_model_source,
     generate_prompt_control_candidates,
     validate_test12_plan,
@@ -223,3 +224,24 @@ def test_control_grammar_declares_full_finite_search_surface():
     assert len(CONTROL_GRAMMAR["retry_policies"]) >= 6
     assert len(CONTROL_GRAMMAR["multi_call_topologies"]) >= 8
     assert len(CONTROL_GRAMMAR["compute_controls"]) >= 13
+
+
+
+def test_capability_frontier_cover_spans_easy_middle_hard_and_boundary_levels():
+    cases = []
+    for family_index in range(3):
+        for level in range(11):
+            cases.append({
+                "id": f"fam{family_index}-l{level}",
+                "category": f"family_{family_index}",
+                "difficulty_level": level,
+                "prompt": "x",
+            })
+    selected = capability_frontier_cover(cases)
+    by_family = {}
+    for row in selected:
+        by_family.setdefault(row["category"], []).append(row["difficulty_level"])
+
+    assert set(by_family) == {"family_0", "family_1", "family_2"}
+    for levels in by_family.values():
+        assert set(levels) == {0, 2, 5, 8, 10}

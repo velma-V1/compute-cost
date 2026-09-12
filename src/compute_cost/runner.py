@@ -943,7 +943,7 @@ class BenchmarkRunner(_CoreBenchmarkRunner):
         seed_run: str | None = None,
         dry_run: bool = False,
     ) -> Path:
-        """Run the seven-hour GPT-20B Test-1.2 full-system improvement campaign."""
+        """Run the <=6h15 Test-1.2 collection stage of the model-to-harness compiler."""
         test_cfg = self.config.get("test12_campaign") or {}
         expected_calls = int(test_cfg.get("expected_calls", 5600))
         safety_cap = int(test_cfg.get("safety_call_cap", 14000))
@@ -1007,7 +1007,7 @@ class BenchmarkRunner(_CoreBenchmarkRunner):
                 {
                     "schema_version": 1,
                     "source": source.get("run_id"),
-                    "synthetic_source": source.get("run_id") == "SYNTHETIC-TEST1.1",
+                    "fresh_model_source": source.get("run_id") == "FRESH-MODEL",
                     "planned_wall_seconds": plan["wall_clock_seconds"],
                     "planned_active_seconds": plan["active_model_seconds"],
                     "core_mechanism_count": plan["core_mechanism_count"],

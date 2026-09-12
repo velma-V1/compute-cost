@@ -1225,6 +1225,53 @@ def _source_headroom(campaign: Test12Campaign, partition: str = "DISCOVERY") -> 
 
 
 
+def _breadth_cover(
+    campaign: Test12Campaign,
+    deadline: float,
+    *,
+    phase: str,
+    interventions: list[dict[str, Any]],
+    failure_cases: list[dict[str, Any]],
+    sentinel_cases: list[dict[str, Any]],
+    seed: int,
+) -> list[dict[str, Any]]:
+    """Mandatory breadth pass with family-rotating fixture assignment.
+
+    Every candidate receives one failure-side and one pass-sentinel trial when
+    both pools exist. Candidate-to-fixture assignment rotates so the full
+    catalog is not judged on the same tiny pair of fixtures.
+    """
+    start = len(campaign.rows)
+    failures = _balanced_cases(failure_cases, len(failure_cases))
+    sentinels = _balanced_cases(sentinel_cases, len(sentinel_cases))
+    for index, intervention in enumerate(interventions):
+        if not campaign.can_start(deadline):
+            break
+        if failures:
+            case = failures[index % len(failures)]
+            campaign.treatment(
+                case,
+                deadline,
+                phase=phase,
+                intervention=intervention,
+                seed=seed,
+            )
+        if not campaign.can_start(deadline):
+            break
+        if sentinels:
+            # Prime stride reduces repeated pair alignment when pool sizes share
+            # small factors with the candidate catalog.
+            case = sentinels[(index * 7 + 3) % len(sentinels)]
+            campaign.treatment(
+                case,
+                deadline,
+                phase=phase,
+                intervention=intervention,
+                seed=seed,
+            )
+    return campaign.rows[start:]
+
+
 def _matrix(
     campaign: Test12Campaign,
     deadline: float,
@@ -1275,12 +1322,44 @@ def _rank_mechanisms(summary: dict[str, Any], campaign: Test12Campaign, limit: i
     return [copy.deepcopy(row[-1]) for row in ranked[:limit]]
 
 
+def capability_frontier_cover(
+    cases: list[dict[str, Any]],
+    *,
+    target_levels: tuple[int, ...] = (0, 2, 5, 8, 10),
+) -> list[dict[str, Any]]:
+    """Pick difficulty-spanning representatives for every capability family."""
+    by_family: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for case in cases:
+        by_family[_family(case)].append(case)
+    selected: list[dict[str, Any]] = []
+    for family in sorted(by_family):
+        pool = sorted(
+            by_family[family],
+            key=lambda row: (int(row.get("difficulty_level", 0)), _fixture_id(row)),
+        )
+        used: set[str] = set()
+        for target in target_levels:
+            candidates = [row for row in pool if _fixture_id(row) not in used]
+            if not candidates:
+                break
+            chosen = min(
+                candidates,
+                key=lambda row: (
+                    abs(int(row.get("difficulty_level", 0)) - int(target)),
+                    int(row.get("difficulty_level", 0)),
+                    _fixture_id(row),
+                ),
+            )
+            used.add(_fixture_id(chosen))
+            selected.append(chosen)
+    return selected
+
+
 def phase_baseline(campaign: Test12Campaign, deadline: float) -> dict[str, Any]:
     start = len(campaign.rows)
-    discovery = _balanced_cases(
-        campaign.partitions["DISCOVERY"],
-        len(campaign.partitions["DISCOVERY"]),
-    )
+    # Map every capability family across easy, middle, hard, and boundary
+    # difficulty points rather than exhausting redundant easy fixtures.
+    discovery = capability_frontier_cover(campaign.partitions["DISCOVERY"])
     primary_seed = int(campaign.cfg["seeds"][0])
     for case in discovery:
         if not campaign.can_start(deadline):
@@ -1303,7 +1382,7 @@ def phase_baseline(campaign: Test12Campaign, deadline: float) -> dict[str, Any]:
         for row in first_rows
         if float(row.get("score", 0.0)) >= 1.0 and str(row["fixture_id"]) in campaign.case_by_id
     ]
-    replicate = _balanced_cases(failures, min(64, len(failures))) + _balanced_cases(passes, min(64, len(passes)))
+    replicate = _balanced_cases(failures, min(40, len(failures))) + _balanced_cases(passes, min(40, len(passes)))
     for seed in [int(v) for v in campaign.cfg["seeds"][1:]]:
         for case in replicate:
             if not campaign.can_start(deadline):
@@ -1313,7 +1392,7 @@ def phase_baseline(campaign: Test12Campaign, deadline: float) -> dict[str, Any]:
     campaign.positive_work(
         "baseline_capability_map",
         start,
-        "every reachable DISCOVERY capability fixture once + balanced instability replication",
+        "balanced full-family/difficulty capability map + targeted instability replication",
     )
     rows = [
         row for row in campaign.rows[start:]
@@ -1359,27 +1438,23 @@ def phase_controller_screen(campaign: Test12Campaign, deadline: float) -> dict[s
     excluded = {"REASONING_MODE","GENERATION_BUDGET","CONTEXT_WINDOW","COMPUTE_COST_ROUTING"}
     interventions = [row for row in campaign.interventions if row["category"] not in excluded]
     fail, passed = _source_headroom(campaign)
-    floor_cases = (
-        _balanced_cases(fail, min(1, len(fail)))
-        + _balanced_cases(passed, min(1, len(passed)))
-    )
-    if not floor_cases:
-        floor_cases = _balanced_cases(campaign.partitions["DISCOVERY"], min(2, len(campaign.partitions["DISCOVERY"])))
+    failures = _balanced_cases(fail, min(64, len(fail)))
+    sentinels = _balanced_cases(passed, min(64, len(passed)))
 
-    # Non-negotiable breadth pass: every declared control candidate is tried.
-    rows = _matrix(
+    # Non-negotiable breadth pass: every declared candidate receives coverage,
+    # distributed across capability families rather than on the same fixture.
+    rows = _breadth_cover(
         campaign,
         deadline,
         phase="mechanism_coverage_floor",
         interventions=interventions,
-        cases=floor_cases,
-        seeds=[int(campaign.cfg["seeds"][0])],
-        coverage_rounds=1,
+        failure_cases=failures,
+        sentinel_cases=sentinels,
+        seed=int(campaign.cfg["seeds"][0]),
     )
 
-    # After breadth coverage, replicate only the finite set of core controller
-    # topologies and dynamically synthesized controls. Prompt-grammar depth is
-    # handled later around promising primitives/boundaries.
+    # Replication depth is adaptive only after the complete breadth catalog has
+    # had its first look.
     depth_ids = {
         str(row["id"])
         for row in CORE_INTERVENTIONS
@@ -1401,7 +1476,7 @@ def phase_controller_screen(campaign: Test12Campaign, deadline: float) -> dict[s
     campaign.positive_work(
         "mechanism_coverage_floor",
         start,
-        "EVERY declared prompt/injection/retry/controller candidate receives minimum coverage before replication is adaptive",
+        "EVERY declared prompt/injection/retry/controller candidate receives rotating failure + sentinel coverage before replication is adaptive",
     )
     return _group_summary(rows, campaign.cfg, lambda row: str(row["intervention_id"]))
 
@@ -1586,9 +1661,43 @@ def phase_composition(campaign: Test12Campaign, deadline: float, combined_summar
     start = len(campaign.rows)
     promoted = _rank_mechanisms(combined_summary, campaign, 12)
     compositions = build_compositions(promoted, int(campaign.cfg["max_composition_arms"]))
-    rows = _matrix(campaign, deadline, phase="composition_interaction", interventions=compositions, cases=_coverage_cases(campaign), coverage_rounds=1)
-    campaign.positive_work("composition_interaction", start, "promoted cross-category A+B+A compositions with matched controls")
+    for intervention in compositions:
+        ident = str(intervention["id"])
+        if ident not in campaign.intervention_by_id:
+            campaign.interventions.append(copy.deepcopy(intervention))
+            campaign.intervention_by_id[ident] = copy.deepcopy(intervention)
+    fail, passed = _source_headroom(campaign)
+    rows = _breadth_cover(
+        campaign,
+        deadline,
+        phase="composition_interaction",
+        interventions=compositions,
+        failure_cases=_balanced_cases(fail, min(16, len(fail))),
+        sentinel_cases=_balanced_cases(passed, min(16, len(passed))),
+        seed=int(campaign.cfg["seeds"][0]),
+    )
+    if campaign.can_start(deadline) and compositions:
+        ranked = _group_summary(rows, campaign.cfg, lambda row: str(row["intervention_id"]))
+        survivors = _rank_mechanisms(ranked, campaign, min(8, len(compositions)))
+        if survivors:
+            rows.extend(
+                _matrix(
+                    campaign,
+                    deadline,
+                    phase="composition_interaction",
+                    interventions=survivors,
+                    cases=_coverage_cases(campaign),
+                    seeds=[int(campaign.cfg["seeds"][1])],
+                    coverage_rounds=1,
+                )
+            )
+    campaign.positive_work(
+        "composition_interaction",
+        start,
+        "all generated composition candidates receive first coverage; replication depth is adaptive",
+    )
     return _group_summary(rows, campaign.cfg, lambda row: str(row["intervention_id"]))
+
 
 
 def phase_routing(campaign: Test12Campaign, deadline: float) -> dict[str, Any]:
@@ -1618,6 +1727,34 @@ def _merge_summaries(*maps: dict[str, Any]) -> dict[str, Any]:
             if current is None or float(value.get("n", 0)) > float(current.get("n", 0)):
                 result[key] = copy.deepcopy(value)
     return result
+
+
+def phase_negative_transfer(
+    campaign: Test12Campaign,
+    deadline: float,
+    summary: dict[str, Any],
+) -> dict[str, Any]:
+    start = len(campaign.rows)
+    candidates = _rank_mechanisms(summary, campaign, 32)
+    _, passed = _source_headroom(campaign)
+    sentinels = _balanced_cases(passed, min(64, len(passed)))
+    if not candidates or not sentinels:
+        return {}
+    rows = _matrix(
+        campaign,
+        deadline,
+        phase="negative_transfer_sentinels",
+        interventions=candidates,
+        cases=sentinels,
+        seeds=[int(campaign.cfg["seeds"][1]), int(campaign.cfg["seeds"][2])],
+        coverage_rounds=1,
+    )
+    campaign.positive_work(
+        "negative_transfer_sentinels",
+        start,
+        "highest-value controls challenged on balanced baseline-pass sentinels across families",
+    )
+    return _group_summary(rows, campaign.cfg, lambda row: str(row["intervention_id"]))
 
 
 def phase_reserve(campaign: Test12Campaign, deadline: float, summary: dict[str, Any]) -> dict[str, Any]:
@@ -2030,11 +2167,14 @@ def run_test12_campaign(
                 },
             )
         elif phase_name == "negative_transfer_sentinels":
-            results["tool"] = phase_category_focus(
-                campaign, deadline, phase=phase_name,
-                categories={"TOOL_POLICY","VERIFICATION","PROMPT_CONTROL","PLANNING"},
-                target_cases=_coverage_cases(campaign),
+            combined = _merge_summaries(
+                results.get("reasoning",{}),
+                results.get("controllers",{}),
+                results.get("context",{}),
+                results.get("retry",{}),
+                results.get("composition",{}),
             )
+            results["tool"] = phase_negative_transfer(campaign, deadline, combined)
             results["routing"] = phase_routing(campaign, deadline)
         elif phase_name == "information_gain_reserve":
             combined = _merge_summaries(

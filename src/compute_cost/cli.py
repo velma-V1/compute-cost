@@ -100,14 +100,14 @@ def build_parser() -> argparse.ArgumentParser:
 
     test12 = sub.add_parser(
         "gpt20b-test1.2",
-        help="Run the seven-hour GPT-20B Test 1.2 full-system improvement campaign.",
+        help="Run the <=6h15 Test 1.2 collection campaign for model-to-harness compilation.",
     )
     test12.add_argument("--model", default="gpt-oss:20b")
     test12.add_argument("--suite", default=str(DEFAULT_CAPABILITY_SUITE_PATH))
     test12.add_argument("--taxonomy", default=str(DEFAULT_CAPABILITY_TAXONOMY_PATH))
     test12.add_argument("--seed-run", default=None, help="Optional prior Test-1.1 run ID used only as a seed library. New-model collection needs no prior run.")
     test12.add_argument("--pull", action="store_true", help="Pull the model if it is not already local.")
-    test12.add_argument("--dry-run", action="store_true", help="Validate Test 1.2 with zero model calls; uses a synthetic Test-1.1 handoff when --test11-run is omitted.")
+    test12.add_argument("--dry-run", action="store_true", help="Validate Test 1.2 with zero model calls. New-model collection requires no prior run.")
 
     test12_tune = sub.add_parser(
         "gpt20b-test1.2-tune",
