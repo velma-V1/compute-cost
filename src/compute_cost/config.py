@@ -88,7 +88,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "halving_cases": [24, 48, 96],
         "final_candidates": 4,
         "final_repeats": 2,
-        "minimum_validation_families": 30,
+        "minimum_validation_families": 40,
         "max_capability_regression_rate": 0.05,
         "minimum_positive_value": 0.0,
     },
@@ -294,6 +294,8 @@ def _validate_test12_tuning(config: dict[str, Any]) -> None:
         value = c.get(name)
         if not isinstance(value, int) or isinstance(value, bool) or value <= 0:
             raise ValueError(f"test12_tuning.{name} must be a positive integer")
+    if int(c["minimum_validation_families"]) != 40:
+        raise ValueError("test12_tuning.minimum_validation_families must be exactly 40")
     values = c.get("halving_cases")
     if not isinstance(values, list) or not values or any(
         not isinstance(v, int) or isinstance(v, bool) or v <= 0 for v in values

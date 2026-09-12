@@ -14,15 +14,17 @@ compiles those observations into an adaptive deployment policy.
 
 | Run | Data partition | Hard ceiling | Active model ceiling |
 | --- | --- | ---: | ---: |
-| Collection | DISCOVERY | 6h15m | 6h |
+| Collection | DISCOVERY | 7h05m | 6h50m |
 | Tuning / compile | VALIDATION | 6h15m | 6h |
-| Combined | — | **12h30m** | **12h** |
+| Combined | — | **13h20m** | **12h50m** |
 
 TEST2_BLIND and TEST3_PROTECTED are never exposed by either run.
 
-The remaining 1h30m below the 14-hour user requirement is operational buffer
-for setup, model loading, finalization, export, or recovery from a bounded
-runtime interruption.
+The remaining 40 minutes below the 14-hour user requirement is operational
+buffer for setup, model loading, finalization, export, or recovery from a
+bounded runtime interruption. Collection received the extra time rather than
+removing existing experiments, because per-family frontier/boundary evidence is
+a prerequisite for manufacturing useful harness blocks.
 
 ## What “full search” means
 
@@ -107,6 +109,24 @@ The tuning run refuses a collection unless all 40 families are marked
 manufacturing-ready. A family with no positive control is still retained: its
 harm/null evidence becomes a negative constraint rather than being dropped.
 
+## Stratified open-pool partitioning
+
+The legacy hash split is retained as the authority for protected data.
+`TEST2_BLIND` and `TEST3_PROTECTED` fixture IDs are immutable.
+
+For Test 1.2 only, the already-open legacy `DISCOVERY + VALIDATION` pool is
+rebalanced by capability family. This prevents random hashing from leaving a
+family with too little manufacturing evidence while preserving future blind
+audits.
+
+Preflight requires at least:
+
+- 3 DISCOVERY fixtures per required capability family; and
+- 1 VALIDATION fixture per required capability family.
+
+If the open pool cannot satisfy that contract, the run fails before model
+calls rather than borrowing from a protected partition.
+
 ## Search surface
 
 The declared improvement surface includes:
@@ -146,6 +166,80 @@ The declared improvement surface includes:
 - negative-transfer boundaries;
 - model-owned residual / fine-tuning qualification.
 
+## Value-density contract
+
+Test 1.2 is not allowed to treat score improvement as the only useful result.
+Every raw observation is indexed into every applicable value channel, including
+baseline/frontier evidence, rescue evidence, pass preservation, hard-case
+evidence, compute cost, routing evidence, manufacturing evidence, tuning data,
+negative transfer, and pruning evidence.
+
+Every capability family must leave collection with a capability-improvement
+dossier covering the critical value dimensions:
+
+- measured raw frontier and difficulty spread;
+- seed/repeatability evidence;
+- failure-side rescue and pass-side preservation;
+- hard-case/frontier-extension probes;
+- prompt control;
+- reasoning effort;
+- generation budget;
+- context window;
+- compute/temperature routing;
+- planning;
+- verification;
+- retry/recovery;
+- state tracking;
+- memory;
+- context selection/compression;
+- tool policy;
+- stop/escalate policy;
+- latency/token/call efficiency;
+- negative-effect search;
+- activation boundaries;
+- contrastive tuning evidence.
+
+The collection is not manufacturing-ready if a critical value dimension is
+missing for any of the 40 capability families.
+
+### Negative results are improvement assets
+
+A harmful result is never discarded merely because it lowers a score. Depending
+on its observed boundary, it becomes one or more of:
+
+- a **route veto** preventing a known regression;
+- a **conditional gate** showing where a control helps and where it hurts;
+- an **activation-boundary sensor**;
+- a **regression sentinel** for future harness/model changes;
+- a **contrastive tuning negative**;
+- a **compensation target** for a later combined block;
+- a **latency/token veto** when it adds cost without quality.
+
+A null control is also useful. If it adds calls, tokens, or latency without
+quality, it becomes a pruning/cost-avoidance rule.
+
+Avoiding a known harmful or useless controller is counted as real harness
+improvement because it preserves the base model's score and compute budget
+relative to a naive "apply every good-looking trick" system.
+
+### Required advancement path
+
+For each family, Test 1.2 must identify one or more evidence-backed advancement
+paths:
+
+- harness capability lift;
+- hard-case/frontier lift;
+- reliability lift;
+- latency speedup;
+- token/call reduction;
+- negative-gating score protection;
+- frontier-extension target; or
+- residual fine-tuning target after cheaper harness owners are exhausted.
+
+A family with no proven positive harness control is **not dropped**. Its null
+and harmful evidence constrains the harness, while its recurrent residual
+failures become higher-value fine-tuning targets.
+
 ## Efficient experimental design
 
 The campaign intentionally does **not** evaluate the full Cartesian product.
@@ -174,6 +268,14 @@ by reducing the breadth of the declared control catalog.
 The collection run produces, among other evidence:
 
 - complete candidate registry;
+- per-family capability-improvement dossiers;
+- family critical-value completeness gate;
+- family × intervention control-response tensor;
+- frontier-shift map;
+- compute/quality elasticity map;
+- negative-effect exploitation map;
+- contrastive negative corpus;
+- observation-to-value index proving reuse of every raw observation;
 - finite control grammar;
 - candidate coverage ledger;
 - raw capability map;

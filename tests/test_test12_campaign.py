@@ -16,6 +16,7 @@ from compute_cost.test12_campaign import (
     capability_frontier_cover,
     fresh_model_source,
     generate_prompt_control_candidates,
+    partition_test12_cases,
     validate_test12_plan,
 )
 from compute_cost.test12_toollab import (
@@ -26,8 +27,20 @@ from compute_cost.test12_toollab import (
 )
 from compute_cost.test12_tuning import (
     TUNING_HARD_SECONDS,
+    _top_family_safe_policies,
+    _top_policies,
     build_tuning_plan,
     validate_tuning_plan,
+)
+from compute_cost.test1_campaign import partition_cases
+from compute_cost.test12_value import (
+    CRITICAL_FAMILY_VALUE_DIMENSIONS,
+    FAMILY_VALUE_DIMENSIONS,
+    build_control_response_tensor,
+    build_family_value_dossiers,
+    build_negative_effect_exploitation,
+    build_value_completeness,
+    observation_value_index,
 )
 
 
@@ -91,8 +104,8 @@ def test_collection_plan_is_full_campaign_under_14_hour_two_run_contract():
     cases = _cases()
     plan = build_test12_plan(cases)
     validate_test12_plan(plan)
-    assert plan["wall_clock_seconds"] == 6 * 60 * 60 + 15 * 60
-    assert plan["active_model_seconds"] == 6 * 60 * 60
+    assert plan["wall_clock_seconds"] == 7 * 60 * 60 + 5 * 60
+    assert plan["active_model_seconds"] == 6 * 60 * 60 + 50 * 60
     assert sum(row["seconds"] for row in plan["phases"]) == ACTIVE_SECONDS
     assert plan["allowed_partitions"] == ["DISCOVERY"]
     assert plan["reserved_for_tuning"] == ["VALIDATION"]
@@ -104,7 +117,19 @@ def test_collection_plan_is_full_campaign_under_14_hour_two_run_contract():
     assert plan["adaptive_allocation"]["coverage_floor_first"] is True
     assert plan["adaptive_allocation"]["successive_halving"] is True
     assert plan["adaptive_allocation"]["oracle_routing_prohibited"] is True
+    assert plan["adaptive_allocation"]["campaign_early_stop"] is False
     assert set(IMPROVEMENT_SURFACE).issubset(set(plan["improvement_surface"]))
+    for required in {
+        "capability-improvement-dossiers.json",
+        "family-value-completeness.json",
+        "control-response-tensor.json",
+        "frontier-shift-map.json",
+        "compute-quality-elasticity-map.json",
+        "negative-effect-exploitation-map.json",
+        "contrastive-negative-corpus.jsonl",
+        "observation-value-index.jsonl",
+    }:
+        assert required in plan["required_outputs"]
 
 
 def test_prompt_injection_grammar_covers_every_declared_level_for_every_primitive():
@@ -181,7 +206,7 @@ def test_real_tool_lab_executes_and_returns_errors_for_bad_arguments():
     assert len(TOOL_HARNESS_POLICIES) >= 5
 
 
-def test_tuning_run_uses_validation_only_and_combined_hard_ceiling_is_12h30m():
+def test_tuning_run_uses_validation_only_and_combined_hard_ceiling_is_13h20m():
     cases = _cases()
     plan = build_tuning_plan(cases, collection_run="collection-run")
     validate_tuning_plan(plan)
@@ -189,7 +214,7 @@ def test_tuning_run_uses_validation_only_and_combined_hard_ceiling_is_12h30m():
     assert set(plan["prohibited_partitions"]) == {"DISCOVERY", "TEST2_BLIND", "TEST3_PROTECTED"}
     assert plan["wall_clock_seconds"] == 6 * 60 * 60 + 15 * 60
     assert plan["total_two_run_hard_ceiling_seconds"] == COLLECTION_HARD_SECONDS + TUNING_HARD_SECONDS
-    assert plan["total_two_run_hard_ceiling_seconds"] == int(12.5 * 60 * 60)
+    assert plan["total_two_run_hard_ceiling_seconds"] == 800 * 60
     assert plan["total_two_run_hard_ceiling_seconds"] < 14 * 60 * 60
 
 
@@ -294,7 +319,10 @@ def test_test12_freezes_all_40_test2_capability_families():
         "sibling_transfer_generalization",
         "composite_agent_tasks",
     }
-    assert len(FAMILY_CONTROL_SURFACES) >= 10
+    assert len(FAMILY_CONTROL_SURFACES) >= 13
+    assert {"GENERATION_BUDGET", "CONTEXT_WINDOW", "COMPUTE_COST_ROUTING"} <= set(
+        FAMILY_CONTROL_SURFACES
+    )
 
 
 def test_collection_plan_fails_if_any_test2_capability_family_is_missing():
@@ -320,3 +348,260 @@ def test_collection_plan_contains_all_capability_family_manufacturing_contracts(
     assert set(plan["family_control_surfaces"]) == set(FAMILY_CONTROL_SURFACES)
     assert "capability-family-coverage.json" in plan["required_outputs"]
     assert "capability-building-block-manufacturing-map.json" in plan["required_outputs"]
+
+
+
+def _value_rows_for_one_family():
+    family = "arithmetic_numerical_reasoning"
+    base_cost = {
+        "prompt_tokens_observed": 100,
+        "output_tokens_observed": 20,
+        "wall_seconds": 2.0,
+    }
+    rows = []
+    # Baseline frontier at multiple levels with one replicated level.
+    for level, score, seed in [
+        (0, 1.0, 42),
+        (2, 1.0, 42),
+        (5, 0.0, 42),
+        (8, 0.0, 42),
+        (10, 0.0, 42),
+        (2, 1.0, 43),
+    ]:
+        rows.append({
+            "family_id": family,
+            "fixture_id": f"base-l{level}",
+            "difficulty_level": level,
+            "intervention_id": "CONTROL",
+            "intervention_category": "CONTROL",
+            "score": score,
+            "control_score": score,
+            "seed": seed,
+            "cost": dict(base_cost),
+            "control_cost": dict(base_cost),
+        })
+
+    categories = list(FAMILY_CONTROL_SURFACES)
+    for index, category in enumerate(categories):
+        # Fail-side rescue trial.
+        rows.append({
+            "family_id": family,
+            "fixture_id": f"fail-{category}",
+            "difficulty_level": 5,
+            "intervention_id": f"IV-{category}",
+            "intervention_category": category,
+            "intervention_mode": "single",
+            "score": 1.0,
+            "control_score": 0.0,
+            "delta": 1.0,
+            "seed": 42,
+            "cost": {
+                "prompt_tokens_observed": 90,
+                "output_tokens_observed": 20,
+                "wall_seconds": 1.5,
+            },
+            "control_cost": dict(base_cost),
+            "task_text": "x",
+            "control_response_text": "bad",
+            "treatment_response_text": "good",
+            "phase": "family_control_floor",
+        })
+        # Pass-side sentinel; make prompt control harmful so negative evidence
+        # has a concrete exploitation path.
+        harmful = category == "PROMPT_CONTROL"
+        rows.append({
+            "family_id": family,
+            "fixture_id": f"pass-{category}",
+            "difficulty_level": 2,
+            "intervention_id": f"IV-{category}",
+            "intervention_category": category,
+            "intervention_mode": "single",
+            "score": 0.0 if harmful else 1.0,
+            "control_score": 1.0,
+            "delta": -1.0 if harmful else 0.0,
+            "seed": 42,
+            "cost": {
+                "prompt_tokens_observed": 90,
+                "output_tokens_observed": 20,
+                "wall_seconds": 1.5,
+            },
+            "control_cost": dict(base_cost),
+            "task_text": "x",
+            "control_response_text": "good",
+            "treatment_response_text": "bad" if harmful else "good",
+            "phase": "family_control_floor",
+        })
+
+    # Explicit prompt-factor evidence.
+    rows.append({
+        "family_id": family,
+        "fixture_id": "grammar",
+        "difficulty_level": 5,
+        "intervention_id": "GRAM-REQ-01",
+        "intervention_category": "PROMPT_CONTROL",
+        "intervention_mode": "grammar_control",
+        "primitive_id": "REQ",
+        "placement": "prefix",
+        "representation": "prose",
+        "dose": 1.0,
+        "recurrence": 1,
+        "score": 1.0,
+        "control_score": 0.0,
+        "delta": 1.0,
+        "seed": 42,
+        "cost": dict(base_cost),
+        "control_cost": dict(base_cost),
+        "phase": "mechanism_coverage_floor",
+    })
+    return rows
+
+
+def test_value_layer_turns_positive_negative_null_and_cost_into_manufacturing_data():
+    family = "arithmetic_numerical_reasoning"
+    rows = _value_rows_for_one_family()
+    interventions = [
+        {"id": f"IV-{category}", "category": category, "mode": "single"}
+        for category in FAMILY_CONTROL_SURFACES
+    ] + [{
+        "id": "GRAM-REQ-01",
+        "category": "PROMPT_CONTROL",
+        "mode": "grammar_control",
+        "primitive_id": "REQ",
+        "placement": "prefix",
+        "representation": "prose",
+        "dose": 1.0,
+        "recurrence": 1,
+    }]
+
+    tensor = build_control_response_tensor(rows, interventions, [family])
+    assert tensor["entry_count"] >= len(FAMILY_CONTROL_SURFACES)
+
+    negative = build_negative_effect_exploitation(tensor, [family])
+    assets = negative["families"][family]["negative_assets"]
+    prompt_asset = next(
+        row for row in assets if row["intervention_id"] == "IV-PROMPT_CONTROL"
+    )
+    assert "CONDITIONAL_GATE" in prompt_asset["uses"]
+    assert "REGRESSION_SENTINEL" in prompt_asset["uses"]
+    assert "CONTRASTIVE_TUNING_NEGATIVE" in prompt_asset["uses"]
+    assert prompt_asset["base_score_preservation_value"] > 0
+    assert prompt_asset["safe_replacement"]["intervention_id"] in {
+        "GRAM-REQ-01",
+        "DIRECT",
+    }
+
+    dossiers = build_family_value_dossiers(
+        rows,
+        interventions,
+        [family],
+        FAMILY_CONTROL_SURFACES,
+    )
+    dossier = dossiers["families"][family]
+    assert dossier["critical_value_ready"] is True
+    assert dossier["advancement_ready"] is True
+    assert "HARNESS_CAPABILITY_LIFT" in dossier["advancement_paths"]
+    assert "NEGATIVE_GATING_SCORE_PROTECTION" in dossier["advancement_paths"]
+    assert dossier["best_latency_paths"]
+
+    completeness = build_value_completeness(dossiers)
+    assert completeness["all_families_critical_value_ready"] is True
+    assert len(CRITICAL_FAMILY_VALUE_DIMENSIONS) >= 20
+    assert len(FAMILY_VALUE_DIMENSIONS) > len(CRITICAL_FAMILY_VALUE_DIMENSIONS)
+
+
+def test_every_observation_is_indexed_into_multiple_value_channels():
+    rows = _value_rows_for_one_family()
+    index = observation_value_index(rows)
+    assert len(index) == len(rows)
+
+    negative = next(
+        row for row in index
+        if row["intervention_id"] == "IV-PROMPT_CONTROL"
+        and "NEGATIVE_TRANSFER" in row["value_channels"]
+    )
+    assert {
+        "RAW_EVIDENCE",
+        "COST_ACCOUNTING",
+        "FAMILY_MANUFACTURING",
+        "ROUTING_EVIDENCE",
+        "CONTRASTIVE_TUNING_NEGATIVE",
+        "REGRESSION_SENTINEL",
+    } <= set(negative["value_channels"])
+
+
+
+def test_test12_stratification_preserves_blind_and_protected_exactly():
+    cases = _cases()
+    legacy = partition_cases(cases)
+    stratified = partition_test12_cases(cases)
+
+    assert {
+        row["id"] for row in stratified["TEST2_BLIND"]
+    } == {
+        row["id"] for row in legacy["TEST2_BLIND"]
+    }
+    assert {
+        row["id"] for row in stratified["TEST3_PROTECTED"]
+    } == {
+        row["id"] for row in legacy["TEST3_PROTECTED"]
+    }
+
+    discovery_counts = {
+        family: sum(
+            1 for row in stratified["DISCOVERY"] if row["category"] == family
+        )
+        for family in TEST2_CAPABILITY_FAMILIES
+    }
+    validation_counts = {
+        family: sum(
+            1 for row in stratified["VALIDATION"] if row["category"] == family
+        )
+        for family in TEST2_CAPABILITY_FAMILIES
+    }
+    assert min(discovery_counts.values()) >= 3
+    assert min(validation_counts.values()) >= 1
+
+
+def test_direct_control_is_never_pruned_before_family_safe_final_selection():
+    registry = [
+        {"policy_id": "DIRECT", "mode": "direct"},
+        {"policy_id": "FAST", "mode": "static"},
+        {"policy_id": "RISKY", "mode": "static"},
+    ]
+    scores = {
+        "DIRECT": {"net_value": 0.0},
+        "FAST": {"net_value": 1.0},
+        "RISKY": {"net_value": 2.0},
+    }
+    kept = _top_policies(registry, scores, 2)
+    assert "DIRECT" in {row["policy_id"] for row in kept}
+
+    family_scores = {
+        "DIRECT": {
+            family: {
+                "mean_delta": 0.0,
+                "regression_rate": 0.0,
+            }
+            for family in TEST2_CAPABILITY_FAMILIES
+        },
+        "RISKY": {
+            family: {
+                "mean_delta": (-1.0 if family == TEST2_CAPABILITY_FAMILIES[0] else 1.0),
+                "regression_rate": (1.0 if family == TEST2_CAPABILITY_FAMILIES[0] else 0.0),
+            }
+            for family in TEST2_CAPABILITY_FAMILIES
+        },
+    }
+    final = _top_family_safe_policies(
+        [registry[0], registry[2]],
+        scores,
+        family_scores,
+        keep=1,
+        max_family_regression_rate=0.05,
+    )
+    assert final[0]["policy_id"] == "DIRECT"
+
+
+def test_tuning_config_requires_all_40_validation_families():
+    config = load_config()
+    assert config["test12_tuning"]["minimum_validation_families"] == 40

@@ -79,6 +79,9 @@ TEST2_CAPABILITY_FAMILIES: tuple[str, ...] = (
 FAMILY_CONTROL_SURFACES: tuple[str, ...] = (
     "PROMPT_CONTROL",
     "REASONING_MODE",
+    "GENERATION_BUDGET",
+    "CONTEXT_WINDOW",
+    "COMPUTE_COST_ROUTING",
     "PLANNING",
     "VERIFICATION",
     "RETRY_RECOVERY",
@@ -97,19 +100,31 @@ from .test12_toollab import (
     score_final,
     tool_system_prompt,
 )
+from .test12_value import (
+    FAMILY_VALUE_DIMENSIONS,
+    CRITICAL_FAMILY_VALUE_DIMENSIONS,
+    build_control_response_tensor,
+    build_family_value_dossiers,
+    build_value_completeness,
+    build_frontier_shift_map,
+    build_compute_quality_elasticity,
+    build_negative_effect_exploitation,
+    contrastive_negative_corpus,
+    observation_value_index,
+)
 
-COLLECTION_HARD_SECONDS = (6 * 60 * 60) + (15 * 60)
-COLLECTION_ACTIVE_SECONDS = 6 * 60 * 60
+COLLECTION_HARD_SECONDS = (7 * 60 * 60) + (5 * 60)
+COLLECTION_ACTIVE_SECONDS = (6 * 60 * 60) + (50 * 60)
 HARD_SECONDS = COLLECTION_HARD_SECONDS
 ACTIVE_SECONDS = COLLECTION_ACTIVE_SECONDS
 CALL_START_CUTOFF_SECONDS = COLLECTION_ACTIVE_SECONDS
 
-# Six active hours; the extra 15 minutes is reserved for preflight/finalization.
+# Six-hours-fifty-minutes active; the extra 15 minutes is reserved for preflight/finalization.
 # Adaptive early-stop may finish sooner once coverage + uncertainty criteria are met.
 PHASES = (
     ("baseline_capability_map", 35 * 60),
     ("fractional_compute_surface", 25 * 60),
-    ("capability_family_manufacturing_floor", 50 * 60),
+    ("capability_family_manufacturing_floor", 100 * 60),
     ("mechanism_coverage_floor", 70 * 60),
     ("real_tool_execution", 25 * 60),
     ("failure_phenotype_replay", 35 * 60),
@@ -145,7 +160,7 @@ IMPROVEMENT_SURFACE = (
 
 RULES = (
     "a new model requires no prior model-specific Test 1 or Test 1.1 run; historical mechanisms are seeds, never evidence for the new model",
-    "collection + tuning hard ceilings sum to 12h30m, leaving operational buffer below the 14-hour end-to-end target",
+    "collection + tuning hard ceilings sum to 13h20m, preserving the full campaign while remaining below the 14-hour end-to-end target",
     "TEST2_BLIND is prohibited",
     "TEST3_PROTECTED is prohibited",
     "every mechanism family receives a coverage floor before adaptive pruning",
@@ -156,6 +171,9 @@ RULES = (
     "multi-call controllers record every physical model call and compete on value per call token and second",
     "intermediate planner critic memory and router outputs are evidence but are not scored as final answers",
     "negative transfer blocks global promotion even when a mechanism rescues a local family",
+    "negative and null results are first-class assets: convert them into vetoes, boundaries, sentinels, pruning rules, contrastive tuning examples, or compensation targets rather than discarding them",
+    "every observation must be reused across all applicable value channels: capability, reliability, cost, routing, manufacturing, negative-transfer, and tuning evidence",
+    "no valuable existing experiment may be removed to create a new value type; new analyses and probes are additive",
     "thinking mode reasoning effort generation budget context window temperature and seed are explicit factors",
     "memory and context compression must preserve decisive task evidence rather than invent state",
     "tool-policy mechanisms are tested both on benchmark tool outputs and on a deterministic in-process synthetic tool harness with real execution and error feedback",
@@ -190,6 +208,14 @@ REQUIRED_OUTPUTS = (
     "mechanism-coverage-ledger.json",
     "capability-family-coverage.json",
     "capability-building-block-manufacturing-map.json",
+    "capability-improvement-dossiers.json",
+    "family-value-completeness.json",
+    "control-response-tensor.json",
+    "frontier-shift-map.json",
+    "compute-quality-elasticity-map.json",
+    "negative-effect-exploitation-map.json",
+    "contrastive-negative-corpus.jsonl",
+    "observation-value-index.jsonl",
     "reasoning-compute-map.json",
     "controller-mechanism-map.json",
     "context-memory-state-map.json",
@@ -484,8 +510,66 @@ def _read_jsonl(path: Path) -> list[dict[str, Any]]:
     return rows
 
 
+def partition_test12_cases(
+    cases: list[dict[str, Any]],
+) -> dict[str, list[dict[str, Any]]]:
+    """Stratify only the already-open Test-1.2 pool by capability family.
+
+    TEST2_BLIND and TEST3_PROTECTED remain byte-for-byte the legacy partitions.
+    Only legacy DISCOVERY + VALIDATION are rebalanced so each capability family
+    has enough collection examples and at least one tuning example.
+    """
+    legacy = partition_cases(cases)
+    result = {
+        "DISCOVERY": [],
+        "VALIDATION": [],
+        "TEST2_BLIND": list(legacy["TEST2_BLIND"]),
+        "TEST3_PROTECTED": list(legacy["TEST3_PROTECTED"]),
+    }
+    open_pool = list(legacy["DISCOVERY"]) + list(legacy["VALIDATION"])
+    by_family: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for case in open_pool:
+        by_family[_family(case)].append(case)
+
+    for family in sorted(by_family):
+        pool = sorted(
+            by_family[family],
+            key=lambda row: (
+                int(row.get("difficulty_level", 0)),
+                _fixture_id(row),
+            ),
+        )
+        if len(pool) <= 1:
+            result["DISCOVERY"].extend(pool)
+            continue
+
+        # Keep at least three collection examples when the open pool permits it.
+        # Remaining capacity supplies tuning examples. Selection is spread over
+        # the difficulty order rather than taking only easy or hard cases.
+        max_validation = max(1, len(pool) - 3)
+        desired_validation = max(1, len(pool) // 4)
+        validation_count = min(max_validation, desired_validation)
+
+        selected_indices: set[int] = set()
+        for slot in range(1, validation_count + 1):
+            index = round(slot * (len(pool) - 1) / (validation_count + 1))
+            while index in selected_indices and index + 1 < len(pool):
+                index += 1
+            while index in selected_indices and index - 1 >= 0:
+                index -= 1
+            selected_indices.add(index)
+
+        for index, case in enumerate(pool):
+            target = "VALIDATION" if index in selected_indices else "DISCOVERY"
+            result[target].append(case)
+
+    for name in result:
+        result[name] = sorted(result[name], key=_fixture_id)
+    return result
+
+
 def build_test12_plan(cases: list[dict[str, Any]], *, seed_run: str | None = None) -> dict[str, Any]:
-    parts = partition_cases(cases)
+    parts = partition_test12_cases(cases)
     return {
         "schema_version": 2,
         "campaign": "model-harness-compiler-test1.2-collection",
@@ -496,6 +580,16 @@ def build_test12_plan(cases: list[dict[str, Any]], *, seed_run: str | None = Non
         "call_start_cutoff_seconds": CALL_START_CUTOFF_SECONDS,
         "phases": [{"name": name, "seconds": seconds} for name, seconds in PHASES],
         "partition_counts": {name: len(rows) for name, rows in parts.items()},
+        "discovery_family_counts": {
+            family: sum(1 for case in parts["DISCOVERY"] if _family(case) == family)
+            for family in TEST2_CAPABILITY_FAMILIES
+        },
+        "validation_family_counts": {
+            family: sum(1 for case in parts["VALIDATION"] if _family(case) == family)
+            for family in TEST2_CAPABILITY_FAMILIES
+        },
+        "minimum_discovery_per_family": 3,
+        "minimum_validation_per_family": 1,
         "allowed_partitions": ["DISCOVERY"],
         "reserved_for_tuning": ["VALIDATION"],
         "prohibited_partitions": ["TEST2_BLIND", "TEST3_PROTECTED"],
@@ -524,7 +618,8 @@ def build_test12_plan(cases: list[dict[str, Any]], *, seed_run: str | None = Non
             "successive_halving": True,
             "exact_failure_replay": True,
             "oracle_routing_prohibited": True,
-            "early_stop_when": "coverage complete and no material decision boundary remains above uncertainty threshold",
+            "campaign_early_stop": False,
+            "adaptive_rule": "adapt replication depth only after mandatory breadth; never skip a declared control family or phase",
         },
         "required_outputs": list(REQUIRED_OUTPUTS),
         "scope_boundaries": {
@@ -540,9 +635,9 @@ def build_test12_plan(cases: list[dict[str, Any]], *, seed_run: str | None = Non
 
 def validate_test12_plan(plan: dict[str, Any]) -> None:
     if int(plan["wall_clock_seconds"]) != COLLECTION_HARD_SECONDS:
-        raise ValueError("Test 1.2 collection hard ceiling must be 6h15m")
+        raise ValueError("Test 1.2 collection hard ceiling must be 7h05m")
     if sum(int(row["seconds"]) for row in plan["phases"]) != COLLECTION_ACTIVE_SECONDS:
-        raise ValueError("Test 1.2 collection active phases must total exactly six hours")
+        raise ValueError("Test 1.2 collection active phases must total exactly 6h50m")
     if plan.get("allowed_partitions") != ["DISCOVERY"]:
         raise ValueError("Test 1.2 collection may use DISCOVERY only")
     if plan.get("reserved_for_tuning") != ["VALIDATION"]:
@@ -563,6 +658,26 @@ def validate_test12_plan(plan: dict[str, Any]) -> None:
         raise ValueError("Test 1.2 required capability-family manifest drifted")
     if set(plan.get("family_control_surfaces") or []) != set(FAMILY_CONTROL_SURFACES):
         raise ValueError("Test 1.2 per-family control-surface contract drifted")
+    discovery_short = [
+        family
+        for family, count in (plan.get("discovery_family_counts") or {}).items()
+        if int(count) < int(plan.get("minimum_discovery_per_family", 3))
+    ]
+    if discovery_short:
+        raise ValueError(
+            "Test 1.2 DISCOVERY lacks manufacturing depth for families: "
+            + ", ".join(discovery_short)
+        )
+    validation_short = [
+        family
+        for family, count in (plan.get("validation_family_counts") or {}).items()
+        if int(count) < int(plan.get("minimum_validation_per_family", 1))
+    ]
+    if validation_short:
+        raise ValueError(
+            "Test 1.2 VALIDATION lacks tuning coverage for families: "
+            + ", ".join(validation_short)
+        )
     missing_surface = sorted(set(IMPROVEMENT_SURFACE) - set(plan.get("improvement_surface") or []))
     if missing_surface:
         raise ValueError(f"Test 1.2 improvement surface incomplete: {missing_surface}")
@@ -631,7 +746,7 @@ def load_test11_source(results_root: Path, run_id: str, cases: list[dict[str, An
 
 
 def fresh_model_source(cases: list[dict[str, Any]]) -> dict[str, Any]:
-    parts = partition_cases(cases)
+    parts = partition_test12_cases(cases)
     return {
         "run_id": "FRESH-MODEL",
         "run_dir": None,
@@ -801,7 +916,7 @@ class Test12Campaign:
         self.start = clock() if started_monotonic is None else float(started_monotonic)
         self.active_end = self.start + ACTIVE_SECONDS
         self.call_start_cutoff = self.start + CALL_START_CUTOFF_SECONDS
-        self.partitions = partition_cases(cases)
+        self.partitions = partition_test12_cases(cases)
         self.case_by_id = {_fixture_id(case): case for case in cases}
         self.interventions = build_intervention_bank(source, max_source_recipes=int(self.cfg["max_source_recipes"]))
         self.intervention_by_id = {str(row["id"]): row for row in self.interventions}
@@ -1138,6 +1253,13 @@ class Test12Campaign:
             "intervention_id": str(intervention.get("id") or "CONTROL"),
             "intervention_category": str(intervention.get("category") or "CONTROL"),
             "intervention_mode": str(intervention.get("mode") or "control"),
+            "intervention_label": intervention.get("label"),
+            "primitive_id": intervention.get("primitive_id"),
+            "placement": intervention.get("placement"),
+            "representation": intervention.get("representation"),
+            "dose": intervention.get("dose"),
+            "recurrence": intervention.get("recurrence"),
+            "parents": copy.deepcopy(intervention.get("parents")),
             "router_choice": intervention.get("router_choice"),
             "risk_gate": intervention.get("risk_gate"),
             "classification": copy.deepcopy(row.get("classification") or {}),
@@ -1151,7 +1273,7 @@ class Test12Campaign:
             "context_request": (row.get("experiment") or {}).get("context_request"),
             "temperature": (row.get("experiment") or {}).get("temperature"),
             "seed": int(seed),
-            "model_calls_per_application": 0 if str(intervention.get("id")) == "CONTROL" else len(aux) + 1,
+            "model_calls_per_application": len(aux) + 1,
             "auxiliary_stage_count": len(aux),
             "auxiliary_stages": [
                 {
@@ -1168,6 +1290,14 @@ class Test12Campaign:
                 "prompt_tokens_observed": prompt_tokens,
                 "output_tokens_observed": output_tokens,
                 "wall_seconds": latency_s,
+            },
+            "control_cost": {
+                "prompt_tokens_observed": float((control.get("metrics") or {}).get("prompt_eval_count") or 0),
+                "output_tokens_observed": float((control.get("metrics") or {}).get("eval_count") or 0),
+                "wall_seconds": (
+                    float((control.get("timing") or {}).get("client_latency_ns") or 0)
+                    / 1_000_000_000.0
+                ),
             },
             "evidence_refs": copy.deepcopy(row.get("evidence_refs") or {}),
         }
@@ -1521,6 +1651,9 @@ def _representative_by_category(
     preference = {
         "PROMPT_CONTROL": ("CTRL-DECOMPOSE", "CTRL-EVIDENCE", "CTRL-CONSTRAINTS"),
         "REASONING_MODE": ("REASON-MEDIUM", "REASON-LOW", "REASON-HIGH"),
+        "GENERATION_BUDGET": ("BUDGET-512", "BUDGET-1024"),
+        "CONTEXT_WINDOW": ("CTX-8192", "CTX-16384"),
+        "COMPUTE_COST_ROUTING": ("TEMP-02", "TEMP-0", "TEMP-07"),
         "PLANNING": ("PLAN-INLINE", "PLAN-SOLVE", "PLAN-SOLVE-VERIFY"),
         "VERIFICATION": ("SOLVE-VERIFY",),
         "RETRY_RECOVERY": ("MINIMAL-REPAIR", "FAILURE-DIAGNOSE-RETRY"),
@@ -1540,11 +1673,90 @@ def _representative_by_category(
     return result
 
 
+def _family_boundary_cases(
+    campaign: Test12Campaign,
+    family: str,
+    pool: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Return pass-side and fail-side frontier probes from current baseline data.
+
+    If the measured frontier is outside the tested range, return the easiest
+    and hardest available cases so the family still produces useful ceiling/
+    floor evidence.
+    """
+    baseline_by_fixture: dict[str, list[float]] = defaultdict(list)
+    for row in campaign.rows:
+        if (
+            row.get("family_id") == family
+            and row.get("intervention_id") == "CONTROL"
+            and row.get("fixture_id")
+        ):
+            baseline_by_fixture[str(row["fixture_id"])].append(
+                float(row.get("score", 0.0))
+            )
+    measured = []
+    for case in pool:
+        fixture_id = _fixture_id(case)
+        values = baseline_by_fixture.get(fixture_id)
+        if not values:
+            continue
+        measured.append(
+            (
+                int(case.get("difficulty_level", 0)),
+                float(median(values)),
+                case,
+            )
+        )
+    if not measured:
+        ordered = sorted(
+            pool,
+            key=lambda row: (
+                int(row.get("difficulty_level", 0)),
+                _fixture_id(row),
+            ),
+        )
+        return [ordered[0], ordered[-1]] if len(ordered) > 1 else ordered
+
+    passes = [row for row in measured if row[1] >= 1.0]
+    fails = [row for row in measured if row[1] < 1.0]
+    chosen: list[dict[str, Any]] = []
+
+    if passes:
+        # Hardest known pass is the pass-side boundary sentinel.
+        chosen.append(max(passes, key=lambda row: (row[0], row[1]))[2])
+    if fails:
+        # Easiest known fail is the fail-side boundary target.
+        fail_case = min(fails, key=lambda row: (row[0], row[1]))[2]
+        if not chosen or _fixture_id(fail_case) != _fixture_id(chosen[0]):
+            chosen.append(fail_case)
+
+    if len(chosen) < 2:
+        ordered = sorted(
+            pool,
+            key=lambda row: (
+                int(row.get("difficulty_level", 0)),
+                _fixture_id(row),
+            ),
+        )
+        for case in (ordered[0], ordered[-1]):
+            if all(_fixture_id(case) != _fixture_id(row) for row in chosen):
+                chosen.append(case)
+            if len(chosen) >= 2:
+                break
+    return chosen
+
+
 def phase_family_control_floor(
     campaign: Test12Campaign,
     deadline: float,
 ) -> dict[str, Any]:
-    """Every canonical capability family sees every mandatory harness surface."""
+    """Every canonical family sees every mandatory surface on its frontier.
+
+    Each control surface is tested on both the hardest known pass and easiest
+    known fail when available. This turns a simple "did it help?" probe into an
+    activation-boundary experiment: when to use the block, when not to use it,
+    and whether it buys capability, reliability, or efficiency.
+    """
     start = len(campaign.rows)
     representatives = _representative_by_category(campaign)
     by_family: dict[str, list[dict[str, Any]]] = defaultdict(list)
@@ -1556,23 +1768,52 @@ def phase_family_control_floor(
         pool = by_family.get(family) or []
         if not pool:
             continue
-        case = min(
+        probes = _family_boundary_cases(campaign, family, pool)
+        for category in FAMILY_CONTROL_SURFACES:
+            intervention = representatives.get(category)
+            if intervention is None:
+                continue
+            for case in probes:
+                if not campaign.can_start(deadline):
+                    break
+                campaign.treatment(
+                    case,
+                    deadline,
+                    phase="family_control_floor",
+                    intervention=intervention,
+                    seed=int(campaign.cfg["seeds"][0]),
+                )
+
+    # Push beyond the boundary: every family also receives three cheap
+    # amplifier probes on its hardest available DISCOVERY fixture. These are
+    # additive to the pass/fail boundary matrix and specifically search for
+    # frontier extension rather than merely recovery at the current edge.
+    hard_probe_categories = (
+        "PROMPT_CONTROL",
+        "REASONING_MODE",
+        "VERIFICATION",
+    )
+    for family in TEST2_CAPABILITY_FAMILIES:
+        pool = by_family.get(family) or []
+        if not pool:
+            continue
+        hardest = max(
             pool,
             key=lambda row: (
-                abs(int(row.get("difficulty_level", 0)) - 5),
+                int(row.get("difficulty_level", 0)),
                 _fixture_id(row),
             ),
         )
-        for category in FAMILY_CONTROL_SURFACES:
+        for category in hard_probe_categories:
             if not campaign.can_start(deadline):
                 break
             intervention = representatives.get(category)
             if intervention is None:
                 continue
             campaign.treatment(
-                case,
+                hardest,
                 deadline,
-                phase="family_control_floor",
+                phase="family_frontier_extension",
                 intervention=intervention,
                 seed=int(campaign.cfg["seeds"][0]),
             )
@@ -1580,7 +1821,7 @@ def phase_family_control_floor(
     campaign.positive_work(
         "family_control_floor",
         start,
-        "all 40 Test-2 capability families x mandatory harness-control surfaces",
+        "all 40 capability families x mandatory harness surfaces on pass-side/fail-side frontier probes",
     )
     rows = campaign.rows[start:]
     return _group_summary(
@@ -1588,6 +1829,7 @@ def phase_family_control_floor(
         campaign.cfg,
         lambda row: f"{row['family_id']}|{row['intervention_category']}",
     )
+
 
 
 def phase_controller_screen(campaign: Test12Campaign, deadline: float) -> dict[str, Any]:
@@ -2350,6 +2592,36 @@ def write_outputs(campaign: Test12Campaign, results: dict[str, Any]) -> None:
     grammar_coverage = _control_grammar_coverage(campaign)
     family_coverage = _capability_family_coverage(campaign)
     manufacturing_map = _capability_building_block_map(campaign)
+    response_tensor = build_control_response_tensor(
+        campaign.rows,
+        campaign.interventions,
+        TEST2_CAPABILITY_FAMILIES,
+    )
+    family_dossiers = build_family_value_dossiers(
+        campaign.rows,
+        campaign.interventions,
+        TEST2_CAPABILITY_FAMILIES,
+        FAMILY_CONTROL_SURFACES,
+    )
+    value_completeness = build_value_completeness(family_dossiers)
+    frontier_shift = build_frontier_shift_map(
+        campaign.rows,
+        response_tensor,
+        TEST2_CAPABILITY_FAMILIES,
+    )
+    compute_elasticity = build_compute_quality_elasticity(
+        response_tensor,
+        TEST2_CAPABILITY_FAMILIES,
+    )
+    negative_exploitation = build_negative_effect_exploitation(
+        response_tensor,
+        TEST2_CAPABILITY_FAMILIES,
+    )
+    negative_corpus = contrastive_negative_corpus(
+        campaign.rows,
+        negative_exploitation,
+    )
+    value_index = observation_value_index(campaign.rows)
     tuning_rows = _tuning_corpus_rows(campaign)
     harness_blueprint = _harness_policy_blueprint(campaign)
     store.write_json("full-control-candidate-registry.json", {
@@ -2361,6 +2633,23 @@ def write_outputs(campaign: Test12Campaign, results: dict[str, Any]) -> None:
     store.write_json("control-grammar-coverage.json", grammar_coverage, producer="test1.2", stage="report")
     store.write_json("capability-family-coverage.json", family_coverage, producer="test1.2", stage="report")
     store.write_json("capability-building-block-manufacturing-map.json", manufacturing_map, producer="test1.2", stage="report")
+    store.write_json("capability-improvement-dossiers.json", family_dossiers, producer="test1.2", stage="report")
+    store.write_json("family-value-completeness.json", value_completeness, producer="test1.2", stage="report")
+    store.write_json("control-response-tensor.json", response_tensor, producer="test1.2", stage="report")
+    store.write_json("frontier-shift-map.json", frontier_shift, producer="test1.2", stage="report")
+    store.write_json("compute-quality-elasticity-map.json", compute_elasticity, producer="test1.2", stage="report")
+    store.write_json("negative-effect-exploitation-map.json", negative_exploitation, producer="test1.2", stage="report")
+    if negative_corpus:
+        for row in negative_corpus:
+            store.append_jsonl("contrastive-negative-corpus.jsonl", row)
+    else:
+        store.append_jsonl("contrastive-negative-corpus.jsonl", {
+            "schema_version":1,
+            "record_type":"EMPTY_NEGATIVE_CORPUS",
+            "reason":"no observed score-decreasing treatment in collection",
+        })
+    for row in value_index:
+        store.append_jsonl("observation-value-index.jsonl", row)
     for tuning_row in tuning_rows:
         store.append_jsonl("tuning-example-corpus.jsonl", tuning_row)
     store.write_json("harness-policy-blueprint.json", harness_blueprint, producer="test1.2", stage="report")
@@ -2405,6 +2694,12 @@ def write_outputs(campaign: Test12Campaign, results: dict[str, Any]) -> None:
         "capability_building_block_manufacturing_map":"capability-building-block-manufacturing-map.json",
         "all_capability_families_manufacturing_ready":family_coverage["all_families_manufacturing_ready"],
         "capability_family_count":len(TEST2_CAPABILITY_FAMILIES),
+        "capability_improvement_dossiers":"capability-improvement-dossiers.json",
+        "negative_effect_exploitation":"negative-effect-exploitation-map.json",
+        "control_response_tensor":"control-response-tensor.json",
+        "family_value_dimensions":list(FAMILY_VALUE_DIMENSIONS),
+        "critical_family_value_dimensions":list(CRITICAL_FAMILY_VALUE_DIMENSIONS),
+        "all_families_critical_value_ready":value_completeness["all_families_critical_value_ready"],
     }, producer="test1.2", stage="report")
     store.write_json("scope-boundaries.json", {"schema_version":1,**scope}, producer="test1.2", stage="report")
     store.write_json("assurance-map-1.2.json", assurance, producer="test1.2", stage="report")

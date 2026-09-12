@@ -32,6 +32,7 @@ from .test12_campaign import (
     build_intervention_bank,
     build_test12_plan,
     fresh_model_source,
+    partition_test12_cases,
     load_test11_source,
     run_test12_campaign,
     validate_test12_plan,
@@ -943,7 +944,7 @@ class BenchmarkRunner(_CoreBenchmarkRunner):
         seed_run: str | None = None,
         dry_run: bool = False,
     ) -> Path:
-        """Run the <=6h15 Test-1.2 collection stage of the model-to-harness compiler."""
+        """Run the <=7h05 Test-1.2 collection stage of the model-to-harness compiler."""
         test_cfg = self.config.get("test12_campaign") or {}
         expected_calls = int(test_cfg.get("expected_calls", 5600))
         safety_cap = int(test_cfg.get("safety_call_cap", 14000))
@@ -974,7 +975,7 @@ class BenchmarkRunner(_CoreBenchmarkRunner):
                 "schema_version": 1,
                 "partitions": {
                     name: [str(case.get("id")) for case in rows]
-                    for name, rows in partition_cases(self.suite.get("cases", []) or []).items()
+                    for name, rows in partition_test12_cases(self.suite.get("cases", []) or []).items()
                 },
             },
             producer="test1.2",
@@ -1209,7 +1210,7 @@ class BenchmarkRunner(_CoreBenchmarkRunner):
                 "schema_version": 1,
                 "partitions": {
                     name: [str(case.get("id")) for case in rows]
-                    for name, rows in partition_cases(self.suite.get("cases", []) or []).items()
+                    for name, rows in partition_test12_cases(self.suite.get("cases", []) or []).items()
                 },
             },
             producer="test1.2-tuning",

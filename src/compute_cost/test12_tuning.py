@@ -19,12 +19,15 @@ from typing import Any, Callable
 from .evidence import EvidenceStore
 from .test1_campaign import _balanced_cases, _family, _fixture_id, partition_cases
 from .test12_campaign import (
+    COLLECTION_HARD_SECONDS,
+    TEST2_CAPABILITY_FAMILIES,
     Test12Campaign,
     _cost_value_frontier,
     _group_summary,
     _rank_mechanisms,
     build_intervention_bank,
     fresh_model_source,
+    partition_test12_cases,
 )
 
 TUNING_HARD_SECONDS = (6 * 60 * 60) + (15 * 60)
@@ -46,6 +49,14 @@ REQUIRED_COLLECTION_FILES = (
     "mechanism-coverage-ledger.json",
     "capability-family-coverage.json",
     "capability-building-block-manufacturing-map.json",
+    "capability-improvement-dossiers.json",
+    "family-value-completeness.json",
+    "control-response-tensor.json",
+    "frontier-shift-map.json",
+    "compute-quality-elasticity-map.json",
+    "negative-effect-exploitation-map.json",
+    "contrastive-negative-corpus.jsonl",
+    "observation-value-index.jsonl",
     "cost-value-frontier-1.2.json",
     "activation-boundary-map.json",
     "negative-transfer-map-1.2.json",
@@ -77,7 +88,7 @@ DEFAULT_TUNING_CONFIG = {
     "halving_cases": [24, 48, 96],
     "final_candidates": 4,
     "final_repeats": 2,
-    "minimum_validation_families": 30,
+    "minimum_validation_families": 40,
     "max_capability_regression_rate": 0.05,
     "minimum_positive_value": 0.0,
 }
@@ -114,6 +125,16 @@ def load_collection(results_root: Path, run_id: str) -> dict[str, Any]:
     manufacturing_map = _read_json(run_dir / "capability-building-block-manufacturing-map.json")
     if int(manufacturing_map.get("family_count", 0)) != 40:
         raise ValueError("collection manufacturing map does not contain all 40 capability families")
+    value_completeness = _read_json(run_dir / "family-value-completeness.json")
+    if not value_completeness.get("all_families_critical_value_ready"):
+        raise ValueError(
+            "collection lacks critical improvement information for capability families: "
+            + ", ".join(value_completeness.get("incomplete_families") or [])
+        )
+    improvement_dossiers = _read_json(run_dir / "capability-improvement-dossiers.json")
+    negative_exploitation = _read_json(run_dir / "negative-effect-exploitation-map.json")
+    frontier_shift = _read_json(run_dir / "frontier-shift-map.json")
+    compute_elasticity = _read_json(run_dir / "compute-quality-elasticity-map.json")
     registry = _read_json(run_dir / "full-control-candidate-registry.json")
     return {
         "run_id": run_id,
@@ -122,6 +143,11 @@ def load_collection(results_root: Path, run_id: str) -> dict[str, Any]:
         "coverage": coverage,
         "family_coverage": family_coverage,
         "manufacturing_map": manufacturing_map,
+        "value_completeness": value_completeness,
+        "improvement_dossiers": improvement_dossiers,
+        "negative_exploitation": negative_exploitation,
+        "frontier_shift": frontier_shift,
+        "compute_elasticity": compute_elasticity,
         "frontier": _read_json(run_dir / "cost-value-frontier-1.2.json"),
         "activation": _read_json(run_dir / "activation-boundary-map.json"),
         "negative": _read_json(run_dir / "negative-transfer-map-1.2.json"),
@@ -134,7 +160,7 @@ def load_collection(results_root: Path, run_id: str) -> dict[str, Any]:
 
 
 def build_tuning_plan(cases: list[dict[str, Any]], *, collection_run: str) -> dict[str, Any]:
-    parts = partition_cases(cases)
+    parts = partition_test12_cases(cases)
     return {
         "schema_version": 1,
         "campaign": "model-harness-compiler-test1.2-tuning",
@@ -146,8 +172,15 @@ def build_tuning_plan(cases: list[dict[str, Any]], *, collection_run: str) -> di
         "prohibited_partitions": ["DISCOVERY", "TEST2_BLIND", "TEST3_PROTECTED"],
         "partition_counts": {name: len(rows) for name, rows in parts.items()},
         "objective": "compile the smallest adaptive harness that maximizes validated capability gain and minimizes regressions, model calls, tokens, and latency",
+        "required_capability_families": list(TEST2_CAPABILITY_FAMILIES),
+        "required_capability_family_count": len(TEST2_CAPABILITY_FAMILIES),
+        "observed_validation_families": sorted({_family(case) for case in parts["VALIDATION"]}),
+        "missing_validation_families": sorted(
+            set(TEST2_CAPABILITY_FAMILIES) - {_family(case) for case in parts["VALIDATION"]}
+        ),
+        "per_family_non_regression_required": True,
         "required_outputs": list(REQUIRED_TUNING_OUTPUTS),
-        "total_two_run_hard_ceiling_seconds": TUNING_HARD_SECONDS + ((6 * 60 * 60) + (15 * 60)),
+        "total_two_run_hard_ceiling_seconds": TUNING_HARD_SECONDS + COLLECTION_HARD_SECONDS,
     }
 
 
@@ -162,6 +195,15 @@ def validate_tuning_plan(plan: dict[str, Any]) -> None:
         raise ValueError("tuning partition contract changed")
     if int(plan["total_two_run_hard_ceiling_seconds"]) >= 14 * 60 * 60:
         raise ValueError("two-run model-to-harness compiler exceeds 14-hour target")
+    if int(plan.get("required_capability_family_count", 0)) != 40:
+        raise ValueError("tuning must validate all 40 capability families")
+    if plan.get("missing_validation_families"):
+        raise ValueError(
+            "VALIDATION is missing required capability families: "
+            + ", ".join(plan["missing_validation_families"])
+        )
+    if plan.get("per_family_non_regression_required") is not True:
+        raise ValueError("tuning must enforce per-family non-regression")
 
 
 def _candidate_registry(collection: dict[str, Any], limit: int) -> list[dict[str, Any]]:
@@ -221,7 +263,6 @@ def _policy_candidates(collection: dict[str, Any], limit: int) -> list[dict[str,
         "policy_id":"ROUTER-COMPILED",
         "mode":"router",
         "route_map":route_map,
-        "tool_execution_policy":tool_execution_policy,
     })
     policies.append({
         "policy_id":"RISK-GATED-COMPILED",
@@ -256,6 +297,71 @@ def _score_policy_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+def _score_policies_by_family(
+    rows: list[dict[str, Any]],
+) -> dict[str, dict[str, Any]]:
+    grouped: dict[tuple[str, str], list[dict[str, Any]]] = defaultdict(list)
+    for row in rows:
+        grouped[
+            (str(row.get("policy_id")), str(row.get("family_id")))
+        ].append(row)
+    result: dict[str, dict[str, Any]] = defaultdict(dict)
+    for (policy_id, family_id), values in grouped.items():
+        result[policy_id][family_id] = _score_policy_rows(values)
+    return dict(result)
+
+
+def _top_family_safe_policies(
+    registry: list[dict[str, Any]],
+    global_scores: dict[str, Any],
+    family_scores: dict[str, dict[str, Any]],
+    *,
+    keep: int,
+    max_family_regression_rate: float,
+) -> list[dict[str, Any]]:
+    required = set(TEST2_CAPABILITY_FAMILIES)
+
+    def rank(policy: dict[str, Any]) -> tuple[Any, ...]:
+        policy_id = str(policy["policy_id"])
+        per_family = family_scores.get(policy_id) or {}
+        missing = required - set(per_family)
+        regressions = [
+            payload
+            for family, payload in per_family.items()
+            if family in required
+            and (
+                float(payload.get("mean_delta", 0.0)) < 0.0
+                or float(payload.get("regression_rate", 0.0))
+                > max_family_regression_rate
+            )
+        ]
+        safe = not missing and not regressions
+        minimum_delta = min(
+            (
+                float(payload.get("mean_delta", 0.0))
+                for family, payload in per_family.items()
+                if family in required
+            ),
+            default=-999.0,
+        )
+        improved_families = sum(
+            1
+            for family, payload in per_family.items()
+            if family in required and float(payload.get("mean_delta", 0.0)) > 0
+        )
+        global_net = float(
+            (global_scores.get(policy_id) or {}).get("net_value", -999.0)
+        )
+        return (
+            1 if safe else 0,
+            minimum_delta,
+            improved_families,
+            global_net,
+        )
+
+    return sorted(registry, key=rank, reverse=True)[: max(1, keep)]
+
+
 class TuningRun:
     def __init__(self, runner: Any, cases: list[dict[str, Any]], collection: dict[str, Any], *, clock: Callable[[],float]=time.monotonic, started: float|None=None):
         self.runner=runner
@@ -264,7 +370,7 @@ class TuningRun:
         self.clock=clock
         self.start=clock() if started is None else float(started)
         self.active_end=self.start+TUNING_ACTIVE_SECONDS
-        self.parts=partition_cases(cases)
+        self.parts=partition_test12_cases(cases)
         self.validation=self.parts["VALIDATION"]
         self.cfg={**DEFAULT_TUNING_CONFIG, **copy.deepcopy((runner.config.get("test12_tuning") or {}))}
         source=fresh_model_source(cases)
@@ -380,7 +486,15 @@ def _top_policies(registry: list[dict[str,Any]], scores: dict[str,Any], keep: in
         key=lambda p: float((scores.get(str(p["policy_id"])) or {}).get("net_value",-999)),
         reverse=True,
     )
-    return ranked[:max(1,keep)]
+    target=max(1,keep)
+    selected=ranked[:target]
+    direct=next((p for p in registry if str(p.get("policy_id"))=="DIRECT"),None)
+    if direct is not None and all(str(p.get("policy_id"))!="DIRECT" for p in selected):
+        if target == 1:
+            selected=[direct]
+        else:
+            selected=selected[: target-1] + [direct]
+    return selected
 
 
 def _fine_tuning_records(run: TuningRun, winner: dict[str,Any]) -> list[dict[str,Any]]:
@@ -420,6 +534,8 @@ def run_test12_tuning(runner: Any, cases: list[dict[str,Any]], *, collection_run
     ledger=[]
     current=policies
     aggregate_scores={}
+    final_confirmation_family_scores={}
+    final_confirmation_rows=[]
     for phase_name,seconds in TUNING_PHASES:
         deadline=min(run.active_end,phase_start+seconds)
         if phase_name=="validation_baseline":
@@ -444,8 +560,27 @@ def run_test12_tuning(runner: Any, cases: list[dict[str,Any]], *, collection_run
         elif phase_name=="residual_failure_replay":
             scores=_evaluate(run,current,_balanced_validation(run,len(run.validation)),deadline,seeds=[43])
         else:
-            scores=_evaluate(run,current,_balanced_validation(run,len(run.validation)),deadline,seeds=[42,44][:int(run.cfg["final_repeats"])])
-            current=_top_policies(current,scores,1)
+            final_start=len(run.rows)
+            scores=_evaluate(
+                run,
+                current,
+                _balanced_validation(run,len(run.validation)),
+                deadline,
+                seeds=[42,44][:int(run.cfg["final_repeats"])],
+            )
+            final_confirmation_rows=run.rows[final_start:]
+            final_confirmation_family_scores=_score_policies_by_family(
+                final_confirmation_rows
+            )
+            current=_top_family_safe_policies(
+                current,
+                scores,
+                final_confirmation_family_scores,
+                keep=1,
+                max_family_regression_rate=float(
+                    run.cfg["max_capability_regression_rate"]
+                ),
+            )
         aggregate_scores.update(scores)
         ledger.append({"phase":phase_name,"remaining_policy_ids":[p["policy_id"] for p in current],"scores":scores})
         phase_start=deadline
@@ -454,6 +589,23 @@ def run_test12_tuning(runner: Any, cases: list[dict[str,Any]], *, collection_run
     winner=current[0] if current else {"policy_id":"DIRECT","mode":"direct"}
     winner_rows=[row for row in run.rows if row.get("policy_id")==winner["policy_id"]]
     winner_summary=_score_policy_rows(winner_rows)
+    winner_family_validation=(
+        final_confirmation_family_scores.get(str(winner["policy_id"])) or {}
+    )
+    missing_winner_families=sorted(
+        set(TEST2_CAPABILITY_FAMILIES) - set(winner_family_validation)
+    )
+    regressing_winner_families=sorted(
+        family
+        for family, payload in winner_family_validation.items()
+        if family in TEST2_CAPABILITY_FAMILIES
+        and (
+            float(payload.get("mean_delta",0.0)) < 0.0
+            or float(payload.get("regression_rate",0.0))
+            > float(run.cfg["max_capability_regression_rate"])
+        )
+    )
+    family_safe=not missing_winner_families and not regressing_winner_families
     route_map=winner.get("route_map") or {}
     do_not_use=[
         key for key,value in ((collection.get("negative") or {}).get("effects") or {}).items()
@@ -475,15 +627,37 @@ def run_test12_tuning(runner: Any, cases: list[dict[str,Any]], *, collection_run
         "collection_run":collection_run,
         "winner_policy":winner,
         "winner_validation":winner_summary,
+        "winner_family_validation":winner_family_validation,
+        "all_40_families_non_regressing":family_safe,
+        "missing_validation_families":missing_winner_families,
+        "regressing_validation_families":regressing_winner_families,
         "route_map":route_map,
         "do_not_use":sorted(do_not_use),
+        "negative_effect_exploitation":copy.deepcopy(
+            collection.get("negative_exploitation") or {}
+        ),
+        "capability_advancement_paths":{
+            family: copy.deepcopy(payload.get("advancement_paths") or [])
+            for family, payload in (
+                (collection.get("improvement_dossiers") or {}).get("families") or {}
+            ).items()
+        },
+        "tool_execution_policy":tool_execution_policy,
         "direct_default_when_unmatched":True,
         "oracle_routing_prohibited":True,
-        "hard_ceiling_total_seconds":TUNING_HARD_SECONDS+((6*60*60)+(15*60)),
+        "hard_ceiling_total_seconds":TUNING_HARD_SECONDS+COLLECTION_HARD_SECONDS,
     }
     runner.store.write_json("successive-halving-ledger.json",{"schema_version":1,"stages":ledger},producer="test1.2-tuning",stage="report")
     runner.store.write_json("compiled-harness-policy.json",compiled,producer="test1.2-tuning",stage="report")
-    runner.store.write_json("compiled-harness-validation.json",{"schema_version":1,"winner":winner_summary,"all_policy_scores":aggregate_scores},producer="test1.2-tuning",stage="report")
+    runner.store.write_json("compiled-harness-validation.json",{
+        "schema_version":1,
+        "winner":winner_summary,
+        "winner_by_family":winner_family_validation,
+        "all_40_families_non_regressing":family_safe,
+        "missing_families":missing_winner_families,
+        "regressing_families":regressing_winner_families,
+        "all_policy_scores":aggregate_scores,
+    },producer="test1.2-tuning",stage="report")
     runner.store.write_json("do-not-use-registry.json",{"schema_version":1,"keys":sorted(do_not_use)},producer="test1.2-tuning",stage="report")
 
     ft=_fine_tuning_records(run,winner)
@@ -505,8 +679,15 @@ def run_test12_tuning(runner: Any, cases: list[dict[str,Any]], *, collection_run
         "collection_run":collection_run,
         "compiled_policy":"compiled-harness-policy.json",
         "validated_policy_summary":winner_summary,
+        "validated_family_summaries":winner_family_validation,
+        "all_40_families_non_regressing":family_safe,
+        "release_status":(
+            "COMPILED_FAMILY_SAFE"
+            if family_safe
+            else "PROVISIONAL_FAMILY_REGRESSION_OR_MISSING_VALIDATION"
+        ),
         "fine_tuning_qualification":qualification,
         "blind_partitions_touched":False,
-        "total_two_run_hard_ceiling_hours":(TUNING_HARD_SECONDS+((6*60*60)+(15*60)))/3600.0,
+        "total_two_run_hard_ceiling_hours":(TUNING_HARD_SECONDS+COLLECTION_HARD_SECONDS)/3600.0,
     },producer="test1.2-tuning",stage="report")
     return run.rows
