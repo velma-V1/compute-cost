@@ -124,6 +124,11 @@ def build_parser() -> argparse.ArgumentParser:
     test12_tune.add_argument("--collection-run", required=True)
     test12_tune.add_argument("--pull", action="store_true")
     test12_tune.add_argument("--dry-run", action="store_true")
+    test12_tune.add_argument(
+        "--resume-run",
+        default=None,
+        help="Resume the same interrupted Test 1.2 tuning/acceptance run ID without reopening completed work or resetting the winner lock.",
+    )
 
     test2 = sub.add_parser(
         "gpt20b-test2",
@@ -338,6 +343,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             collection_run=args.collection_run,
             pull=bool(args.pull),
             dry_run=bool(args.dry_run),
+            resume_run=args.resume_run,
         )
         print(json.dumps({"run_id": run_dir.name, "run_dir": str(run_dir)}, indent=2))
         return 0
