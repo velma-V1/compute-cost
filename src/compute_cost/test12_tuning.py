@@ -840,6 +840,43 @@ def _evaluate(run: TuningRun, policies: list[dict[str,Any]], cases: list[dict[st
     return {key:_score_policy_rows(values) for key,values in grouped.items()}
 
 
+def _evaluate_acceptance(
+    run: TuningRun,
+    winner: dict[str, Any],
+    cases: list[dict[str, Any]],
+    deadline: float,
+    *,
+    primary_seed: int,
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    """Breadth first, then spend remaining holdout time on extra evidence."""
+    start = len(run.rows)
+    primary = _balanced_partition(
+        cases,
+        min(len(cases), max(40, 2 * len(TEST2_CAPABILITY_FAMILIES))),
+    )
+    _evaluate(run, [winner], primary, deadline, seeds=[primary_seed])
+
+    if run.can_start(deadline):
+        used = {_fixture_id(case) for case in primary}
+        remaining = [case for case in cases if _fixture_id(case) not in used]
+        if remaining:
+            _evaluate(run, [winner], _balanced_partition(remaining), deadline, seeds=[primary_seed])
+
+    if run.can_start(deadline):
+        # If breadth is complete early, buy independent repeat evidence rather
+        # than leave acceptance minutes idle.
+        _evaluate(run, [winner], primary, deadline, seeds=[primary_seed + 100])
+
+    rows = run.rows[start:]
+    grouped = defaultdict(list)
+    for row in rows:
+        grouped[str(row["policy_id"])].append(row)
+    return {
+        key: _score_policy_rows(values)
+        for key, values in grouped.items()
+    }, rows
+
+
 def _top_policies(registry: list[dict[str,Any]], scores: dict[str,Any], keep: int) -> list[dict[str,Any]]:
     ranked=sorted(
         registry,
@@ -997,15 +1034,13 @@ def run_test12_tuning(runner: Any, cases: list[dict[str,Any]], *, collection_run
                 )
                 winner_lock_hash=_policy_lock_hash(winner_locked)
                 current=[winner_locked]
-            blind_start=len(run.rows)
-            scores=_evaluate(
+            scores, blind_rows = _evaluate_acceptance(
                 run,
-                [winner_locked],
-                _balanced_partition(run.test2_blind),
+                winner_locked,
+                run.test2_blind,
                 deadline,
-                seeds=[45],
+                primary_seed=45,
             )
-            blind_rows=run.rows[blind_start:]
             blind_scores=copy.deepcopy(scores)
         elif phase_name=="test3_protected_acceptance":
             if winner_locked is None:
@@ -1014,15 +1049,13 @@ def run_test12_tuning(runner: Any, cases: list[dict[str,Any]], *, collection_run
                 )
                 winner_lock_hash=_policy_lock_hash(winner_locked)
                 current=[winner_locked]
-            protected_start=len(run.rows)
-            scores=_evaluate(
+            scores, protected_rows = _evaluate_acceptance(
                 run,
-                [winner_locked],
-                _balanced_partition(run.test3_protected),
+                winner_locked,
+                run.test3_protected,
                 deadline,
-                seeds=[46],
+                primary_seed=46,
             )
-            protected_rows=run.rows[protected_start:]
             protected_scores=copy.deepcopy(scores)
         else:
             raise ValueError(f"unknown Test 1.2 tuning phase: {phase_name}")
