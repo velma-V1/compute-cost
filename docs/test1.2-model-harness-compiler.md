@@ -14,17 +14,16 @@ compiles those observations into an adaptive deployment policy.
 
 | Run | Data partition | Hard ceiling | Active model ceiling |
 | --- | --- | ---: | ---: |
-| Collection | DISCOVERY | 7h05m | 6h50m |
+| Collection | DISCOVERY | 7h40m | 7h25m |
 | Tuning / compile | VALIDATION | 6h15m | 6h |
-| Combined | — | **13h20m** | **12h50m** |
+| Combined | — | **13h55m** | **13h25m** |
 
 TEST2_BLIND and TEST3_PROTECTED are never exposed by either run.
 
-The remaining 40 minutes below the 14-hour user requirement is operational
-buffer for setup, model loading, finalization, export, or recovery from a
-bounded runtime interruption. Collection received the extra time rather than
-removing existing experiments, because per-family frontier/boundary evidence is
-a prerequisite for manufacturing useful harness blocks.
+The combined hard ceiling remains below 14 hours. The additional collection
+time is additive: no existing valuable phase was removed. It is reserved for
+seven frontier-gap labs identified by a current research audit, while the normal
+15-minute collection and tuning finalization margins remain explicit.
 
 ## What “full search” means
 
@@ -164,7 +163,44 @@ The declared improvement surface includes:
 - seed/instability replication;
 - cost-aware selection;
 - negative-transfer boundaries;
-- model-owned residual / fine-tuning qualification.
+- model-owned residual / fine-tuning qualification;
+- verifier-guided adaptive width/depth search;
+- metamorphic reliability under semantics-preserving perturbation;
+- paired act/abstain calibration;
+- active write/manage/read memory;
+- controlled reflection-to-sibling transfer;
+- explicit/implicit tool-failure chaos recovery;
+- dependency-aware parallel tool scheduling.
+
+## Frontier-gap research additions
+
+A second research audit found seven orthogonal capabilities that were not
+sufficiently measured by the existing prompt/retry/controller matrix. They are
+now mandatory additive labs:
+
+1. **Adaptive search** — compare width (independent branches) versus depth
+   (feedback-driven refinement) with a verifier deciding when extra refinement
+   is worth the cost.
+2. **Metamorphic robustness** — require stable behavior under
+   meaning-preserving prompt wrappers/format perturbations instead of relying on
+   one wording.
+3. **Calibrated abstention** — paired ACT/ABSTAIN cases distinguish task
+   competence from knowing when autonomous action is inappropriate.
+4. **Active memory control** — compare append-only context with an explicit
+   write/manage/read memory loop across superseded and evolving state.
+5. **Reflection transfer** — derive a lesson from a failed attempt without
+   revealing the oracle answer, then test whether that lesson prevents the same
+   failure class on a different sibling task.
+6. **Tool-chaos recovery** — inject explicit transient failure, explicit
+   permanent failure, stale successful responses, and semantically corrupted
+   successful responses. Recovery must distinguish replanning from blind retry.
+7. **Tool scheduling** — measure dependency-valid parallel scheduling and true
+   critical-path makespan, not just whether the correct tools were selected.
+
+The tuning run refuses to compile a harness if any of these seven labs is
+missing. Their results are compiled into explicit deployment rules, including
+search activation, abstention guards, memory activation, reflection reuse,
+successful-tool verification, retry bans, and parallel-scheduler enablement.
 
 ## Value-density contract
 
@@ -276,6 +312,14 @@ The collection run produces, among other evidence:
 - negative-effect exploitation map;
 - contrastive negative corpus;
 - observation-to-value index proving reuse of every raw observation;
+- adaptive-search map;
+- metamorphic-reliability map;
+- abstention-calibration map;
+- active-memory-evolution map;
+- reflection-transfer map;
+- tool-chaos-recovery map;
+- tool-scheduling map;
+- consolidated frontier-gap value map;
 - finite control grammar;
 - candidate coverage ledger;
 - raw capability map;

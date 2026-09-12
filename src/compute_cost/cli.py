@@ -100,7 +100,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     test12 = sub.add_parser(
         "gpt20b-test1.2",
-        help="Run the <=7h05 Test 1.2 collection campaign for model-to-harness compilation.",
+        help="Run the <=7h40 Test 1.2 collection campaign for model-to-harness compilation.",
     )
     test12.add_argument("--model", default="gpt-oss:20b")
     test12.add_argument("--suite", default=str(DEFAULT_CAPABILITY_SUITE_PATH))

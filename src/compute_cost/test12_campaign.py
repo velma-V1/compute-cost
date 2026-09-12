@@ -112,15 +112,34 @@ from .test12_value import (
     contrastive_negative_corpus,
     observation_value_index,
 )
+from .test12_frontier_labs import (
+    ABSTENTION_CASES,
+    CHAOS_TOOL_SCHEMAS,
+    FRONTIER_GAP_SURFACES,
+    MEMORY_STREAMS,
+    METAMORPHIC_VARIANTS,
+    TOOL_CHAOS_CASES,
+    TOOL_SCHEDULING_CASES,
+    chaos_system_prompt,
+    execute_chaos_tool,
+    memory_answer_prompt,
+    memory_prompt,
+    parse_json_object,
+    schedule_prompt,
+    score_abstention,
+    score_memory_final,
+    score_schedule,
+    summarize_chaos_transcript,
+)
 
-COLLECTION_HARD_SECONDS = (7 * 60 * 60) + (5 * 60)
-COLLECTION_ACTIVE_SECONDS = (6 * 60 * 60) + (50 * 60)
+COLLECTION_HARD_SECONDS = (7 * 60 * 60) + (40 * 60)
+COLLECTION_ACTIVE_SECONDS = (7 * 60 * 60) + (25 * 60)
 HARD_SECONDS = COLLECTION_HARD_SECONDS
 ACTIVE_SECONDS = COLLECTION_ACTIVE_SECONDS
 CALL_START_CUTOFF_SECONDS = COLLECTION_ACTIVE_SECONDS
 
-# Six-hours-fifty-minutes active; the extra 15 minutes is reserved for preflight/finalization.
-# Adaptive early-stop may finish sooner once coverage + uncertainty criteria are met.
+# Seven-hours-twenty-five-minutes active; the extra 15 minutes is reserved for preflight/finalization.
+# Campaign-level early stop is prohibited; only replication depth may adapt after mandatory breadth.
 PHASES = (
     ("baseline_capability_map", 35 * 60),
     ("fractional_compute_surface", 25 * 60),
@@ -132,6 +151,7 @@ PHASES = (
     ("dose_activation_boundaries", 35 * 60),
     ("negative_transfer_sentinels", 30 * 60),
     ("information_gain_reserve", 25 * 60),
+    ("frontier_gap_labs", 35 * 60),
 )
 
 
@@ -156,11 +176,12 @@ IMPROVEMENT_SURFACE = (
     "COMPOSITION_LAYERING",
     "COMPUTE_COST_ROUTING",
     "FINE_TUNING_QUALIFICATION",
+    *FRONTIER_GAP_SURFACES,
 )
 
 RULES = (
     "a new model requires no prior model-specific Test 1 or Test 1.1 run; historical mechanisms are seeds, never evidence for the new model",
-    "collection + tuning hard ceilings sum to 13h20m, preserving the full campaign while remaining below the 14-hour end-to-end target",
+    "collection + tuning hard ceilings sum to 13h55m; the seven frontier-gap labs are additive and no prior valuable phase is removed",
     "TEST2_BLIND is prohibited",
     "TEST3_PROTECTED is prohibited",
     "every mechanism family receives a coverage floor before adaptive pruning",
@@ -181,6 +202,7 @@ RULES = (
     "A+B+A and other composition effects are measured rather than assumed additive",
     "residual failures are eligible for fine-tuning only after prompt controller compute context retry and tool-policy owners are tested",
     "unused active time is allocated to uncertainty reduction and replication, never arbitrary repeated prompting",
+    "frontier-gap labs measure adaptive search, metamorphic robustness, calibrated abstention, evolving memory, reflection transfer, tool-chaos recovery, and dependency-aware tool scheduling",
 )
 
 REQUIRED_TEST11_FILES = (
@@ -216,6 +238,14 @@ REQUIRED_OUTPUTS = (
     "negative-effect-exploitation-map.json",
     "contrastive-negative-corpus.jsonl",
     "observation-value-index.jsonl",
+    "adaptive-search-map.json",
+    "metamorphic-reliability-map.json",
+    "abstention-calibration-map.json",
+    "active-memory-evolution-map.json",
+    "reflection-transfer-map.json",
+    "tool-chaos-recovery-map.json",
+    "tool-scheduling-map.json",
+    "frontier-gap-value-map.json",
     "reasoning-compute-map.json",
     "controller-mechanism-map.json",
     "context-memory-state-map.json",
@@ -311,6 +341,7 @@ CORE_INTERVENTIONS: tuple[dict[str, Any], ...] = (
     {"id":"COUNTEREXAMPLE-RETRY","category":"RETRY_RECOVERY","mode":"retry","label":"counterexample_retry","aux_instruction":"Find a concrete counterexample or violated requirement that proves the candidate wrong. If none exists, say NONE.","final_instruction":"Retry only if the counterexample is supported; otherwise keep the candidate. Return only the final answer."},
     {"id":"CONSTRAINT-RETRY","category":"RETRY_RECOVERY","mode":"retry","label":"constraint_retry","aux_instruction":"Identify the first hard constraint the candidate violates, if any. Name only that constraint and the evidence.","final_instruction":"Retry from the original task while satisfying the violated constraint and preserving already-correct parts."},
     {"id":"TOOL-SCHEMA-RETRY","category":"TOOL_POLICY","mode":"retry","label":"tool_schema_retry","aux_instruction":"Identify the exact tool-selection or argument-schema defect in the candidate tool-like output.","final_instruction":"Rebuild the tool-like output from the required schema and dependencies; return only the corrected output."},
+    {"id":"ADAPTIVE-BRANCH-SEARCH","category":"ADAPTIVE_SEARCH","mode":"adaptive_search","label":"verifier_guided_width_depth","aux_instruction":"Solve independently. Prefer a materially different reasoning route from other branches.","final_instruction":"Use the verifier evidence to select or repair the strongest candidate. Return only the final answer."},
     {"id":"PLAN-INLINE","category":"PLANNING","mode":"single","label":"inline_plan","instruction":"Before answering, form the minimum dependency-ordered plan needed for this task, then solve it."},
     {"id":"MEMORY-INLINE","category":"MEMORY","mode":"single","label":"inline_working_memory","instruction":"Before answering, retain a compact working ledger of decisive facts, constraints, and state changes and use it consistently."},
     {"id":"CONTEXT-INLINE","category":"CONTEXT_SELECTION_COMPRESSION","mode":"single","label":"inline_context_selection","instruction":"Focus only on evidence that can change the answer; preserve decisive facts and ignore distractors."},
@@ -635,9 +666,9 @@ def build_test12_plan(cases: list[dict[str, Any]], *, seed_run: str | None = Non
 
 def validate_test12_plan(plan: dict[str, Any]) -> None:
     if int(plan["wall_clock_seconds"]) != COLLECTION_HARD_SECONDS:
-        raise ValueError("Test 1.2 collection hard ceiling must be 7h05m")
+        raise ValueError("Test 1.2 collection hard ceiling must be 7h40m")
     if sum(int(row["seconds"]) for row in plan["phases"]) != COLLECTION_ACTIVE_SECONDS:
-        raise ValueError("Test 1.2 collection active phases must total exactly 6h50m")
+        raise ValueError("Test 1.2 collection active phases must total exactly 7h25m")
     if plan.get("allowed_partitions") != ["DISCOVERY"]:
         raise ValueError("Test 1.2 collection may use DISCOVERY only")
     if plan.get("reserved_for_tuning") != ["VALIDATION"]:
@@ -1160,6 +1191,49 @@ class Test12Campaign:
                 {"role":"assistant","content":"CANDIDATE A:\n" + a + "\n\nCANDIDATE B:\n" + b},
                 {"role":"user","content":str(intervention.get("final_instruction") or "")},
             ]
+        elif mode == "adaptive_search":
+            a = add_aux("search-branch-a", [
+                {"role":"user","content":prompt + "\n\nSolve independently. Use one coherent route."}
+            ])
+            b = add_aux("search-branch-b", [
+                {"role":"user","content":prompt + "\n\nSolve independently using a materially different route from a typical first attempt."}
+            ])
+            verifier = add_aux("search-verifier", [
+                {"role":"user","content":prompt},
+                {"role":"assistant","content":"BRANCH A:\n" + a + "\n\nBRANCH B:\n" + b},
+                {"role":"user","content":"Compare both candidates against the task. First line must be exactly CHOOSE_A, CHOOSE_B, or REFINE. Then give only the decisive defect/evidence."},
+            ])
+            refinement = ""
+            if verifier.strip().upper().startswith("REFINE") and self.can_start(deadline):
+                refinement = add_aux("search-refine", [
+                    {"role":"user","content":prompt},
+                    {"role":"assistant","content":"BRANCH A:\n" + a + "\n\nBRANCH B:\n" + b + "\n\nVERIFIER:\n" + verifier},
+                    {"role":"user","content":"Construct a third candidate that specifically resolves the verifier's uncertainty. Do not merely restate A or B."},
+                ])
+            evidence = "BRANCH A:\n" + a + "\n\nBRANCH B:\n" + b + "\n\nVERIFIER:\n" + verifier
+            if refinement:
+                evidence += "\n\nREFINEMENT:\n" + refinement
+            messages = [
+                {"role":"user","content":prompt},
+                {"role":"assistant","content":evidence},
+                {"role":"user","content":str(intervention.get("final_instruction") or "Return the best supported final answer only.")},
+            ]
+        elif mode == "metamorphic":
+            template = str(intervention.get("template") or "{prompt}")
+            messages = [{"role":"user","content":template.format(prompt=prompt)}]
+        elif mode == "reflection_transfer":
+            source_prompt = str(intervention.get("source_prompt") or "")
+            source_candidate = str(intervention.get("source_candidate") or "")
+            lesson = add_aux("reflection", [
+                {"role":"user","content":source_prompt},
+                {"role":"assistant","content":source_candidate},
+                {"role":"user","content":"The prior answer failed. Without being given the correct answer, identify the generalizable mistake pattern and write one compact lesson that would prevent the same class of failure on a different sibling task."},
+            ])
+            intervention = {**copy.deepcopy(intervention), "reflection_text": lesson}
+            messages = [
+                {"role":"system","content":"GENERALIZED FAILURE LESSON:\n" + lesson + "\nApply it only if relevant; do not copy details from the source task."},
+                {"role":"user","content":prompt},
+            ]
         elif mode == "three_stage":
             plan = add_aux("plan", [{"role":"user","content":prompt + "\n\n" + str(intervention.get("aux_instruction") or "")}])
             solve = add_aux("solve", [
@@ -1262,6 +1336,10 @@ class Test12Campaign:
             "parents": copy.deepcopy(intervention.get("parents")),
             "router_choice": intervention.get("router_choice"),
             "risk_gate": intervention.get("risk_gate"),
+            "reflection_text_sha256": (
+                hashlib.sha256(str(intervention.get("reflection_text")).encode("utf-8")).hexdigest()
+                if intervention.get("reflection_text") else None
+            ),
             "classification": copy.deepcopy(row.get("classification") or {}),
             "score": numeric,
             "control_score": float(control.get("score") or 0.0),
@@ -2128,6 +2206,625 @@ def _merge_summaries(*maps: dict[str, Any]) -> dict[str, Any]:
     return result
 
 
+
+def _frontier_call(
+    campaign: Test12Campaign,
+    deadline: float,
+    *,
+    case_id: str,
+    messages: list[dict[str, str]],
+    intervention_id: str,
+    seed: int = 42,
+    budget: int = 256,
+    call_index: int = 1,
+) -> dict[str, Any] | None:
+    case = {
+        "id": case_id,
+        "category": "frontier_gap_lab",
+        "difficulty_level": 0,
+        "prompt": messages[-1]["content"] if messages else "",
+    }
+    return campaign._aux(
+        case,
+        deadline,
+        stage="frontier-gap",
+        messages=messages,
+        intervention={
+            "id": intervention_id,
+            "category": "FRONTIER_GAP_LAB",
+            "mode": "synthetic",
+            "aux_generation_budget": budget,
+        },
+        seed=seed,
+        call_index=call_index,
+    )
+
+
+def phase_adaptive_search(
+    campaign: Test12Campaign,
+    deadline: float,
+) -> dict[str, Any]:
+    failures = [
+        row
+        for row in campaign.rows
+        if row.get("intervention_id") == "CONTROL"
+        and float(row.get("score", 0.0)) < 1.0
+        and row.get("family_id") in TEST2_CAPABILITY_FAMILIES
+    ]
+    failures.sort(
+        key=lambda row: (
+            int(row.get("difficulty_level", 0)),
+            str(row.get("family_id")),
+        ),
+        reverse=True,
+    )
+    chosen = []
+    seen_families: set[str] = set()
+    for row in failures:
+        family = str(row.get("family_id"))
+        if family in seen_families:
+            continue
+        case = campaign.case_by_id.get(str(row.get("fixture_id")))
+        if case is None:
+            continue
+        chosen.append(case)
+        seen_families.add(family)
+        if len(chosen) >= 8:
+            break
+
+    intervention = campaign.intervention_by_id.get("ADAPTIVE-BRANCH-SEARCH")
+    rows = []
+    if intervention is not None:
+        for case in chosen:
+            if not campaign.can_start(deadline):
+                break
+            row = campaign.treatment(
+                case,
+                deadline,
+                phase="frontier_adaptive_search",
+                intervention=intervention,
+                seed=int(campaign.cfg["seeds"][0]),
+            )
+            if row is not None:
+                rows.append(row)
+    return {
+        "schema_version": 1,
+        "tested_families": sorted({str(row.get("family_id")) for row in rows}),
+        "observations": len(rows),
+        "rescues": sum(1 for row in rows if float(row.get("delta", 0.0)) > 0),
+        "regressions": sum(1 for row in rows if float(row.get("delta", 0.0)) < 0),
+        "rows": rows,
+    }
+
+
+def phase_metamorphic_reliability(
+    campaign: Test12Campaign,
+    deadline: float,
+) -> dict[str, Any]:
+    variants = []
+    for variant in METAMORPHIC_VARIANTS:
+        intervention = {
+            "id": "METAMORPHIC-" + str(variant["id"]),
+            "category": "METAMORPHIC_ROBUSTNESS",
+            "mode": "metamorphic",
+            "label": str(variant["id"]).lower(),
+            "template": str(variant["template"]),
+        }
+        if intervention["id"] not in campaign.intervention_by_id:
+            campaign.interventions.append(copy.deepcopy(intervention))
+            campaign.intervention_by_id[intervention["id"]] = copy.deepcopy(intervention)
+        variants.append(intervention)
+
+    by_family: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for case in campaign.partitions["DISCOVERY"]:
+        if _family(case) in TEST2_CAPABILITY_FAMILIES:
+            by_family[_family(case)].append(case)
+
+    rows = []
+    for index, family in enumerate(TEST2_CAPABILITY_FAMILIES):
+        if not campaign.can_start(deadline):
+            break
+        pool = by_family.get(family) or []
+        if not pool:
+            continue
+        probes = _family_boundary_cases(campaign, family, pool)
+        case = probes[-1] if probes else pool[0]
+        intervention = variants[index % len(variants)]
+        row = campaign.treatment(
+            case,
+            deadline,
+            phase="frontier_metamorphic",
+            intervention=intervention,
+            seed=int(campaign.cfg["seeds"][0]),
+        )
+        if row is not None:
+            rows.append(row)
+
+    return {
+        "schema_version": 1,
+        "family_count": len({str(row.get("family_id")) for row in rows}),
+        "observations": len(rows),
+        "stable": sum(1 for row in rows if float(row.get("delta", 0.0)) == 0.0),
+        "improved": sum(1 for row in rows if float(row.get("delta", 0.0)) > 0.0),
+        "regressed": sum(1 for row in rows if float(row.get("delta", 0.0)) < 0.0),
+        "rows": rows,
+    }
+
+
+def phase_abstention_calibration(
+    campaign: Test12Campaign,
+    deadline: float,
+) -> dict[str, Any]:
+    rows = []
+    for index, case in enumerate(ABSTENTION_CASES):
+        if not campaign.can_start(deadline):
+            break
+        call = _frontier_call(
+            campaign,
+            deadline,
+            case_id=str(case["id"]),
+            intervention_id="ABSTENTION-CALIBRATION",
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "Decide whether an autonomous agent should act. "
+                        "Return exactly JSON {\"decision\":\"ACT\"} or "
+                        "{\"decision\":\"ABSTAIN\"}. Do not explain."
+                    ),
+                },
+                {"role": "user", "content": str(case["prompt"])},
+            ],
+            seed=42 + index,
+            budget=96,
+            call_index=index + 1,
+        )
+        if call is None:
+            break
+        correct, decision = score_abstention(str(call.get("text") or ""), str(case["expected"]))
+        rows.append(
+            {
+                "case_id": case["id"],
+                "pair_id": case["pair_id"],
+                "expected": case["expected"],
+                "decision": decision,
+                "correct": correct,
+                "metrics": call.get("metrics"),
+                "timing": call.get("timing"),
+                "evidence_refs": call.get("evidence_refs"),
+            }
+        )
+    pairs: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for row in rows:
+        pairs[str(row["pair_id"])].append(row)
+    paired_correct = sum(
+        1
+        for values in pairs.values()
+        if len(values) >= 2 and all(bool(row["correct"]) for row in values)
+    )
+    return {
+        "schema_version": 1,
+        "n": len(rows),
+        "accuracy": (
+            sum(1 for row in rows if row["correct"]) / len(rows)
+            if rows
+            else 0.0
+        ),
+        "pair_count": len(pairs),
+        "paired_accuracy": paired_correct / len(pairs) if pairs else 0.0,
+        "false_act": sum(
+            1
+            for row in rows
+            if row["expected"] == "ABSTAIN" and row["decision"] == "ACT"
+        ),
+        "false_abstain": sum(
+            1
+            for row in rows
+            if row["expected"] == "ACT" and row["decision"] == "ABSTAIN"
+        ),
+        "rows": rows,
+    }
+
+
+def phase_active_memory(
+    campaign: Test12Campaign,
+    deadline: float,
+) -> dict[str, Any]:
+    rows = []
+    for index, stream in enumerate(MEMORY_STREAMS):
+        if not campaign.can_start(deadline):
+            break
+        direct = _frontier_call(
+            campaign,
+            deadline,
+            case_id=str(stream["id"]) + "-direct",
+            intervention_id="MEMORY-APPEND-ONLY",
+            messages=[
+                {
+                    "role": "user",
+                    "content": (
+                        "EVENT STREAM:\n- "
+                        + "\n- ".join(str(v) for v in stream["events"])
+                        + "\n\nQUESTION: "
+                        + str(stream["question"])
+                        + '\nReturn JSON {"final":"..."} only.'
+                    ),
+                }
+            ],
+            seed=100 + index,
+            budget=160,
+            call_index=1,
+        )
+        if direct is None:
+            break
+        direct_ok, direct_final = score_memory_final(
+            str(direct.get("text") or ""), str(stream["expected"])
+        )
+
+        memory = _frontier_call(
+            campaign,
+            deadline,
+            case_id=str(stream["id"]) + "-write",
+            intervention_id="MEMORY-WRITE-MANAGE",
+            messages=[{"role": "user", "content": memory_prompt(stream)}],
+            seed=200 + index,
+            budget=192,
+            call_index=1,
+        )
+        if memory is None:
+            break
+        memory_obj = parse_json_object(str(memory.get("text") or "")) or {}
+        memory_text = str(memory_obj.get("memory") or memory.get("text") or "")
+
+        answer = _frontier_call(
+            campaign,
+            deadline,
+            case_id=str(stream["id"]) + "-read",
+            intervention_id="MEMORY-WRITE-MANAGE-READ",
+            messages=[
+                {
+                    "role": "user",
+                    "content": memory_answer_prompt(stream, memory_text),
+                }
+            ],
+            seed=300 + index,
+            budget=128,
+            call_index=2,
+        )
+        if answer is None:
+            break
+        active_ok, active_final = score_memory_final(
+            str(answer.get("text") or ""), str(stream["expected"])
+        )
+        rows.append(
+            {
+                "case_id": stream["id"],
+                "expected": stream["expected"],
+                "direct_correct": direct_ok,
+                "direct_final": direct_final,
+                "active_correct": active_ok,
+                "active_final": active_final,
+                "memory_text_sha256": hashlib.sha256(
+                    memory_text.encode("utf-8")
+                ).hexdigest(),
+                "direct_metrics": direct.get("metrics"),
+                "memory_metrics": memory.get("metrics"),
+                "answer_metrics": answer.get("metrics"),
+            }
+        )
+    return {
+        "schema_version": 1,
+        "n": len(rows),
+        "direct_accuracy": (
+            sum(1 for row in rows if row["direct_correct"]) / len(rows)
+            if rows
+            else 0.0
+        ),
+        "active_accuracy": (
+            sum(1 for row in rows if row["active_correct"]) / len(rows)
+            if rows
+            else 0.0
+        ),
+        "active_rescues": sum(
+            1
+            for row in rows
+            if not row["direct_correct"] and row["active_correct"]
+        ),
+        "active_regressions": sum(
+            1
+            for row in rows
+            if row["direct_correct"] and not row["active_correct"]
+        ),
+        "rows": rows,
+    }
+
+
+def phase_reflection_transfer(
+    campaign: Test12Campaign,
+    deadline: float,
+) -> dict[str, Any]:
+    failures = [
+        row
+        for row in campaign.rows
+        if row.get("intervention_id") == "CONTROL"
+        and float(row.get("score", 0.0)) < 1.0
+        and row.get("family_id") in TEST2_CAPABILITY_FAMILIES
+    ]
+    by_family: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for row in failures:
+        by_family[str(row["family_id"])].append(row)
+
+    rows = []
+    for family in TEST2_CAPABILITY_FAMILIES:
+        if not campaign.can_start(deadline) or len(rows) >= 8:
+            break
+        source_rows = by_family.get(family) or []
+        if not source_rows:
+            continue
+        source = max(
+            source_rows,
+            key=lambda row: int(row.get("difficulty_level", 0)),
+        )
+        source_id = str(source.get("fixture_id"))
+        pool = [
+            case
+            for case in campaign.partitions["DISCOVERY"]
+            if _family(case) == family and _fixture_id(case) != source_id
+        ]
+        if not pool:
+            continue
+        target = max(
+            pool,
+            key=lambda case: (
+                int(case.get("difficulty_level", 0)),
+                _fixture_id(case),
+            ),
+        )
+        intervention = {
+            "id": f"REFLECTION-TRANSFER-{family}",
+            "category": "REFLECTION_TRANSFER",
+            "mode": "reflection_transfer",
+            "label": "failure_lesson_to_sibling",
+            "source_prompt": source.get("task_text"),
+            "source_candidate": source.get("treatment_response_text")
+            or source.get("control_response_text"),
+        }
+        if intervention["id"] not in campaign.intervention_by_id:
+            campaign.interventions.append(copy.deepcopy(intervention))
+            campaign.intervention_by_id[intervention["id"]] = copy.deepcopy(
+                intervention
+            )
+        row = campaign.treatment(
+            target,
+            deadline,
+            phase="frontier_reflection_transfer",
+            intervention=intervention,
+            seed=int(campaign.cfg["seeds"][0]),
+        )
+        if row is not None:
+            rows.append(row)
+    return {
+        "schema_version": 1,
+        "n": len(rows),
+        "families": sorted({str(row.get("family_id")) for row in rows}),
+        "sibling_rescues": sum(
+            1 for row in rows if float(row.get("delta", 0.0)) > 0
+        ),
+        "negative_transfer": sum(
+            1 for row in rows if float(row.get("delta", 0.0)) < 0
+        ),
+        "rows": rows,
+    }
+
+
+def phase_tool_scheduling(
+    campaign: Test12Campaign,
+    deadline: float,
+) -> dict[str, Any]:
+    rows = []
+    for index, case in enumerate(TOOL_SCHEDULING_CASES):
+        if not campaign.can_start(deadline):
+            break
+        call = _frontier_call(
+            campaign,
+            deadline,
+            case_id=str(case["id"]),
+            intervention_id="TOOL-SCHEDULING",
+            messages=[{"role": "user", "content": schedule_prompt(case)}],
+            seed=400 + index,
+            budget=256,
+            call_index=index + 1,
+        )
+        if call is None:
+            break
+        scored = score_schedule(
+            str(call.get("text") or ""), dict(case["tasks"])
+        )
+        rows.append(
+            {
+                "case_id": case["id"],
+                **scored,
+                "model_text": call.get("text"),
+                "metrics": call.get("metrics"),
+                "timing": call.get("timing"),
+                "evidence_refs": call.get("evidence_refs"),
+            }
+        )
+    return {
+        "schema_version": 1,
+        "n": len(rows),
+        "valid_rate": (
+            sum(1 for row in rows if row.get("valid")) / len(rows)
+            if rows
+            else 0.0
+        ),
+        "optimal_rate": (
+            sum(1 for row in rows if row.get("optimal")) / len(rows)
+            if rows
+            else 0.0
+        ),
+        "mean_efficiency": (
+            mean(
+                [
+                    float(row.get("efficiency") or 0.0)
+                    for row in rows
+                    if row.get("valid")
+                ]
+            )
+            if any(row.get("valid") for row in rows)
+            else 0.0
+        ),
+        "rows": rows,
+    }
+
+
+def phase_tool_chaos(
+    campaign: Test12Campaign,
+    deadline: float,
+) -> dict[str, Any]:
+    rows = []
+    for case_index, case in enumerate(TOOL_CHAOS_CASES):
+        if not campaign.can_start(deadline):
+            break
+        state: dict[str, Any] = {}
+        transcript = []
+        messages = [
+            {"role": "system", "content": chaos_system_prompt(case)},
+            {"role": "user", "content": str(case["goal"])},
+        ]
+        final_value = None
+        for step in range(1, int(case["max_steps"]) + 1):
+            if not campaign.can_start(deadline):
+                break
+            call = _frontier_call(
+                campaign,
+                deadline,
+                case_id=f"{case['id']}-step{step}",
+                intervention_id="TOOL-CHAOS-RECOVERY",
+                messages=messages,
+                seed=500 + case_index,
+                budget=192,
+                call_index=step,
+            )
+            if call is None:
+                break
+            text = str(call.get("text") or "")
+            action = parse_json_object(text)
+            event = {
+                "step": step,
+                "model_text": text,
+                "action": action,
+                "metrics": call.get("metrics"),
+                "timing": call.get("timing"),
+                "evidence_refs": call.get("evidence_refs"),
+            }
+            if not isinstance(action, dict):
+                result = {"ok": False, "error": "UNPARSEABLE_ACTION"}
+                event["tool_result"] = result
+                transcript.append(event)
+                messages.extend(
+                    [
+                        {"role": "assistant", "content": text},
+                        {
+                            "role": "user",
+                            "content": "ERROR: emit a valid JSON tool call or final object.",
+                        },
+                    ]
+                )
+                continue
+            if "final" in action:
+                final_value = action.get("final")
+                transcript.append(event)
+                break
+            result = execute_chaos_tool(case, action, state)
+            event["tool_result"] = result
+            transcript.append(event)
+            messages.extend(
+                [
+                    {"role": "assistant", "content": text},
+                    {
+                        "role": "user",
+                        "content": "TOOL RESULT:\n"
+                        + json.dumps(result, sort_keys=True)
+                        + "\nContinue. Do not assume ok=true means semantically trustworthy.",
+                    },
+                ]
+            )
+        summary = summarize_chaos_transcript(
+            case, transcript, final_value
+        )
+        rows.append(
+            {
+                "case_id": case["id"],
+                "failure_class": case["failure_class"],
+                **summary,
+                "transcript": transcript,
+            }
+        )
+    return {
+        "schema_version": 1,
+        "n": len(rows),
+        "success_rate": (
+            sum(1 for row in rows if row["success"]) / len(rows)
+            if rows
+            else 0.0
+        ),
+        "implicit_failure_success_rate": (
+            sum(
+                1
+                for row in rows
+                if row["failure_class"]
+                in {"IMPLICIT_SEMANTIC_CORRUPTION", "STALE_SUCCESS"}
+                and row["success"]
+            )
+            / max(
+                1,
+                sum(
+                    1
+                    for row in rows
+                    if row["failure_class"]
+                    in {"IMPLICIT_SEMANTIC_CORRUPTION", "STALE_SUCCESS"}
+                ),
+            )
+        ),
+        "blind_identical_retries": sum(
+            int(row.get("blind_identical_retries", 0)) for row in rows
+        ),
+        "rows": rows,
+    }
+
+
+def phase_frontier_gap_labs(
+    campaign: Test12Campaign,
+    deadline: float,
+) -> dict[str, Any]:
+    phase_start = campaign.clock()
+    names_and_functions = (
+        ("adaptive_search", phase_adaptive_search),
+        ("metamorphic", phase_metamorphic_reliability),
+        ("abstention", phase_abstention_calibration),
+        ("active_memory", phase_active_memory),
+        ("reflection_transfer", phase_reflection_transfer),
+        ("tool_chaos", phase_tool_chaos),
+        ("tool_scheduling", phase_tool_scheduling),
+    )
+    results: dict[str, Any] = {}
+    for index, (name, function) in enumerate(names_and_functions):
+        if not campaign.can_start(deadline):
+            break
+        sub_deadline = min(
+            deadline,
+            phase_start + (index + 1) * 5 * 60,
+        )
+        results[name] = function(campaign, sub_deadline)
+    results["schema_version"] = 1
+    results["surfaces"] = list(FRONTIER_GAP_SURFACES)
+    results["completed_labs"] = sorted(
+        key for key in results if key not in {"schema_version", "surfaces"}
+    )
+    return results
+
+
 def phase_negative_transfer(
     campaign: Test12Campaign,
     deadline: float,
@@ -2639,6 +3336,28 @@ def write_outputs(campaign: Test12Campaign, results: dict[str, Any]) -> None:
     store.write_json("frontier-shift-map.json", frontier_shift, producer="test1.2", stage="report")
     store.write_json("compute-quality-elasticity-map.json", compute_elasticity, producer="test1.2", stage="report")
     store.write_json("negative-effect-exploitation-map.json", negative_exploitation, producer="test1.2", stage="report")
+    frontier_gaps = copy.deepcopy(results.get("frontier_gaps") or {})
+    store.write_json("adaptive-search-map.json", frontier_gaps.get("adaptive_search", {}), producer="test1.2", stage="report")
+    store.write_json("metamorphic-reliability-map.json", frontier_gaps.get("metamorphic", {}), producer="test1.2", stage="report")
+    store.write_json("abstention-calibration-map.json", frontier_gaps.get("abstention", {}), producer="test1.2", stage="report")
+    store.write_json("active-memory-evolution-map.json", frontier_gaps.get("active_memory", {}), producer="test1.2", stage="report")
+    store.write_json("reflection-transfer-map.json", frontier_gaps.get("reflection_transfer", {}), producer="test1.2", stage="report")
+    store.write_json("tool-chaos-recovery-map.json", frontier_gaps.get("tool_chaos", {}), producer="test1.2", stage="report")
+    store.write_json("tool-scheduling-map.json", frontier_gaps.get("tool_scheduling", {}), producer="test1.2", stage="report")
+    store.write_json("frontier-gap-value-map.json", {
+        "schema_version":1,
+        "surfaces":list(FRONTIER_GAP_SURFACES),
+        "completed_labs":frontier_gaps.get("completed_labs", []),
+        "maps":{
+            "ADAPTIVE_SEARCH":"adaptive-search-map.json",
+            "METAMORPHIC_ROBUSTNESS":"metamorphic-reliability-map.json",
+            "ABSTENTION_CALIBRATION":"abstention-calibration-map.json",
+            "ACTIVE_MEMORY_CONTROL":"active-memory-evolution-map.json",
+            "REFLECTION_TRANSFER":"reflection-transfer-map.json",
+            "TOOL_CHAOS_RECOVERY":"tool-chaos-recovery-map.json",
+            "TOOL_SCHEDULING":"tool-scheduling-map.json",
+        },
+    }, producer="test1.2", stage="report")
     if negative_corpus:
         for row in negative_corpus:
             store.append_jsonl("contrastive-negative-corpus.jsonl", row)
@@ -2700,6 +3419,8 @@ def write_outputs(campaign: Test12Campaign, results: dict[str, Any]) -> None:
         "family_value_dimensions":list(FAMILY_VALUE_DIMENSIONS),
         "critical_family_value_dimensions":list(CRITICAL_FAMILY_VALUE_DIMENSIONS),
         "all_families_critical_value_ready":value_completeness["all_families_critical_value_ready"],
+        "frontier_gap_surfaces":list(FRONTIER_GAP_SURFACES),
+        "frontier_gap_value_map":"frontier-gap-value-map.json",
     }, producer="test1.2", stage="report")
     store.write_json("scope-boundaries.json", {"schema_version":1,**scope}, producer="test1.2", stage="report")
     store.write_json("assurance-map-1.2.json", assurance, producer="test1.2", stage="report")
@@ -2782,6 +3503,8 @@ def run_test12_campaign(
                 results.get("routing",{}),
             )
             results["reserve"] = phase_reserve(campaign, deadline, combined)
+        elif phase_name == "frontier_gap_labs":
+            results["frontier_gaps"] = phase_frontier_gap_labs(campaign, deadline)
 
         ended = campaign.clock()
         runner.store.append_jsonl("test1.2-phase-events.jsonl", {

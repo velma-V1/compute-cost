@@ -20,6 +20,7 @@ from .evidence import EvidenceStore
 from .test1_campaign import _balanced_cases, _family, _fixture_id, partition_cases
 from .test12_campaign import (
     COLLECTION_HARD_SECONDS,
+    FRONTIER_GAP_SURFACES,
     TEST2_CAPABILITY_FAMILIES,
     Test12Campaign,
     _cost_value_frontier,
@@ -57,6 +58,14 @@ REQUIRED_COLLECTION_FILES = (
     "negative-effect-exploitation-map.json",
     "contrastive-negative-corpus.jsonl",
     "observation-value-index.jsonl",
+    "adaptive-search-map.json",
+    "metamorphic-reliability-map.json",
+    "abstention-calibration-map.json",
+    "active-memory-evolution-map.json",
+    "reflection-transfer-map.json",
+    "tool-chaos-recovery-map.json",
+    "tool-scheduling-map.json",
+    "frontier-gap-value-map.json",
     "cost-value-frontier-1.2.json",
     "activation-boundary-map.json",
     "negative-transfer-map-1.2.json",
@@ -135,6 +144,38 @@ def load_collection(results_root: Path, run_id: str) -> dict[str, Any]:
     negative_exploitation = _read_json(run_dir / "negative-effect-exploitation-map.json")
     frontier_shift = _read_json(run_dir / "frontier-shift-map.json")
     compute_elasticity = _read_json(run_dir / "compute-quality-elasticity-map.json")
+    frontier_gap_maps = {
+        "adaptive_search": _read_json(run_dir / "adaptive-search-map.json"),
+        "metamorphic": _read_json(run_dir / "metamorphic-reliability-map.json"),
+        "abstention": _read_json(run_dir / "abstention-calibration-map.json"),
+        "active_memory": _read_json(run_dir / "active-memory-evolution-map.json"),
+        "reflection_transfer": _read_json(run_dir / "reflection-transfer-map.json"),
+        "tool_chaos": _read_json(run_dir / "tool-chaos-recovery-map.json"),
+        "tool_scheduling": _read_json(run_dir / "tool-scheduling-map.json"),
+        "index": _read_json(run_dir / "frontier-gap-value-map.json"),
+    }
+    if set((frontier_gap_maps["index"] or {}).get("surfaces") or []) != set(FRONTIER_GAP_SURFACES):
+        raise ValueError("collection frontier-gap surface contract drifted")
+    expected_labs = {
+        "adaptive_search",
+        "metamorphic",
+        "abstention",
+        "active_memory",
+        "reflection_transfer",
+        "tool_chaos",
+        "tool_scheduling",
+    }
+    completed_labs = set((frontier_gap_maps["index"] or {}).get("completed_labs") or [])
+    if completed_labs != expected_labs:
+        raise ValueError(
+            "collection did not complete every frontier-gap lab: "
+            + ", ".join(sorted(expected_labs - completed_labs))
+        )
+    if any(
+        int((frontier_gap_maps[name] or {}).get("schema_version", 0)) != 1
+        for name in expected_labs
+    ):
+        raise ValueError("one or more frontier-gap maps are missing measured output")
     registry = _read_json(run_dir / "full-control-candidate-registry.json")
     return {
         "run_id": run_id,
@@ -148,6 +189,7 @@ def load_collection(results_root: Path, run_id: str) -> dict[str, Any]:
         "negative_exploitation": negative_exploitation,
         "frontier_shift": frontier_shift,
         "compute_elasticity": compute_elasticity,
+        "frontier_gap_maps": frontier_gap_maps,
         "frontier": _read_json(run_dir / "cost-value-frontier-1.2.json"),
         "activation": _read_json(run_dir / "activation-boundary-map.json"),
         "negative": _read_json(run_dir / "negative-transfer-map-1.2.json"),
@@ -246,6 +288,67 @@ def _route_map(candidates: list[dict[str, Any]]) -> dict[str, str]:
         found = next((row for row in candidates if row.get("category") in cats), None)
         result[route] = str(found["id"]) if found else "DIRECT"
     return result
+
+
+def _compile_frontier_gap_policy(collection: dict[str, Any]) -> dict[str, Any]:
+    maps = collection.get("frontier_gap_maps") or {}
+    adaptive = maps.get("adaptive_search") or {}
+    metamorphic = maps.get("metamorphic") or {}
+    abstention = maps.get("abstention") or {}
+    memory = maps.get("active_memory") or {}
+    reflection = maps.get("reflection_transfer") or {}
+    chaos = maps.get("tool_chaos") or {}
+    scheduling = maps.get("tool_scheduling") or {}
+
+    return {
+        "schema_version": 1,
+        "adaptive_search": {
+            "enabled": int(adaptive.get("rescues", 0)) > int(adaptive.get("regressions", 0)),
+            "rescues": adaptive.get("rescues", 0),
+            "regressions": adaptive.get("regressions", 0),
+            "activation": "HARD_OR_FAILED_TASK_ONLY",
+        },
+        "metamorphic_robustness": {
+            "regressed_cases": int(metamorphic.get("regressed", 0)),
+            "family_count": int(metamorphic.get("family_count", 0)),
+            "require_wrapper_regression_sentinels": int(metamorphic.get("regressed", 0)) > 0,
+        },
+        "abstention": {
+            "paired_accuracy": float(abstention.get("paired_accuracy", 0.0)),
+            "false_act": int(abstention.get("false_act", 0)),
+            "false_abstain": int(abstention.get("false_abstain", 0)),
+            "require_pre_action_guard": int(abstention.get("false_act", 0)) > 0,
+            "require_evidence_gather_before_abstain": int(abstention.get("false_abstain", 0)) > 0,
+        },
+        "active_memory": {
+            "enabled": float(memory.get("active_accuracy", 0.0)) >= float(memory.get("direct_accuracy", 0.0)),
+            "direct_accuracy": float(memory.get("direct_accuracy", 0.0)),
+            "active_accuracy": float(memory.get("active_accuracy", 0.0)),
+            "activation": "EVOLVING_OR_SUPERSEDED_STATE",
+        },
+        "reflection_transfer": {
+            "enabled": int(reflection.get("sibling_rescues", 0)) > int(reflection.get("negative_transfer", 0)),
+            "sibling_rescues": int(reflection.get("sibling_rescues", 0)),
+            "negative_transfer": int(reflection.get("negative_transfer", 0)),
+            "activation": "MATCHED_FAILURE_PHENOTYPE_ONLY",
+        },
+        "tool_chaos": {
+            "success_rate": float(chaos.get("success_rate", 0.0)),
+            "implicit_failure_success_rate": float(chaos.get("implicit_failure_success_rate", 0.0)),
+            "force_verify_successful_tool_results": float(chaos.get("implicit_failure_success_rate", 0.0)) < 1.0,
+            "ban_identical_blind_retry": int(chaos.get("blind_identical_retries", 0)) > 0,
+        },
+        "tool_scheduling": {
+            "valid_rate": float(scheduling.get("valid_rate", 0.0)),
+            "optimal_rate": float(scheduling.get("optimal_rate", 0.0)),
+            "mean_efficiency": float(scheduling.get("mean_efficiency", 0.0)),
+            "parallel_scheduler_enabled": (
+                float(scheduling.get("valid_rate", 0.0)) >= 0.8
+                and float(scheduling.get("mean_efficiency", 0.0)) >= 0.8
+            ),
+            "fallback": "DEPENDENCY_ORDERED_SEQUENTIAL",
+        },
+    }
 
 
 def _policy_candidates(collection: dict[str, Any], limit: int) -> list[dict[str, Any]]:
@@ -621,6 +724,7 @@ def run_test12_tuning(runner: Any, cases: list[dict[str,Any]], *, collection_run
                 -float((tool_effects.get(key) or {}).get("mean_model_calls",999.0)),
             ),
         )
+    frontier_gap_policy=_compile_frontier_gap_policy(collection)
     compiled={
         "schema_version":1,
         "model":getattr(runner,"model",None),
@@ -643,6 +747,7 @@ def run_test12_tuning(runner: Any, cases: list[dict[str,Any]], *, collection_run
             ).items()
         },
         "tool_execution_policy":tool_execution_policy,
+        "frontier_gap_policy":frontier_gap_policy,
         "direct_default_when_unmatched":True,
         "oracle_routing_prohibited":True,
         "hard_ceiling_total_seconds":TUNING_HARD_SECONDS+COLLECTION_HARD_SECONDS,
@@ -680,6 +785,7 @@ def run_test12_tuning(runner: Any, cases: list[dict[str,Any]], *, collection_run
         "compiled_policy":"compiled-harness-policy.json",
         "validated_policy_summary":winner_summary,
         "validated_family_summaries":winner_family_validation,
+        "frontier_gap_policy":frontier_gap_policy,
         "all_40_families_non_regressing":family_safe,
         "release_status":(
             "COMPILED_FAMILY_SAFE"

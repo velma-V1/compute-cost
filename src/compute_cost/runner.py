@@ -944,7 +944,7 @@ class BenchmarkRunner(_CoreBenchmarkRunner):
         seed_run: str | None = None,
         dry_run: bool = False,
     ) -> Path:
-        """Run the <=7h05 Test-1.2 collection stage of the model-to-harness compiler."""
+        """Run the <=7h40 Test-1.2 collection stage of the model-to-harness compiler."""
         test_cfg = self.config.get("test12_campaign") or {}
         expected_calls = int(test_cfg.get("expected_calls", 5600))
         safety_cap = int(test_cfg.get("safety_call_cap", 14000))

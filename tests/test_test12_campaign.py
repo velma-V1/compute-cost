@@ -27,12 +27,22 @@ from compute_cost.test12_toollab import (
 )
 from compute_cost.test12_tuning import (
     TUNING_HARD_SECONDS,
+    _compile_frontier_gap_policy,
     _top_family_safe_policies,
     _top_policies,
     build_tuning_plan,
     validate_tuning_plan,
 )
 from compute_cost.test1_campaign import partition_cases
+from compute_cost.test12_frontier_labs import (
+    FRONTIER_GAP_SURFACES,
+    TOOL_CHAOS_CASES,
+    execute_chaos_tool,
+    optimal_parallel_makespan,
+    score_abstention,
+    score_memory_final,
+    score_schedule,
+)
 from compute_cost.test12_value import (
     CRITICAL_FAMILY_VALUE_DIMENSIONS,
     FAMILY_VALUE_DIMENSIONS,
@@ -104,8 +114,8 @@ def test_collection_plan_is_full_campaign_under_14_hour_two_run_contract():
     cases = _cases()
     plan = build_test12_plan(cases)
     validate_test12_plan(plan)
-    assert plan["wall_clock_seconds"] == 7 * 60 * 60 + 5 * 60
-    assert plan["active_model_seconds"] == 6 * 60 * 60 + 50 * 60
+    assert plan["wall_clock_seconds"] == 7 * 60 * 60 + 40 * 60
+    assert plan["active_model_seconds"] == 7 * 60 * 60 + 25 * 60
     assert sum(row["seconds"] for row in plan["phases"]) == ACTIVE_SECONDS
     assert plan["allowed_partitions"] == ["DISCOVERY"]
     assert plan["reserved_for_tuning"] == ["VALIDATION"]
@@ -128,6 +138,14 @@ def test_collection_plan_is_full_campaign_under_14_hour_two_run_contract():
         "negative-effect-exploitation-map.json",
         "contrastive-negative-corpus.jsonl",
         "observation-value-index.jsonl",
+        "adaptive-search-map.json",
+        "metamorphic-reliability-map.json",
+        "abstention-calibration-map.json",
+        "active-memory-evolution-map.json",
+        "reflection-transfer-map.json",
+        "tool-chaos-recovery-map.json",
+        "tool-scheduling-map.json",
+        "frontier-gap-value-map.json",
     }:
         assert required in plan["required_outputs"]
 
@@ -206,7 +224,7 @@ def test_real_tool_lab_executes_and_returns_errors_for_bad_arguments():
     assert len(TOOL_HARNESS_POLICIES) >= 5
 
 
-def test_tuning_run_uses_validation_only_and_combined_hard_ceiling_is_13h20m():
+def test_tuning_run_uses_validation_only_and_combined_hard_ceiling_is_13h55m():
     cases = _cases()
     plan = build_tuning_plan(cases, collection_run="collection-run")
     validate_tuning_plan(plan)
@@ -214,7 +232,7 @@ def test_tuning_run_uses_validation_only_and_combined_hard_ceiling_is_13h20m():
     assert set(plan["prohibited_partitions"]) == {"DISCOVERY", "TEST2_BLIND", "TEST3_PROTECTED"}
     assert plan["wall_clock_seconds"] == 6 * 60 * 60 + 15 * 60
     assert plan["total_two_run_hard_ceiling_seconds"] == COLLECTION_HARD_SECONDS + TUNING_HARD_SECONDS
-    assert plan["total_two_run_hard_ceiling_seconds"] == 800 * 60
+    assert plan["total_two_run_hard_ceiling_seconds"] == 835 * 60
     assert plan["total_two_run_hard_ceiling_seconds"] < 14 * 60 * 60
 
 
@@ -605,3 +623,133 @@ def test_direct_control_is_never_pruned_before_family_safe_final_selection():
 def test_tuning_config_requires_all_40_validation_families():
     config = load_config()
     assert config["test12_tuning"]["minimum_validation_families"] == 40
+
+
+
+def test_frontier_gap_research_adds_at_least_seven_orthogonal_surfaces():
+    assert set(FRONTIER_GAP_SURFACES) == {
+        "ADAPTIVE_SEARCH",
+        "METAMORPHIC_ROBUSTNESS",
+        "ABSTENTION_CALIBRATION",
+        "ACTIVE_MEMORY_CONTROL",
+        "REFLECTION_TRANSFER",
+        "TOOL_CHAOS_RECOVERY",
+        "TOOL_SCHEDULING",
+    }
+    assert set(FRONTIER_GAP_SURFACES) <= set(IMPROVEMENT_SURFACE)
+
+
+def test_abstention_and_memory_scorers_are_strict():
+    assert score_abstention('{"decision":"ACT"}', "ACT") == (True, "ACT")
+    assert score_abstention('{"decision":"ABSTAIN"}', "ACT") == (False, "ABSTAIN")
+    assert score_abstention("I would act", "ACT") == (False, None)
+
+    assert score_memory_final('{"final":"gamma"}', "gamma") == (True, "gamma")
+    assert score_memory_final('{"final":"beta"}', "gamma") == (False, "beta")
+
+
+def test_tool_scheduler_scores_true_parallel_critical_path():
+    tasks = {
+        "A": {"depends_on": [], "duration": 5},
+        "B": {"depends_on": [], "duration": 2},
+        "C": {"depends_on": [], "duration": 3},
+        "D": {"depends_on": ["A"], "duration": 1},
+        "E": {"depends_on": ["B", "C"], "duration": 2},
+        "F": {"depends_on": ["D", "E"], "duration": 2},
+    }
+    assert optimal_parallel_makespan(tasks) == 8
+    result = score_schedule(
+        '{"start_times":{"A":0,"B":0,"C":0,"D":5,"E":3,"F":6}}',
+        tasks,
+    )
+    assert result["valid"] is True
+    assert result["optimal"] is True
+    assert result["makespan"] == 8
+
+    broken = score_schedule(
+        '{"start_times":{"A":0,"B":0,"C":0,"D":4,"E":3,"F":6}}',
+        tasks,
+    )
+    assert broken["valid"] is False
+    assert broken["reason"] == "DEPENDENCY_VIOLATION"
+
+
+def test_tool_chaos_distinguishes_transient_permanent_corrupt_and_stale_success():
+    by_class = {row["failure_class"]: row for row in TOOL_CHAOS_CASES}
+
+    state = {}
+    transient = by_class["EXPLICIT_TRANSIENT"]
+    first = execute_chaos_tool(
+        transient,
+        {"tool": "primary_lookup", "arguments": {}},
+        state,
+    )
+    second = execute_chaos_tool(
+        transient,
+        {"tool": "primary_lookup", "arguments": {}},
+        state,
+    )
+    assert first["ok"] is False and first["retryable"] is True
+    assert second["ok"] is True and second["value"] == "42"
+
+    permanent = execute_chaos_tool(
+        by_class["EXPLICIT_PERMANENT"],
+        {"tool": "primary_lookup", "arguments": {}},
+        {},
+    )
+    assert permanent["ok"] is False and permanent["retryable"] is False
+
+    corrupt = execute_chaos_tool(
+        by_class["IMPLICIT_SEMANTIC_CORRUPTION"],
+        {"tool": "primary_lookup", "arguments": {}},
+        {},
+    )
+    assert corrupt["ok"] is True and corrupt["value"] == "41"
+
+    stale = execute_chaos_tool(
+        by_class["STALE_SUCCESS"],
+        {"tool": "primary_lookup", "arguments": {}},
+        {},
+    )
+    assert stale["ok"] is True and stale["version"] == 1
+
+
+def test_frontier_gap_evidence_compiles_to_explicit_harness_rules():
+    collection = {
+        "frontier_gap_maps": {
+            "adaptive_search": {"rescues": 3, "regressions": 1},
+            "metamorphic": {"regressed": 2, "family_count": 40},
+            "abstention": {
+                "paired_accuracy": 0.5,
+                "false_act": 1,
+                "false_abstain": 2,
+            },
+            "active_memory": {
+                "direct_accuracy": 0.67,
+                "active_accuracy": 1.0,
+            },
+            "reflection_transfer": {
+                "sibling_rescues": 4,
+                "negative_transfer": 1,
+            },
+            "tool_chaos": {
+                "success_rate": 0.75,
+                "implicit_failure_success_rate": 0.5,
+                "blind_identical_retries": 1,
+            },
+            "tool_scheduling": {
+                "valid_rate": 1.0,
+                "optimal_rate": 0.67,
+                "mean_efficiency": 0.9,
+            },
+        }
+    }
+    policy = _compile_frontier_gap_policy(collection)
+    assert policy["adaptive_search"]["enabled"] is True
+    assert policy["metamorphic_robustness"]["require_wrapper_regression_sentinels"] is True
+    assert policy["abstention"]["require_pre_action_guard"] is True
+    assert policy["active_memory"]["enabled"] is True
+    assert policy["reflection_transfer"]["enabled"] is True
+    assert policy["tool_chaos"]["force_verify_successful_tool_results"] is True
+    assert policy["tool_chaos"]["ban_identical_blind_retry"] is True
+    assert policy["tool_scheduling"]["parallel_scheduler_enabled"] is True
