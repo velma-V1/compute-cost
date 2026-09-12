@@ -844,7 +844,10 @@ def _top_policies(registry: list[dict[str,Any]], scores: dict[str,Any], keep: in
 
 def _fine_tuning_records(run: TuningRun, winner: dict[str,Any]) -> list[dict[str,Any]]:
     winner_id=str(winner["policy_id"])
-    rows=[row for row in run.rows if row.get("policy_id")==winner_id]
+    rows=[
+        row for row in run.rows
+        if row.get("policy_id")==winner_id and row.get("partition")=="VALIDATION"
+    ]
     result=[]
     for row in rows:
         if float(row.get("control_score",0.0))>=1.0 or float(row.get("score",0.0))>=1.0:
@@ -864,6 +867,27 @@ def _fine_tuning_records(run: TuningRun, winner: dict[str,Any]) -> list[dict[str
     return result
 
 
+def _acceptance_pass(summary: dict[str, Any], max_regression_rate: float) -> bool:
+    return (
+        int(summary.get("n", 0)) > 0
+        and float(summary.get("mean_delta", 0.0)) >= 0.0
+        and float(summary.get("regression_rate", 1.0)) <= float(max_regression_rate)
+    )
+
+
+def _family_is_safe(payload: dict[str, Any], max_regression_rate: float) -> bool:
+    return (
+        int(payload.get("n", 0)) > 0
+        and float(payload.get("mean_delta", 0.0)) >= 0.0
+        and float(payload.get("regression_rate", 1.0)) <= float(max_regression_rate)
+    )
+
+
+def _policy_lock_hash(policy: dict[str, Any]) -> str:
+    payload = json.dumps(policy, sort_keys=True, separators=(",", ":"), default=str)
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
 def run_test12_tuning(runner: Any, cases: list[dict[str,Any]], *, collection_run: str, clock: Callable[[],float]=time.monotonic, started_monotonic: float|None=None) -> list[dict[str,Any]]:
     assert runner.store is not None
     collection=load_collection(Path(runner.results_root),collection_run)
@@ -881,8 +905,18 @@ def run_test12_tuning(runner: Any, cases: list[dict[str,Any]], *, collection_run
     aggregate_scores={}
     final_confirmation_family_scores={}
     final_confirmation_rows=[]
+    winner_locked: dict[str, Any] | None = None
+    winner_lock_hash: str | None = None
+    blind_rows: list[dict[str, Any]] = []
+    protected_rows: list[dict[str, Any]] = []
+    blind_scores: dict[str, Any] = {}
+    protected_scores: dict[str, Any] = {}
+
     for phase_name,seconds in TUNING_PHASES:
         deadline=min(run.active_end,phase_start+seconds)
+        partition = plan["phase_partition_policy"][phase_name]
+        run.campaign.allowed_partitions={partition}
+
         if phase_name=="validation_baseline":
             cases0=_balanced_validation(run,min(len(run.validation),128))
             for case in cases0:
@@ -904,7 +938,7 @@ def run_test12_tuning(runner: Any, cases: list[dict[str,Any]], *, collection_run
             current=_top_policies(current,scores,int(run.cfg["final_candidates"]))
         elif phase_name=="residual_failure_replay":
             scores=_evaluate(run,current,_balanced_validation(run,len(run.validation)),deadline,seeds=[43])
-        else:
+        elif phase_name=="final_validation_lock":
             final_start=len(run.rows)
             scores=_evaluate(
                 run,
@@ -926,16 +960,85 @@ def run_test12_tuning(runner: Any, cases: list[dict[str,Any]], *, collection_run
                     run.cfg["max_capability_regression_rate"]
                 ),
             )
+            winner_locked=copy.deepcopy(
+                current[0] if current else {"policy_id":"DIRECT","mode":"direct"}
+            )
+            winner_lock_hash=_policy_lock_hash(winner_locked)
+            current=[winner_locked]
+        elif phase_name=="test2_blind_acceptance":
+            if winner_locked is None:
+                winner_locked=copy.deepcopy(
+                    current[0] if current else {"policy_id":"DIRECT","mode":"direct"}
+                )
+                winner_lock_hash=_policy_lock_hash(winner_locked)
+                current=[winner_locked]
+            blind_start=len(run.rows)
+            scores=_evaluate(
+                run,
+                [winner_locked],
+                _balanced_partition(run.test2_blind),
+                deadline,
+                seeds=[45],
+            )
+            blind_rows=run.rows[blind_start:]
+            blind_scores=copy.deepcopy(scores)
+        elif phase_name=="test3_protected_acceptance":
+            if winner_locked is None:
+                winner_locked=copy.deepcopy(
+                    current[0] if current else {"policy_id":"DIRECT","mode":"direct"}
+                )
+                winner_lock_hash=_policy_lock_hash(winner_locked)
+                current=[winner_locked]
+            protected_start=len(run.rows)
+            scores=_evaluate(
+                run,
+                [winner_locked],
+                _balanced_partition(run.test3_protected),
+                deadline,
+                seeds=[46],
+            )
+            protected_rows=run.rows[protected_start:]
+            protected_scores=copy.deepcopy(scores)
+        else:
+            raise ValueError(f"unknown Test 1.2 tuning phase: {phase_name}")
+
         aggregate_scores.update(scores)
-        ledger.append({"phase":phase_name,"remaining_policy_ids":[p["policy_id"] for p in current],"scores":scores})
+        ledger.append({
+            "phase":phase_name,
+            "partition":partition,
+            "remaining_policy_ids":[p["policy_id"] for p in current],
+            "winner_lock_hash":winner_lock_hash,
+            "scores":scores,
+        })
         phase_start=deadline
         if not run.can_start(run.active_end): break
 
-    winner=current[0] if current else {"policy_id":"DIRECT","mode":"direct"}
-    winner_rows=[row for row in run.rows if row.get("policy_id")==winner["policy_id"]]
+    winner=winner_locked or (current[0] if current else {"policy_id":"DIRECT","mode":"direct"})
+    winner_rows=[
+        row for row in run.rows
+        if row.get("policy_id")==winner["policy_id"]
+        and row.get("partition")=="VALIDATION"
+    ]
     winner_summary=_score_policy_rows(winner_rows)
     winner_family_validation=(
         final_confirmation_family_scores.get(str(winner["policy_id"])) or {}
+    )
+    if not winner_family_validation:
+        winner_family_validation=(
+            _score_policies_by_family(winner_rows).get(str(winner["policy_id"])) or {}
+        )
+    blind_summary=_score_policy_rows([
+        row for row in blind_rows if row.get("policy_id")==winner["policy_id"]
+    ])
+    protected_summary=_score_policy_rows([
+        row for row in protected_rows if row.get("policy_id")==winner["policy_id"]
+    ])
+    acceptance_rows=[
+        row for row in [*blind_rows,*protected_rows]
+        if row.get("policy_id")==winner["policy_id"]
+    ]
+    acceptance_family_validation=(
+        _score_policies_by_family(acceptance_rows).get(str(winner["policy_id"])) or {}
     )
     missing_winner_families=sorted(
         set(TEST2_CAPABILITY_FAMILIES) - set(winner_family_validation)
@@ -951,6 +1054,28 @@ def run_test12_tuning(runner: Any, cases: list[dict[str,Any]], *, collection_run
         )
     )
     family_safe=not missing_winner_families and not regressing_winner_families
+    max_regression=float(run.cfg["max_capability_regression_rate"])
+    blind_pass=_acceptance_pass(blind_summary,max_regression)
+    protected_pass=_acceptance_pass(protected_summary,max_regression)
+
+    certified_families=[]
+    for family in TEST2_CAPABILITY_FAMILIES:
+        validation_payload=winner_family_validation.get(family)
+        if not validation_payload or not _family_is_safe(validation_payload,max_regression):
+            continue
+        holdout_payload=acceptance_family_validation.get(family)
+        if holdout_payload and not _family_is_safe(holdout_payload,max_regression):
+            continue
+        certified_families.append(family)
+    blocked_families=sorted(set(TEST2_CAPABILITY_FAMILIES)-set(certified_families))
+
+    if family_safe and blind_pass and protected_pass:
+        terminal_decision="FULL_INVERTED_INTEGRATION"
+    elif certified_families and int(protected_summary.get("n",0))>0:
+        terminal_decision="CONSTRAINED_CAPABILITY_SCOPED_INTEGRATION"
+    else:
+        terminal_decision="REJECT_MODEL_ADDITION"
+
     route_map=winner.get("route_map") or {}
     do_not_use=[
         key for key,value in ((collection.get("negative") or {}).get("effects") or {}).items()
@@ -998,6 +1123,13 @@ def run_test12_tuning(runner: Any, cases: list[dict[str,Any]], *, collection_run
         "direct_default_when_unmatched":True,
         "oracle_routing_prohibited":True,
         "hard_ceiling_total_seconds":TUNING_HARD_SECONDS+COLLECTION_HARD_SECONDS,
+        "winner_locked_before_holdouts":True,
+        "winner_lock_sha256":winner_lock_hash,
+        "blind_acceptance_is_tuning_input":False,
+        "protected_acceptance_is_tuning_input":False,
+        "terminal_decision":terminal_decision,
+        "certified_capability_families":certified_families,
+        "blocked_capability_families":blocked_families,
     }
     runner.store.write_json("successive-halving-ledger.json",{"schema_version":1,"stages":ledger},producer="test1.2-tuning",stage="report")
     runner.store.write_json("compiled-harness-policy.json",compiled,producer="test1.2-tuning",stage="report")
@@ -1009,6 +1141,11 @@ def run_test12_tuning(runner: Any, cases: list[dict[str,Any]], *, collection_run
         "missing_families":missing_winner_families,
         "regressing_families":regressing_winner_families,
         "all_policy_scores":aggregate_scores,
+        "winner_lock_sha256":winner_lock_hash,
+        "test2_blind_acceptance":blind_summary,
+        "test3_protected_acceptance":protected_summary,
+        "acceptance_family_validation":acceptance_family_validation,
+        "terminal_decision":terminal_decision,
     },producer="test1.2-tuning",stage="report")
     runner.store.write_json("do-not-use-registry.json",{"schema_version":1,"keys":sorted(do_not_use)},producer="test1.2-tuning",stage="report")
 
