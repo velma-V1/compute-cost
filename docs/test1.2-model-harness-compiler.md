@@ -15,10 +15,13 @@ compiles those observations into an adaptive deployment policy.
 | Run | Data partition | Hard ceiling | Active model ceiling |
 | --- | --- | ---: | ---: |
 | Collection | DISCOVERY | 7h44m | 7h29m |
-| Tuning / compile | VALIDATION | 6h15m | 6h |
+| Tuning / compile / acceptance | VALIDATION → TEST2_BLIND → TEST3_PROTECTED | 6h15m | 6h |
 | Combined | — | **13h59m** | **13h29m** |
 
-TEST2_BLIND and TEST3_PROTECTED are never exposed by either run.
+Collection never exposes protected partitions. Run 2 optimizes and freezes the
+winner on VALIDATION first, then opens TEST2_BLIND and TEST3_PROTECTED exactly
+once for immutable terminal acceptance. Holdout results may approve, constrain,
+or reject deployment, but may never retune or reselect the winner.
 
 The combined hard ceiling remains below 14 hours. The additional collection
 time is additive: no existing valuable phase was removed. Test 1.2 now contains
@@ -116,8 +119,8 @@ The legacy hash split is retained as the authority for protected data.
 
 For Test 1.2 only, the already-open legacy `DISCOVERY + VALIDATION` pool is
 rebalanced by capability family. This prevents random hashing from leaving a
-family with too little manufacturing evidence while preserving future blind
-audits.
+family with too little manufacturing evidence while preserving the legacy
+blind/protected holdouts for the terminal acceptance tail of Run 2.
 
 Preflight requires at least:
 
@@ -514,8 +517,38 @@ A new model is not considered harness-compiled if:
 - any capability family lacks its mandatory manufacturing control-surface floor;
 - any declared collection candidate was never exercised;
 - VALIDATION was used during collection;
-- DISCOVERY was used for tuning;
-- TEST2_BLIND or TEST3_PROTECTED was exposed;
+- DISCOVERY was used during Run 2;
+- TEST2_BLIND or TEST3_PROTECTED was opened before the winner was immutably locked;
+- holdout evidence changed, tuned, or reselected the frozen winner;
+- blind/protected terminal acceptance did not complete;
 - the final policy has unbounded negative transfer;
 - the compiled harness requires oracle labels unavailable at deployment;
 - the collection/tuning evidence cannot be integrity verified.
+
+
+## Terminal onboarding contract
+
+After Collection + Tuning/Compile/Acceptance complete, Test 1.2 is finished for
+that model version. The terminal package must make one decision:
+
+- `FULL_INVERTED_INTEGRATION`
+- `CONSTRAINED_CAPABILITY_SCOPED_INTEGRATION`
+- `REJECT_MODEL_ADDITION`
+
+No separate Test 2 or Test 3 characterization run is required for onboarding.
+The protected partitions are consumed inside Run 2 after policy lock.
+
+A rerun is justified only when the run was invalid/corrupted, acceptance could
+not complete because of a runtime/evidence failure, or the model/runtime changed
+materially. A later weight update is a new model version and therefore a new
+onboarding event, not unfinished Test 1.2 work.
+
+The terminal outputs are:
+
+- `test1.2-final-acceptance.json`
+- `integration-capability-contract.json`
+- `inverted-model-integration-package.json`
+- `test1.2-terminal-handoff.json`
+
+The final acceptance rule requires both non-regression and absolute competence;
+zero regression on a task the model still fails does not qualify as capability.
