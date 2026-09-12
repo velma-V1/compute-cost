@@ -32,8 +32,11 @@ from compute_cost.test12_toollab import (
 )
 from compute_cost.test12_tuning import (
     TUNING_HARD_SECONDS,
+    _acceptance_pass,
     _compile_frontier_gap_policy,
     _compile_second_gap_policy,
+    _family_is_safe,
+    _score_policy_rows,
     _top_family_safe_policies,
     _top_policies,
     build_tuning_plan,
@@ -263,13 +266,38 @@ def test_real_tool_lab_executes_and_returns_errors_for_bad_arguments():
     assert len(TOOL_HARNESS_POLICIES) >= 5
 
 
-def test_tuning_run_uses_validation_only_and_combined_hard_ceiling_is_13h59m():
+def test_tuning_run_finishes_terminal_onboarding_inside_13h59m():
     cases = _cases()
     plan = build_tuning_plan(cases, collection_run="collection-run")
     validate_tuning_plan(plan)
-    assert plan["allowed_partitions"] == ["VALIDATION"]
-    assert set(plan["prohibited_partitions"]) == {"DISCOVERY", "TEST2_BLIND", "TEST3_PROTECTED"}
+    assert plan["allowed_partitions"] == [
+        "VALIDATION",
+        "TEST2_BLIND",
+        "TEST3_PROTECTED",
+    ]
+    assert plan["prohibited_partitions"] == ["DISCOVERY"]
+    assert plan["phase_partition_policy"]["final_validation_lock"] == "VALIDATION"
+    assert plan["phase_partition_policy"]["test2_blind_acceptance"] == "TEST2_BLIND"
+    assert plan["phase_partition_policy"]["test3_protected_acceptance"] == "TEST3_PROTECTED"
+    assert plan["winner_locked_before_holdouts"] is True
+    assert plan["blind_acceptance_is_tuning_input"] is False
+    assert plan["protected_acceptance_is_tuning_input"] is False
+    assert plan["no_additional_characterization_test_required"] is True
+    assert set(plan["terminal_decisions"]) == {
+        "FULL_INVERTED_INTEGRATION",
+        "CONSTRAINED_CAPABILITY_SCOPED_INTEGRATION",
+        "REJECT_MODEL_ADDITION",
+    }
+    for required in {
+        "test1.2-final-acceptance.json",
+        "integration-capability-contract.json",
+        "inverted-model-integration-package.json",
+        "test1.2-terminal-handoff.json",
+    }:
+        assert required in plan["required_outputs"]
     assert plan["wall_clock_seconds"] == 6 * 60 * 60 + 15 * 60
+    assert plan["active_model_seconds"] == 6 * 60 * 60
+    assert sum(row["seconds"] for row in plan["phases"]) == 6 * 60 * 60
     assert plan["total_two_run_hard_ceiling_seconds"] == COLLECTION_HARD_SECONDS + TUNING_HARD_SECONDS
     assert plan["total_two_run_hard_ceiling_seconds"] == 839 * 60
     assert plan["total_two_run_hard_ceiling_seconds"] < 14 * 60 * 60
@@ -1200,3 +1228,52 @@ def test_explicit_exact_repeat_escape_hatch_preserves_deliberate_reproducibility
     assert len(calls) == 3  # one cached control + two deliberate treatment repeats
     assert campaign.efficiency_counters["exact_duplicate_treatments_skipped"] == 0
     assert campaign.efficiency_counters["explicit_exact_repeats_executed"] == 1
+
+
+
+def test_terminal_acceptance_requires_absolute_competence_not_only_zero_regression():
+    failed_but_nonregressing = _score_policy_rows([
+        {
+            "policy_id": "DIRECT",
+            "family_id": "family_a",
+            "score": 0.0,
+            "control_score": 0.0,
+            "delta": 0.0,
+            "model_calls": 0,
+        }
+        for _ in range(6)
+    ])
+    assert failed_but_nonregressing["mean_delta"] == 0.0
+    assert failed_but_nonregressing["regression_rate"] == 0.0
+    assert failed_but_nonregressing["pass_rate"] == 0.0
+    assert _acceptance_pass(failed_but_nonregressing, 0.05, 0.67) is False
+    assert _family_is_safe(failed_but_nonregressing, 0.05, 0.67) is False
+
+    competent = _score_policy_rows([
+        {
+            "policy_id": "P1",
+            "family_id": "family_a",
+            "score": score,
+            "control_score": score,
+            "delta": 0.0,
+            "model_calls": 1,
+        }
+        for score in [1.0, 1.0, 1.0, 1.0, 1.0, 0.0]
+    ])
+    assert competent["pass_rate"] >= 0.67
+    assert _acceptance_pass(competent, 0.05, 0.67) is True
+    assert _family_is_safe(competent, 0.05, 0.67) is True
+
+
+def test_terminal_tuning_outputs_include_complete_inverted_integration_package():
+    plan = build_tuning_plan(_cases(), collection_run="collection-run")
+    expected = {
+        "compiled-harness-policy.json",
+        "compiled-harness-validation.json",
+        "model-harness-card.json",
+        "test1.2-final-acceptance.json",
+        "integration-capability-contract.json",
+        "inverted-model-integration-package.json",
+        "test1.2-terminal-handoff.json",
+    }
+    assert expected <= set(plan["required_outputs"])
