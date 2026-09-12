@@ -607,15 +607,37 @@ def _row_integrity_hash(row: dict[str, Any]) -> str:
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
+def _read_recovery_checkpoint(path: Path) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    issues: list[dict[str, Any]] = []
+    candidates = [path, path.with_name(path.name + ".tmp")]
+    for candidate in candidates:
+        if not candidate.is_file():
+            continue
+        try:
+            value = json.loads(candidate.read_text(encoding="utf-8", errors="strict"))
+        except Exception as exc:
+            issues.append({
+                "path": candidate.name,
+                "problem": "CHECKPOINT_JSON_INVALID",
+                "detail": f"{type(exc).__name__}: {exc}",
+            })
+            continue
+        if isinstance(value, dict):
+            if candidate != path:
+                issues.append({
+                    "path": candidate.name,
+                    "problem": "RECOVERED_FROM_ATOMIC_TEMP_CHECKPOINT",
+                })
+            return value, issues
+    return {}, issues
+
+
 def load_test12_recovery(run_dir: Path) -> dict[str, Any]:
     """Load only valid atomic evidence from an interrupted Test 1.2 run."""
     checkpoint_path = run_dir / "test1.2-recovery-checkpoint.json"
-    checkpoint = (
-        json.loads(checkpoint_path.read_text(encoding="utf-8"))
-        if checkpoint_path.is_file() else {}
-    )
+    checkpoint, checkpoint_issues = _read_recovery_checkpoint(checkpoint_path)
     rows: list[dict[str, Any]] = []
-    issues: list[dict[str, Any]] = []
+    issues: list[dict[str, Any]] = list(checkpoint_issues)
     observations = run_dir / "test1.2-observations.jsonl"
     if observations.is_file():
         for line_number, raw in enumerate(
@@ -1210,7 +1232,12 @@ class Test12Campaign:
 
     def _write_recovery_checkpoint(self, *, state: str = "ACTIVE") -> None:
         store = getattr(self.runner, "store", None)
-        if store is None or not hasattr(store, "write_json"):
+        if store is None:
+            return
+        writer = getattr(store, "write_json_atomic", None)
+        if writer is None:
+            writer = getattr(store, "write_json", None)
+        if writer is None:
             return
         run_id = getattr(store, "run_id", None)
         physical_calls = int(
@@ -1243,7 +1270,7 @@ class Test12Campaign:
             ),
             "full_rerun_allowed": False,
         }
-        store.write_json(
+        writer(
             "test1.2-recovery-checkpoint.json",
             checkpoint,
             producer="test1.2",
