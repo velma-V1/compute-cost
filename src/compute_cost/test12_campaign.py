@@ -229,7 +229,7 @@ RULES = (
     "residual failures are eligible for fine-tuning only after prompt controller compute context retry and tool-policy owners are tested",
     "unused active time is allocated to uncertainty reduction and replication, never arbitrary repeated prompting",
     "the governing stop condition is fixed wall-clock time; model-call limits are runaway safety rails and never the optimization objective",
-    "exact case x seed x intervention repeats are suppressed unless the experimental design changes seed or intervention state explicitly",
+    "exact case x seed x intervention repeats are suppressed unless the experimental design changes seed/intervention state or explicitly marks allow_exact_repeat",
     "unmeasured baseline cases remain UNKNOWN and must never be silently counted as failures",
     "multi-call controllers and individual calls may start only when measured latency indicates enough runway to reach a scored result before the current deadline",
     "information-gain reserve fills missing capability-family x mandatory-control-surface evidence before spending time on additional replication",
@@ -711,6 +711,7 @@ def build_test12_plan(cases: list[dict[str, Any]], *, seed_run: str | None = Non
             "model_call_cap_role": "RUNAWAY_SAFETY_RAIL_ONLY",
             "deadline_runway_guard": True,
             "exact_duplicate_suppression": True,
+            "explicit_exact_repeat_escape_hatch": "allow_exact_repeat",
             "unknown_baseline_is_failure": False,
             "reserve_family_surface_gap_first": True,
             "adaptive_rule": "adapt replication depth only after mandatory breadth; never skip a declared control family or phase",
@@ -1234,7 +1235,8 @@ class Test12Campaign:
         self.assert_allowed(case)
         signature = self._trial_signature(case, intervention, seed)
         estimated_calls = _estimated_physical_calls(intervention)
-        if signature in self.completed_treatment_signatures:
+        allow_exact_repeat = bool(intervention.get("allow_exact_repeat"))
+        if signature in self.completed_treatment_signatures and not allow_exact_repeat:
             self.efficiency_counters["exact_duplicate_treatments_skipped"] += 1
             self.efficiency_counters["estimated_duplicate_physical_calls_avoided"] += estimated_calls
             return None
