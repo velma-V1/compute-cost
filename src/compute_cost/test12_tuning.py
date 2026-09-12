@@ -131,6 +131,7 @@ DEFAULT_TUNING_CONFIG = {
     "minimum_validation_families": 40,
     "max_capability_regression_rate": 0.05,
     "minimum_positive_value": 0.0,
+    "minimum_acceptance_pass_rate": 0.67,
 }
 
 
@@ -573,7 +574,18 @@ def _policy_candidates(collection: dict[str, Any], limit: int) -> list[dict[str,
 
 def _score_policy_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
     if not rows:
-        return {"n":0,"mean_delta":0.0,"regression_rate":1.0,"mean_calls":0.0,"net_value":-999.0}
+        return {
+            "n":0,
+            "mean_score":0.0,
+            "pass_rate":0.0,
+            "mean_control_score":0.0,
+            "mean_delta":0.0,
+            "regression_rate":1.0,
+            "mean_calls":0.0,
+            "net_value":-999.0,
+        }
+    scores=[float(row.get("score") or 0.0) for row in rows]
+    control_scores=[float(row.get("control_score") or 0.0) for row in rows]
     deltas=[float(row.get("delta") or 0.0) for row in rows]
     regressions=sum(1 for value in deltas if value < 0)
     calls=[float(row.get("model_calls") or 0.0) for row in rows]
@@ -582,6 +594,9 @@ def _score_policy_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
     mean_calls=mean(calls)
     return {
         "n":len(rows),
+        "mean_score":mean(scores),
+        "pass_rate":sum(1 for value in scores if value >= 1.0)/len(scores),
+        "mean_control_score":mean(control_scores),
         "mean_delta":mean_delta,
         "median_delta":median(deltas),
         "wins":sum(1 for value in deltas if value>0),
@@ -867,17 +882,27 @@ def _fine_tuning_records(run: TuningRun, winner: dict[str,Any]) -> list[dict[str
     return result
 
 
-def _acceptance_pass(summary: dict[str, Any], max_regression_rate: float) -> bool:
+def _acceptance_pass(
+    summary: dict[str, Any],
+    max_regression_rate: float,
+    minimum_pass_rate: float,
+) -> bool:
     return (
         int(summary.get("n", 0)) > 0
+        and float(summary.get("pass_rate", 0.0)) >= float(minimum_pass_rate)
         and float(summary.get("mean_delta", 0.0)) >= 0.0
         and float(summary.get("regression_rate", 1.0)) <= float(max_regression_rate)
     )
 
 
-def _family_is_safe(payload: dict[str, Any], max_regression_rate: float) -> bool:
+def _family_is_safe(
+    payload: dict[str, Any],
+    max_regression_rate: float,
+    minimum_pass_rate: float,
+) -> bool:
     return (
         int(payload.get("n", 0)) > 0
+        and float(payload.get("pass_rate", 0.0)) >= float(minimum_pass_rate)
         and float(payload.get("mean_delta", 0.0)) >= 0.0
         and float(payload.get("regression_rate", 1.0)) <= float(max_regression_rate)
     )
@@ -1055,16 +1080,17 @@ def run_test12_tuning(runner: Any, cases: list[dict[str,Any]], *, collection_run
     )
     family_safe=not missing_winner_families and not regressing_winner_families
     max_regression=float(run.cfg["max_capability_regression_rate"])
-    blind_pass=_acceptance_pass(blind_summary,max_regression)
-    protected_pass=_acceptance_pass(protected_summary,max_regression)
+    minimum_pass_rate=float(run.cfg["minimum_acceptance_pass_rate"])
+    blind_pass=_acceptance_pass(blind_summary,max_regression,minimum_pass_rate)
+    protected_pass=_acceptance_pass(protected_summary,max_regression,minimum_pass_rate)
 
     certified_families=[]
     for family in TEST2_CAPABILITY_FAMILIES:
         validation_payload=winner_family_validation.get(family)
-        if not validation_payload or not _family_is_safe(validation_payload,max_regression):
+        if not validation_payload or not _family_is_safe(validation_payload,max_regression,minimum_pass_rate):
             continue
         holdout_payload=acceptance_family_validation.get(family)
-        if holdout_payload and not _family_is_safe(holdout_payload,max_regression):
+        if holdout_payload and not _family_is_safe(holdout_payload,max_regression,minimum_pass_rate):
             continue
         certified_families.append(family)
     blocked_families=sorted(set(TEST2_CAPABILITY_FAMILIES)-set(certified_families))
@@ -1172,6 +1198,8 @@ def run_test12_tuning(runner: Any, cases: list[dict[str,Any]], *, collection_run
         "winner_locked_before_holdouts":True,
         "holdouts_used_for_tuning_or_selection":False,
         "validation_family_safe":family_safe,
+        "minimum_acceptance_pass_rate":minimum_pass_rate,
+        "maximum_capability_regression_rate":max_regression,
         "test2_blind":{
             "summary":blind_summary,
             "passed":blind_pass,
