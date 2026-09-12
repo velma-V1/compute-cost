@@ -279,13 +279,19 @@ def load_test1_source(results_root: Path, run_id: str, cases: list[dict[str, Any
     run_dir = results_root / run_id
     if not run_dir.is_dir():
         raise ValueError(f"Test-1 source run does not exist: {run_id}")
-    problems = EvidenceStore(results_root, run_id).verify_manifest()
-    if problems:
-        raise ValueError(f"Test-1 evidence manifest verification failed: {problems}")
     required = ("test1-observations.jsonl", "fixture-partitions.json", "failure-registry.json")
+    problems = EvidenceStore(results_root, run_id).verify_manifest_paths(required)
+    if problems:
+        raise ValueError(f"Test-1 consumed-artifact verification failed: {problems}")
     missing = [name for name in required if not (run_dir / name).is_file()]
     if missing:
         raise ValueError(f"Test-1 source missing required artifacts: {missing}")
+    manifest_bytes = (run_dir / EvidenceStore.MANIFEST_NAME).read_bytes()
+    source_integrity = {
+        "verification_mode": "CONSUMED_ARTIFACTS",
+        "verified_paths": list(required),
+        "source_manifest_sha256": hashlib.sha256(manifest_bytes).hexdigest(),
+    }
 
     source_parts = (_read_json(run_dir / "fixture-partitions.json").get("partitions") or {})
     computed = partition_cases(cases)
@@ -319,6 +325,7 @@ def load_test1_source(results_root: Path, run_id: str, cases: list[dict[str, Any
         "negative_rows": negatives,
         "truncation_rows": truncations,
         "failures": (_read_json(run_dir / "failure-registry.json").get("failures") or []),
+        "source_integrity": source_integrity,
     }
 
 
