@@ -699,7 +699,6 @@ class BenchmarkRunner(_CoreBenchmarkRunner):
         dry_run: bool = False,
     ) -> Path:
         """Run the seven-hour corrective GPT-20B Test-1.1 campaign."""
-        campaign_started_monotonic = time.monotonic()
         test_cfg = self.config.get("test11_campaign") or {}
         expected_calls = int(test_cfg.get("expected_calls", 5200))
         safety_cap = int(test_cfg.get("safety_call_cap", 12000))
@@ -871,6 +870,17 @@ class BenchmarkRunner(_CoreBenchmarkRunner):
             self._event("PREFLIGHT_COMPLETE", model=model, mode="gpt20b-test1.1")
             self._progress_complete("preflight")
             self._progress_preflight_complete = True
+
+            # The seven-hour experimental clock starts only after all source-integrity
+            # verification and runtime preflight work has completed. Large retained
+            # evidence sets can take minutes to re-hash and must not consume active
+            # experiment time.
+            campaign_started_monotonic = time.monotonic()
+            self._event(
+                "TEST11_ACTIVE_WINDOW_START",
+                model=model,
+                test1_run=test1_run,
+            )
 
             rows = run_test11_campaign(
                 self,
