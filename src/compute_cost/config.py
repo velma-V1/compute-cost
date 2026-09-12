@@ -91,6 +91,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "minimum_validation_families": 40,
         "max_capability_regression_rate": 0.05,
         "minimum_positive_value": 0.0,
+        "minimum_acceptance_pass_rate": 0.67,
     },
     "test2_campaign": {
         "expected_calls": 4100,
@@ -301,10 +302,16 @@ def _validate_test12_tuning(config: dict[str, Any]) -> None:
         not isinstance(v, int) or isinstance(v, bool) or v <= 0 for v in values
     ):
         raise ValueError("test12_tuning.halving_cases must be a non-empty positive-integer list")
-    for name in ("max_capability_regression_rate", "minimum_positive_value"):
+    for name in (
+        "max_capability_regression_rate",
+        "minimum_positive_value",
+        "minimum_acceptance_pass_rate",
+    ):
         value = c.get(name)
         if isinstance(value, bool) or not isinstance(value, (int, float)):
             raise ValueError(f"test12_tuning.{name} must be numeric")
+    if not 0.0 <= float(c["minimum_acceptance_pass_rate"]) <= 1.0:
+        raise ValueError("test12_tuning.minimum_acceptance_pass_rate must be in [0,1]")
 
 
 def _validate_test2_campaign(config: dict[str, Any]) -> None:
