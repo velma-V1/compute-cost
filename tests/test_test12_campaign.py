@@ -155,6 +155,7 @@ def test_collection_plan_is_full_campaign_under_14_hour_two_run_contract():
     assert plan["adaptive_allocation"]["model_call_cap_role"] == "RUNAWAY_SAFETY_RAIL_ONLY"
     assert plan["adaptive_allocation"]["deadline_runway_guard"] is True
     assert plan["adaptive_allocation"]["exact_duplicate_suppression"] is True
+    assert plan["adaptive_allocation"]["explicit_exact_repeat_escape_hatch"] == "allow_exact_repeat"
     assert plan["adaptive_allocation"]["unknown_baseline_is_failure"] is False
     assert plan["adaptive_allocation"]["reserve_family_surface_gap_first"] is True
     assert set(IMPROVEMENT_SURFACE).issubset(set(plan["improvement_surface"]))
@@ -1134,3 +1135,67 @@ def test_gap_first_reserve_targets_missing_family_surface_pairs_before_replicati
     remaining = _family_surface_gap_queue(campaign)
     assert len(remaining) == len(initial) - 1
     assert (family, category) not in {(f, c) for f, c, _, _ in remaining}
+
+
+
+def test_explicit_exact_repeat_escape_hatch_preserves_deliberate_reproducibility(monkeypatch):
+    class Store:
+        run_id = "repeat-run"
+
+        def append_jsonl(self, *args, **kwargs):
+            return None
+
+    class Runner:
+        def __init__(self):
+            self.config = load_config()
+            self.progress = None
+            self.store = Store()
+            self._model_call_counts = {"repeat-run": 0}
+
+        def _utc(self):
+            return "2026-09-12T00:00:00Z"
+
+    calls = []
+
+    def fake_execute(runner, case, spec, parent=None, messages_override=None):
+        calls.append((case["id"], spec.experiment_id))
+        runner._model_call_counts["repeat-run"] += 1
+        return {
+            "score": 1.0,
+            "classification": {"valid_for_capability": True, "result_class": "PASS"},
+            "response_text": "ok",
+            "experiment": {
+                "experiment_id": spec.experiment_id,
+                "generation_budget": spec.generation_budget,
+                "reasoning_effort": spec.reasoning_effort,
+                "context_request": spec.context_request,
+                "temperature": spec.temperature,
+            },
+            "metrics": {"prompt_eval_count": 10, "eval_count": 2},
+            "timing": {"client_latency_ns": 1_000_000_000},
+            "evidence_refs": {},
+        }
+
+    monkeypatch.setattr(test12_module, "execute_experiment", fake_execute)
+    cases = _cases()
+    runner = Runner()
+    campaign = Test12Campaign(
+        runner,
+        cases,
+        fresh_model_source(cases),
+        clock=lambda: 0.0,
+        started_monotonic=0.0,
+    )
+    case = campaign.partitions["DISCOVERY"][0]
+    intervention = {
+        "id": "UNIT-REPEAT",
+        "category": "PROMPT_CONTROL",
+        "mode": "single",
+        "instruction": "Return the correct answer.",
+        "allow_exact_repeat": True,
+    }
+
+    assert campaign.treatment(case, 100.0, phase="repeat-a", intervention=intervention, seed=42) is not None
+    assert campaign.treatment(case, 100.0, phase="repeat-b", intervention=intervention, seed=42) is not None
+    assert len(calls) == 3  # one cached control + two deliberate treatment repeats
+    assert campaign.efficiency_counters["exact_duplicate_treatments_skipped"] == 0
