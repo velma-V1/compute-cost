@@ -1199,3 +1199,4 @@ def test_explicit_exact_repeat_escape_hatch_preserves_deliberate_reproducibility
     assert campaign.treatment(case, 100.0, phase="repeat-b", intervention=intervention, seed=42) is not None
     assert len(calls) == 3  # one cached control + two deliberate treatment repeats
     assert campaign.efficiency_counters["exact_duplicate_treatments_skipped"] == 0
+    assert campaign.efficiency_counters["explicit_exact_repeats_executed"] == 1
