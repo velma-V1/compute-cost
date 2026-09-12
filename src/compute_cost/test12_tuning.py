@@ -838,7 +838,7 @@ class TuningRun:
 
     def _write_checkpoint(self, *, state: str="ACTIVE") -> None:
         store=self.runner.store
-        if store is None:
+        if store is None or not hasattr(store,"write_json"):
             return
         run_id=getattr(store,"run_id",None)
         physical_calls=int(getattr(self.runner,"_model_call_counts",{}).get(run_id,0)) if run_id else 0
