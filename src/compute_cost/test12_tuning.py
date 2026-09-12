@@ -1033,7 +1033,7 @@ def _evaluate_acceptance(
     primary_seed: int,
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     """Breadth first, then spend remaining holdout time on extra evidence."""
-    start = len(run.rows)
+    partition = run.campaign.partition_name(cases[0]) if cases else "UNKNOWN"
     primary = _balanced_partition(
         cases,
         min(len(cases), max(40, 2 * len(TEST2_CAPABILITY_FAMILIES))),
@@ -1051,7 +1051,12 @@ def _evaluate_acceptance(
         # than leave acceptance minutes idle.
         _evaluate(run, [winner], primary, deadline, seeds=[primary_seed + 100])
 
-    rows = run.rows[start:]
+    rows = [
+        row for row in run.rows
+        if str(row.get("policy_id")) == str(winner["policy_id"])
+        and str(row.get("partition")) == partition
+        and int(row.get("seed") or 0) in {int(primary_seed), int(primary_seed + 100)}
+    ]
     grouped = defaultdict(list)
     for row in rows:
         grouped[str(row["policy_id"])].append(row)
@@ -1169,6 +1174,9 @@ def run_test12_tuning(
     ] or policies
     ledger=copy.deepcopy(run.phase_ledger)
     aggregate_scores={}
+    for item in ledger:
+        for key,value in (item.get("scores") or {}).items():
+            aggregate_scores[str(key)]=copy.deepcopy(value)
     final_confirmation_family_scores={}
     final_confirmation_rows=[]
     winner_locked: dict[str, Any] | None = copy.deepcopy(run.winner_locked)
@@ -1302,6 +1310,24 @@ def run_test12_tuning(
         if not run.can_start(run.active_end): break
 
     winner=winner_locked or (current[0] if current else {"policy_id":"DIRECT","mode":"direct"})
+    if not blind_rows:
+        blind_rows=[
+            row for row in run.rows
+            if row.get("policy_id")==winner["policy_id"]
+            and row.get("partition")=="TEST2_BLIND"
+        ]
+        blind_scores={
+            str(winner["policy_id"]):_score_policy_rows(blind_rows)
+        } if blind_rows else {}
+    if not protected_rows:
+        protected_rows=[
+            row for row in run.rows
+            if row.get("policy_id")==winner["policy_id"]
+            and row.get("partition")=="TEST3_PROTECTED"
+        ]
+        protected_scores={
+            str(winner["policy_id"]):_score_policy_rows(protected_rows)
+        } if protected_rows else {}
     winner_rows=[
         row for row in run.rows
         if row.get("policy_id")==winner["policy_id"]
