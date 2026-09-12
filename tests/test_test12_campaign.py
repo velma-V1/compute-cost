@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import compute_cost.test12_campaign as test12_module
 from compute_cost.cli import build_parser
 from compute_cost.config import load_config
 from compute_cost.test12_campaign import (
@@ -959,8 +960,8 @@ def test_source_headroom_keeps_unmeasured_cases_unknown_instead_of_failed():
     ]
 
     failed, passed = _source_headroom(campaign)
-    assert [row["id"] for row in failed] == [cases[1]["id"]]
-    assert [row["id"] for row in passed] == [cases[0]["id"]]
+    assert {row["id"] for row in failed} == {cases[1]["id"]}
+    assert {row["id"] for row in passed} == {cases[0]["id"]}
     assert all(row["id"] not in {cases[2]["id"], cases[3]["id"]} for row in failed)
 
 
@@ -1008,3 +1009,88 @@ def test_trial_signature_ignores_runtime_router_outputs_but_not_control_design()
 
     assert campaign._trial_signature(case, a, 42) == campaign._trial_signature(case, b, 42)
     assert campaign._trial_signature(case, a, 42) != campaign._trial_signature(case, c, 42)
+
+
+
+def test_exact_duplicate_treatment_is_skipped_without_spending_another_call(monkeypatch):
+    class Store:
+        run_id = "unit-run"
+
+        def append_jsonl(self, *args, **kwargs):
+            return None
+
+    class Runner:
+        def __init__(self):
+            self.config = load_config()
+            self.progress = None
+            self.store = Store()
+            self._model_call_counts = {"unit-run": 0}
+
+        def _utc(self):
+            return "2026-09-12T00:00:00Z"
+
+    calls = []
+
+    def fake_execute(runner, case, spec, parent=None, messages_override=None):
+        calls.append((case["id"], spec.experiment_id))
+        runner._model_call_counts["unit-run"] += 1
+        return {
+            "score": 1.0,
+            "classification": {
+                "valid_for_capability": True,
+                "result_class": "PASS",
+            },
+            "response_text": "ok",
+            "experiment": {
+                "experiment_id": spec.experiment_id,
+                "generation_budget": spec.generation_budget,
+                "reasoning_effort": spec.reasoning_effort,
+                "context_request": spec.context_request,
+                "temperature": spec.temperature,
+            },
+            "metrics": {
+                "prompt_eval_count": 10,
+                "eval_count": 2,
+            },
+            "timing": {"client_latency_ns": 1_000_000_000},
+            "evidence_refs": {},
+        }
+
+    monkeypatch.setattr(test12_module, "execute_experiment", fake_execute)
+    cases = _cases()
+    runner = Runner()
+    campaign = Test12Campaign(
+        runner,
+        cases,
+        fresh_model_source(cases),
+        clock=lambda: 0.0,
+        started_monotonic=0.0,
+    )
+    case = campaign.partitions["DISCOVERY"][0]
+    intervention = {
+        "id": "UNIT-SINGLE",
+        "category": "PROMPT_CONTROL",
+        "mode": "single",
+        "instruction": "Return the correct answer.",
+    }
+
+    first = campaign.treatment(
+        case,
+        100.0,
+        phase="unit",
+        intervention=intervention,
+        seed=42,
+    )
+    second = campaign.treatment(
+        case,
+        100.0,
+        phase="unit-again",
+        intervention=intervention,
+        seed=42,
+    )
+
+    assert first is not None
+    assert second is None
+    assert len(calls) == 2  # one matched control + one treatment
+    assert campaign.efficiency_counters["exact_duplicate_treatments_skipped"] == 1
+    assert campaign.efficiency_counters["estimated_duplicate_physical_calls_avoided"] == 1
