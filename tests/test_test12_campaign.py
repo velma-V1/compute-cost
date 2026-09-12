@@ -5,6 +5,9 @@ from compute_cost.config import load_config
 from compute_cost.test12_campaign import (
     ACTIVE_SECONDS,
     COLLECTION_HARD_SECONDS,
+    Test12Campaign,
+    _estimated_physical_calls,
+    _source_headroom,
     CONTROL_GRAMMAR,
     CORE_INTERVENTIONS,
     IMPROVEMENT_SURFACE,
@@ -172,6 +175,7 @@ def test_collection_plan_is_full_campaign_under_14_hour_two_run_contract():
         "semantic-transaction-map.json",
         "dynamic-replanning-map.json",
         "second-frontier-gap-value-map.json",
+        "test1.2-efficiency-audit.json",
     }:
         assert required in plan["required_outputs"]
 
@@ -932,3 +936,75 @@ def test_second_gap_evidence_compiles_to_explicit_harness_rules():
     assert policy["belief_state"]["explicit_belief_state_required"] is True
     assert policy["semantic_transactions"]["idempotency_guard_required"] is True
     assert policy["dynamic_replanning"]["invalidate_plan_on_cost_or_availability_change"] is True
+
+
+
+def test_source_headroom_keeps_unmeasured_cases_unknown_instead_of_failed():
+    cases = _cases(8)
+    campaign = type("CampaignStub", (), {})()
+    campaign.partitions = {"DISCOVERY": cases}
+    campaign.rows = [
+        {
+            "intervention_id": "CONTROL",
+            "partition": "DISCOVERY",
+            "fixture_id": cases[0]["id"],
+            "score": 1.0,
+        },
+        {
+            "intervention_id": "CONTROL",
+            "partition": "DISCOVERY",
+            "fixture_id": cases[1]["id"],
+            "score": 0.0,
+        },
+    ]
+
+    failed, passed = _source_headroom(campaign)
+    assert [row["id"] for row in failed] == [cases[1]["id"]]
+    assert [row["id"] for row in passed] == [cases[0]["id"]]
+    assert all(row["id"] not in {cases[2]["id"], cases[3]["id"]} for row in failed)
+
+
+def test_multicall_estimator_reserves_complete_controller_runway():
+    assert _estimated_physical_calls({"mode": "single"}) == 1
+    assert _estimated_physical_calls({"mode": "critique_repair"}) == 2
+    assert _estimated_physical_calls({"mode": "ensemble"}) == 3
+    assert _estimated_physical_calls({"mode": "adaptive_search"}) == 5
+
+
+def test_runway_guard_uses_observed_latency_and_preserves_short_work():
+    campaign = Test12Campaign.__new__(Test12Campaign)
+    campaign.call_latency_seconds = [2.0, 2.0, 2.0, 2.0]
+    campaign.active_end = 100.0
+    campaign.call_start_cutoff = 100.0
+    campaign.clock = lambda: 0.0
+
+    assert campaign._has_runway(10.0, 1) is True
+    assert campaign._has_runway(10.0, 3) is True
+    assert campaign._has_runway(10.0, 5) is False
+    assert campaign._estimated_call_seconds() == 2.4
+
+
+def test_trial_signature_ignores_runtime_router_outputs_but_not_control_design():
+    campaign = Test12Campaign.__new__(Test12Campaign)
+    case = {"id": "case-1"}
+    a = {
+        "id": "ROUTE",
+        "mode": "router",
+        "instruction": "route well",
+        "router_choice": "PLAN",
+    }
+    b = {
+        "id": "ROUTE",
+        "mode": "router",
+        "instruction": "route well",
+        "router_choice": "VERIFY",
+    }
+    c = {
+        "id": "ROUTE",
+        "mode": "router",
+        "instruction": "different",
+        "router_choice": "VERIFY",
+    }
+
+    assert campaign._trial_signature(case, a, 42) == campaign._trial_signature(case, b, 42)
+    assert campaign._trial_signature(case, a, 42) != campaign._trial_signature(case, c, 42)
