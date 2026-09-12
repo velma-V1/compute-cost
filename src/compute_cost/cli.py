@@ -108,6 +108,11 @@ def build_parser() -> argparse.ArgumentParser:
     test12.add_argument("--seed-run", default=None, help="Optional prior Test-1.1 run ID used only as a seed library. New-model collection needs no prior run.")
     test12.add_argument("--pull", action="store_true", help="Pull the model if it is not already local.")
     test12.add_argument("--dry-run", action="store_true", help="Validate Test 1.2 with zero model calls. New-model collection requires no prior run.")
+    test12.add_argument(
+        "--resume-run",
+        default=None,
+        help="Resume the same interrupted Test 1.2 collection run ID. Preserves valid evidence and remaining time/call budgets; never starts a full rerun.",
+    )
 
     test12_tune = sub.add_parser(
         "gpt20b-test1.2-tune",
@@ -316,6 +321,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             pull=bool(args.pull),
             seed_run=args.seed_run,
             dry_run=bool(args.dry_run),
+            resume_run=args.resume_run,
         )
         print(json.dumps({"run_id": run_dir.name, "run_dir": str(run_dir)}, indent=2))
         return 0
