@@ -313,6 +313,7 @@ REQUIRED_OUTPUTS = (
     "fine-tuning-readiness-map-1.2.json",
     "test1.2-priority-queue.json",
     "test1.2-uncertainty-ledger.json",
+    "test1.2-efficiency-audit.json",
     "test1.2-handoff.json",
     "tuning-example-corpus.jsonl",
     "harness-policy-blueprint.json",
@@ -978,6 +979,35 @@ def _latency_seconds(row: dict[str, Any]) -> float:
     return 0.0
 
 
+def _intervention_fingerprint(intervention: dict[str, Any]) -> str:
+    stable = {
+        key: value
+        for key, value in intervention.items()
+        if key not in {"router_choice", "risk_gate", "reflection_text"}
+    }
+    payload = json.dumps(stable, sort_keys=True, separators=(",", ":"), default=str)
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def _estimated_physical_calls(intervention: dict[str, Any]) -> int:
+    """Worst-case physical calls needed to finish one scored application."""
+    mode = str(intervention.get("mode") or "single")
+    return {
+        "precompute": 2,
+        "critique_repair": 2,
+        "failure_synth": 2,
+        "retry": 2,
+        "delegation": 2,
+        "ensemble": 3,
+        "adaptive_search": 5,
+        "reflection_transfer": 2,
+        "three_stage": 3,
+        "aba": 3,
+        "router": 2,
+        "confidence_gate": 2,
+    }.get(mode, 1)
+
+
 class Test12Campaign:
     __test__ = False
 
@@ -1007,6 +1037,46 @@ class Test12Campaign:
         self.rows: list[dict[str, Any]] = []
         self.sequence = 0
         self.phase_assertions: list[dict[str, Any]] = []
+        self.completed_treatment_signatures: set[tuple[str, int, str]] = set()
+        self.call_latency_seconds: list[float] = []
+        self.efficiency_counters: dict[str, int] = {
+            "exact_duplicate_treatments_skipped": 0,
+            "insufficient_runway_treatments_skipped": 0,
+            "estimated_duplicate_physical_calls_avoided": 0,
+            "estimated_runway_dead_end_calls_avoided": 0,
+            "partial_controller_dead_ends": 0,
+            "physical_calls_spent_without_scored_result": 0,
+        }
+
+    def _trial_signature(
+        self,
+        case: dict[str, Any],
+        intervention: dict[str, Any],
+        seed: int,
+    ) -> tuple[str, int, str]:
+        return (
+            _fixture_id(case),
+            int(seed),
+            _intervention_fingerprint(intervention),
+        )
+
+    def _observe_call_latency(self, seconds: float) -> None:
+        if seconds > 0:
+            self.call_latency_seconds.append(float(seconds))
+
+    def _estimated_call_seconds(self) -> float | None:
+        samples = sorted(value for value in self.call_latency_seconds[-64:] if value > 0)
+        if len(samples) < 4:
+            return None
+        index = min(len(samples) - 1, int(math.ceil(0.75 * len(samples))) - 1)
+        return max(0.05, samples[index] * 1.20)
+
+    def _has_runway(self, deadline: float, physical_calls: int) -> bool:
+        estimate = self._estimated_call_seconds()
+        if estimate is None:
+            return True
+        remaining = min(deadline, self.active_end, self.call_start_cutoff) - self.clock()
+        return remaining >= (estimate * max(1, int(physical_calls)) + 0.25)
 
     def partition_name(self, case: dict[str, Any]) -> str:
         fixture_id = _fixture_id(case)
@@ -1053,6 +1123,7 @@ class Test12Campaign:
             row = execute_experiment(self.runner, case, spec, parent=None)
         finally:
             self._progress(label, False)
+        self._observe_call_latency(_latency_seconds(row))
         score = row.get("score")
         valid = (row.get("classification") or {}).get("valid_for_capability") is True
         record = {
@@ -1104,6 +1175,10 @@ class Test12Campaign:
             )
         finally:
             self._progress(label, False)
+        timing = copy.deepcopy(generation.get("timing") or {})
+        latency_ns = timing.get("client_latency_ns")
+        if isinstance(latency_ns, (int, float)) and not isinstance(latency_ns, bool):
+            self._observe_call_latency(float(latency_ns) / 1_000_000_000.0)
         text = str((generation.get("normalized") or {}).get("text") or "")
         return {
             "text": text,
@@ -1111,7 +1186,7 @@ class Test12Campaign:
             "text_chars": len(text),
             "ok": bool(generation.get("ok")),
             "metrics": copy.deepcopy(generation.get("metrics") or {}),
-            "timing": copy.deepcopy(generation.get("timing") or {}),
+            "timing": timing,
             "evidence_refs": refs,
             "invocation": {"request_fields": copy.deepcopy((invocation or {}).get("request_fields") or {})},
         }
@@ -1134,9 +1209,21 @@ class Test12Campaign:
         seed: int,
     ) -> dict[str, Any] | None:
         self.assert_allowed(case)
+        signature = self._trial_signature(case, intervention, seed)
+        estimated_calls = _estimated_physical_calls(intervention)
+        if signature in self.completed_treatment_signatures:
+            self.efficiency_counters["exact_duplicate_treatments_skipped"] += 1
+            self.efficiency_counters["estimated_duplicate_physical_calls_avoided"] += estimated_calls
+            return None
+
         control = self.control(case, deadline, seed=seed)
         if control is None or not self.can_start(deadline):
             return None
+        if not self._has_runway(deadline, estimated_calls):
+            self.efficiency_counters["insufficient_runway_treatments_skipped"] += 1
+            self.efficiency_counters["estimated_runway_dead_end_calls_avoided"] += estimated_calls
+            return None
+
         mode = str(intervention.get("mode") or "single")
         prompt = str(case["prompt"])
         candidate = str(control.get("response_text") or "")
@@ -1331,6 +1418,9 @@ class Test12Campaign:
             raise ValueError(f"unknown Test 1.2 intervention mode: {mode}")
 
         if not self.can_start(deadline):
+            if aux:
+                self.efficiency_counters["partial_controller_dead_ends"] += 1
+                self.efficiency_counters["physical_calls_spent_without_scored_result"] += len(aux)
             return None
         self.sequence += 1
         spec = _spec(self.sequence, case, f"{phase}-{intervention['id']}-s{seed}", self.cfg, intervention, seed=seed)
@@ -1340,7 +1430,10 @@ class Test12Campaign:
             row = execute_experiment(self.runner, case, spec, parent=None, messages_override=messages)
         finally:
             self._progress(label, False)
-        return self._record(case, row, phase=phase, intervention=intervention, control=control, seed=seed, aux=aux)
+        self._observe_call_latency(_latency_seconds(row))
+        recorded = self._record(case, row, phase=phase, intervention=intervention, control=control, seed=seed, aux=aux)
+        self.completed_treatment_signatures.add(signature)
+        return recorded
 
     def _record(
         self,
@@ -1557,8 +1650,14 @@ def _source_headroom(campaign: Test12Campaign, partition: str = "DISCOVERY") -> 
         for key, values in current.items()
         if values
     }
-    fail = [case for case in rows if baseline.get(_fixture_id(case), 0.0) < 1.0]
-    passed = [case for case in rows if baseline.get(_fixture_id(case), 0.0) >= 1.0]
+    fail = [
+        case for case in rows
+        if _fixture_id(case) in baseline and baseline[_fixture_id(case)] < 1.0
+    ]
+    passed = [
+        case for case in rows
+        if _fixture_id(case) in baseline and baseline[_fixture_id(case)] >= 1.0
+    ]
     return (
         _balanced_cases(fail, min(96, len(fail))),
         _balanced_cases(passed, min(96, len(passed))),
@@ -3345,6 +3444,90 @@ def _coverage_ledger(campaign: Test12Campaign) -> dict[str, Any]:
     return {"schema_version":1,"mechanisms":by_mechanism,"categories":categories}
 
 
+def _efficiency_audit(campaign: Test12Campaign) -> dict[str, Any]:
+    controls = [
+        row for row in campaign.rows if row.get("intervention_id") == "CONTROL"
+    ]
+    treatments = [
+        row for row in campaign.rows
+        if row.get("intervention_id") not in {None, "CONTROL"}
+    ]
+    measured_fixtures = {str(row.get("fixture_id")) for row in controls if row.get("fixture_id")}
+    discovery = campaign.partitions.get("DISCOVERY") or []
+    unmeasured = [
+        _fixture_id(case) for case in discovery
+        if _fixture_id(case) not in measured_fixtures
+    ]
+
+    per_phase: dict[str, Any] = {}
+    grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for row in campaign.rows:
+        grouped[str(row.get("phase") or "UNKNOWN")].append(row)
+    for phase, rows in sorted(grouped.items()):
+        treatment_rows = [
+            row for row in rows if row.get("intervention_id") not in {None, "CONTROL"}
+        ]
+        score_changes = [
+            row for row in treatment_rows if float(row.get("delta", 0.0)) != 0.0
+        ]
+        per_phase[phase] = {
+            "observations": len(rows),
+            "treatment_observations": len(treatment_rows),
+            "families": len({str(row.get("family_id")) for row in rows}),
+            "fixtures": len({str(row.get("fixture_id")) for row in rows}),
+            "score_changing_treatments": len(score_changes),
+            "measured_model_calls": sum(
+                int(row.get("model_calls_per_application") or 0)
+                for row in treatment_rows
+            ),
+            "measured_wall_seconds": sum(
+                float((row.get("cost") or {}).get("wall_seconds") or 0.0)
+                for row in treatment_rows
+            ),
+        }
+
+    latency = sorted(value for value in campaign.call_latency_seconds if value > 0)
+    p50 = latency[len(latency) // 2] if latency else None
+    p75 = latency[min(len(latency) - 1, int(math.ceil(0.75 * len(latency))) - 1)] if latency else None
+    store = campaign.runner.store
+    run_id = getattr(store, "run_id", None)
+    physical_calls = (
+        int(getattr(campaign.runner, "_model_call_counts", {}).get(run_id, 0))
+        if run_id is not None else 0
+    )
+    avoided = (
+        campaign.efficiency_counters["estimated_duplicate_physical_calls_avoided"]
+        + campaign.efficiency_counters["estimated_runway_dead_end_calls_avoided"]
+    )
+    return {
+        "schema_version": 1,
+        "stopping_rule": "FIXED_WALL_CLOCK",
+        "model_call_cap_role": "RUNAWAY_SAFETY_RAIL_ONLY",
+        "objective": "maximize novel decision-changing model-building evidence per active wall-clock second",
+        "active_window_seconds": ACTIVE_SECONDS,
+        "physical_model_calls_observed": physical_calls,
+        "control_observations": len(controls),
+        "treatment_observations": len(treatments),
+        "completed_unique_treatment_signatures": len(campaign.completed_treatment_signatures),
+        "efficiency_counters": copy.deepcopy(campaign.efficiency_counters),
+        "estimated_physical_calls_avoided": avoided,
+        "call_latency_estimator": {
+            "sample_count": len(latency),
+            "p50_seconds": p50,
+            "p75_seconds": p75,
+            "runway_call_seconds": campaign._estimated_call_seconds(),
+            "policy": "P75_LAST_64_X_1.20_PLUS_0.25S_MARGIN",
+        },
+        "baseline_measurement": {
+            "measured_discovery_fixtures": len(measured_fixtures),
+            "unmeasured_discovery_fixture_count": len(unmeasured),
+            "unmeasured_discovery_fixture_ids": unmeasured,
+            "unknown_is_not_failure": True,
+        },
+        "per_phase": per_phase,
+    }
+
+
 def _activation_and_negative_transfer(campaign: Test12Campaign) -> tuple[dict[str, Any], dict[str, Any]]:
     effects = _group_summary(
         campaign.rows,
@@ -3925,6 +4108,8 @@ def write_outputs(campaign: Test12Campaign, results: dict[str, Any]) -> None:
     store.write_json("fine-tuning-readiness-map-1.2.json", fine, producer="test1.2", stage="report")
     store.write_json("test1.2-priority-queue.json", {"schema_version":1,"queue":queue}, producer="test1.2", stage="report")
     store.write_json("test1.2-uncertainty-ledger.json", {"schema_version":1,"unknowns":unknowns}, producer="test1.2", stage="report")
+    efficiency_audit = _efficiency_audit(campaign)
+    store.write_json("test1.2-efficiency-audit.json", efficiency_audit, producer="test1.2", stage="report")
     store.write_json("test1.2-handoff.json", {
         "schema_version":1,
         "source_seed_run":campaign.source.get("run_id"),
@@ -3954,6 +4139,9 @@ def write_outputs(campaign: Test12Campaign, results: dict[str, Any]) -> None:
         "zero_clock_model_manufacturing_map":"zero-clock-model-manufacturing-map.json",
         "zero_clock_model_calls_added":zero_clock_training["zero_model_calls_added"],
         "zero_clock_active_test_seconds_added":zero_clock_training["zero_active_test_seconds_added"],
+        "efficiency_audit":"test1.2-efficiency-audit.json",
+        "estimated_physical_calls_avoided":efficiency_audit["estimated_physical_calls_avoided"],
+        "partial_controller_dead_ends":efficiency_audit["efficiency_counters"]["partial_controller_dead_ends"],
     }, producer="test1.2", stage="report")
     store.write_json("scope-boundaries.json", {"schema_version":1,**scope}, producer="test1.2", stage="report")
     store.write_json("assurance-map-1.2.json", assurance, producer="test1.2", stage="report")
