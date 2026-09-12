@@ -538,10 +538,15 @@ that model version. The terminal package must make one decision:
 No separate Test 2 or Test 3 characterization run is required for onboarding.
 The protected partitions are consumed inside Run 2 after policy lock.
 
-A rerun is justified only when the run was invalid/corrupted, acceptance could
-not complete because of a runtime/evidence failure, or the model/runtime changed
-materially. A later weight update is a new model version and therefore a new
-onboarding event, not unfinished Test 1.2 work.
+A full Test 1.2 rerun is never the recovery mechanism. If execution is
+interrupted or an atomic evidence record is damaged, recovery resumes the same
+run ID, preserves every valid observation, preserves elapsed active-time and
+physical-call budgets, restores completed phases and the frozen winner lock,
+quarantines only the damaged atomic record, and replays only the missing slice.
+
+A materially changed model, runtime behavior, or benchmark contract is a new
+onboarding event rather than a rerun of the old one. A later weight update is a
+new model version, not unfinished Test 1.2 work.
 
 The terminal outputs are:
 
@@ -552,3 +557,31 @@ The terminal outputs are:
 
 The final acceptance rule requires both non-regression and absolute competence;
 zero regression on a task the model still fails does not qualify as capability.
+
+
+## No-full-rerun recovery contract
+
+Both Test 1.2 runs are checkpointed continuously.
+
+Recovery invariants:
+
+- same run ID;
+- valid atomic observations are retained;
+- malformed/hash-mismatched atomic records are quarantined individually;
+- completed case × seed × intervention work is restored and not purchased twice;
+- elapsed active-time budget is restored rather than reset;
+- physical model-call safety usage is restored rather than reset;
+- completed phases are skipped;
+- an interrupted phase resumes with only its remaining phase time;
+- Run 2 restores the exact frozen winner and its lock hash before opening or
+  continuing blind/protected acceptance;
+- holdout recovery cannot reopen tuning or select a different winner;
+- at most the single in-flight atomic trial at the instant of interruption may
+  need to be replayed.
+
+Public recovery entry points:
+
+- `gpt20b-test1.2 --resume-run <same-run-id>`
+- `gpt20b-test1.2-tune --collection-run <collection-id> --resume-run <same-run-id>`
+
+The recovery policy is `NO_FULL_RERUN_ATOMIC_RESUME`.
