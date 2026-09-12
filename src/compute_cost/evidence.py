@@ -150,6 +150,57 @@ class EvidenceStore:
         self.write_json(self.MANIFEST_NAME, manifest, producer="evidence-store", stage="finalize")
         return manifest
 
+    def verify_manifest_paths(self, relative_paths: list[str] | tuple[str, ...]) -> list[dict[str, str]]:
+        """Verify only manifest-declared artifacts that a downstream stage consumes.
+
+        This preserves content-addressed provenance for selected source artifacts
+        without re-reading the entire retained evidence tree on every dependent
+        campaign startup.
+        """
+        manifest_path = self.run_dir / self.MANIFEST_NAME
+        if not manifest_path.exists():
+            return [{"path": self.MANIFEST_NAME, "problem": "missing"}]
+
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        problems: list[dict[str, str]] = []
+        if manifest.get("run_id") != self.run_id:
+            problems.append({"path": self.MANIFEST_NAME, "problem": "run_id_mismatch"})
+
+        declared: dict[str, dict[str, Any]] = {}
+        duplicates: set[str] = set()
+        for item in manifest.get("artifacts", []) or []:
+            if not isinstance(item, dict) or "path" not in item:
+                continue
+            key = str(item["path"])
+            if key in declared:
+                duplicates.add(key)
+            else:
+                declared[key] = item
+
+        for requested in relative_paths:
+            rel = Path(requested)
+            if rel.is_absolute() or ".." in rel.parts:
+                problems.append({"path": str(requested), "problem": "invalid_path"})
+                continue
+            key = rel.as_posix()
+            if key in duplicates:
+                problems.append({"path": key, "problem": "duplicate_manifest_entry"})
+                continue
+            expected = declared.get(key)
+            if expected is None:
+                problems.append({"path": key, "problem": "not_in_manifest"})
+                continue
+            path = self.run_dir / rel
+            if not path.exists():
+                problems.append({"path": key, "problem": "missing"})
+                continue
+            actual = self._artifact_record(path)
+            if actual["sha256"] != expected.get("sha256"):
+                problems.append({"path": key, "problem": "sha256_mismatch"})
+            elif actual["bytes"] != expected.get("bytes"):
+                problems.append({"path": key, "problem": "size_mismatch"})
+        return problems
+
     def verify_manifest(self) -> list[dict[str, str]]:
         manifest_path = self.run_dir / self.MANIFEST_NAME
         if not manifest_path.exists():
