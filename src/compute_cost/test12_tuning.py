@@ -21,6 +21,7 @@ from .test1_campaign import _balanced_cases, _family, _fixture_id, partition_cas
 from .test12_campaign import (
     COLLECTION_HARD_SECONDS,
     FRONTIER_GAP_SURFACES,
+    SECOND_GAP_SURFACES,
     TEST2_CAPABILITY_FAMILIES,
     Test12Campaign,
     _cost_value_frontier,
@@ -66,6 +67,22 @@ REQUIRED_COLLECTION_FILES = (
     "tool-chaos-recovery-map.json",
     "tool-scheduling-map.json",
     "frontier-gap-value-map.json",
+    "authority-separation-map.json",
+    "reward-hacking-resistance-map.json",
+    "clarification-value-map.json",
+    "governance-compaction-map.json",
+    "belief-state-map.json",
+    "semantic-transaction-map.json",
+    "dynamic-replanning-map.json",
+    "second-frontier-gap-value-map.json",
+    "harness-to-weight-distillation-corpus.jsonl",
+    "weighted-preference-corpus.jsonl",
+    "capability-curriculum.json",
+    "router-supervision-corpus.jsonl",
+    "stability-anchor-corpus.jsonl",
+    "cross-family-transfer-graph.json",
+    "pareto-training-targets.jsonl",
+    "zero-clock-model-manufacturing-map.json",
     "cost-value-frontier-1.2.json",
     "activation-boundary-map.json",
     "negative-transfer-map-1.2.json",
@@ -154,6 +171,16 @@ def load_collection(results_root: Path, run_id: str) -> dict[str, Any]:
         "tool_scheduling": _read_json(run_dir / "tool-scheduling-map.json"),
         "index": _read_json(run_dir / "frontier-gap-value-map.json"),
     }
+    second_gap_maps = {
+        "authority": _read_json(run_dir / "authority-separation-map.json"),
+        "reward_hacking": _read_json(run_dir / "reward-hacking-resistance-map.json"),
+        "clarification": _read_json(run_dir / "clarification-value-map.json"),
+        "governance_compaction": _read_json(run_dir / "governance-compaction-map.json"),
+        "belief_state": _read_json(run_dir / "belief-state-map.json"),
+        "semantic_transactions": _read_json(run_dir / "semantic-transaction-map.json"),
+        "dynamic_replanning": _read_json(run_dir / "dynamic-replanning-map.json"),
+        "index": _read_json(run_dir / "second-frontier-gap-value-map.json"),
+    }
     if set((frontier_gap_maps["index"] or {}).get("surfaces") or []) != set(FRONTIER_GAP_SURFACES):
         raise ValueError("collection frontier-gap surface contract drifted")
     expected_labs = {
@@ -176,6 +203,45 @@ def load_collection(results_root: Path, run_id: str) -> dict[str, Any]:
         for name in expected_labs
     ):
         raise ValueError("one or more frontier-gap maps are missing measured output")
+    if set((second_gap_maps["index"] or {}).get("surfaces") or []) != set(SECOND_GAP_SURFACES):
+        raise ValueError("collection second-gap surface contract drifted")
+    expected_second_labs = {
+        "authority",
+        "reward_hacking",
+        "clarification",
+        "governance_compaction",
+        "belief_state",
+        "semantic_transactions",
+        "dynamic_replanning",
+    }
+    completed_second_labs = set((second_gap_maps["index"] or {}).get("completed_labs") or [])
+    if completed_second_labs != expected_second_labs:
+        raise ValueError(
+            "collection did not complete every second frontier-gap lab: "
+            + ", ".join(sorted(expected_second_labs - completed_second_labs))
+        )
+    if any(
+        int((second_gap_maps[name] or {}).get("schema_version", 0)) != 1
+        or int((second_gap_maps[name] or {}).get("n", 0)) <= 0
+        for name in expected_second_labs
+    ):
+        raise ValueError("one or more second-gap maps are missing measured output")
+    zero_clock_model = _read_json(run_dir / "zero-clock-model-manufacturing-map.json")
+    if zero_clock_model.get("zero_model_calls_added") is not True:
+        raise ValueError("zero-clock model refinery must add zero model calls")
+    if zero_clock_model.get("zero_active_test_seconds_added") is not True:
+        raise ValueError("zero-clock model refinery must add zero active-test seconds")
+    required_zero_clock_products = {
+        "HARNESS_TO_WEIGHT_DISTILLATION",
+        "WEIGHTED_HARD_NEGATIVE_PREFERENCES",
+        "CAPABILITY_CURRICULUM",
+        "ROUTER_ACTIVATION_SUPERVISION",
+        "STABILITY_ANCHORS",
+        "CROSS_FAMILY_TRANSFER_GRAPH",
+        "PARETO_EFFICIENCY_TARGETS",
+    }
+    if set(zero_clock_model.get("products") or []) != required_zero_clock_products:
+        raise ValueError("zero-clock model-building product contract drifted")
     registry = _read_json(run_dir / "full-control-candidate-registry.json")
     return {
         "run_id": run_id,
@@ -190,6 +256,8 @@ def load_collection(results_root: Path, run_id: str) -> dict[str, Any]:
         "frontier_shift": frontier_shift,
         "compute_elasticity": compute_elasticity,
         "frontier_gap_maps": frontier_gap_maps,
+        "second_gap_maps": second_gap_maps,
+        "zero_clock_model": zero_clock_model,
         "frontier": _read_json(run_dir / "cost-value-frontier-1.2.json"),
         "activation": _read_json(run_dir / "activation-boundary-map.json"),
         "negative": _read_json(run_dir / "negative-transfer-map-1.2.json"),
@@ -347,6 +415,67 @@ def _compile_frontier_gap_policy(collection: dict[str, Any]) -> dict[str, Any]:
                 and float(scheduling.get("mean_efficiency", 0.0)) >= 0.8
             ),
             "fallback": "DEPENDENCY_ORDERED_SEQUENTIAL",
+        },
+    }
+
+
+def _compile_second_gap_policy(collection: dict[str, Any]) -> dict[str, Any]:
+    maps = collection.get("second_gap_maps") or {}
+    authority = maps.get("authority") or {}
+    reward = maps.get("reward_hacking") or {}
+    clarification = maps.get("clarification") or {}
+    compaction = maps.get("governance_compaction") or {}
+    belief = maps.get("belief_state") or {}
+    txn = maps.get("semantic_transactions") or {}
+    replan = maps.get("dynamic_replanning") or {}
+
+    return {
+        "schema_version": 1,
+        "authority_separation": {
+            "accuracy": float(authority.get("accuracy", 0.0)),
+            "force_metadata_authorization_gate": int(authority.get("unsafe_authority_accepts", 0)) > 0,
+            "preserve_approved_changes": int(authority.get("approved_change_overblocks", 0)) > 0,
+            "untrusted_text_never_grants_authority": True,
+        },
+        "reward_hacking": {
+            "accuracy": float(reward.get("accuracy", 0.0)),
+            "shortcut_exploits": int(reward.get("shortcut_exploits", 0)),
+            "legitimate_optimization_overblocks": int(reward.get("legitimate_optimization_overblocks", 0)),
+            "protect_evaluator_and_verification_path": int(reward.get("shortcut_exploits", 0)) > 0,
+        },
+        "clarification": {
+            "accuracy": float(clarification.get("accuracy", 0.0)),
+            "under_clarification": int(clarification.get("under_clarification", 0)),
+            "over_clarification": int(clarification.get("over_clarification", 0)),
+            "use_value_of_information_gate": (
+                int(clarification.get("under_clarification", 0)) > 0
+                or int(clarification.get("over_clarification", 0)) > 0
+            ),
+        },
+        "governance_compaction": {
+            "checkpoint_preservation_rate": float(compaction.get("checkpoint_preservation_rate", 0.0)),
+            "resume_accuracy": float(compaction.get("resume_accuracy", 0.0)),
+            "pin_governance_constraints": (
+                float(compaction.get("checkpoint_preservation_rate", 0.0)) < 1.0
+                or int(compaction.get("governance_decay_events", 0)) > 0
+            ),
+        },
+        "belief_state": {
+            "accuracy": float(belief.get("accuracy", 0.0)),
+            "premature_commitments": int(belief.get("premature_commitments", 0)),
+            "explicit_belief_state_required": int(belief.get("premature_commitments", 0)) > 0,
+        },
+        "semantic_transactions": {
+            "accuracy": float(txn.get("accuracy", 0.0)),
+            "unsafe_commits_or_duplicates": int(txn.get("unsafe_commits_or_duplicates", 0)),
+            "stage_validate_commit_boundary": True,
+            "idempotency_guard_required": int(txn.get("unsafe_commits_or_duplicates", 0)) > 0,
+        },
+        "dynamic_replanning": {
+            "accuracy": float(replan.get("accuracy", 0.0)),
+            "failed_replans": int(replan.get("failed_replans", 0)),
+            "unnecessary_replans": int(replan.get("unnecessary_replans", 0)),
+            "invalidate_plan_on_cost_or_availability_change": True,
         },
     }
 
@@ -725,6 +854,7 @@ def run_test12_tuning(runner: Any, cases: list[dict[str,Any]], *, collection_run
             ),
         )
     frontier_gap_policy=_compile_frontier_gap_policy(collection)
+    second_gap_policy=_compile_second_gap_policy(collection)
     compiled={
         "schema_version":1,
         "model":getattr(runner,"model",None),
@@ -748,6 +878,10 @@ def run_test12_tuning(runner: Any, cases: list[dict[str,Any]], *, collection_run
         },
         "tool_execution_policy":tool_execution_policy,
         "frontier_gap_policy":frontier_gap_policy,
+        "second_gap_policy":second_gap_policy,
+        "zero_clock_model_manufacturing":copy.deepcopy(
+            collection.get("zero_clock_model") or {}
+        ),
         "direct_default_when_unmatched":True,
         "oracle_routing_prohibited":True,
         "hard_ceiling_total_seconds":TUNING_HARD_SECONDS+COLLECTION_HARD_SECONDS,
@@ -786,6 +920,10 @@ def run_test12_tuning(runner: Any, cases: list[dict[str,Any]], *, collection_run
         "validated_policy_summary":winner_summary,
         "validated_family_summaries":winner_family_validation,
         "frontier_gap_policy":frontier_gap_policy,
+        "second_gap_policy":second_gap_policy,
+        "zero_clock_model_manufacturing":copy.deepcopy(
+            collection.get("zero_clock_model") or {}
+        ),
         "all_40_families_non_regressing":family_safe,
         "release_status":(
             "COMPILED_FAMILY_SAFE"

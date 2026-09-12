@@ -14,16 +14,17 @@ compiles those observations into an adaptive deployment policy.
 
 | Run | Data partition | Hard ceiling | Active model ceiling |
 | --- | --- | ---: | ---: |
-| Collection | DISCOVERY | 7h40m | 7h25m |
+| Collection | DISCOVERY | 7h44m | 7h29m |
 | Tuning / compile | VALIDATION | 6h15m | 6h |
-| Combined | — | **13h55m** | **13h25m** |
+| Combined | — | **13h59m** | **13h29m** |
 
 TEST2_BLIND and TEST3_PROTECTED are never exposed by either run.
 
 The combined hard ceiling remains below 14 hours. The additional collection
-time is additive: no existing valuable phase was removed. It is reserved for
-seven frontier-gap labs identified by a current research audit, while the normal
-15-minute collection and tuning finalization margins remain explicit.
+time is additive: no existing valuable phase was removed. Test 1.2 now contains
+two frontier-gap audits totaling fourteen orthogonal lab surfaces. The second
+audit consumes only four additional active minutes through short structured
+micro-labs, while the normal collection finalization margin remains explicit.
 
 ## What “full search” means
 
@@ -170,7 +171,14 @@ The declared improvement surface includes:
 - active write/manage/read memory;
 - controlled reflection-to-sibling transfer;
 - explicit/implicit tool-failure chaos recovery;
-- dependency-aware parallel tool scheduling.
+- dependency-aware parallel tool scheduling;
+- trusted-authority separation from untrusted tool/retrieval text;
+- reward-hacking / evaluator-integrity resistance;
+- value-of-information clarification;
+- governance-safe compaction and resume;
+- explicit belief-state reasoning under partial observability;
+- semantic transaction / rollback / idempotency discipline;
+- dynamic replanning under changed cost or availability.
 
 ## Frontier-gap research additions
 
@@ -201,6 +209,88 @@ The tuning run refuses to compile a harness if any of these seven labs is
 missing. Their results are compiled into explicit deployment rules, including
 search activation, abstention guards, memory activation, reflection reuse,
 successful-tool verification, retry bans, and parallel-scheduler enablement.
+
+## Second frontier-gap research audit
+
+A second external-research audit added seven more mandatory, orthogonal
+manufacturing surfaces without removing or shrinking any prior experiment:
+
+1. **Authority separation / indirect prompt injection** — distinguishes trusted
+   task and authorization metadata from untrusted tool/retrieval text. It tests
+   both attack resistance and approved high-impact actions so a trivial
+   "block everything" strategy cannot score well.
+2. **Reward-hacking resistance** — measures whether the model exploits public
+   score shortcuts, skips verification to optimize a proxy, or tampers with the
+   evaluation path; legitimate non-evaluator optimization is included as an
+   overblocking control.
+3. **Value-of-information clarification** — measures when the model should ask
+   one targeted question rather than acting prematurely, and when it should act
+   without wasting a user interaction.
+4. **Governance-safe compaction/resume** — compacts long state while preserving
+   hard rules, approvals, current authoritative state, and then tests behavior
+   after resumption using only the checkpoint.
+5. **Belief-state reasoning under partial observability** — distinguishes
+   "hidden state is unresolved" from "state is known enough to act" and measures
+   premature commitment versus useful sensing.
+6. **Semantic transaction control** — tests stage/validate/commit discipline,
+   rollback after failed validation, and idempotent duplicate handling.
+7. **Dynamic cost/state replanning** — tests whether a previously good plan is
+   invalidated when costs or tool availability change, while penalizing needless
+   replanning when nothing changed.
+
+The tuning compiler refuses a collection unless every second-audit lab produced
+measured output. These results compile into explicit gates for authority,
+evaluator integrity, clarification, compaction pinning, belief-state tracking,
+transaction boundaries, and dynamic replanning.
+
+## Zero-clock model-building refinery
+
+Test 1.2 also converts already-paid observations into model-training assets
+during deterministic finalization. This stage adds **zero model calls and zero
+active-test seconds**.
+
+Seven mandatory products are manufactured:
+
+1. harness-to-weight SFT distillation targets;
+2. weighted same-task hard-negative preference pairs;
+3. measured capability/difficulty curriculum weights;
+4. router/activation supervision;
+5. stability/rehearsal anchors for already-correct base behavior;
+6. cross-family transfer graph;
+7. maximum-quality / minimum-compute Pareto targets.
+
+This creates two distinct improvement paths from the same experiment:
+
+```
+measured controller improvement
+        |
+        +--> keep as harness block when conditional/specialized
+        |
+        +--> distill into shared model weights when broadly transferable
+```
+
+The transfer graph prevents a locally useful intervention from being baked
+globally into weights when it has negative transfer elsewhere. Stable base
+passes become rehearsal anchors so fine-tuning cannot improve weak families by
+silently erasing strong ones.
+
+Required artifacts:
+
+- `harness-to-weight-distillation-corpus.jsonl`
+- `weighted-preference-corpus.jsonl`
+- `capability-curriculum.json`
+- `router-supervision-corpus.jsonl`
+- `stability-anchor-corpus.jsonl`
+- `cross-family-transfer-graph.json`
+- `pareto-training-targets.jsonl`
+- `zero-clock-model-manufacturing-map.json`
+
+The final summary must prove:
+
+- `zero_model_calls_added=true`
+- `zero_active_test_seconds_added=true`
+
+The tuning run rejects a collection if this zero-clock contract drifts.
 
 ## Value-density contract
 
@@ -320,6 +410,22 @@ The collection run produces, among other evidence:
 - tool-chaos-recovery map;
 - tool-scheduling map;
 - consolidated frontier-gap value map;
+- authority-separation map;
+- reward-hacking-resistance map;
+- clarification-value map;
+- governance-compaction map;
+- belief-state map;
+- semantic-transaction map;
+- dynamic-replanning map;
+- consolidated second-frontier-gap value map;
+- harness-to-weight distillation corpus;
+- weighted hard-negative preference corpus;
+- capability curriculum;
+- router/activation supervision corpus;
+- stability-anchor rehearsal corpus;
+- cross-family transfer graph;
+- quality/compute Pareto training targets;
+- zero-clock model-manufacturing manifest;
 - finite control grammar;
 - candidate coverage ledger;
 - raw capability map;
