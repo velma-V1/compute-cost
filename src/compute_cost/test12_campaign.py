@@ -1197,7 +1197,7 @@ class Test12Campaign:
 
     def _write_recovery_checkpoint(self, *, state: str = "ACTIVE") -> None:
         store = getattr(self.runner, "store", None)
-        if store is None:
+        if store is None or not hasattr(store, "write_json"):
             return
         run_id = getattr(store, "run_id", None)
         physical_calls = int(
