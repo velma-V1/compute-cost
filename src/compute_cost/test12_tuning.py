@@ -1127,8 +1127,9 @@ def run_test12_tuning(runner: Any, cases: list[dict[str,Any]], *, collection_run
             continue
         certified_families.append(family)
     blocked_families=sorted(set(TEST2_CAPABILITY_FAMILIES)-set(certified_families))
+    all_40_families_competent=len(certified_families)==len(TEST2_CAPABILITY_FAMILIES)
 
-    if family_safe and blind_pass and protected_pass:
+    if family_safe and all_40_families_competent and blind_pass and protected_pass:
         terminal_decision="FULL_INVERTED_INTEGRATION"
     elif certified_families and int(protected_summary.get("n",0))>0:
         terminal_decision="CONSTRAINED_CAPABILITY_SCOPED_INTEGRATION"
@@ -1231,6 +1232,7 @@ def run_test12_tuning(runner: Any, cases: list[dict[str,Any]], *, collection_run
         "winner_locked_before_holdouts":True,
         "holdouts_used_for_tuning_or_selection":False,
         "validation_family_safe":family_safe,
+        "all_40_families_competent":all_40_families_competent,
         "minimum_acceptance_pass_rate":minimum_pass_rate,
         "maximum_capability_regression_rate":max_regression,
         "test2_blind":{
