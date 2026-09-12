@@ -83,6 +83,11 @@ REQUIRED_COLLECTION_FILES = (
     "cross-family-transfer-graph.json",
     "pareto-training-targets.jsonl",
     "zero-clock-model-manufacturing-map.json",
+    "reliability-weighted-distillation-corpus.jsonl",
+    "long-horizon-training-mix.json",
+    "preference-quality-index.jsonl",
+    "failure-credit-assignment-corpus.jsonl",
+    "calibration-verify-supervision-corpus.jsonl",
     "cost-value-frontier-1.2.json",
     "activation-boundary-map.json",
     "negative-transfer-map-1.2.json",
@@ -239,9 +244,21 @@ def load_collection(results_root: Path, run_id: str) -> dict[str, Any]:
         "STABILITY_ANCHORS",
         "CROSS_FAMILY_TRANSFER_GRAPH",
         "PARETO_EFFICIENCY_TARGETS",
+        "RELIABILITY_WEIGHTED_DISTILLATION",
+        "LONG_HORIZON_BALANCED_TRAINING_MIX",
+        "PREFERENCE_QUALITY_FILTER",
+        "FAILURE_CREDIT_ASSIGNMENT",
+        "CALIBRATION_VERIFY_SUPERVISION",
     }
     if set(zero_clock_model.get("products") or []) != required_zero_clock_products:
         raise ValueError("zero-clock model-building product contract drifted")
+    zero_clock_assets = {
+        "reliability_weighted_distillation": _read_jsonl(run_dir / "reliability-weighted-distillation-corpus.jsonl"),
+        "long_horizon_training_mix": _read_json(run_dir / "long-horizon-training-mix.json"),
+        "preference_quality": _read_jsonl(run_dir / "preference-quality-index.jsonl"),
+        "failure_credit": _read_jsonl(run_dir / "failure-credit-assignment-corpus.jsonl"),
+        "calibration_verify": _read_jsonl(run_dir / "calibration-verify-supervision-corpus.jsonl"),
+    }
     registry = _read_json(run_dir / "full-control-candidate-registry.json")
     return {
         "run_id": run_id,
@@ -258,6 +275,7 @@ def load_collection(results_root: Path, run_id: str) -> dict[str, Any]:
         "frontier_gap_maps": frontier_gap_maps,
         "second_gap_maps": second_gap_maps,
         "zero_clock_model": zero_clock_model,
+        "zero_clock_assets": zero_clock_assets,
         "frontier": _read_json(run_dir / "cost-value-frontier-1.2.json"),
         "activation": _read_json(run_dir / "activation-boundary-map.json"),
         "negative": _read_json(run_dir / "negative-transfer-map-1.2.json"),
@@ -931,6 +949,18 @@ def run_test12_tuning(runner: Any, cases: list[dict[str,Any]], *, collection_run
             else "PROVISIONAL_FAMILY_REGRESSION_OR_MISSING_VALIDATION"
         ),
         "fine_tuning_qualification":qualification,
+        "zero_clock_training_assets":{
+            "product_count":len(collection.get("zero_clock_model",{}).get("products") or []),
+            "manifest":"zero-clock-model-manufacturing-map.json",
+            "recommended_primary_assets":[
+                "reliability-weighted-distillation-corpus.jsonl",
+                "preference-quality-index.jsonl",
+                "long-horizon-training-mix.json",
+                "stability-anchor-corpus.jsonl",
+                "failure-credit-assignment-corpus.jsonl",
+                "calibration-verify-supervision-corpus.jsonl",
+            ],
+        },
         "blind_partitions_touched":False,
         "total_two_run_hard_ceiling_hours":(TUNING_HARD_SECONDS+COLLECTION_HARD_SECONDS)/3600.0,
     },producer="test1.2-tuning",stage="report")

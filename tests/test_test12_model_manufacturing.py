@@ -6,6 +6,11 @@ from compute_cost.test12_model_manufacturing import (
     build_capability_curriculum,
     build_cross_family_transfer_graph,
     build_harness_to_weight_distillation,
+    build_reliability_weighted_distillation,
+    build_long_horizon_training_mix,
+    build_preference_quality_index,
+    build_failure_credit_assignment,
+    build_calibration_verify_supervision,
     build_pareto_targets,
     build_router_supervision,
     build_stability_anchors,
@@ -161,13 +166,13 @@ def _rows():
     return rows
 
 
-def test_zero_clock_refinery_declares_seven_training_products_and_no_new_inference():
+def test_zero_clock_refinery_declares_twelve_training_products_and_no_new_inference():
     result = build_zero_clock_model_manufacturing(
         _rows(),
         ["family_a", "family_b"],
     )
     assert set(result["products"]) == set(ZERO_CLOCK_MODEL_BUILDING_PRODUCTS)
-    assert len(result["products"]) == 7
+    assert len(result["products"]) == 12
     assert result["zero_model_calls_added"] is True
     assert result["zero_active_test_seconds_added"] is True
 
@@ -281,6 +286,108 @@ def test_zero_clock_training_artifacts_are_hard_required_outputs():
         "stability-anchor-corpus.jsonl",
         "cross-family-transfer-graph.json",
         "pareto-training-targets.jsonl",
+        "reliability-weighted-distillation-corpus.jsonl",
+        "long-horizon-training-mix.json",
+        "preference-quality-index.jsonl",
+        "failure-credit-assignment-corpus.jsonl",
+        "calibration-verify-supervision-corpus.jsonl",
         "zero-clock-model-manufacturing-map.json",
+    }
+    assert expected <= set(REQUIRED_OUTPUTS)
+
+
+
+def test_reliability_weighted_distillation_downweights_one_off_teacher_targets():
+    rows = _rows()
+    reliable = build_reliability_weighted_distillation(rows)
+    assert reliable
+    by_fixture = {
+        fixture: row
+        for row in reliable
+        for fixture in row["fixture_ids"]
+    }
+    target = by_fixture["a-fail"]
+    assert 0.0 <= target["teacher_reliability"] <= 1.0
+    assert target["independent_support_count"] >= 1
+    assert target["sample_weight"] > 0.0
+    assert "supporting_interventions" in target
+    assert "train_ready" in target
+
+
+def test_long_horizon_mix_preserves_coverage_and_prevents_single_family_monopoly():
+    rows = _rows()
+    curriculum = build_capability_curriculum(
+        rows,
+        ["family_a", "family_b"],
+    )
+    anchors = build_stability_anchors(rows)
+    transfer = build_cross_family_transfer_graph(rows)
+    mix = build_long_horizon_training_mix(
+        curriculum,
+        anchors,
+        transfer,
+    )
+    weights = [
+        row["recommended_long_horizon_mix_weight"]
+        for row in mix["families"].values()
+    ]
+    assert set(mix["families"]) == {"family_a", "family_b"}
+    assert abs(sum(weights) - 1.0) < 1e-9
+    assert all(weight > 0.0 for weight in weights)
+    assert max(weights) < 0.85
+
+
+def test_preference_quality_index_keeps_model_specific_evidence_strength():
+    rows = _rows()
+    preferences = build_weighted_preference_pairs(rows)
+    quality = build_preference_quality_index(preferences, rows)
+    assert len(quality) == len(preferences)
+    assert all(
+        0.0 <= row["preference_quality_score"] <= 1.0
+        for row in quality
+    )
+    regression = next(
+        row for row in quality
+        if row["fixture_id"] == "a-pass"
+        and row["source_intervention_id"] == "VERIFY"
+    )
+    assert regression["preference_reason"] == "QUALITY_REGRESSION_NEGATIVE"
+    assert "outcome_sign_consistency" in regression
+    assert "train_ready" in regression
+
+
+def test_failure_credit_assignment_separates_model_weakness_from_control_harm():
+    credit = build_failure_credit_assignment(_rows())
+    by_fixture = {row["fixture_id"]: row for row in credit}
+    assert (
+        by_fixture["a-fail"]["failure_owner"]
+        == "BASE_MODEL_BEHAVIOR_RESCUABLE_BY_CONTROL"
+    )
+    assert by_fixture["a-fail"]["validated_repair_action"] == "PLAN"
+    assert (
+        by_fixture["a-pass"]["failure_owner"]
+        == "CONTROL_NEGATIVE_TRANSFER"
+    )
+    assert by_fixture["a-pass"]["validated_repair_action"] == "DIRECT"
+
+
+def test_calibration_verify_supervision_teaches_when_to_trust_or_escalate():
+    labels = build_calibration_verify_supervision(_rows())
+    by_fixture = {row["fixture_id"]: row for row in labels}
+    assert by_fixture["a-pass"]["target_action"] == "TRUST_DIRECT"
+    assert by_fixture["a-fail"]["target_action"] in {
+        "ESCALATE_TO_VALIDATED_CONTROL",
+        "VERIFY",
+    }
+    assert by_fixture["a-fail"]["observed_direct_pass_rate"] < 1.0
+
+
+def test_zero_clock_training_artifacts_include_five_new_quality_layers():
+    expected = {
+        "reliability-weighted-distillation-corpus.jsonl",
+        "long-horizon-training-mix.json",
+        "preference-quality-index.jsonl",
+        "failure-credit-assignment-corpus.jsonl",
+        "calibration-verify-supervision-corpus.jsonl",
     }
     assert expected <= set(REQUIRED_OUTPUTS)

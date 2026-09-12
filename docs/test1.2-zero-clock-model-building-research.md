@@ -54,7 +54,7 @@ observations.
 - Test 1.2 applies the analogous principle at the **harness/control routing**
   level: train from measured action utility rather than hard-code every control.
 
-## Seven zero-clock products
+## Twelve zero-clock products
 
 ### 1. Harness-to-weight distillation
 
@@ -203,6 +203,144 @@ Use:
 - preference tuning for equal-quality lower-compute output;
 - distillation of test-time compute back into cheaper single-pass behavior.
 
+## Second zero-clock quality pass
+
+A deeper data-quality audit added five more deterministic products. These do
+not create any new model/runtime calls and do not add a campaign phase.
+
+### 8. Reliability-weighted distillation
+
+A one-off harness rescue is not treated as an equally reliable teacher target
+to a rescue reproduced across seeds or distinct interventions.
+
+The refinery scores each distillation target using:
+- independent support count;
+- seed support;
+- intervention/category support;
+- observed score margin;
+- contradictory positive-target count.
+
+Artifact:
+
+`reliability-weighted-distillation-corpus.jsonl`
+
+Use:
+- SFT/LoRA target weighting;
+- filter provisional one-off targets;
+- prioritize targets supported by multiple measured mechanisms.
+
+Research basis:
+- *When Are Teacher Tokens Reliable? Position-Weighted On-Policy
+  Self-Distillation for Reasoning* (arXiv:2605.21606, 2026);
+- recent preference/data-selection work showing that training examples have
+  strongly model-dependent value.
+
+### 9. Long-horizon balanced training mix
+
+A curriculum focused only on today's weakest capability can over-concentrate
+gradients and cause forgetting or reduce future adaptability.
+
+The refinery blends:
+- current weakness;
+- uniform capability coverage;
+- stability-anchor retention need;
+- cross-family transfer evidence;
+- an anti-concentration cap.
+
+Artifact:
+
+`long-horizon-training-mix.json`
+
+Use:
+- multi-capability fine-tuning mixture weights;
+- anti-forgetting rehearsal allocation;
+- prevent one weak family from monopolizing the update budget.
+
+Research basis:
+- *The Long-Term Effects of Data Selection in LLM Fine-Tuning*
+  (arXiv:2605.30537, 2026);
+- *MSSR: Memory-Aware Adaptive Replay for Continual LLM Fine-Tuning*
+  (arXiv:2603.09892, 2026).
+
+### 10. Preference-quality filtering
+
+Not every DPO/ORPO pair is equally useful. The refinery ranks each existing
+same-task preference pair by:
+- outcome-sign consistency;
+- replication count;
+- seed count;
+- quality margin;
+- hard-case value.
+
+Artifact:
+
+`preference-quality-index.jsonl`
+
+Use:
+- select/weight DPO, ORPO, KTO, or reward-model pairs;
+- retain harmful-control negatives only when their measured sign is stable;
+- avoid spending training compute on noisy or contradictory pairs.
+
+Research basis:
+- *Towards Understanding Valuable Preference Data for Large Language Model
+  Alignment* (arXiv:2510.13212, 2025), which finds preference-pair value is
+  model dependent and that better selection can outperform larger raw sets.
+
+### 11. Failure credit assignment
+
+Failed trajectories are converted into supervised ownership/repair records
+rather than being treated as undifferentiated negatives.
+
+The deterministic labels distinguish:
+- base-model behavior rescued by a measured control;
+- control-induced negative transfer;
+- unresolved residual model/control failure.
+
+Artifact:
+
+`failure-credit-assignment-corpus.jsonl`
+
+Use:
+- train failure detectors;
+- train repair/router heads;
+- separate "improve model weights" from "do not activate this controller";
+- salvage useful evidence from failures.
+
+Research basis:
+- *Exploring Expert Failures Improves LLM Agent Tuning*
+  (arXiv:2504.13145, 2025);
+- *Where LLM Agents Fail and How They can Learn From Failures*
+  (arXiv:2509.25370, 2025).
+
+### 12. Calibration / verify supervision
+
+Test 1.2 already measures raw correctness, repeats, instability, and whether
+verification/retry controllers rescue a fixture. The refinery converts that
+evidence into supervision labels:
+
+- `TRUST_DIRECT`
+- `VERIFY`
+- `ESCALATE_TO_VALIDATED_CONTROL`
+- `ESCALATE_OR_ABSTAIN`
+
+Artifact:
+
+`calibration-verify-supervision-corpus.jsonl`
+
+Use:
+- train a confidence/verification head;
+- teach the model when its raw answer is reliable;
+- reduce unnecessary verification on stable strengths;
+- escalate unreliable or repeatedly failed regions.
+
+Research basis:
+- *Beyond Accuracy: The Role of Calibration in Self-Improving Large Language
+  Models* (arXiv:2504.02902, 2025), which reports that self-improvement can
+  increase overconfidence unless calibration is handled explicitly.
+
+These five additions change **data quality and training policy**, not the test
+clock. The hard ceiling remains 13h59m.
+
 ## Hard zero-clock contract
 
 The summary artifact:
@@ -215,7 +353,7 @@ must contain:
 - `zero_active_test_seconds_added = true`
 
 The tuning run refuses the collection if either value is false or if any of the
-seven product classes disappears.
+twelve product classes disappears.
 
 These outputs therefore increase model-training value without changing the
 Test 1.2 phase schedule or its 13h59m combined hard ceiling.

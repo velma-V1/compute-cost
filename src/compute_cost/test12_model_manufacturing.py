@@ -23,6 +23,11 @@ ZERO_CLOCK_MODEL_BUILDING_PRODUCTS: tuple[str, ...] = (
     "STABILITY_ANCHORS",
     "CROSS_FAMILY_TRANSFER_GRAPH",
     "PARETO_EFFICIENCY_TARGETS",
+    "RELIABILITY_WEIGHTED_DISTILLATION",
+    "LONG_HORIZON_BALANCED_TRAINING_MIX",
+    "PREFERENCE_QUALITY_FILTER",
+    "FAILURE_CREDIT_ASSIGNMENT",
+    "CALIBRATION_VERIFY_SUPERVISION",
 )
 
 
@@ -678,6 +683,461 @@ def build_pareto_targets(
     return result
 
 
+def build_reliability_weighted_distillation(
+    rows: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Score harness-to-weight teacher targets by observed reliability.
+
+    A single successful rescue is useful but should not receive the same
+    gradient weight as a target independently reproduced across seeds or
+    interventions. This function adds evidence strength without another model
+    call and never discards provenance.
+    """
+    candidates: dict[tuple[str, str], list[dict[str, Any]]] = defaultdict(list)
+    all_positive_targets: dict[str, set[str]] = defaultdict(set)
+    for row in rows:
+        if not _eligible_training_row(row):
+            continue
+        if _num(row.get("score")) <= _num(row.get("control_score")):
+            continue
+        task = _text(row.get("task_text"))
+        target = _text(row.get("treatment_response_text"))
+        if not task or not target:
+            continue
+        candidates[(task, target)].append(row)
+        all_positive_targets[task].add(target)
+
+    result = []
+    for (task, target), values in sorted(candidates.items()):
+        seeds = {int(row.get("seed") or 0) for row in values}
+        interventions = {
+            str(row.get("intervention_id"))
+            for row in values
+            if row.get("intervention_id")
+        }
+        categories = {
+            str(row.get("intervention_category") or "")
+            for row in values
+            if row.get("intervention_category")
+        }
+        deltas = [
+            _num(row.get("score")) - _num(row.get("control_score"))
+            for row in values
+        ]
+        fixture_ids = {
+            str(row.get("fixture_id"))
+            for row in values
+            if row.get("fixture_id")
+        }
+        contradictory_targets = max(
+            0, len(all_positive_targets.get(task, set())) - 1
+        )
+
+        replication = min(1.0, len(values) / 3.0)
+        seed_support = min(1.0, len(seeds) / 2.0)
+        mechanism_support = min(1.0, len(interventions) / 2.0)
+        margin = min(1.0, max(0.0, mean(deltas)))
+        contradiction_penalty = min(0.35, 0.10 * contradictory_targets)
+        reliability = max(
+            0.0,
+            min(
+                1.0,
+                0.25
+                + 0.20 * replication
+                + 0.15 * seed_support
+                + 0.15 * mechanism_support
+                + 0.25 * margin
+                - contradiction_penalty,
+            ),
+        )
+        exemplar = max(
+            values,
+            key=lambda row: (
+                _num(row.get("score")) - _num(row.get("control_score")),
+                int(row.get("difficulty_level") or 0),
+            ),
+        )
+        result.append(
+            {
+                "schema_version": 1,
+                "record_id": _stable_id(
+                    "reliable-distill",
+                    exemplar.get("fixture_id"),
+                    target,
+                ),
+                "training_type": "RELIABILITY_WEIGHTED_DISTILLATION",
+                "family_id": exemplar.get("family_id"),
+                "fixture_ids": sorted(fixture_ids),
+                "difficulty_level": exemplar.get("difficulty_level"),
+                "input": task,
+                "target": target,
+                "teacher_reliability": reliability,
+                "sample_weight": max(
+                    0.10,
+                    reliability
+                    * (
+                        1.0
+                        + mean(deltas)
+                        + (
+                            0.25
+                            if int(exemplar.get("difficulty_level") or 0) >= 5
+                            else 0.0
+                        )
+                    ),
+                ),
+                "supporting_seeds": sorted(seeds),
+                "supporting_interventions": sorted(interventions),
+                "supporting_categories": sorted(categories),
+                "independent_support_count": len(values),
+                "contradictory_positive_target_count": contradictory_targets,
+                "train_ready": reliability >= 0.55,
+                "principle": (
+                    "weight teacher targets by measured reproducibility and "
+                    "cross-control support instead of treating one-off rescues "
+                    "as equally trustworthy"
+                ),
+            }
+        )
+    return result
+
+
+def build_long_horizon_training_mix(
+    curriculum: dict[str, Any],
+    anchors: list[dict[str, Any]],
+    transfer: dict[str, Any],
+) -> dict[str, Any]:
+    """Blend weakness priority with coverage, retention, and transfer.
+
+    Purely weakness-driven curricula can over-concentrate gradients on the
+    current problem and make later adaptation/retention worse. This derives a
+    bounded family mix from evidence already present in the run.
+    """
+    families = dict(curriculum.get("families") or {})
+    if not families:
+        return {
+            "schema_version": 1,
+            "training_type": "LONG_HORIZON_BALANCED_TRAINING_MIX",
+            "families": {},
+            "principle": "no family evidence available",
+        }
+
+    anchor_counts: dict[str, int] = defaultdict(int)
+    for row in anchors:
+        if row.get("family_id"):
+            anchor_counts[str(row["family_id"])] += 1
+
+    transfer_bonus: dict[str, float] = defaultdict(float)
+    for edge in (transfer.get("edges") or []):
+        family = str(edge.get("family_id") or "")
+        if not family:
+            continue
+        delta = _num(edge.get("mean_delta"))
+        if delta > 0:
+            transfer_bonus[family] += min(1.0, delta)
+
+    n = len(families)
+    uniform = 1.0 / n
+    raw: dict[str, float] = {}
+    for family, item in families.items():
+        weakness = _num(item.get("recommended_training_mix_weight"))
+        retention_need = min(1.0, anchor_counts.get(family, 0) / 4.0)
+        future_transfer = min(1.0, transfer_bonus.get(family, 0.0) / 3.0)
+        # 55% current utility, 25% universal coverage, 10% retention,
+        # 10% future-proxy transfer. All terms come from existing evidence.
+        raw[family] = (
+            0.55 * weakness
+            + 0.25 * uniform
+            + 0.10 * uniform * (1.0 + retention_need)
+            + 0.10 * uniform * (1.0 + future_transfer)
+        )
+
+    # Anti-concentration: no family may exceed 2.5x uniform before
+    # renormalization. Excess mass is redistributed proportionally.
+    cap = 2.5 * uniform
+    bounded = {family: min(value, cap) for family, value in raw.items()}
+    total = sum(bounded.values()) or 1.0
+    normalized = {
+        family: value / total for family, value in bounded.items()
+    }
+    return {
+        "schema_version": 1,
+        "training_type": "LONG_HORIZON_BALANCED_TRAINING_MIX",
+        "family_count": n,
+        "anti_concentration_cap_pre_normalization": cap,
+        "families": {
+            family: {
+                "measured_weakness_weight": _num(
+                    families[family].get("recommended_training_mix_weight")
+                ),
+                "stability_anchor_count": anchor_counts.get(family, 0),
+                "positive_transfer_proxy": transfer_bonus.get(family, 0.0),
+                "recommended_long_horizon_mix_weight": normalized[family],
+            }
+            for family in sorted(families)
+        },
+        "principle": (
+            "balance immediate weakness with coverage, retention, and future "
+            "transfer so current gains do not create capability imbalance or "
+            "catastrophic forgetting"
+        ),
+    }
+
+
+def build_preference_quality_index(
+    preferences: list[dict[str, Any]],
+    rows: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Rank same-task preference pairs by model-specific evidence quality."""
+    by_key: dict[tuple[str, str], list[dict[str, Any]]] = defaultdict(list)
+    for row in rows:
+        if row.get("partition") != "DISCOVERY":
+            continue
+        key = (
+            str(row.get("fixture_id") or ""),
+            str(row.get("intervention_id") or ""),
+        )
+        by_key[key].append(row)
+
+    result = []
+    for pair in preferences:
+        key = (
+            str(pair.get("fixture_id") or ""),
+            str(pair.get("source_intervention_id") or ""),
+        )
+        evidence = by_key.get(key, [])
+        signs = []
+        for row in evidence:
+            delta = _num(row.get("delta"))
+            signs.append(1 if delta > 0 else -1 if delta < 0 else 0)
+
+        expected_sign = (
+            -1
+            if pair.get("preference_reason") == "QUALITY_REGRESSION_NEGATIVE"
+            else 1
+            if pair.get("preference_reason") == "QUALITY_WIN"
+            else 0
+        )
+        if expected_sign == 0:
+            sign_consistency = 1.0
+        elif signs:
+            sign_consistency = (
+                sum(1 for sign in signs if sign == expected_sign) / len(signs)
+            )
+        else:
+            sign_consistency = 0.0
+
+        seed_count = len(
+            {
+                int(row.get("seed") or 0)
+                for row in evidence
+                if row.get("seed") is not None
+            }
+        )
+        evidence_count = len(evidence)
+        margin = min(1.0, _num(pair.get("quality_gap")))
+        hard_bonus = 1.0 if int(pair.get("difficulty_level") or 0) >= 5 else 0.0
+        quality = min(
+            1.0,
+            0.15
+            + 0.30 * sign_consistency
+            + 0.20 * min(1.0, evidence_count / 3.0)
+            + 0.15 * min(1.0, seed_count / 2.0)
+            + 0.15 * margin
+            + 0.05 * hard_bonus,
+        )
+        result.append(
+            {
+                **pair,
+                "preference_quality_score": quality,
+                "evidence_count": evidence_count,
+                "seed_count": seed_count,
+                "outcome_sign_consistency": sign_consistency,
+                "train_ready": quality >= 0.55,
+                "selection_rule": (
+                    "MODEL_SPECIFIC_EVIDENCE_QUALITY"
+                ),
+            }
+        )
+    return result
+
+
+def build_failure_credit_assignment(
+    rows: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Turn failures into root-cause/repair supervision.
+
+    This does not invent a hidden cause. It records only causal ownership that
+    is directly supported by matched control/treatment outcomes and observable
+    failure labels.
+    """
+    by_fixture: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for row in rows:
+        if row.get("partition") == "DISCOVERY" and row.get("fixture_id"):
+            by_fixture[str(row["fixture_id"])].append(row)
+
+    result = []
+    for fixture_id, values in sorted(by_fixture.items()):
+        baseline = next(
+            (row for row in values if row.get("intervention_id") == "CONTROL"),
+            None,
+        )
+        if baseline is None:
+            continue
+        base_score = _num(baseline.get("score"))
+        treatments = [
+            row
+            for row in values
+            if row.get("intervention_id") not in {None, "CONTROL"}
+        ]
+        successful_repairs = [
+            row for row in treatments if _num(row.get("score")) > base_score
+        ]
+        regressions = [
+            row
+            for row in treatments
+            if _num(row.get("score")) < _num(row.get("control_score"))
+        ]
+
+        source = next(
+            (row for row in treatments if _text(row.get("task_text"))),
+            None,
+        )
+        task = _text((source or {}).get("task_text"))
+        if not task:
+            continue
+
+        if base_score < 1.0 and successful_repairs:
+            owner = "BASE_MODEL_BEHAVIOR_RESCUABLE_BY_CONTROL"
+            best = max(
+                successful_repairs,
+                key=lambda row: _num(row.get("delta")),
+            )
+            repair = str(best.get("intervention_id"))
+            repair_category = str(best.get("intervention_category") or "")
+        elif base_score >= 1.0 and regressions:
+            owner = "CONTROL_NEGATIVE_TRANSFER"
+            worst = min(regressions, key=lambda row: _num(row.get("delta")))
+            repair = "DIRECT"
+            repair_category = "DIRECT"
+            best = worst
+        elif base_score < 1.0:
+            owner = "RESIDUAL_MODEL_OR_UNRESOLVED_OWNER"
+            repair = "NONE_VALIDATED"
+            repair_category = "UNRESOLVED"
+            best = baseline
+        else:
+            continue
+
+        classification = (
+            best.get("classification")
+            if isinstance(best.get("classification"), dict)
+            else {}
+        )
+        result.append(
+            {
+                "schema_version": 1,
+                "record_id": _stable_id("failure-credit", fixture_id, owner),
+                "training_type": "FAILURE_CREDIT_ASSIGNMENT",
+                "fixture_id": fixture_id,
+                "family_id": best.get("family_id") or baseline.get("family_id"),
+                "difficulty_level": best.get("difficulty_level")
+                or baseline.get("difficulty_level"),
+                "input": task,
+                "failure_owner": owner,
+                "observable_failure_class": classification.get("result_class"),
+                "validated_repair_action": repair,
+                "validated_repair_category": repair_category,
+                "baseline_score": base_score,
+                "repair_score": (
+                    _num(best.get("score"))
+                    if best is not baseline
+                    else base_score
+                ),
+                "evidence_only": True,
+            }
+        )
+    return result
+
+
+def build_calibration_verify_supervision(
+    rows: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Teach when DIRECT is trustworthy versus verification/escalation."""
+    by_fixture: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for row in rows:
+        if row.get("partition") == "DISCOVERY" and row.get("fixture_id"):
+            by_fixture[str(row["fixture_id"])].append(row)
+
+    result = []
+    for fixture_id, values in sorted(by_fixture.items()):
+        baselines = [
+            row for row in values if row.get("intervention_id") == "CONTROL"
+        ]
+        treatments = [
+            row
+            for row in values
+            if row.get("intervention_id") not in {None, "CONTROL"}
+        ]
+        source = next(
+            (row for row in treatments if _text(row.get("task_text"))),
+            None,
+        )
+        task = _text((source or {}).get("task_text"))
+        if not baselines or not task:
+            continue
+
+        scores = [_num(row.get("score")) for row in baselines]
+        pass_rate = mean(scores)
+        instability = pstdev(scores) if len(scores) > 1 else 0.0
+        verification_rescues = [
+            row
+            for row in treatments
+            if row.get("intervention_category")
+            in {"VERIFICATION", "CRITIQUE", "RETRY_RECOVERY"}
+            and _num(row.get("score")) > _num(row.get("control_score"))
+        ]
+        any_rescue = [
+            row
+            for row in treatments
+            if _num(row.get("score")) > _num(row.get("control_score"))
+        ]
+
+        if pass_rate >= 1.0 and instability == 0.0:
+            target = "TRUST_DIRECT"
+        elif verification_rescues:
+            target = "VERIFY"
+        elif pass_rate < 1.0 and any_rescue:
+            target = "ESCALATE_TO_VALIDATED_CONTROL"
+        elif pass_rate < 1.0:
+            target = "ESCALATE_OR_ABSTAIN"
+        else:
+            target = "VERIFY"
+
+        result.append(
+            {
+                "schema_version": 1,
+                "record_id": _stable_id("calibrate", fixture_id),
+                "training_type": "CALIBRATION_VERIFY_SUPERVISION",
+                "fixture_id": fixture_id,
+                "family_id": (source or baselines[0]).get("family_id"),
+                "difficulty_level": (source or baselines[0]).get(
+                    "difficulty_level"
+                ),
+                "input": task,
+                "target_action": target,
+                "observed_direct_pass_rate": pass_rate,
+                "observed_direct_instability": instability,
+                "verification_rescue_count": len(verification_rescues),
+                "any_control_rescue_count": len(any_rescue),
+                "principle": (
+                    "calibrate trust from measured correctness/stability and "
+                    "validated rescue evidence rather than self-confidence"
+                ),
+            }
+        )
+    return result
+
+
 def build_zero_clock_model_manufacturing(
     rows: list[dict[str, Any]],
     families: Iterable[str],
@@ -689,6 +1149,16 @@ def build_zero_clock_model_manufacturing(
     anchors = build_stability_anchors(rows)
     transfer = build_cross_family_transfer_graph(rows)
     pareto = build_pareto_targets(rows)
+
+    reliable_distillation = build_reliability_weighted_distillation(rows)
+    long_horizon_mix = build_long_horizon_training_mix(
+        curriculum,
+        anchors,
+        transfer,
+    )
+    preference_quality = build_preference_quality_index(preferences, rows)
+    failure_credit = build_failure_credit_assignment(rows)
+    calibration = build_calibration_verify_supervision(rows)
 
     return {
         "schema_version": 1,
@@ -703,6 +1173,13 @@ def build_zero_clock_model_manufacturing(
             "pareto_targets": len(pareto),
             "curriculum_families": len(curriculum.get("families") or {}),
             "transfer_edges": len(transfer.get("edges") or []),
+            "reliability_weighted_distillation": len(reliable_distillation),
+            "long_horizon_mix_families": len(
+                long_horizon_mix.get("families") or {}
+            ),
+            "preference_quality_records": len(preference_quality),
+            "failure_credit_records": len(failure_credit),
+            "calibration_verify_records": len(calibration),
         },
         "distillation": distillation,
         "preferences": preferences,
@@ -711,4 +1188,9 @@ def build_zero_clock_model_manufacturing(
         "anchors": anchors,
         "transfer": transfer,
         "pareto": pareto,
+        "reliable_distillation": reliable_distillation,
+        "long_horizon_mix": long_horizon_mix,
+        "preference_quality": preference_quality,
+        "failure_credit": failure_credit,
+        "calibration": calibration,
     }

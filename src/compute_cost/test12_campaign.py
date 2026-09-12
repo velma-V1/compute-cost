@@ -292,6 +292,11 @@ REQUIRED_OUTPUTS = (
     "cross-family-transfer-graph.json",
     "pareto-training-targets.jsonl",
     "zero-clock-model-manufacturing-map.json",
+    "reliability-weighted-distillation-corpus.jsonl",
+    "long-horizon-training-mix.json",
+    "preference-quality-index.jsonl",
+    "failure-credit-assignment-corpus.jsonl",
+    "calibration-verify-supervision-corpus.jsonl",
     "reasoning-compute-map.json",
     "controller-mechanism-map.json",
     "context-memory-state-map.json",
@@ -3839,6 +3844,10 @@ def write_outputs(campaign: Test12Campaign, results: dict[str, Any]) -> None:
         ("router-supervision-corpus.jsonl", "router"),
         ("stability-anchor-corpus.jsonl", "anchors"),
         ("pareto-training-targets.jsonl", "pareto"),
+        ("reliability-weighted-distillation-corpus.jsonl", "reliable_distillation"),
+        ("preference-quality-index.jsonl", "preference_quality"),
+        ("failure-credit-assignment-corpus.jsonl", "failure_credit"),
+        ("calibration-verify-supervision-corpus.jsonl", "calibration"),
     )
     for path, key in zero_clock_jsonl:
         values = zero_clock_training[key]
@@ -3854,6 +3863,7 @@ def write_outputs(campaign: Test12Campaign, results: dict[str, Any]) -> None:
             })
     store.write_json("capability-curriculum.json", zero_clock_training["curriculum"], producer="test1.2", stage="report")
     store.write_json("cross-family-transfer-graph.json", zero_clock_training["transfer"], producer="test1.2", stage="report")
+    store.write_json("long-horizon-training-mix.json", zero_clock_training["long_horizon_mix"], producer="test1.2", stage="report")
     store.write_json("zero-clock-model-manufacturing-map.json", {
         "schema_version":1,
         "zero_model_calls_added":zero_clock_training["zero_model_calls_added"],
@@ -3868,6 +3878,11 @@ def write_outputs(campaign: Test12Campaign, results: dict[str, Any]) -> None:
             "STABILITY_ANCHORS":"stability-anchor-corpus.jsonl",
             "CROSS_FAMILY_TRANSFER_GRAPH":"cross-family-transfer-graph.json",
             "PARETO_EFFICIENCY_TARGETS":"pareto-training-targets.jsonl",
+            "RELIABILITY_WEIGHTED_DISTILLATION":"reliability-weighted-distillation-corpus.jsonl",
+            "LONG_HORIZON_BALANCED_TRAINING_MIX":"long-horizon-training-mix.json",
+            "PREFERENCE_QUALITY_FILTER":"preference-quality-index.jsonl",
+            "FAILURE_CREDIT_ASSIGNMENT":"failure-credit-assignment-corpus.jsonl",
+            "CALIBRATION_VERIFY_SUPERVISION":"calibration-verify-supervision-corpus.jsonl",
         },
     }, producer="test1.2", stage="report")
     if negative_corpus:

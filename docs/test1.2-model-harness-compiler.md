@@ -249,7 +249,7 @@ Test 1.2 also converts already-paid observations into model-training assets
 during deterministic finalization. This stage adds **zero model calls and zero
 active-test seconds**.
 
-Seven mandatory products are manufactured:
+Twelve mandatory products are manufactured:
 
 1. harness-to-weight SFT distillation targets;
 2. weighted same-task hard-negative preference pairs;
@@ -257,7 +257,12 @@ Seven mandatory products are manufactured:
 4. router/activation supervision;
 5. stability/rehearsal anchors for already-correct base behavior;
 6. cross-family transfer graph;
-7. maximum-quality / minimum-compute Pareto targets.
+7. maximum-quality / minimum-compute Pareto targets;
+8. reliability-weighted distillation;
+9. long-horizon balanced training mix;
+10. preference-quality filtering;
+11. failure credit assignment;
+12. calibration / verify supervision.
 
 This creates two distinct improvement paths from the same experiment:
 
@@ -284,13 +289,18 @@ Required artifacts:
 - `cross-family-transfer-graph.json`
 - `pareto-training-targets.jsonl`
 - `zero-clock-model-manufacturing-map.json`
+- `reliability-weighted-distillation-corpus.jsonl`
+- `long-horizon-training-mix.json`
+- `preference-quality-index.jsonl`
+- `failure-credit-assignment-corpus.jsonl`
+- `calibration-verify-supervision-corpus.jsonl`
 
 The final summary must prove:
 
 - `zero_model_calls_added=true`
 - `zero_active_test_seconds_added=true`
 
-The tuning run rejects a collection if this zero-clock contract drifts.
+The tuning run rejects a collection if this zero-clock contract drifts or any of the twelve products disappears.
 
 ## Value-density contract
 
