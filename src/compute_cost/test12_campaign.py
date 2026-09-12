@@ -1048,6 +1048,7 @@ class Test12Campaign:
         self.rows: list[dict[str, Any]] = []
         self.sequence = 0
         self.phase_assertions: list[dict[str, Any]] = []
+        self.phase_events: list[dict[str, Any]] = []
         self.completed_treatment_signatures: set[tuple[str, int, str]] = set()
         self.call_latency_seconds: list[float] = []
         self.efficiency_counters: dict[str, int] = {
@@ -3639,6 +3640,24 @@ def _efficiency_audit(campaign: Test12Campaign) -> dict[str, Any]:
             "unmeasured_discovery_fixture_ids": unmeasured,
             "unknown_is_not_failure": True,
         },
+        "phase_schedule": {
+            "events": copy.deepcopy(campaign.phase_events),
+            "total_deadline_overrun_seconds": sum(
+                float(row.get("deadline_overrun_seconds") or 0.0)
+                for row in campaign.phase_events
+            ),
+            "total_inherited_headroom_seconds": sum(
+                float(row.get("inherited_headroom_seconds") or 0.0)
+                for row in campaign.phase_events
+            ),
+            "phases_with_runway_skips": [
+                row["phase"]
+                for row in campaign.phase_events
+                if int((row.get("efficiency_counter_delta") or {}).get("single_call_runway_skips", 0))
+                + int((row.get("efficiency_counter_delta") or {}).get("insufficient_runway_treatments_skipped", 0))
+                > 0
+            ],
+        },
         "per_phase": per_phase,
     }
 
@@ -4287,6 +4306,10 @@ def run_test12_campaign(
     for phase_name, seconds in PHASES:
         deadline = min(campaign.active_end, phase_start + seconds)
         before = len(campaign.rows)
+        actual_started = campaign.clock()
+        counters_before = copy.deepcopy(campaign.efficiency_counters)
+        run_id = getattr(runner.store, "run_id", None)
+        physical_before = int(getattr(runner, "_model_call_counts", {}).get(run_id, 0)) if run_id else 0
         if phase_name == "baseline_capability_map":
             results["baseline"] = phase_baseline(campaign, deadline)
         elif phase_name == "fractional_compute_surface":
@@ -4345,14 +4368,29 @@ def run_test12_campaign(
             results["second_frontier_gaps"] = phase_second_frontier_gap_labs(campaign, deadline)
 
         ended = campaign.clock()
-        runner.store.append_jsonl("test1.2-phase-events.jsonl", {
+        physical_after = int(getattr(runner, "_model_call_counts", {}).get(run_id, 0)) if run_id else 0
+        counter_delta = {
+            key: int(campaign.efficiency_counters.get(key, 0)) - int(counters_before.get(key, 0))
+            for key in campaign.efficiency_counters
+        }
+        phase_event = {
             "phase":phase_name,
-            "started_monotonic":phase_start,
+            "scheduled_started_monotonic":phase_start,
+            "actual_started_monotonic":actual_started,
             "ended_monotonic":ended,
             "deadline_monotonic":deadline,
+            "scheduled_window_seconds":max(0.0, deadline - phase_start),
+            "available_window_seconds_at_actual_start":max(0.0, deadline - actual_started),
+            "inherited_headroom_seconds":max(0.0, phase_start - actual_started),
+            "actual_elapsed_seconds":max(0.0, ended - actual_started),
+            "deadline_overrun_seconds":max(0.0, ended - deadline),
             "observations_added":len(campaign.rows)-before,
             "total_observations":len(campaign.rows),
-        })
+            "physical_model_calls_added":max(0, physical_after - physical_before),
+            "efficiency_counter_delta":counter_delta,
+        }
+        campaign.phase_events.append(copy.deepcopy(phase_event))
+        runner.store.append_jsonl("test1.2-phase-events.jsonl", phase_event)
         phase_start = deadline
         if ended >= campaign.active_end:
             break
