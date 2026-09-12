@@ -9,6 +9,8 @@ from compute_cost.test12_campaign import (
     CORE_INTERVENTIONS,
     IMPROVEMENT_SURFACE,
     PROMPT_PRIMITIVES,
+    TEST2_CAPABILITY_FAMILIES,
+    FAMILY_CONTROL_SURFACES,
     build_intervention_bank,
     build_test12_plan,
     capability_frontier_cover,
@@ -245,3 +247,76 @@ def test_capability_frontier_cover_spans_easy_middle_hard_and_boundary_levels():
     assert set(by_family) == {"family_0", "family_1", "family_2"}
     for levels in by_family.values():
         assert set(levels) == {0, 2, 5, 8, 10}
+
+
+
+def test_test12_freezes_all_40_test2_capability_families():
+    assert len(TEST2_CAPABILITY_FAMILIES) == 40
+    assert set(TEST2_CAPABILITY_FAMILIES) == {
+        "instruction_following_constraint_stacking",
+        "strict_structured_output",
+        "extraction_transformation",
+        "arithmetic_numerical_reasoning",
+        "algebra_quantitative_reasoning",
+        "formal_logic_deduction",
+        "causal_counterfactual_reasoning",
+        "temporal_reasoning",
+        "spatial_reasoning",
+        "planning_optimization",
+        "coding_generation",
+        "code_comprehension",
+        "debugging_root_cause_diagnosis",
+        "refactoring_under_constraints",
+        "test_generation_verification",
+        "tool_selection",
+        "tool_argument_correctness",
+        "multi_tool_sequencing",
+        "tool_error_recovery",
+        "ambiguity_detection",
+        "missing_information_handling",
+        "uncertainty_calibration",
+        "hallucination_resistance",
+        "context_retrieval",
+        "context_reasoning",
+        "lost_in_middle_resistance",
+        "distractor_noise_resistance",
+        "contradictory_information_handling",
+        "multi_turn_state_tracking",
+        "updated_obsolete_state_rejection",
+        "memory_compression_summary_fidelity",
+        "decomposition",
+        "self_correction",
+        "verification_critique",
+        "meta_reasoning",
+        "prompt_instruction_conflict_handling",
+        "format_robustness",
+        "adversarial_wording_robustness",
+        "sibling_transfer_generalization",
+        "composite_agent_tasks",
+    }
+    assert len(FAMILY_CONTROL_SURFACES) >= 10
+
+
+def test_collection_plan_fails_if_any_test2_capability_family_is_missing():
+    cases = [
+        case for case in _cases()
+        if case["category"] != "tool_error_recovery"
+    ]
+    plan = build_test12_plan(cases)
+    assert plan["missing_capability_families"] == ["tool_error_recovery"]
+    try:
+        validate_test12_plan(plan)
+    except ValueError as exc:
+        assert "capability family contract incomplete" in str(exc)
+    else:
+        raise AssertionError("Test 1.2 accepted a suite missing a required capability family")
+
+
+def test_collection_plan_contains_all_capability_family_manufacturing_contracts():
+    plan = build_test12_plan(_cases())
+    assert plan["required_capability_family_count"] == 40
+    assert set(plan["required_capability_families"]) == set(TEST2_CAPABILITY_FAMILIES)
+    assert plan["missing_capability_families"] == []
+    assert set(plan["family_control_surfaces"]) == set(FAMILY_CONTROL_SURFACES)
+    assert "capability-family-coverage.json" in plan["required_outputs"]
+    assert "capability-building-block-manufacturing-map.json" in plan["required_outputs"]

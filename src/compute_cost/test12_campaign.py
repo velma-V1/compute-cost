@@ -33,6 +33,62 @@ from .evidence import EvidenceStore
 from .experiments import ExperimentSpec, make_experiment_id
 from .test1_campaign import _balanced_cases, _family, _fixture_id, partition_cases
 from .test11_campaign import TRUNCATION_CLASSES, CAPABILITY_FAILURE_CLASSES
+TEST2_CAPABILITY_FAMILIES: tuple[str, ...] = (
+    "instruction_following_constraint_stacking",
+    "strict_structured_output",
+    "extraction_transformation",
+    "arithmetic_numerical_reasoning",
+    "algebra_quantitative_reasoning",
+    "formal_logic_deduction",
+    "causal_counterfactual_reasoning",
+    "temporal_reasoning",
+    "spatial_reasoning",
+    "planning_optimization",
+    "coding_generation",
+    "code_comprehension",
+    "debugging_root_cause_diagnosis",
+    "refactoring_under_constraints",
+    "test_generation_verification",
+    "tool_selection",
+    "tool_argument_correctness",
+    "multi_tool_sequencing",
+    "tool_error_recovery",
+    "ambiguity_detection",
+    "missing_information_handling",
+    "uncertainty_calibration",
+    "hallucination_resistance",
+    "context_retrieval",
+    "context_reasoning",
+    "lost_in_middle_resistance",
+    "distractor_noise_resistance",
+    "contradictory_information_handling",
+    "multi_turn_state_tracking",
+    "updated_obsolete_state_rejection",
+    "memory_compression_summary_fidelity",
+    "decomposition",
+    "self_correction",
+    "verification_critique",
+    "meta_reasoning",
+    "prompt_instruction_conflict_handling",
+    "format_robustness",
+    "adversarial_wording_robustness",
+    "sibling_transfer_generalization",
+    "composite_agent_tasks",
+)
+
+FAMILY_CONTROL_SURFACES: tuple[str, ...] = (
+    "PROMPT_CONTROL",
+    "REASONING_MODE",
+    "PLANNING",
+    "VERIFICATION",
+    "RETRY_RECOVERY",
+    "STATE_TRACKING",
+    "MEMORY",
+    "CONTEXT_SELECTION_COMPRESSION",
+    "TOOL_POLICY",
+    "STOP_ESCALATE_POLICY",
+)
+
 from .test12_toollab import (
     TOOL_HARNESS_POLICIES,
     TOOL_MICROCASES,
@@ -51,15 +107,16 @@ CALL_START_CUTOFF_SECONDS = COLLECTION_ACTIVE_SECONDS
 # Six active hours; the extra 15 minutes is reserved for preflight/finalization.
 # Adaptive early-stop may finish sooner once coverage + uncertainty criteria are met.
 PHASES = (
-    ("baseline_capability_map", 40 * 60),
-    ("fractional_compute_surface", 30 * 60),
-    ("mechanism_coverage_floor", 60 * 60),
-    ("real_tool_execution", 30 * 60),
-    ("failure_phenotype_replay", 45 * 60),
-    ("interaction_scout", 40 * 60),
-    ("dose_activation_boundaries", 40 * 60),
-    ("negative_transfer_sentinels", 45 * 60),
-    ("information_gain_reserve", 30 * 60),
+    ("baseline_capability_map", 35 * 60),
+    ("fractional_compute_surface", 25 * 60),
+    ("capability_family_manufacturing_floor", 50 * 60),
+    ("mechanism_coverage_floor", 70 * 60),
+    ("real_tool_execution", 25 * 60),
+    ("failure_phenotype_replay", 35 * 60),
+    ("interaction_scout", 30 * 60),
+    ("dose_activation_boundaries", 35 * 60),
+    ("negative_transfer_sentinels", 30 * 60),
+    ("information_gain_reserve", 25 * 60),
 )
 
 
@@ -131,6 +188,8 @@ REQUIRED_OUTPUTS = (
     "full-control-candidate-registry.json",
     "control-grammar-coverage.json",
     "mechanism-coverage-ledger.json",
+    "capability-family-coverage.json",
+    "capability-building-block-manufacturing-map.json",
     "reasoning-compute-map.json",
     "controller-mechanism-map.json",
     "context-memory-state-map.json",
@@ -226,6 +285,11 @@ CORE_INTERVENTIONS: tuple[dict[str, Any], ...] = (
     {"id":"COUNTEREXAMPLE-RETRY","category":"RETRY_RECOVERY","mode":"retry","label":"counterexample_retry","aux_instruction":"Find a concrete counterexample or violated requirement that proves the candidate wrong. If none exists, say NONE.","final_instruction":"Retry only if the counterexample is supported; otherwise keep the candidate. Return only the final answer."},
     {"id":"CONSTRAINT-RETRY","category":"RETRY_RECOVERY","mode":"retry","label":"constraint_retry","aux_instruction":"Identify the first hard constraint the candidate violates, if any. Name only that constraint and the evidence.","final_instruction":"Retry from the original task while satisfying the violated constraint and preserving already-correct parts."},
     {"id":"TOOL-SCHEMA-RETRY","category":"TOOL_POLICY","mode":"retry","label":"tool_schema_retry","aux_instruction":"Identify the exact tool-selection or argument-schema defect in the candidate tool-like output.","final_instruction":"Rebuild the tool-like output from the required schema and dependencies; return only the corrected output."},
+    {"id":"PLAN-INLINE","category":"PLANNING","mode":"single","label":"inline_plan","instruction":"Before answering, form the minimum dependency-ordered plan needed for this task, then solve it."},
+    {"id":"MEMORY-INLINE","category":"MEMORY","mode":"single","label":"inline_working_memory","instruction":"Before answering, retain a compact working ledger of decisive facts, constraints, and state changes and use it consistently."},
+    {"id":"CONTEXT-INLINE","category":"CONTEXT_SELECTION_COMPRESSION","mode":"single","label":"inline_context_selection","instruction":"Focus only on evidence that can change the answer; preserve decisive facts and ignore distractors."},
+    {"id":"TOOL-INLINE","category":"TOOL_POLICY","mode":"single","label":"inline_tool_guard","instruction":"For tool-like work, validate tool choice, exact argument schema, dependencies, and postcondition before finalizing."},
+    {"id":"STOP-INLINE","category":"STOP_ESCALATE_POLICY","mode":"single","label":"inline_stop_rule","instruction":"Use only the processing needed to reach a supported answer; stop when the requested postcondition is fully satisfied."},
 )
 
 PROMPT_PRIMITIVES: tuple[dict[str, str], ...] = (
@@ -435,6 +499,13 @@ def build_test12_plan(cases: list[dict[str, Any]], *, seed_run: str | None = Non
         "allowed_partitions": ["DISCOVERY"],
         "reserved_for_tuning": ["VALIDATION"],
         "prohibited_partitions": ["TEST2_BLIND", "TEST3_PROTECTED"],
+        "required_capability_families": list(TEST2_CAPABILITY_FAMILIES),
+        "required_capability_family_count": len(TEST2_CAPABILITY_FAMILIES),
+        "observed_capability_families": sorted({_family(case) for case in cases}),
+        "missing_capability_families": sorted(
+            set(TEST2_CAPABILITY_FAMILIES) - {_family(case) for case in cases}
+        ),
+        "family_control_surfaces": list(FAMILY_CONTROL_SURFACES),
         "improvement_surface": list(IMPROVEMENT_SURFACE),
         "core_mechanism_count": len(CORE_INTERVENTIONS),
         "generated_prompt_control_count": len(generate_prompt_control_candidates()),
@@ -481,6 +552,17 @@ def validate_test12_plan(plan: dict[str, Any]) -> None:
     for name in ("DISCOVERY", "VALIDATION", "TEST2_BLIND", "TEST3_PROTECTED"):
         if int(plan["partition_counts"].get(name, 0)) <= 0:
             raise ValueError(f"{name} partition is empty")
+    if int(plan.get("required_capability_family_count", 0)) != 40:
+        raise ValueError("Test 1.2 must freeze all 40 Test-2 capability families")
+    if plan.get("missing_capability_families"):
+        raise ValueError(
+            "Test 1.2 capability family contract incomplete: "
+            + ", ".join(plan["missing_capability_families"])
+        )
+    if set(plan.get("required_capability_families") or []) != set(TEST2_CAPABILITY_FAMILIES):
+        raise ValueError("Test 1.2 required capability-family manifest drifted")
+    if set(plan.get("family_control_surfaces") or []) != set(FAMILY_CONTROL_SURFACES):
+        raise ValueError("Test 1.2 per-family control-surface contract drifted")
     missing_surface = sorted(set(IMPROVEMENT_SURFACE) - set(plan.get("improvement_surface") or []))
     if missing_surface:
         raise ValueError(f"Test 1.2 improvement surface incomplete: {missing_surface}")
@@ -1433,6 +1515,81 @@ def phase_reasoning_compute(campaign: Test12Campaign, deadline: float) -> dict[s
     return _group_summary(rows, campaign.cfg, lambda row: str(row["intervention_id"]))
 
 
+def _representative_by_category(
+    campaign: Test12Campaign,
+) -> dict[str, dict[str, Any]]:
+    preference = {
+        "PROMPT_CONTROL": ("CTRL-DECOMPOSE", "CTRL-EVIDENCE", "CTRL-CONSTRAINTS"),
+        "REASONING_MODE": ("REASON-MEDIUM", "REASON-LOW", "REASON-HIGH"),
+        "PLANNING": ("PLAN-INLINE", "PLAN-SOLVE", "PLAN-SOLVE-VERIFY"),
+        "VERIFICATION": ("SOLVE-VERIFY",),
+        "RETRY_RECOVERY": ("MINIMAL-REPAIR", "FAILURE-DIAGNOSE-RETRY"),
+        "STATE_TRACKING": ("CTRL-STATE",),
+        "MEMORY": ("MEMORY-INLINE", "EVIDENCE-LEDGER", "STATE-MEMORY"),
+        "CONTEXT_SELECTION_COMPRESSION": ("CONTEXT-INLINE", "CONTEXT-SELECT", "CONTEXT-COMPRESS"),
+        "TOOL_POLICY": ("TOOL-INLINE", "TOOL-SCHEMA", "TOOL-POSTCHECK"),
+        "STOP_ESCALATE_POLICY": ("STOP-INLINE", "RISK-GATED-VERIFY", "STOP-WHEN-SUFFICIENT"),
+    }
+    result: dict[str, dict[str, Any]] = {}
+    for category in FAMILY_CONTROL_SURFACES:
+        for ident in preference.get(category, ()):
+            intervention = campaign.intervention_by_id.get(ident)
+            if intervention is not None:
+                result[category] = intervention
+                break
+    return result
+
+
+def phase_family_control_floor(
+    campaign: Test12Campaign,
+    deadline: float,
+) -> dict[str, Any]:
+    """Every canonical capability family sees every mandatory harness surface."""
+    start = len(campaign.rows)
+    representatives = _representative_by_category(campaign)
+    by_family: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for case in campaign.partitions["DISCOVERY"]:
+        if _family(case) in TEST2_CAPABILITY_FAMILIES:
+            by_family[_family(case)].append(case)
+
+    for family in TEST2_CAPABILITY_FAMILIES:
+        pool = by_family.get(family) or []
+        if not pool:
+            continue
+        case = min(
+            pool,
+            key=lambda row: (
+                abs(int(row.get("difficulty_level", 0)) - 5),
+                _fixture_id(row),
+            ),
+        )
+        for category in FAMILY_CONTROL_SURFACES:
+            if not campaign.can_start(deadline):
+                break
+            intervention = representatives.get(category)
+            if intervention is None:
+                continue
+            campaign.treatment(
+                case,
+                deadline,
+                phase="family_control_floor",
+                intervention=intervention,
+                seed=int(campaign.cfg["seeds"][0]),
+            )
+
+    campaign.positive_work(
+        "family_control_floor",
+        start,
+        "all 40 Test-2 capability families x mandatory harness-control surfaces",
+    )
+    rows = campaign.rows[start:]
+    return _group_summary(
+        rows,
+        campaign.cfg,
+        lambda row: f"{row['family_id']}|{row['intervention_category']}",
+    )
+
+
 def phase_controller_screen(campaign: Test12Campaign, deadline: float) -> dict[str, Any]:
     start = len(campaign.rows)
     excluded = {"REASONING_MODE","GENERATION_BUDGET","CONTEXT_WINDOW","COMPUTE_COST_ROUTING"}
@@ -2013,6 +2170,141 @@ def _harness_policy_blueprint(campaign: Test12Campaign) -> dict[str, Any]:
     }
 
 
+def _capability_family_coverage(campaign: Test12Campaign) -> dict[str, Any]:
+    families: dict[str, Any] = {}
+    for family in TEST2_CAPABILITY_FAMILIES:
+        rows = [row for row in campaign.rows if row.get("family_id") == family]
+        controls = [row for row in rows if row.get("intervention_id") != "CONTROL"]
+        baseline = [row for row in rows if row.get("intervention_id") == "CONTROL"]
+        surfaces = sorted({
+            str(row.get("intervention_category"))
+            for row in controls
+            if row.get("intervention_category")
+        })
+        levels = sorted({
+            int(row.get("difficulty_level", 0))
+            for row in rows
+            if isinstance(row.get("difficulty_level"), int)
+        })
+        missing = sorted(set(FAMILY_CONTROL_SURFACES) - set(surfaces))
+        families[family] = {
+            "baseline_observations": len(baseline),
+            "treatment_observations": len(controls),
+            "difficulty_levels_observed": levels,
+            "control_surfaces_observed": surfaces,
+            "missing_control_surfaces": missing,
+            "manufacturing_ready": bool(baseline) and not missing,
+        }
+    return {
+        "schema_version": 1,
+        "required_family_count": len(TEST2_CAPABILITY_FAMILIES),
+        "families": families,
+        "missing_families": [
+            family for family, row in families.items()
+            if row["baseline_observations"] == 0
+        ],
+        "not_manufacturing_ready": [
+            family for family, row in families.items()
+            if not row["manufacturing_ready"]
+        ],
+        "all_families_manufacturing_ready": all(
+            row["manufacturing_ready"] for row in families.values()
+        ),
+    }
+
+
+def _capability_building_block_map(campaign: Test12Campaign) -> dict[str, Any]:
+    records: dict[str, Any] = {}
+    for family in TEST2_CAPABILITY_FAMILIES:
+        rows = [
+            row for row in campaign.rows
+            if row.get("family_id") == family
+            and row.get("intervention_id") not in {None, "CONTROL"}
+        ]
+        by_intervention: dict[str, list[dict[str, Any]]] = defaultdict(list)
+        for row in rows:
+            by_intervention[str(row["intervention_id"])].append(row)
+
+        scored = []
+        for ident, values in by_intervention.items():
+            summary = mechanism_summary(values, campaign.cfg)
+            category = str(values[0].get("intervention_category") or "")
+            scored.append({
+                "intervention_id": ident,
+                "category": category,
+                **summary,
+            })
+        scored.sort(
+            key=lambda row: (
+                float(row.get("net_value", 0.0)),
+                float(row.get("value_per_call", 0.0)),
+            ),
+            reverse=True,
+        )
+        winners = [
+            row for row in scored
+            if row.get("classification") in {
+                "STRONG_CONDITIONAL_RESCUE",
+                "PROMISING_CONDITIONAL_RESCUE",
+            }
+        ]
+        harms = [
+            row for row in scored
+            if row.get("classification") == "CAPABILITY_HARM"
+            or int(row.get("capability_regressions", 0)) > 0
+        ]
+        nulls = [
+            row for row in scored
+            if row.get("classification") == "NO_RESCUE_SIGNAL"
+        ]
+        by_surface: dict[str, list[dict[str, Any]]] = defaultdict(list)
+        for row in scored:
+            by_surface[str(row.get("category") or "UNKNOWN")].append(row)
+
+        candidate_blocks = []
+        for surface, values in sorted(by_surface.items()):
+            if not values:
+                continue
+            best = values[0]
+            candidate_blocks.append({
+                "block_family": family,
+                "block_surface": surface,
+                "candidate_intervention_id": best["intervention_id"],
+                "classification": best.get("classification"),
+                "net_value": best.get("net_value"),
+                "value_per_call": best.get("value_per_call"),
+                "activation_state": "FAMILY_CONDITIONAL",
+            })
+
+        records[family] = {
+            "family_id": family,
+            "observations": len(rows),
+            "tested_control_surfaces": sorted(by_surface),
+            "best_controls": winners[:12],
+            "harmful_controls": harms[:12],
+            "null_controls": nulls[:12],
+            "candidate_building_blocks": candidate_blocks,
+            "manufacturing_status": (
+                "READY_FOR_TEST1.3_BLOCK_MANUFACTURING"
+                if set(FAMILY_CONTROL_SURFACES) <= set(by_surface)
+                else "MORE_COLLECTION_REQUIRED"
+            ),
+        }
+    return {
+        "schema_version": 1,
+        "source": "TEST1.2_COLLECTION",
+        "required_capability_families": list(TEST2_CAPABILITY_FAMILIES),
+        "family_count": len(records),
+        "families": records,
+        "test1.3_contract": {
+            "consume_every_family": True,
+            "manufacture_from_measured_winners_only": True,
+            "preserve_harmful_and_null_controls_as_negative_constraints": True,
+            "do_not_drop_family_when_no_positive_control_exists": True,
+        },
+    }
+
+
 def write_outputs(campaign: Test12Campaign, results: dict[str, Any]) -> None:
     store = campaign.runner.store
     assert store is not None
@@ -2056,6 +2348,8 @@ def write_outputs(campaign: Test12Campaign, results: dict[str, Any]) -> None:
         "not_looked_at":["TEST2_BLIND","TEST3_PROTECTED","REAL_EXTERNAL_TOOL_EXECUTION","CROSS_VENDOR_HARNESS","MODEL_WEIGHT_UPDATE"],
     }
     grammar_coverage = _control_grammar_coverage(campaign)
+    family_coverage = _capability_family_coverage(campaign)
+    manufacturing_map = _capability_building_block_map(campaign)
     tuning_rows = _tuning_corpus_rows(campaign)
     harness_blueprint = _harness_policy_blueprint(campaign)
     store.write_json("full-control-candidate-registry.json", {
@@ -2065,6 +2359,8 @@ def write_outputs(campaign: Test12Campaign, results: dict[str, Any]) -> None:
         "control_grammar":copy.deepcopy(CONTROL_GRAMMAR),
     }, producer="test1.2", stage="report")
     store.write_json("control-grammar-coverage.json", grammar_coverage, producer="test1.2", stage="report")
+    store.write_json("capability-family-coverage.json", family_coverage, producer="test1.2", stage="report")
+    store.write_json("capability-building-block-manufacturing-map.json", manufacturing_map, producer="test1.2", stage="report")
     for tuning_row in tuning_rows:
         store.append_jsonl("tuning-example-corpus.jsonl", tuning_row)
     store.write_json("harness-policy-blueprint.json", harness_blueprint, producer="test1.2", stage="report")
@@ -2106,6 +2402,9 @@ def write_outputs(campaign: Test12Campaign, results: dict[str, Any]) -> None:
         "full_control_candidate_coverage":grammar_coverage,
         "tuning_example_count":len(tuning_rows),
         "harness_policy_blueprint":"harness-policy-blueprint.json",
+        "capability_building_block_manufacturing_map":"capability-building-block-manufacturing-map.json",
+        "all_capability_families_manufacturing_ready":family_coverage["all_families_manufacturing_ready"],
+        "capability_family_count":len(TEST2_CAPABILITY_FAMILIES),
     }, producer="test1.2", stage="report")
     store.write_json("scope-boundaries.json", {"schema_version":1,**scope}, producer="test1.2", stage="report")
     store.write_json("assurance-map-1.2.json", assurance, producer="test1.2", stage="report")
@@ -2140,6 +2439,8 @@ def run_test12_campaign(
             results["baseline"] = phase_baseline(campaign, deadline)
         elif phase_name == "fractional_compute_surface":
             results["reasoning"] = phase_reasoning_compute(campaign, deadline)
+        elif phase_name == "capability_family_manufacturing_floor":
+            results["family_floor"] = phase_family_control_floor(campaign, deadline)
         elif phase_name == "mechanism_coverage_floor":
             results["controllers"] = phase_controller_screen(campaign, deadline)
         elif phase_name == "real_tool_execution":

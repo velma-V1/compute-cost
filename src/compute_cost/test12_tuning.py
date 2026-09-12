@@ -44,6 +44,8 @@ REQUIRED_COLLECTION_FILES = (
     "full-control-candidate-registry.json",
     "control-grammar-coverage.json",
     "mechanism-coverage-ledger.json",
+    "capability-family-coverage.json",
+    "capability-building-block-manufacturing-map.json",
     "cost-value-frontier-1.2.json",
     "activation-boundary-map.json",
     "negative-transfer-map-1.2.json",
@@ -101,12 +103,25 @@ def load_collection(results_root: Path, run_id: str) -> dict[str, Any]:
     coverage = _read_json(run_dir / "control-grammar-coverage.json")
     if not coverage.get("all_declared_candidates_tested"):
         raise ValueError("collection did not exercise every declared control candidate")
+    family_coverage = _read_json(run_dir / "capability-family-coverage.json")
+    if int(family_coverage.get("required_family_count", 0)) != 40:
+        raise ValueError("collection capability-family contract is not the required 40-family Test-2 set")
+    if not family_coverage.get("all_families_manufacturing_ready"):
+        raise ValueError(
+            "collection is not manufacturing-ready for all capability families: "
+            + ", ".join(family_coverage.get("not_manufacturing_ready") or [])
+        )
+    manufacturing_map = _read_json(run_dir / "capability-building-block-manufacturing-map.json")
+    if int(manufacturing_map.get("family_count", 0)) != 40:
+        raise ValueError("collection manufacturing map does not contain all 40 capability families")
     registry = _read_json(run_dir / "full-control-candidate-registry.json")
     return {
         "run_id": run_id,
         "run_dir": str(run_dir),
         "registry": registry,
         "coverage": coverage,
+        "family_coverage": family_coverage,
+        "manufacturing_map": manufacturing_map,
         "frontier": _read_json(run_dir / "cost-value-frontier-1.2.json"),
         "activation": _read_json(run_dir / "activation-boundary-map.json"),
         "negative": _read_json(run_dir / "negative-transfer-map-1.2.json"),

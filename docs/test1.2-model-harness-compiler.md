@@ -40,6 +40,73 @@ The tuning run refuses to consume a collection whose
 `control-grammar-coverage.json` does not state
 `all_declared_candidates_tested=true`.
 
+## Capability-family manufacturing contract
+
+Test 1.2 freezes the complete 40-family capability taxonomy used by the Test-2
+campaign. The collection run fails preflight if any family is absent from the
+materialized suite.
+
+The required families are:
+
+1. instruction following / constraint stacking
+2. strict structured output
+3. extraction / transformation
+4. arithmetic / numerical reasoning
+5. algebra / quantitative reasoning
+6. formal logic / deduction
+7. causal / counterfactual reasoning
+8. temporal reasoning
+9. spatial reasoning
+10. planning / optimization
+11. coding generation
+12. code comprehension
+13. debugging / root-cause diagnosis
+14. refactoring under constraints
+15. test generation / verification
+16. tool selection
+17. tool argument correctness
+18. multi-tool sequencing
+19. tool-error recovery
+20. ambiguity detection
+21. missing-information handling
+22. uncertainty / calibration
+23. hallucination resistance
+24. context retrieval
+25. context reasoning
+26. lost-in-the-middle resistance
+27. distractor / noise resistance
+28. contradictory-information handling
+29. multi-turn state tracking
+30. updated / obsolete-state rejection
+31. memory compression / summary fidelity
+32. decomposition
+33. self-correction
+34. verification / critique
+35. meta-reasoning
+36. prompt / instruction conflict handling
+37. format robustness
+38. adversarial wording robustness
+39. sibling-transfer generalization
+40. composite agent tasks
+
+Capability coverage is not just a raw-score checklist. Before replication depth
+becomes adaptive, every family receives a dedicated manufacturing floor across
+the major harness-control surfaces: prompt control, reasoning mode, planning,
+verification, retry/recovery, state tracking, memory, context
+selection/compression, tool policy, and stop/escalation policy.
+
+The collection emits:
+
+- `capability-family-coverage.json` — proves all 40 families have baseline
+  evidence and the required control-surface floor;
+- `capability-building-block-manufacturing-map.json` — per family, records
+  winning controls, harmful controls, null controls, cost/value evidence, and
+  candidate building blocks for the next manufacturing stage.
+
+The tuning run refuses a collection unless all 40 families are marked
+manufacturing-ready. A family with no positive control is still retained: its
+harm/null evidence becomes a negative constraint rather than being dropped.
+
 ## Search surface
 
 The declared improvement surface includes:
@@ -181,6 +248,8 @@ This prevents training model weights to compensate for a controller defect.
 
 A new model is not considered harness-compiled if:
 
+- any of the 40 required capability families is missing;
+- any capability family lacks its mandatory manufacturing control-surface floor;
 - any declared collection candidate was never exercised;
 - VALIDATION was used during collection;
 - DISCOVERY was used for tuning;
