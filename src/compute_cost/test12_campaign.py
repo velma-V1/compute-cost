@@ -1062,6 +1062,7 @@ class Test12Campaign:
             "single_call_runway_skips": 0,
             "mid_controller_runway_stops": 0,
             "estimated_single_calls_avoided": 0,
+            "explicit_exact_repeats_executed": 0,
         }
 
     def _trial_signature(
@@ -1236,10 +1237,12 @@ class Test12Campaign:
         signature = self._trial_signature(case, intervention, seed)
         estimated_calls = _estimated_physical_calls(intervention)
         allow_exact_repeat = bool(intervention.get("allow_exact_repeat"))
-        if signature in self.completed_treatment_signatures and not allow_exact_repeat:
-            self.efficiency_counters["exact_duplicate_treatments_skipped"] += 1
-            self.efficiency_counters["estimated_duplicate_physical_calls_avoided"] += estimated_calls
-            return None
+        if signature in self.completed_treatment_signatures:
+            if not allow_exact_repeat:
+                self.efficiency_counters["exact_duplicate_treatments_skipped"] += 1
+                self.efficiency_counters["estimated_duplicate_physical_calls_avoided"] += estimated_calls
+                return None
+            self.efficiency_counters["explicit_exact_repeats_executed"] += 1
 
         control = self.control(case, deadline, seed=seed)
         if control is None or not self.can_start(deadline):
