@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+
 import compute_cost.test12_campaign as test12_module
 from compute_cost.cli import build_parser
 from compute_cost.config import load_config
@@ -9,7 +11,9 @@ from compute_cost.test12_campaign import (
     Test12Campaign,
     _estimated_physical_calls,
     _family_surface_gap_queue,
+    _row_integrity_hash,
     _source_headroom,
+    load_test12_recovery,
     CONTROL_GRAMMAR,
     CORE_INTERVENTIONS,
     IMPROVEMENT_SURFACE,
@@ -37,6 +41,8 @@ from compute_cost.test12_tuning import (
     _compile_second_gap_policy,
     _family_is_safe,
     _score_policy_rows,
+    _tuning_row_hash,
+    load_tuning_recovery,
     _top_family_safe_policies,
     _top_policies,
     build_tuning_plan,
@@ -313,6 +319,13 @@ def test_default_config_and_cli_expose_collection_and_tuning_runs():
     assert collect.command == "gpt20b-test1.2"
     assert collect.dry_run is True
     assert collect.seed_run is None
+    assert collect.resume_run is None
+    resumed_collect = parser.parse_args([
+        "gpt20b-test1.2",
+        "--resume-run",
+        "test1.2-existing",
+    ])
+    assert resumed_collect.resume_run == "test1.2-existing"
 
     tune = parser.parse_args([
         "gpt20b-test1.2-tune",
@@ -323,6 +336,15 @@ def test_default_config_and_cli_expose_collection_and_tuning_runs():
     assert tune.command == "gpt20b-test1.2-tune"
     assert tune.collection_run == "test1.2-example"
     assert tune.dry_run is True
+    assert tune.resume_run is None
+    resumed_tune = parser.parse_args([
+        "gpt20b-test1.2-tune",
+        "--collection-run",
+        "test1.2-example",
+        "--resume-run",
+        "test1.2-tune-existing",
+    ])
+    assert resumed_tune.resume_run == "test1.2-tune-existing"
 
 
 def test_control_grammar_declares_full_finite_search_surface():
@@ -1277,3 +1299,161 @@ def test_terminal_tuning_outputs_include_complete_inverted_integration_package()
         "test1.2-terminal-handoff.json",
     }
     assert expected <= set(plan["required_outputs"])
+
+
+
+def test_collection_recovery_salvages_valid_atomic_rows_and_quarantines_only_damage(tmp_path):
+    run_dir = tmp_path / "test1.2-run"
+    run_dir.mkdir()
+    valid = {
+        "schema_version": 1,
+        "fixture_id": "case-a",
+        "intervention_id": "UNIT",
+        "seed": 42,
+        "score": 1.0,
+        "cost": {"wall_seconds": 1.5},
+    }
+    valid["observation_sha256"] = _row_integrity_hash(valid)
+    damaged = {
+        "schema_version": 1,
+        "fixture_id": "case-b",
+        "intervention_id": "UNIT",
+        "seed": 42,
+        "score": 1.0,
+        "observation_sha256": "not-the-real-hash",
+    }
+    (run_dir / "test1.2-observations.jsonl").write_text(
+        json.dumps(valid) + "\n" + "{broken-json\n" + json.dumps(damaged) + "\n",
+        encoding="utf-8",
+    )
+    (run_dir / "test1.2-recovery-checkpoint.json").write_text(
+        json.dumps({
+            "schema_version": 1,
+            "active_seconds_used": 123.0,
+            "physical_model_calls_used": 9,
+            "full_rerun_allowed": False,
+        }),
+        encoding="utf-8",
+    )
+
+    recovered = load_test12_recovery(run_dir)
+    assert recovered["rows"] == [valid]
+    assert len(recovered["issues"]) == 2
+    assert {row["problem"] for row in recovered["issues"]} == {
+        "MALFORMED_JSONL_ATOMIC_RECORD",
+        "ATOMIC_RECORD_HASH_MISMATCH",
+    }
+    assert recovered["checkpoint"]["active_seconds_used"] == 123.0
+    assert recovered["checkpoint"]["full_rerun_allowed"] is False
+
+
+def test_collection_resume_restores_elapsed_budget_controls_and_completed_trial():
+    cases = _cases()
+    source = fresh_model_source(cases)
+    base = Test12Campaign(
+        type("Runner", (), {"config": load_config()})(),
+        cases,
+        source,
+        clock=lambda: 1000.0,
+        started_monotonic=1000.0,
+    )
+    case = base.partitions["DISCOVERY"][0]
+    intervention = {
+        "id": "UNIT-RESUME",
+        "category": "PROMPT_CONTROL",
+        "mode": "single",
+        "instruction": "x",
+    }
+    control_row = {
+        "fixture_id": case["id"],
+        "intervention_id": "CONTROL",
+        "seed": 42,
+        "score": 1.0,
+        "classification": {"valid_for_capability": True},
+        "treatment_response_text": "ok",
+        "control_cost": {
+            "prompt_tokens_observed": 10,
+            "output_tokens_observed": 2,
+            "wall_seconds": 1.0,
+        },
+        "cost": {"wall_seconds": 1.0},
+    }
+    treatment_row = {
+        "fixture_id": case["id"],
+        "intervention_id": "UNIT-RESUME",
+        "seed": 42,
+        "score": 1.0,
+        "classification": {"valid_for_capability": True},
+        "cost": {"wall_seconds": 2.0},
+    }
+    resume_state = {
+        "checkpoint": {
+            "active_seconds_used": 600.0,
+            "completed_phases": ["baseline_capability_map"],
+            "efficiency_counters": {},
+        },
+        "rows": [control_row, treatment_row],
+        "phase_events": [{"phase": "baseline_capability_map"}],
+        "phase_assertions": [],
+    }
+    campaign = Test12Campaign(
+        type("Runner", (), {"config": load_config()})(),
+        cases,
+        source,
+        clock=lambda: 2000.0,
+        resume_state=resume_state,
+    )
+    campaign.intervention_by_id["UNIT-RESUME"] = intervention
+    campaign._restore_atomic_evidence()
+
+    assert abs(campaign.active_end - (2000.0 + ACTIVE_SECONDS - 600.0)) < 1e-9
+    assert (case["id"], 42) in campaign.controls
+    assert (case["id"], 42, "UNIT-RESUME") in campaign.completed_treatment_ids
+    assert "baseline_capability_map" in campaign.completed_phases
+
+
+def test_tuning_recovery_salvages_valid_policy_rows_and_preserves_winner_lock(tmp_path):
+    run_dir = tmp_path / "test1.2-tune-run"
+    run_dir.mkdir()
+    valid = {
+        "schema_version": 1,
+        "policy_id": "P1",
+        "fixture_id": "case-a",
+        "seed": 42,
+        "partition": "VALIDATION",
+        "score": 1.0,
+        "control_score": 1.0,
+        "delta": 0.0,
+        "model_calls": 1,
+    }
+    valid["tuning_observation_sha256"] = _tuning_row_hash(valid)
+    (run_dir / "test1.2-tuning-observations.jsonl").write_text(
+        json.dumps(valid) + "\n" + "{partial\n",
+        encoding="utf-8",
+    )
+    (run_dir / "test1.2-tuning-recovery-checkpoint.json").write_text(
+        json.dumps({
+            "schema_version": 1,
+            "active_seconds_used": 321.0,
+            "physical_model_calls_used": 17,
+            "winner_locked": {"policy_id": "P1", "mode": "direct"},
+            "winner_lock_sha256": "locked",
+            "completed_phases": ["final_validation_lock"],
+            "full_rerun_allowed": False,
+        }),
+        encoding="utf-8",
+    )
+
+    recovered = load_tuning_recovery(run_dir)
+    assert recovered["rows"] == [valid]
+    assert len(recovered["issues"]) == 1
+    assert recovered["checkpoint"]["winner_lock_sha256"] == "locked"
+    assert recovered["checkpoint"]["full_rerun_allowed"] is False
+
+
+def test_terminal_plan_forbids_full_rerun_recovery():
+    plan = build_tuning_plan(_cases(), collection_run="collection-run")
+    assert plan["full_rerun_recovery_prohibited"] is True
+    assert plan["same_run_id_resume_required"] is True
+    assert plan["atomic_evidence_salvage_required"] is True
+    assert plan["winner_lock_must_survive_resume"] is True
