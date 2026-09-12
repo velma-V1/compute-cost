@@ -151,6 +151,12 @@ def test_collection_plan_is_full_campaign_under_14_hour_two_run_contract():
     assert plan["adaptive_allocation"]["successive_halving"] is True
     assert plan["adaptive_allocation"]["oracle_routing_prohibited"] is True
     assert plan["adaptive_allocation"]["campaign_early_stop"] is False
+    assert plan["adaptive_allocation"]["stopping_rule"] == "FIXED_WALL_CLOCK"
+    assert plan["adaptive_allocation"]["model_call_cap_role"] == "RUNAWAY_SAFETY_RAIL_ONLY"
+    assert plan["adaptive_allocation"]["deadline_runway_guard"] is True
+    assert plan["adaptive_allocation"]["exact_duplicate_suppression"] is True
+    assert plan["adaptive_allocation"]["unknown_baseline_is_failure"] is False
+    assert plan["adaptive_allocation"]["reserve_family_surface_gap_first"] is True
     assert set(IMPROVEMENT_SURFACE).issubset(set(plan["improvement_surface"]))
     for required in {
         "capability-improvement-dossiers.json",
