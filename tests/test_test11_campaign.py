@@ -399,3 +399,80 @@ def test_test11_refuses_protected_partitions(tmp_path: Path):
 
     with pytest.raises(ValueError, match="protected partition"):
         campaign.assert_allowed(protected)
+
+
+class _PreflightRuntime:
+    @staticmethod
+    def _exchange(parsed):
+        return {
+            "request": {"body_b64": ""},
+            "raw_response_b64": "",
+            "stream_events": [],
+            "parsed": parsed,
+        }
+
+    def version(self):
+        return self._exchange({"version": "test"})
+
+    def list_models(self):
+        return self._exchange({"models": [{"name": "gpt-oss:20b", "size": 1}]})
+
+    def model_available_in(self, tags, model):
+        return True
+
+    def model_info(self, model):
+        return self._exchange({"model": model})
+
+    def generate(self, *args, **kwargs):
+        raise AssertionError("campaign stub should prevent model invocation")
+
+
+def test_test11_active_clock_starts_after_source_preflight(tmp_path: Path, monkeypatch):
+    import compute_cost.runner as runner_module
+
+    cases = _cases()
+    config = load_config()
+    config["telemetry"]["background"] = False
+    clock = {"value": 10.0}
+    observed = {}
+
+    def fake_load_test1_source(results_root, run_id, source_cases):
+        # Simulate a long source-integrity preflight before the active window.
+        clock["value"] = 1234.5
+        return synthetic_test1_source(source_cases)
+
+    def fake_run_test11_campaign(runner, source_cases, *, test1_run, started_monotonic):
+        observed["started_monotonic"] = started_monotonic
+        observed["test1_run"] = test1_run
+        return []
+
+    monkeypatch.setattr(runner_module, "load_test1_source", fake_load_test1_source)
+    monkeypatch.setattr(runner_module, "run_test11_campaign", fake_run_test11_campaign)
+    monkeypatch.setattr(runner_module.time, "monotonic", lambda: clock["value"])
+
+    runner = BenchmarkRunner(
+        _PreflightRuntime(),
+        config,
+        {"benchmark_version": "test11-clock", "cases": cases},
+        results_root=tmp_path,
+        hardware_collector=lambda: {},
+        progress_factory=lambda total: _Progress(total),
+    )
+
+    run_dir = runner.gpt20b_test11(
+        "gpt-oss:20b",
+        test1_run="source-test1",
+        dry_run=False,
+    )
+
+    assert observed["started_monotonic"] == 1234.5
+    assert observed["test1_run"] == "source-test1"
+
+    events = [
+        json.loads(line)
+        for line in (run_dir / "events.jsonl").read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    event_types = [row["type"] for row in events]
+    assert event_types.index("PREFLIGHT_COMPLETE") < event_types.index("TEST11_ACTIVE_WINDOW_START")
+    assert event_types.index("TEST11_ACTIVE_WINDOW_START") < event_types.index("TEST11_COMPLETE")
