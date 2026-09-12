@@ -134,6 +134,8 @@ def execute_experiment(
             "seed": spec.seed,
         },
     )
+    if spec.context_request is not None:
+        options["num_ctx"] = int(spec.context_request)
     think_request = spec.reasoning_effort if spec.reasoning_effort is not None else spec.thinking_mode
     generation, invocation, refs = runner._invoke_generation(
         stage="characterize",
