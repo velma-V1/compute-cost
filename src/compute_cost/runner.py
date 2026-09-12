@@ -28,6 +28,23 @@ from .test11_campaign import (
     synthetic_test1_source,
     validate_test11_plan,
 )
+from .test12_campaign import (
+    build_intervention_bank,
+    build_test12_plan,
+    fresh_model_source,
+    partition_test12_cases,
+    load_test11_source,
+    load_test12_recovery,
+    run_test12_campaign,
+    validate_test12_plan,
+)
+from .test12_tuning import (
+    build_tuning_plan,
+    load_collection,
+    load_tuning_recovery,
+    run_test12_tuning,
+    validate_tuning_plan,
+)
 from .test2_campaign import (
     build_test2_plan,
     load_test1_handoff,
@@ -914,6 +931,618 @@ class BenchmarkRunner(_CoreBenchmarkRunner):
                 failure="TEST11_ERROR",
                 error_type=type(exc).__name__,
                 error=str(exc),
+            )
+            return self._finalize_run()
+        finally:
+            if self.progress is not None and not self._progress_stopped:
+                self.progress.stop_live(newline=True)
+                self._progress_stopped = True
+
+    def gpt20b_test12(
+        self,
+        model: str,
+        *,
+        pull: bool = False,
+        seed_run: str | None = None,
+        dry_run: bool = False,
+        resume_run: str | None = None,
+    ) -> Path:
+        """Run the <=7h44 Test-1.2 collection stage of the model-to-harness compiler."""
+        test_cfg = self.config.get("test12_campaign") or {}
+        expected_calls = int(test_cfg.get("expected_calls", 5600))
+        safety_cap = int(test_cfg.get("safety_call_cap", 14000))
+        limits = self.config.setdefault("limits", {})
+        limits["max_model_calls_per_run"] = max(
+            int(limits.get("max_model_calls_per_run", 3000)),
+            safety_cap,
+        )
+
+        self.progress = self._progress_factory(expected_calls + 2)
+        self._progress_preflight_complete = False
+        self._progress_stopped = False
+        self.progress.start("preflight")
+        self.progress.start_live()
+
+        self.model = model
+        if dry_run and resume_run:
+            raise ValueError("dry-run cannot resume an existing Test 1.2 run")
+
+        resume_state: dict[str, Any] | None = None
+        if resume_run:
+            run_id = str(resume_run)
+            run_dir = self.results_root / run_id
+            if not run_dir.is_dir():
+                raise ValueError(f"Test 1.2 resume run does not exist: {run_id}")
+            resume_state = load_test12_recovery(run_dir)
+            checkpoint = resume_state.get("checkpoint") or {}
+            checkpoint_model = checkpoint.get("model")
+            if checkpoint_model and checkpoint_model != model:
+                raise ValueError(
+                    f"resume model mismatch: checkpoint={checkpoint_model} requested={model}"
+                )
+            snapshot_path = run_dir / "benchmark-snapshot.json"
+            if snapshot_path.is_file():
+                prior_suite = json.loads(snapshot_path.read_text(encoding="utf-8"))
+                if prior_suite != self.suite:
+                    raise ValueError(
+                        "resume benchmark snapshot changed; this is a new onboarding event, not a recovery"
+                    )
+            run_id = str(resume_run)
+        else:
+            run_id = f"test1.2-{datetime.now().strftime('%Y%m%d-%H%M%S')}-{uuid.uuid4().hex[:8]}"
+
+        self.store = EvidenceStore(self.results_root, run_id)
+        store = self.store
+        if resume_state:
+            checkpoint = resume_state.get("checkpoint") or {}
+            self._model_call_counts[run_id] = int(
+                checkpoint.get("physical_model_calls_used") or 0
+            )
+            self._request_seq = 1_000_000 + self._model_call_counts[run_id]
+            self._telemetry_seq = 1_000_000 + len(
+                (store.run_dir / "telemetry.jsonl").read_text(
+                    encoding="utf-8", errors="ignore"
+                ).splitlines()
+            ) if (store.run_dir / "telemetry.jsonl").is_file() else 1_000_000
+            store.append_jsonl("test1.2-recovery-ledger.jsonl", {
+                "schema_version": 1,
+                "event": "RESUME_REQUESTED",
+                "timestamp_utc": self._utc(),
+                "same_run_id": run_id,
+                "valid_atomic_observations_restored": len(resume_state.get("rows") or []),
+                "damaged_atomic_records_quarantined": len(resume_state.get("issues") or []),
+                "issues": copy.deepcopy(resume_state.get("issues") or []),
+                "active_seconds_used_before_resume": float(
+                    checkpoint.get("active_seconds_used") or 0.0
+                ),
+                "physical_model_calls_used_before_resume": int(
+                    checkpoint.get("physical_model_calls_used") or 0
+                ),
+                "full_rerun": False,
+            })
+        else:
+            store.write_json("resolved-config.json", self.config, producer="runner", stage="preflight")
+            store.write_json("benchmark-snapshot.json", self.suite, producer="runner", stage="preflight")
+
+        plan = build_test12_plan(self.suite.get("cases", []) or [], seed_run=seed_run)
+        validate_test12_plan(plan)
+        store.write_json("test1.2-plan.json", plan, producer="test1.2", stage="preflight")
+        store.write_json(
+            "fixture-partitions.json",
+            {
+                "schema_version": 1,
+                "partitions": {
+                    name: [str(case.get("id")) for case in rows]
+                    for name, rows in partition_test12_cases(self.suite.get("cases", []) or []).items()
+                },
+            },
+            producer="test1.2",
+            stage="preflight",
+        )
+        self._event(
+            "RUN_RESUME" if resume_state else "RUN_START",
+            model=model,
+            benchmark_version=self.suite.get("benchmark_version"),
+            mode=(
+                "gpt20b-test1.2-resume"
+                if resume_state
+                else "gpt20b-test1.2-dry-run"
+                if dry_run
+                else "gpt20b-test1.2"
+            ),
+            seed_run=seed_run,
+            resume_run=run_id if resume_state else None,
+        )
+
+        if dry_run:
+            source = (
+                load_test11_source(
+                    self.results_root,
+                    seed_run,
+                    self.suite.get("cases", []) or [],
+                )
+                if seed_run
+                else fresh_model_source(self.suite.get("cases", []) or [])
+            )
+            mechanisms = build_intervention_bank(
+                source,
+                max_source_recipes=int(test_cfg.get("max_source_recipes", 8)),
+            )
+            store.write_json(
+                "test1.2-dry-run-validation.json",
+                {
+                    "schema_version": 1,
+                    "source": source.get("run_id"),
+                    "fresh_model_source": source.get("run_id") == "FRESH-MODEL",
+                    "planned_wall_seconds": plan["wall_clock_seconds"],
+                    "planned_active_seconds": plan["active_model_seconds"],
+                    "core_mechanism_count": plan["core_mechanism_count"],
+                    "expanded_mechanism_count": len(mechanisms),
+                    "mechanism_categories": sorted({str(row["category"]) for row in mechanisms}),
+                    "improvement_surface": plan["improvement_surface"],
+                    "coverage_floor_first": plan["adaptive_allocation"]["coverage_floor_first"],
+                    "oracle_routing_prohibited": plan["adaptive_allocation"]["oracle_routing_prohibited"],
+                    "protected_partitions": plan["prohibited_partitions"],
+                    "protected_partitions_exposed": False,
+                    "required_outputs": plan["required_outputs"],
+                    "scope_boundaries": plan["scope_boundaries"],
+                },
+                producer="test1.2",
+                stage="preflight",
+            )
+            self._progress_complete("preflight")
+            self._progress_preflight_complete = True
+            self._event(
+                "TEST12_DRY_RUN_COMPLETE",
+                model=model,
+                seed_run=seed_run,
+                expanded_mechanism_count=len(mechanisms),
+                planned_wall_seconds=plan["wall_clock_seconds"],
+            )
+            return self._finalize_run()
+
+        self._start_telemetry()
+        try:
+            source = (
+                load_test11_source(
+                    self.results_root,
+                    seed_run,
+                    self.suite.get("cases", []) or [],
+                )
+                if seed_run
+                else fresh_model_source(self.suite.get("cases", []) or [])
+            )
+            store.write_json(
+                "test1.2-source-preflight.json",
+                {
+                    "schema_version": 1,
+                    "source_run": seed_run,
+                    "source_observations": len(source.get("observations", [])),
+                    "source_priority_items": len((source.get("priority_queue") or {}).get("queue", []) or []),
+                    "source_ingredients": len((source.get("ingredient_registry") or {}).get("ingredients", []) or []),
+                    "source_integrity": copy.deepcopy(source.get("source_integrity") or {}),
+                    "expanded_mechanism_count": len(
+                        build_intervention_bank(
+                            source,
+                            max_source_recipes=int(test_cfg.get("max_source_recipes", 8)),
+                        )
+                    ),
+                },
+                producer="test1.2",
+                stage="preflight",
+            )
+
+            hardware = self.hardware_collector()
+            store.write_json("hardware.json", hardware, producer="hardware", stage="preflight")
+
+            version = self.runtime.version()
+            version_refs = self._persist_control_exchange("runtime-version", version)
+            tags = self.runtime.list_models()
+            tags_refs = self._persist_control_exchange("model-list", tags)
+            available = (
+                self.runtime.model_available_in(tags, model)
+                if hasattr(self.runtime, "model_available_in")
+                else self.runtime.is_model_available(model)
+            )
+
+            pull_refs = None
+            if not available and pull:
+                pull_result = self.runtime.pull(model)
+                pull_refs = self._persist_control_exchange("model-pull", pull_result)
+                tags = self.runtime.list_models()
+                tags_refs = self._persist_control_exchange("model-list-after-pull", tags)
+                available = (
+                    self.runtime.model_available_in(tags, model)
+                    if hasattr(self.runtime, "model_available_in")
+                    else self.runtime.is_model_available(model)
+                )
+
+            if not available:
+                store.write_json(
+                    "runtime.json",
+                    {
+                        "model": model,
+                        "available": False,
+                        "version": version.get("parsed"),
+                        "model_size_bytes": None,
+                        "evidence_refs": {"version": version_refs, "tags": tags_refs, "pull": pull_refs},
+                    },
+                    producer="runner",
+                    stage="preflight",
+                )
+                self._event("RUN_FAILED", failure="MODEL_NOT_FOUND", model=model)
+                return self._finalize_run()
+
+            info = self.runtime.model_info(model)
+            info_refs = self._persist_control_exchange("model-info", info)
+            store.write_json(
+                "runtime.json",
+                {
+                    "model": model,
+                    "available": True,
+                    "version": version.get("parsed"),
+                    "model_size_bytes": self._find_model_size(tags, model),
+                    "model_info": info.get("parsed"),
+                    "evidence_refs": {"version": version_refs, "tags": tags_refs, "show": info_refs, "pull": pull_refs},
+                },
+                producer="runner",
+                stage="preflight",
+            )
+            self._event("PREFLIGHT_COMPLETE", model=model, mode="gpt20b-test1.2")
+            self._progress_complete("preflight")
+            self._progress_preflight_complete = True
+
+            campaign_started_monotonic = time.monotonic()
+            self._event(
+                "TEST12_ACTIVE_WINDOW_RESUME" if resume_state else "TEST12_ACTIVE_WINDOW_START",
+                model=model,
+                seed_run=seed_run,
+                resume_run=run_id if resume_state else None,
+            )
+            rows = run_test12_campaign(
+                self,
+                self.suite.get("cases", []) or [],
+                seed_run=seed_run,
+                started_monotonic=campaign_started_monotonic,
+                resume_state=resume_state,
+            )
+            physical_calls = self._model_call_counts.get(store.run_id, 0)
+            self._event(
+                "TEST12_COMPLETE",
+                model=model,
+                observations=len(rows),
+                physical_model_calls=physical_calls,
+                seed_run=seed_run,
+            )
+            return self._finalize_run()
+        except Exception as exc:
+            store.write_json(
+                "raw/runner-failure.json",
+                {
+                    "type": type(exc).__name__,
+                    "message": str(exc),
+                    "traceback": traceback.format_exc(),
+                },
+                producer="runner",
+                stage="fatal",
+            )
+            checkpoint_path = store.run_dir / "test1.2-recovery-checkpoint.json"
+            checkpoint = {}
+            if checkpoint_path.is_file():
+                try:
+                    checkpoint = json.loads(checkpoint_path.read_text(encoding="utf-8"))
+                except Exception:
+                    checkpoint = {}
+            checkpoint.update({
+                "schema_version": 1,
+                "recovery_policy": "NO_FULL_RERUN_ATOMIC_RESUME",
+                "state": "PAUSED_RECOVERABLE",
+                "run_id": store.run_id,
+                "model": model,
+                "physical_model_calls_used": int(
+                    self._model_call_counts.get(store.run_id, 0)
+                ),
+                "full_rerun_allowed": False,
+            })
+            store.write_json_atomic(
+                "test1.2-recovery-checkpoint.json",
+                checkpoint,
+                producer="runner",
+                stage="recovery-checkpoint",
+            )
+            self._event(
+                "TEST12_PAUSED_RECOVERABLE",
+                error_type=type(exc).__name__,
+                error=str(exc),
+                resume_run=store.run_id,
+                full_rerun_required=False,
+            )
+            return self._finalize_run()
+        finally:
+            if self.progress is not None and not self._progress_stopped:
+                self.progress.stop_live(newline=True)
+                self._progress_stopped = True
+
+    def gpt20b_test12_tune(
+        self,
+        model: str,
+        *,
+        collection_run: str,
+        pull: bool = False,
+        dry_run: bool = False,
+        resume_run: str | None = None,
+    ) -> Path:
+        """Tune/compile a model-specific harness from a completed Test-1.2 collection run."""
+        tune_cfg = self.config.get("test12_tuning") or {}
+        expected_calls = int(tune_cfg.get("expected_calls", 4200))
+        safety_cap = int(tune_cfg.get("safety_call_cap", 10000))
+        limits = self.config.setdefault("limits", {})
+        limits["max_model_calls_per_run"] = max(
+            int(limits.get("max_model_calls_per_run", 3000)),
+            safety_cap,
+        )
+
+        self.progress = self._progress_factory(expected_calls + 2)
+        self._progress_preflight_complete = False
+        self._progress_stopped = False
+        self.progress.start("preflight")
+        self.progress.start_live()
+
+        self.model = model
+        if dry_run and resume_run:
+            raise ValueError("dry-run cannot resume an existing Test 1.2 tuning run")
+
+        resume_state: dict[str, Any] | None = None
+        if resume_run:
+            run_id = str(resume_run)
+            run_dir = self.results_root / run_id
+            if not run_dir.is_dir():
+                raise ValueError(f"Test 1.2 tuning resume run does not exist: {run_id}")
+            resume_state = load_tuning_recovery(run_dir)
+            checkpoint = resume_state.get("checkpoint") or {}
+            checkpoint_model = checkpoint.get("model")
+            if checkpoint_model and checkpoint_model != model:
+                raise ValueError(
+                    f"resume model mismatch: checkpoint={checkpoint_model} requested={model}"
+                )
+            checkpoint_collection = checkpoint.get("collection_run")
+            if checkpoint_collection and checkpoint_collection != collection_run:
+                raise ValueError(
+                    "resume collection source changed; this is a new onboarding event, not recovery"
+                )
+            snapshot_path = run_dir / "benchmark-snapshot.json"
+            if snapshot_path.is_file():
+                prior_suite = json.loads(snapshot_path.read_text(encoding="utf-8"))
+                if prior_suite != self.suite:
+                    raise ValueError(
+                        "resume benchmark snapshot changed; this is a new onboarding event, not recovery"
+                    )
+        else:
+            run_id = f"test1.2-tune-{datetime.now().strftime('%Y%m%d-%H%M%S')}-{uuid.uuid4().hex[:8]}"
+
+        self.store = EvidenceStore(self.results_root, run_id)
+        store = self.store
+        if resume_state:
+            checkpoint = resume_state.get("checkpoint") or {}
+            self._model_call_counts[run_id] = int(
+                checkpoint.get("physical_model_calls_used") or 0
+            )
+            self._request_seq = 2_000_000 + self._model_call_counts[run_id]
+            self._telemetry_seq = 2_000_000 + len(
+                (store.run_dir / "telemetry.jsonl").read_text(
+                    encoding="utf-8", errors="ignore"
+                ).splitlines()
+            ) if (store.run_dir / "telemetry.jsonl").is_file() else 2_000_000
+            store.append_jsonl("test1.2-tuning-recovery-ledger.jsonl", {
+                "schema_version": 1,
+                "event": "RESUME_REQUESTED",
+                "timestamp_utc": self._utc(),
+                "same_run_id": run_id,
+                "valid_policy_observations_restored": len(resume_state.get("rows") or []),
+                "damaged_policy_records_quarantined": len(resume_state.get("issues") or []),
+                "issues": copy.deepcopy(resume_state.get("issues") or []),
+                "active_seconds_used_before_resume": float(
+                    checkpoint.get("active_seconds_used") or 0.0
+                ),
+                "physical_model_calls_used_before_resume": int(
+                    checkpoint.get("physical_model_calls_used") or 0
+                ),
+                "winner_lock_sha256": checkpoint.get("winner_lock_sha256"),
+                "full_rerun": False,
+            })
+        else:
+            store.write_json("resolved-config.json", self.config, producer="runner", stage="preflight")
+            store.write_json("benchmark-snapshot.json", self.suite, producer="runner", stage="preflight")
+
+        plan = build_tuning_plan(self.suite.get("cases", []) or [], collection_run=collection_run)
+        validate_tuning_plan(plan)
+        store.write_json("test1.2-tuning-plan.json", plan, producer="test1.2-tuning", stage="preflight")
+        store.write_json(
+            "fixture-partitions.json",
+            {
+                "schema_version": 1,
+                "partitions": {
+                    name: [str(case.get("id")) for case in rows]
+                    for name, rows in partition_test12_cases(self.suite.get("cases", []) or []).items()
+                },
+            },
+            producer="test1.2-tuning",
+            stage="preflight",
+        )
+        self._event(
+            "RUN_RESUME" if resume_state else "RUN_START",
+            model=model,
+            benchmark_version=self.suite.get("benchmark_version"),
+            mode=(
+                "gpt20b-test1.2-tune-resume"
+                if resume_state
+                else "gpt20b-test1.2-tune-dry-run"
+                if dry_run
+                else "gpt20b-test1.2-tune"
+            ),
+            collection_run=collection_run,
+            resume_run=run_id if resume_state else None,
+        )
+
+        if dry_run:
+            collection = load_collection(self.results_root, collection_run)
+            store.write_json(
+                "test1.2-tuning-dry-run-validation.json",
+                {
+                    "schema_version": 1,
+                    "collection_run": collection_run,
+                    "collection_candidate_count": len((collection.get("registry") or {}).get("candidates", [])),
+                    "all_declared_collection_controls_tested": bool((collection.get("coverage") or {}).get("all_declared_candidates_tested")),
+                    "planned_wall_seconds": plan["wall_clock_seconds"],
+                    "planned_active_seconds": plan["active_model_seconds"],
+                    "allowed_partitions": plan["allowed_partitions"],
+                    "prohibited_partitions": plan["prohibited_partitions"],
+                    "total_two_run_hard_ceiling_seconds": plan["total_two_run_hard_ceiling_seconds"],
+                    "required_outputs": plan["required_outputs"],
+                },
+                producer="test1.2-tuning",
+                stage="preflight",
+            )
+            self._progress_complete("preflight")
+            self._progress_preflight_complete = True
+            self._event("TEST12_TUNING_DRY_RUN_COMPLETE", model=model, collection_run=collection_run)
+            return self._finalize_run()
+
+        self._start_telemetry()
+        try:
+            collection = load_collection(self.results_root, collection_run)
+            store.write_json(
+                "test1.2-tuning-source-preflight.json",
+                {
+                    "schema_version": 1,
+                    "collection_run": collection_run,
+                    "collection_candidate_count": len((collection.get("registry") or {}).get("candidates", [])),
+                    "all_declared_collection_controls_tested": bool((collection.get("coverage") or {}).get("all_declared_candidates_tested")),
+                    "collection_tuning_examples": len(collection.get("corpus") or []),
+                },
+                producer="test1.2-tuning",
+                stage="preflight",
+            )
+
+            hardware = self.hardware_collector()
+            store.write_json("hardware.json", hardware, producer="hardware", stage="preflight")
+
+            version = self.runtime.version()
+            version_refs = self._persist_control_exchange("runtime-version", version)
+            tags = self.runtime.list_models()
+            tags_refs = self._persist_control_exchange("model-list", tags)
+            available = (
+                self.runtime.model_available_in(tags, model)
+                if hasattr(self.runtime, "model_available_in")
+                else self.runtime.is_model_available(model)
+            )
+            pull_refs = None
+            if not available and pull:
+                pull_result = self.runtime.pull(model)
+                pull_refs = self._persist_control_exchange("model-pull", pull_result)
+                tags = self.runtime.list_models()
+                tags_refs = self._persist_control_exchange("model-list-after-pull", tags)
+                available = (
+                    self.runtime.model_available_in(tags, model)
+                    if hasattr(self.runtime, "model_available_in")
+                    else self.runtime.is_model_available(model)
+                )
+            if not available:
+                store.write_json(
+                    "runtime.json",
+                    {
+                        "model": model,
+                        "available": False,
+                        "version": version.get("parsed"),
+                        "model_size_bytes": None,
+                        "evidence_refs": {"version": version_refs, "tags": tags_refs, "pull": pull_refs},
+                    },
+                    producer="runner",
+                    stage="preflight",
+                )
+                self._event("RUN_FAILED", failure="MODEL_NOT_FOUND", model=model)
+                return self._finalize_run()
+
+            info = self.runtime.model_info(model)
+            info_refs = self._persist_control_exchange("model-info", info)
+            store.write_json(
+                "runtime.json",
+                {
+                    "model": model,
+                    "available": True,
+                    "version": version.get("parsed"),
+                    "model_size_bytes": self._find_model_size(tags, model),
+                    "model_info": info.get("parsed"),
+                    "evidence_refs": {"version": version_refs, "tags": tags_refs, "show": info_refs, "pull": pull_refs},
+                },
+                producer="runner",
+                stage="preflight",
+            )
+            self._event("PREFLIGHT_COMPLETE", model=model, mode="gpt20b-test1.2-tune")
+            self._progress_complete("preflight")
+            self._progress_preflight_complete = True
+
+            started = time.monotonic()
+            self._event("TEST12_TUNING_ACTIVE_WINDOW_START", model=model, collection_run=collection_run)
+            rows = run_test12_tuning(
+                self,
+                self.suite.get("cases", []) or [],
+                collection_run=collection_run,
+                started_monotonic=started,
+                resume_state=resume_state,
+            )
+            physical_calls = self._model_call_counts.get(store.run_id, 0)
+            self._event(
+                "TEST12_TUNING_COMPLETE",
+                model=model,
+                observations=len(rows),
+                physical_model_calls=physical_calls,
+                collection_run=collection_run,
+            )
+            return self._finalize_run()
+        except Exception as exc:
+            store.write_json(
+                "raw/runner-failure.json",
+                {
+                    "type": type(exc).__name__,
+                    "message": str(exc),
+                    "traceback": traceback.format_exc(),
+                },
+                producer="runner",
+                stage="fatal",
+            )
+            checkpoint_path = store.run_dir / "test1.2-tuning-recovery-checkpoint.json"
+            checkpoint = {}
+            if checkpoint_path.is_file():
+                try:
+                    checkpoint = json.loads(checkpoint_path.read_text(encoding="utf-8"))
+                except Exception:
+                    checkpoint = {}
+            checkpoint.update({
+                "schema_version": 1,
+                "recovery_policy": "NO_FULL_RERUN_ATOMIC_RESUME",
+                "state": "PAUSED_RECOVERABLE",
+                "run_id": store.run_id,
+                "model": model,
+                "collection_run": collection_run,
+                "physical_model_calls_used": int(
+                    self._model_call_counts.get(store.run_id, 0)
+                ),
+                "full_rerun_allowed": False,
+            })
+            store.write_json_atomic(
+                "test1.2-tuning-recovery-checkpoint.json",
+                checkpoint,
+                producer="runner",
+                stage="recovery-checkpoint",
+            )
+            self._event(
+                "TEST12_TUNING_PAUSED_RECOVERABLE",
+                error_type=type(exc).__name__,
+                error=str(exc),
+                resume_run=store.run_id,
+                winner_lock_sha256=checkpoint.get("winner_lock_sha256"),
+                full_rerun_required=False,
             )
             return self._finalize_run()
         finally:

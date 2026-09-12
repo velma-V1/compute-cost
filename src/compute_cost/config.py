@@ -57,6 +57,42 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "minimum_phase_observations": 16,
         "minimum_active_utilization": 0.90,
     },
+    "test12_campaign": {
+        "expected_calls": 5900,
+        "safety_call_cap": 14000,
+        "base_generation_budget": 256,
+        "generation_budgets": [256, 512, 1024, 2048],
+        "context_windows": [4096, 8192, 16384, 32768],
+        "seeds": [42, 43, 44],
+        "coverage_floor_failures": 4,
+        "coverage_floor_sentinels": 4,
+        "promotion_min_rescue_trials": 4,
+        "promotion_min_pass_sentinels": 8,
+        "promotion_rescue_rate": 0.25,
+        "promotion_max_capability_regression_rate": 0.10,
+        "max_promoted_mechanisms": 16,
+        "max_source_recipes": 8,
+        "max_composition_arms": 24,
+        "confirmation_mechanisms": 16,
+        "minimum_phase_observations": 16,
+        "router_confidence_threshold": 0.65,
+        "call_cost_penalty": 0.06,
+        "token_cost_penalty": 0.00002,
+        "latency_cost_penalty": 0.002,
+    },
+    "test12_tuning": {
+        "expected_calls": 4200,
+        "safety_call_cap": 10000,
+        "screen_candidates": 24,
+        "screen_cases": 16,
+        "halving_cases": [24, 48, 96],
+        "final_candidates": 4,
+        "final_repeats": 2,
+        "minimum_validation_families": 40,
+        "max_capability_regression_rate": 0.05,
+        "minimum_positive_value": 0.0,
+        "minimum_acceptance_pass_rate": 0.67,
+    },
     "test2_campaign": {
         "expected_calls": 4100,
         "safety_call_cap": 10000,
@@ -197,6 +233,85 @@ def _validate_test11_campaign(config: dict[str, Any]) -> None:
         raise ValueError("test11_campaign.promotion_max_capability_regression_rate must be in [0,1]")
     if not 0.0 < float(c["minimum_active_utilization"]) <= 1.0:
         raise ValueError("test11_campaign.minimum_active_utilization must be in (0,1]")
+
+
+def _validate_test12_campaign(config: dict[str, Any]) -> None:
+    c = config.get("test12_campaign")
+    if not isinstance(c, dict):
+        raise ValueError("test12_campaign config must be a table")
+    for name in (
+        "expected_calls",
+        "safety_call_cap",
+        "base_generation_budget",
+        "coverage_floor_failures",
+        "coverage_floor_sentinels",
+        "promotion_min_rescue_trials",
+        "promotion_min_pass_sentinels",
+        "max_promoted_mechanisms",
+        "max_source_recipes",
+        "max_composition_arms",
+        "confirmation_mechanisms",
+        "minimum_phase_observations",
+    ):
+        value = c.get(name)
+        if not isinstance(value, int) or isinstance(value, bool) or value <= 0:
+            raise ValueError(f"test12_campaign.{name} must be a positive integer")
+    for name in ("generation_budgets", "context_windows", "seeds"):
+        values = c.get(name)
+        if not isinstance(values, list) or not values or any(
+            not isinstance(v, int) or isinstance(v, bool) or v <= 0 for v in values
+        ):
+            raise ValueError(f"test12_campaign.{name} must be a non-empty positive-integer list")
+    for name in (
+        "promotion_rescue_rate",
+        "promotion_max_capability_regression_rate",
+        "router_confidence_threshold",
+        "call_cost_penalty",
+        "token_cost_penalty",
+        "latency_cost_penalty",
+    ):
+        value = c.get(name)
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            raise ValueError(f"test12_campaign.{name} must be numeric")
+    if not 0.0 < float(c["promotion_rescue_rate"]) <= 1.0:
+        raise ValueError("test12_campaign.promotion_rescue_rate must be in (0,1]")
+    if not 0.0 <= float(c["promotion_max_capability_regression_rate"]) <= 1.0:
+        raise ValueError("test12_campaign.promotion_max_capability_regression_rate must be in [0,1]")
+
+
+def _validate_test12_tuning(config: dict[str, Any]) -> None:
+    c = config.get("test12_tuning")
+    if not isinstance(c, dict):
+        raise ValueError("test12_tuning config must be a table")
+    for name in (
+        "expected_calls",
+        "safety_call_cap",
+        "screen_candidates",
+        "screen_cases",
+        "final_candidates",
+        "final_repeats",
+        "minimum_validation_families",
+    ):
+        value = c.get(name)
+        if not isinstance(value, int) or isinstance(value, bool) or value <= 0:
+            raise ValueError(f"test12_tuning.{name} must be a positive integer")
+    if int(c["minimum_validation_families"]) != 40:
+        raise ValueError("test12_tuning.minimum_validation_families must be exactly 40")
+    values = c.get("halving_cases")
+    if not isinstance(values, list) or not values or any(
+        not isinstance(v, int) or isinstance(v, bool) or v <= 0 for v in values
+    ):
+        raise ValueError("test12_tuning.halving_cases must be a non-empty positive-integer list")
+    for name in (
+        "max_capability_regression_rate",
+        "minimum_positive_value",
+        "minimum_acceptance_pass_rate",
+    ):
+        value = c.get(name)
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            raise ValueError(f"test12_tuning.{name} must be numeric")
+    if not 0.0 <= float(c["minimum_acceptance_pass_rate"]) <= 1.0:
+        raise ValueError("test12_tuning.minimum_acceptance_pass_rate must be in [0,1]")
 
 
 def _validate_test2_campaign(config: dict[str, Any]) -> None:
@@ -379,6 +494,8 @@ def load_config(
 
     _validate_limits(config)
     _validate_test11_campaign(config)
+    _validate_test12_campaign(config)
+    _validate_test12_tuning(config)
     _validate_test2_campaign(config)
     _validate_characterization(config)
     _validate_capability_campaign(config)

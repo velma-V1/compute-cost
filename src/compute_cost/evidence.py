@@ -100,6 +100,31 @@ class EvidenceStore:
             media_type="application/json",
         )
 
+    def write_json_atomic(
+        self,
+        relative_path: str | Path,
+        value: Any,
+        *,
+        producer: str | None = None,
+        stage: str | None = None,
+        case_id: str | None = None,
+    ) -> dict[str, Any]:
+        """Atomically replace a JSON checkpoint without risking the prior copy."""
+        path = self._path(relative_path)
+        encoded = (
+            json.dumps(value, ensure_ascii=False, sort_keys=True, indent=2, default=str) + "\n"
+        ).encode("utf-8")
+        temp = path.with_name(path.name + ".tmp")
+        temp.write_bytes(encoded)
+        temp.replace(path)
+        return self._artifact_record(
+            path,
+            producer=producer,
+            stage=stage,
+            case_id=case_id,
+            media_type="application/json",
+        )
+
     def append_jsonl(self, relative_path: str | Path, value: Any) -> dict[str, Any]:
         path = self._path(relative_path)
         encoded = (json.dumps(value, ensure_ascii=False, sort_keys=True, default=str) + "\n").encode(
