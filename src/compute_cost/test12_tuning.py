@@ -32,6 +32,7 @@ from .test12_campaign import (
     _rank_mechanisms,
     build_intervention_bank,
     fresh_model_source,
+    load_test12_recovery,
     partition_test12_cases,
 )
 
@@ -118,6 +119,7 @@ REQUIRED_TUNING_OUTPUTS = (
     "integration-capability-contract.json",
     "inverted-model-integration-package.json",
     "test1.2-terminal-handoff.json",
+    "test1.2-tuning-recovery-checkpoint.json",
 )
 
 DEFAULT_TUNING_CONFIG = {
@@ -143,6 +145,59 @@ def _read_jsonl(path: Path) -> list[dict[str, Any]]:
     if not path.is_file():
         return []
     return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+
+
+def _tuning_row_hash(row: dict[str, Any]) -> str:
+    stable = {key: value for key, value in row.items() if key != "tuning_observation_sha256"}
+    payload = json.dumps(stable, sort_keys=True, separators=(",", ":"), default=str)
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def load_tuning_recovery(run_dir: Path) -> dict[str, Any]:
+    checkpoint_path = run_dir / "test1.2-tuning-recovery-checkpoint.json"
+    checkpoint = (
+        json.loads(checkpoint_path.read_text(encoding="utf-8"))
+        if checkpoint_path.is_file() else {}
+    )
+    rows: list[dict[str, Any]] = []
+    issues: list[dict[str, Any]] = []
+    path = run_dir / "test1.2-tuning-observations.jsonl"
+    if path.is_file():
+        for line_number, raw in enumerate(
+            path.read_text(encoding="utf-8", errors="replace").splitlines(),
+            start=1,
+        ):
+            if not raw.strip():
+                continue
+            try:
+                row = json.loads(raw)
+            except json.JSONDecodeError as exc:
+                issues.append({
+                    "line": line_number,
+                    "problem": "MALFORMED_TUNING_ATOMIC_RECORD",
+                    "detail": str(exc),
+                })
+                continue
+            if not isinstance(row, dict):
+                issues.append({"line": line_number, "problem": "NON_OBJECT_TUNING_RECORD"})
+                continue
+            expected = row.get("tuning_observation_sha256")
+            if expected and expected != _tuning_row_hash(row):
+                issues.append({
+                    "line": line_number,
+                    "problem": "TUNING_RECORD_HASH_MISMATCH",
+                    "policy_id": row.get("policy_id"),
+                    "fixture_id": row.get("fixture_id"),
+                    "seed": row.get("seed"),
+                })
+                continue
+            rows.append(row)
+    return {
+        "checkpoint": checkpoint,
+        "rows": rows,
+        "issues": issues,
+        "campaign_recovery": load_test12_recovery(run_dir),
+    }
 
 
 def load_collection(results_root: Path, run_id: str) -> dict[str, Any]:
@@ -331,6 +386,10 @@ def build_tuning_plan(cases: list[dict[str, Any]], *, collection_run: str) -> di
         "protected_acceptance_is_tuning_input": False,
         "winner_locked_before_holdouts": True,
         "no_additional_characterization_test_required": True,
+        "full_rerun_recovery_prohibited": True,
+        "same_run_id_resume_required": True,
+        "atomic_evidence_salvage_required": True,
+        "winner_lock_must_survive_resume": True,
         "terminal_decisions": [
             "FULL_INVERTED_INTEGRATION",
             "CONSTRAINED_CAPABILITY_SCOPED_INTEGRATION",
@@ -379,6 +438,10 @@ def validate_tuning_plan(plan: dict[str, Any]) -> None:
         raise ValueError("blind/protected acceptance may never tune or select the policy")
     if plan.get("no_additional_characterization_test_required") is not True:
         raise ValueError("Test 1.2 must be terminal for model onboarding")
+    if plan.get("full_rerun_recovery_prohibited") is not True:
+        raise ValueError("Test 1.2 recovery may not require a full rerun")
+    if plan.get("winner_lock_must_survive_resume") is not True:
+        raise ValueError("winner lock must survive tuning/acceptance recovery")
 
 
 def _candidate_registry(collection: dict[str, Any], limit: int) -> list[dict[str, Any]]:
@@ -674,12 +737,24 @@ def _top_family_safe_policies(
 
 
 class TuningRun:
-    def __init__(self, runner: Any, cases: list[dict[str, Any]], collection: dict[str, Any], *, clock: Callable[[],float]=time.monotonic, started: float|None=None):
+    def __init__(
+        self,
+        runner: Any,
+        cases: list[dict[str, Any]],
+        collection: dict[str, Any],
+        *,
+        clock: Callable[[],float]=time.monotonic,
+        started: float|None=None,
+        resume_state: dict[str, Any] | None = None,
+    ):
         self.runner=runner
         self.cases=cases
         self.collection=collection
         self.clock=clock
-        self.start=clock() if started is None else float(started)
+        self.resume_state=copy.deepcopy(resume_state or {})
+        checkpoint=self.resume_state.get("checkpoint") or {}
+        elapsed_before_resume=max(0.0,float(checkpoint.get("active_seconds_used") or 0.0))
+        self.start=(clock()-elapsed_before_resume) if self.resume_state else (clock() if started is None else float(started))
         self.active_end=self.start+TUNING_ACTIVE_SECONDS
         self.parts=partition_test12_cases(cases)
         self.validation=self.parts["VALIDATION"]
@@ -688,7 +763,14 @@ class TuningRun:
         self.cfg={**DEFAULT_TUNING_CONFIG, **copy.deepcopy((runner.config.get("test12_tuning") or {}))}
         source=fresh_model_source(cases)
         source["baselines"]={}
-        self.campaign=Test12Campaign(runner,cases,source,clock=clock,started_monotonic=self.start)
+        self.campaign=Test12Campaign(
+            runner,
+            cases,
+            source,
+            clock=clock,
+            started_monotonic=self.start,
+            resume_state=self.resume_state.get("campaign_recovery"),
+        )
         self.campaign.allowed_partitions={"VALIDATION"}
         # Replace campaign bank with exact collection candidates so no mechanism
         # definition drifts between collection and tuning.
@@ -699,13 +781,100 @@ class TuningRun:
         ]
         self.campaign.interventions=collected
         self.campaign.intervention_by_id={str(row["id"]):row for row in collected}
-        self.rows=[]
+        self.rows=copy.deepcopy(self.resume_state.get("rows") or [])
         self.router_cache: dict[tuple[str, int], tuple[str, dict[str, Any] | None]] = {}
         self.treatment_cache: dict[tuple[str, int, str], dict[str, Any]] = {}
+        self.policy_observation_index: dict[tuple[str, str, int, str], dict[str, Any]] = {}
         self.reuse_counters = {
-            "router_decisions_reused": 0,
-            "treatment_trials_reused": 0,
+            "router_decisions_reused": int((checkpoint.get("reuse_counters") or {}).get("router_decisions_reused",0)),
+            "treatment_trials_reused": int((checkpoint.get("reuse_counters") or {}).get("treatment_trials_reused",0)),
+            "policy_observations_reused": int((checkpoint.get("reuse_counters") or {}).get("policy_observations_reused",0)),
         }
+        self.completed_phases=set(str(x) for x in (checkpoint.get("completed_phases") or []))
+        self.current_phase: str|None=None
+        self.current_phase_started: float|None=None
+        self.current_phase_elapsed_base=0.0
+        self.current_policy_ids=[str(x) for x in (checkpoint.get("current_policy_ids") or [])]
+        self.winner_locked=copy.deepcopy(checkpoint.get("winner_locked"))
+        self.winner_lock_hash=checkpoint.get("winner_lock_sha256")
+        self.phase_ledger=copy.deepcopy(checkpoint.get("phase_ledger") or [])
+        self._restore_tuning_evidence()
+
+    def _restore_tuning_evidence(self) -> None:
+        for row in self.campaign.rows:
+            intervention_id=str(row.get("intervention_id") or "")
+            if intervention_id in {"", "CONTROL"}:
+                continue
+            intervention=self.campaign.intervention_by_id.get(intervention_id)
+            if intervention is None:
+                continue
+            key=(
+                str(row.get("fixture_id") or ""),
+                int(row.get("seed") or 0),
+                _intervention_fingerprint(intervention),
+            )
+            self.treatment_cache[key]=copy.deepcopy(row)
+
+        for row in self.rows:
+            key=(
+                str(row.get("policy_id") or ""),
+                str(row.get("fixture_id") or ""),
+                int(row.get("seed") or 0),
+                str(row.get("partition") or ""),
+            )
+            self.policy_observation_index[key]=copy.deepcopy(row)
+            route=str(row.get("route") or "")
+            if route:
+                self.router_cache[
+                    (str(row.get("fixture_id") or ""), int(row.get("seed") or 0))
+                ]=(route,{"recovered_router_evidence":True})
+
+    def _phase_elapsed_seconds(self) -> float:
+        if self.current_phase_started is None:
+            return float(self.current_phase_elapsed_base)
+        return float(self.current_phase_elapsed_base)+max(
+            0.0,self.clock()-self.current_phase_started
+        )
+
+    def _write_checkpoint(self, *, state: str="ACTIVE") -> None:
+        store=self.runner.store
+        if store is None:
+            return
+        run_id=getattr(store,"run_id",None)
+        physical_calls=int(getattr(self.runner,"_model_call_counts",{}).get(run_id,0)) if run_id else 0
+        payload={
+            "schema_version":1,
+            "recovery_policy":"NO_FULL_RERUN_ATOMIC_RESUME",
+            "state":state,
+            "run_id":run_id,
+            "model":getattr(self.runner,"model",None),
+            "collection_run":self.collection.get("run_id"),
+            "active_seconds_used":min(
+                float(TUNING_ACTIVE_SECONDS),
+                max(0.0,self.clock()-self.start),
+            ),
+            "active_seconds_remaining":max(
+                0.0,
+                float(TUNING_ACTIVE_SECONDS)-max(0.0,self.clock()-self.start),
+            ),
+            "physical_model_calls_used":physical_calls,
+            "completed_policy_observations":len(self.rows),
+            "completed_phases":sorted(self.completed_phases),
+            "current_phase":self.current_phase,
+            "current_phase_elapsed_seconds":self._phase_elapsed_seconds(),
+            "current_policy_ids":list(self.current_policy_ids),
+            "winner_locked":copy.deepcopy(self.winner_locked),
+            "winner_lock_sha256":self.winner_lock_hash,
+            "phase_ledger":copy.deepcopy(self.phase_ledger),
+            "reuse_counters":copy.deepcopy(self.reuse_counters),
+            "full_rerun_allowed":False,
+        }
+        store.write_json(
+            "test1.2-tuning-recovery-checkpoint.json",
+            payload,
+            producer="test1.2-tuning",
+            stage="recovery-checkpoint",
+        )
 
     def can_start(self, deadline: float) -> bool:
         return self.clock() < min(deadline,self.active_end)
@@ -759,6 +928,11 @@ class TuningRun:
         return trial
 
     def run_policy(self, policy: dict[str,Any], case: dict[str,Any], deadline: float, *, seed: int) -> dict[str,Any]|None:
+        partition=self.campaign.partition_name(case)
+        observation_key=(str(policy["policy_id"]),_fixture_id(case),int(seed),partition)
+        if observation_key in self.policy_observation_index:
+            self.reuse_counters["policy_observations_reused"] += 1
+            return copy.deepcopy(self.policy_observation_index[observation_key])
         control=self.baseline(case,deadline,seed)
         if control is None:
             return None
@@ -811,8 +985,11 @@ class TuningRun:
                 }
         row["partition"] = self.campaign.partition_name(case)
         row["evidence_reuse_counters"] = copy.deepcopy(self.reuse_counters)
+        row["tuning_observation_sha256"] = _tuning_row_hash(row)
         self.rows.append(row)
+        self.policy_observation_index[observation_key]=copy.deepcopy(row)
         self.runner.store.append_jsonl("test1.2-tuning-observations.jsonl",row)
+        self._write_checkpoint()
         return row
 
 
@@ -826,17 +1003,24 @@ def _balanced_partition(cases: list[dict[str, Any]], n: int | None = None) -> li
 
 
 def _evaluate(run: TuningRun, policies: list[dict[str,Any]], cases: list[dict[str,Any]], deadline: float, *, seeds: list[int]) -> dict[str,Any]:
-    start=len(run.rows)
+    requested_keys=set()
     for seed in seeds:
         for policy in policies:
             for case in cases:
+                partition=run.campaign.partition_name(case)
+                key=(str(policy["policy_id"]),_fixture_id(case),int(seed),partition)
+                requested_keys.add(key)
+                if key in run.policy_observation_index:
+                    run.reuse_counters["policy_observations_reused"] += 1
+                    continue
                 if not run.can_start(deadline):
                     break
                 run.run_policy(policy,case,deadline,seed=seed)
-    rows=run.rows[start:]
     grouped=defaultdict(list)
-    for row in rows:
-        grouped[str(row["policy_id"])].append(row)
+    for key in requested_keys:
+        row=run.policy_observation_index.get(key)
+        if row is not None:
+            grouped[str(row["policy_id"])].append(row)
     return {key:_score_policy_rows(values) for key,values in grouped.items()}
 
 
@@ -950,34 +1134,66 @@ def _policy_lock_hash(policy: dict[str, Any]) -> str:
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
-def run_test12_tuning(runner: Any, cases: list[dict[str,Any]], *, collection_run: str, clock: Callable[[],float]=time.monotonic, started_monotonic: float|None=None) -> list[dict[str,Any]]:
+def run_test12_tuning(
+    runner: Any,
+    cases: list[dict[str,Any]],
+    *,
+    collection_run: str,
+    clock: Callable[[],float]=time.monotonic,
+    started_monotonic: float|None=None,
+    resume_state: dict[str,Any]|None=None,
+) -> list[dict[str,Any]]:
     assert runner.store is not None
     collection=load_collection(Path(runner.results_root),collection_run)
     plan=build_tuning_plan(cases,collection_run=collection_run)
     validate_tuning_plan(plan)
     runner.store.write_json("test1.2-tuning-plan.json",plan,producer="test1.2-tuning",stage="preflight")
 
-    run=TuningRun(runner,cases,collection,clock=clock,started=started_monotonic)
+    run=TuningRun(
+        runner,
+        cases,
+        collection,
+        clock=clock,
+        started=started_monotonic,
+        resume_state=resume_state,
+    )
     policies=_policy_candidates(collection,int(run.cfg["screen_candidates"]))
     runner.store.write_json("candidate-harness-registry.json",{"schema_version":1,"policies":policies},producer="test1.2-tuning",stage="preflight")
 
-    phase_start=run.start
-    ledger=[]
-    current=policies
+    checkpoint=(resume_state or {}).get("checkpoint") or {}
+    policy_by_id={str(row["policy_id"]):row for row in policies}
+    current=[
+        policy_by_id[value]
+        for value in run.current_policy_ids
+        if value in policy_by_id
+    ] or policies
+    ledger=copy.deepcopy(run.phase_ledger)
     aggregate_scores={}
     final_confirmation_family_scores={}
     final_confirmation_rows=[]
-    winner_locked: dict[str, Any] | None = None
-    winner_lock_hash: str | None = None
+    winner_locked: dict[str, Any] | None = copy.deepcopy(run.winner_locked)
+    winner_lock_hash: str | None = run.winner_lock_hash
     blind_rows: list[dict[str, Any]] = []
     protected_rows: list[dict[str, Any]] = []
     blind_scores: dict[str, Any] = {}
     protected_scores: dict[str, Any] = {}
 
+    resume_phase=str(checkpoint.get("current_phase") or "")
+    resume_phase_elapsed=float(checkpoint.get("current_phase_elapsed_seconds") or 0.0)
     for phase_name,seconds in TUNING_PHASES:
-        deadline=min(run.active_end,phase_start+seconds)
+        if phase_name in run.completed_phases:
+            continue
+        phase_elapsed_before=resume_phase_elapsed if phase_name==resume_phase else 0.0
+        actual_started=run.clock()
+        run.current_phase=phase_name
+        run.current_phase_started=actual_started
+        run.current_phase_elapsed_base=phase_elapsed_before
+        remaining_phase_seconds=max(0.0,float(seconds)-phase_elapsed_before)
+        deadline=min(run.active_end,actual_started+remaining_phase_seconds)
         partition = plan["phase_partition_policy"][phase_name]
         run.campaign.allowed_partitions={partition}
+        run.current_policy_ids=[str(p["policy_id"]) for p in current]
+        run._write_checkpoint()
 
         if phase_name=="validation_baseline":
             cases0=_balanced_validation(run,min(len(run.validation),128))
@@ -1026,13 +1242,19 @@ def run_test12_tuning(runner: Any, cases: list[dict[str,Any]], *, collection_run
                 current[0] if current else {"policy_id":"DIRECT","mode":"direct"}
             )
             winner_lock_hash=_policy_lock_hash(winner_locked)
+            run.winner_locked=copy.deepcopy(winner_locked)
+            run.winner_lock_hash=winner_lock_hash
             current=[winner_locked]
+            run.current_policy_ids=[str(winner_locked["policy_id"])]
+            run._write_checkpoint()
         elif phase_name=="test2_blind_acceptance":
             if winner_locked is None:
                 winner_locked=copy.deepcopy(
                     current[0] if current else {"policy_id":"DIRECT","mode":"direct"}
                 )
                 winner_lock_hash=_policy_lock_hash(winner_locked)
+                run.winner_locked=copy.deepcopy(winner_locked)
+                run.winner_lock_hash=winner_lock_hash
                 current=[winner_locked]
             scores, blind_rows = _evaluate_acceptance(
                 run,
@@ -1048,6 +1270,8 @@ def run_test12_tuning(runner: Any, cases: list[dict[str,Any]], *, collection_run
                     current[0] if current else {"policy_id":"DIRECT","mode":"direct"}
                 )
                 winner_lock_hash=_policy_lock_hash(winner_locked)
+                run.winner_locked=copy.deepcopy(winner_locked)
+                run.winner_lock_hash=winner_lock_hash
                 current=[winner_locked]
             scores, protected_rows = _evaluate_acceptance(
                 run,
@@ -1068,7 +1292,13 @@ def run_test12_tuning(runner: Any, cases: list[dict[str,Any]], *, collection_run
             "winner_lock_hash":winner_lock_hash,
             "scores":scores,
         })
-        phase_start=deadline
+        run.phase_ledger=copy.deepcopy(ledger)
+        run.current_policy_ids=[str(p["policy_id"]) for p in current]
+        run.completed_phases.add(phase_name)
+        run.current_phase=None
+        run.current_phase_started=None
+        run.current_phase_elapsed_base=0.0
+        run._write_checkpoint()
         if not run.can_start(run.active_end): break
 
     winner=winner_locked or (current[0] if current else {"policy_id":"DIRECT","mode":"direct"})
@@ -1249,10 +1479,19 @@ def run_test12_tuning(runner: Any, cases: list[dict[str,Any]], *, collection_run
         "certified_capability_families":certified_families,
         "blocked_capability_families":blocked_families,
         "no_additional_characterization_test_required":True,
-        "rerun_only_if":[
-            "run_invalid_or_corrupted",
-            "runtime_or_evidence_failure_prevented_terminal_acceptance",
-            "model_weights_or_runtime_behavior_changed_materially",
+        "recovery_policy":{
+            "full_rerun_allowed":False,
+            "interruption_action":"RESUME_SAME_RUN_ID",
+            "corruption_action":"QUARANTINE_DAMAGED_ATOMIC_RECORD_AND_REPLAY_ONLY_MISSING_SLICE",
+            "preserve_valid_evidence":True,
+            "preserve_elapsed_time_budget":True,
+            "preserve_physical_call_budget":True,
+            "preserve_winner_lock":True,
+        },
+        "new_onboarding_event_only_if":[
+            "model_weights_changed_materially",
+            "runtime_behavior_changed_materially",
+            "benchmark_contract_changed_materially",
         ],
     }
     runner.store.write_json(
@@ -1349,7 +1588,8 @@ def run_test12_tuning(runner: Any, cases: list[dict[str,Any]], *, collection_run
         "no_test3_followup_required":True,
         "no_additional_characterization_test_required":True,
         "next_action":integration_package["next_action"],
-        "rerun_only_if":final_acceptance["rerun_only_if"],
+        "recovery_policy":final_acceptance["recovery_policy"],
+        "new_onboarding_event_only_if":final_acceptance["new_onboarding_event_only_if"],
     }
     runner.store.write_json(
         "test1.2-terminal-handoff.json",
@@ -1396,4 +1636,5 @@ def run_test12_tuning(runner: Any, cases: list[dict[str,Any]], *, collection_run
         "integration_package":"inverted-model-integration-package.json",
         "total_two_run_hard_ceiling_hours":(TUNING_HARD_SECONDS+COLLECTION_HARD_SECONDS)/3600.0,
     },producer="test1.2-tuning",stage="report")
+    run._write_checkpoint(state="ONBOARDING_COMPLETE")
     return run.rows
