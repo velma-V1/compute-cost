@@ -273,7 +273,7 @@ REQUIRED_OUTPUTS = (
 )
 
 DEFAULT_TEST12_CONFIG: dict[str, Any] = {
-    "expected_calls": 5600,
+    "expected_calls": 5900,
     "safety_call_cap": 14000,
     "base_generation_budget": 256,
     "generation_budgets": [256, 512, 1024, 2048],
