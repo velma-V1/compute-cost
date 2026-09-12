@@ -33,6 +33,7 @@ from .test12_campaign import (
     build_intervention_bank,
     fresh_model_source,
     load_test12_recovery,
+    _read_recovery_checkpoint,
     partition_test12_cases,
 )
 
@@ -155,12 +156,9 @@ def _tuning_row_hash(row: dict[str, Any]) -> str:
 
 def load_tuning_recovery(run_dir: Path) -> dict[str, Any]:
     checkpoint_path = run_dir / "test1.2-tuning-recovery-checkpoint.json"
-    checkpoint = (
-        json.loads(checkpoint_path.read_text(encoding="utf-8"))
-        if checkpoint_path.is_file() else {}
-    )
+    checkpoint, checkpoint_issues = _read_recovery_checkpoint(checkpoint_path)
     rows: list[dict[str, Any]] = []
-    issues: list[dict[str, Any]] = []
+    issues: list[dict[str, Any]] = list(checkpoint_issues)
     path = run_dir / "test1.2-tuning-observations.jsonl"
     if path.is_file():
         for line_number, raw in enumerate(
@@ -192,11 +190,23 @@ def load_tuning_recovery(run_dir: Path) -> dict[str, Any]:
                 })
                 continue
             rows.append(row)
+    campaign_recovery = load_test12_recovery(run_dir)
+    atomic_checkpoint = campaign_recovery.get("checkpoint") or {}
+    if float(atomic_checkpoint.get("active_seconds_used") or 0.0) > float(
+        checkpoint.get("active_seconds_used") or 0.0
+    ):
+        checkpoint["active_seconds_used"] = float(
+            atomic_checkpoint.get("active_seconds_used") or 0.0
+        )
+    checkpoint["physical_model_calls_used"] = max(
+        int(checkpoint.get("physical_model_calls_used") or 0),
+        int(atomic_checkpoint.get("physical_model_calls_used") or 0),
+    )
     return {
         "checkpoint": checkpoint,
         "rows": rows,
         "issues": issues,
-        "campaign_recovery": load_test12_recovery(run_dir),
+        "campaign_recovery": campaign_recovery,
     }
 
 
@@ -838,7 +848,12 @@ class TuningRun:
 
     def _write_checkpoint(self, *, state: str="ACTIVE") -> None:
         store=self.runner.store
-        if store is None or not hasattr(store,"write_json"):
+        if store is None:
+            return
+        writer=getattr(store,"write_json_atomic",None)
+        if writer is None:
+            writer=getattr(store,"write_json",None)
+        if writer is None:
             return
         run_id=getattr(store,"run_id",None)
         physical_calls=int(getattr(self.runner,"_model_call_counts",{}).get(run_id,0)) if run_id else 0
@@ -869,7 +884,7 @@ class TuningRun:
             "reuse_counters":copy.deepcopy(self.reuse_counters),
             "full_rerun_allowed":False,
         }
-        store.write_json(
+        writer(
             "test1.2-tuning-recovery-checkpoint.json",
             payload,
             producer="test1.2-tuning",
