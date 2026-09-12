@@ -1244,7 +1244,7 @@ class BenchmarkRunner(_CoreBenchmarkRunner):
                 ),
                 "full_rerun_allowed": False,
             })
-            store.write_json(
+            store.write_json_atomic(
                 "test1.2-recovery-checkpoint.json",
                 checkpoint,
                 producer="runner",
@@ -1530,7 +1530,7 @@ class BenchmarkRunner(_CoreBenchmarkRunner):
                 ),
                 "full_rerun_allowed": False,
             })
-            store.write_json(
+            store.write_json_atomic(
                 "test1.2-tuning-recovery-checkpoint.json",
                 checkpoint,
                 producer="runner",
