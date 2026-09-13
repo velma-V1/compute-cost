@@ -142,6 +142,9 @@ def build_test2_plan(cases: list[dict[str, Any]], *, test1_run: str | None = Non
         "prohibited_partitions": ["TEST3_PROTECTED"],
         "required_test1_files": list(REQUIRED_TEST1_FILES),
         "required_outputs": list(REQUIRED_OUTPUTS),
+        "stage_role": "DEDICATED_PROOF_RECURRENCE_ROBUSTNESS_DISTILLATION",
+        "test12_exact_control_execution_required": True,
+        "legacy_recipe_translation_to_test12_prohibited": True,
         "finalization_contract": {
             "system_recipe": True,
             "recovery_policy": True,
@@ -236,6 +239,14 @@ def load_test1_handoff(
     run_dir = results_root / run_id
     if not run_dir.is_dir():
         raise ValueError(f"Test-1 run does not exist: {run_id}")
+
+    if (run_dir / "test1.2-handoff.json").is_file():
+        raise ValueError(
+            "Test 2 exact-control adapter is required for Test 1.2 handoffs; "
+            "legacy INGREDIENT recipe translation is prohibited because it would "
+            "change the discovered control semantics. Rebuild Test 2 to execute "
+            "the exact Test 1.2 intervention definitions before running this campaign."
+        )
     manifest_problems = EvidenceStore(results_root, run_id).verify_manifest()
     if manifest_problems:
         raise ValueError(f"Test-1 evidence manifest verification failed: {manifest_problems}")
