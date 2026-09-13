@@ -63,9 +63,21 @@ def _stable_id(*parts: Any) -> str:
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:24]
 
 
+def _capability_valid(row: dict[str, Any]) -> bool:
+    if "delta_valid" in row:
+        return bool(row.get("delta_valid"))
+    if "valid_for_capability" in row:
+        return bool(row.get("valid_for_capability"))
+    classification = row.get("classification")
+    if isinstance(classification, dict) and "valid_for_capability" in classification:
+        return classification.get("valid_for_capability") is True
+    return True
+
+
 def _eligible_training_row(row: dict[str, Any]) -> bool:
     return (
-        row.get("partition") == "DISCOVERY"
+        _capability_valid(row)
+        and row.get("partition") == "DISCOVERY"
         and row.get("intervention_id") not in {None, "CONTROL"}
         and bool(_text(row.get("task_text")))
         and bool(_text(row.get("control_response_text")))
@@ -1142,6 +1154,9 @@ def build_zero_clock_model_manufacturing(
     rows: list[dict[str, Any]],
     families: Iterable[str],
 ) -> dict[str, Any]:
+    raw_row_count = len(rows)
+    rows = [row for row in rows if _capability_valid(row)]
+    invalid_rows_excluded = raw_row_count - len(rows)
     distillation = build_harness_to_weight_distillation(rows)
     preferences = build_weighted_preference_pairs(rows)
     curriculum = build_capability_curriculum(rows, families)
@@ -1164,6 +1179,8 @@ def build_zero_clock_model_manufacturing(
         "schema_version": 1,
         "zero_model_calls_added": True,
         "zero_active_test_seconds_added": True,
+        "invalid_capability_rows_excluded": invalid_rows_excluded,
+        "valid_source_rows": len(rows),
         "products": list(ZERO_CLOCK_MODEL_BUILDING_PRODUCTS),
         "counts": {
             "harness_to_weight_distillation": len(distillation),
