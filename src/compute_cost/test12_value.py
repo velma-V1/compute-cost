@@ -56,8 +56,10 @@ def _row_valid_for_capability(row: dict[str, Any]) -> bool:
         return bool(row.get("delta_valid"))
     if "valid_for_capability" in row:
         return bool(row.get("valid_for_capability"))
-    classification = row.get("classification") or {}
-    return classification.get("valid_for_capability") is True
+    classification = row.get("classification")
+    if isinstance(classification, dict) and "valid_for_capability" in classification:
+        return classification.get("valid_for_capability") is True
+    return True
 
 
 def _number(value: Any) -> float:
