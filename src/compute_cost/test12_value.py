@@ -51,6 +51,15 @@ CRITICAL_FAMILY_VALUE_DIMENSIONS: tuple[str, ...] = tuple(
 )
 
 
+def _row_valid_for_capability(row: dict[str, Any]) -> bool:
+    if "delta_valid" in row:
+        return bool(row.get("delta_valid"))
+    if "valid_for_capability" in row:
+        return bool(row.get("valid_for_capability"))
+    classification = row.get("classification") or {}
+    return classification.get("valid_for_capability") is True
+
+
 def _number(value: Any) -> float:
     return (
         float(value)
@@ -242,6 +251,8 @@ def build_control_response_tensor(
         intervention_id = str(row.get("intervention_id") or "")
         if family not in family_set or intervention_id in {"", "CONTROL"}:
             continue
+        if not _row_valid_for_capability(row):
+            continue
         grouped[(family, intervention_id)].append(row)
 
     entries = [
@@ -270,6 +281,7 @@ def _baseline_frontier(
         for row in rows
         if row.get("family_id") == family
         and row.get("intervention_id") == "CONTROL"
+        and _row_valid_for_capability(row)
     ]
     by_level: dict[int, list[float]] = defaultdict(list)
     for row in baseline:
