@@ -53,7 +53,6 @@ TUNING_PHASES = (
 
 REQUIRED_COLLECTION_FILES = (
     "test1.2-observations.jsonl",
-    "test1.2-opportunity-discovery-map.json",
     "full-control-candidate-registry.json",
     "control-grammar-coverage.json",
     "mechanism-coverage-ledger.json",
@@ -312,11 +311,22 @@ def load_collection(results_root: Path, run_id: str) -> dict[str, Any]:
         for name in expected_second_labs
     ):
         raise ValueError("one or more second-gap maps are missing measured output")
-    opportunity_discovery = _read_json(run_dir / "test1.2-opportunity-discovery-map.json")
-    if opportunity_discovery.get("collection_role") != "OPPORTUNITY_DISCOVERY":
-        raise ValueError("collection opportunity-discovery contract drifted")
-    if opportunity_discovery.get("proof_owner") != "RUN2_TEST2":
-        raise ValueError("collection incorrectly claims proof ownership")
+    opportunity_path = run_dir / "test1.2-opportunity-discovery-map.json"
+    if opportunity_path.is_file():
+        opportunity_discovery = _read_json(opportunity_path)
+        if opportunity_discovery.get("collection_role") != "OPPORTUNITY_DISCOVERY":
+            raise ValueError("collection opportunity-discovery contract drifted")
+        if opportunity_discovery.get("proof_owner") != "RUN2_TEST2":
+            raise ValueError("collection incorrectly claims proof ownership")
+    else:
+        # Backward compatibility for completed pre-opportunity-first Test 1.2
+        # collections. Their evidence remains valid; Run 2 still owns proof.
+        opportunity_discovery = {
+            "schema_version": 1,
+            "collection_role": "LEGACY_BROAD_COLLECTION",
+            "proof_owner": "RUN2_TEST2",
+            "legacy_collection_without_opportunity_map": True,
+        }
     zero_clock_model = _read_json(run_dir / "zero-clock-model-manufacturing-map.json")
     if zero_clock_model.get("zero_model_calls_added") is not True:
         raise ValueError("zero-clock model refinery must add zero model calls")
