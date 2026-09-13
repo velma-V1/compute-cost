@@ -1475,12 +1475,12 @@ def test_priority_validation_spends_existing_budget_on_collection_gap_families_f
     })()
     selected = _priority_validation(run, 12)
     assert len(selected) == 12
-    selected_families = [_family(row) for row in selected]
+    selected_families = [str(row.get("family_id") or row.get("category")) for row in selected]
     assert gap_families <= set(selected_families)
     gap_levels = [
         int(row.get("difficulty_level") or 0)
         for row in selected
-        if _family(row) in gap_families
+        if str(row.get("family_id") or row.get("category")) in gap_families
     ]
     assert gap_levels
     assert max(gap_levels) >= 5
