@@ -155,6 +155,12 @@ from .test12_model_manufacturing import (
     ZERO_CLOCK_MODEL_BUILDING_PRODUCTS,
     build_zero_clock_model_manufacturing,
 )
+from .test12_foundation_labs import (
+    FOUNDATION_QUESTIONS,
+    foundation_question_ledger,
+    run_role_specialization_lab,
+    run_runtime_semantics_gate,
+)
 
 COLLECTION_HARD_SECONDS = (7 * 60 * 60) + (44 * 60)
 COLLECTION_ACTIVE_SECONDS = (7 * 60 * 60) + (29 * 60)
@@ -165,15 +171,17 @@ CALL_START_CUTOFF_SECONDS = COLLECTION_ACTIVE_SECONDS
 # Seven-hours-twenty-nine-minutes active; the extra 15 minutes is reserved for preflight/finalization.
 # Campaign-level early stop is prohibited; only replication depth may adapt after mandatory breadth.
 PHASES = (
+    ("runtime_semantics_gate", 20 * 60),
     ("baseline_capability_map", 35 * 60),
     ("fractional_compute_surface", 25 * 60),
+    ("role_specialization_gate", 20 * 60),
     ("capability_family_manufacturing_floor", 100 * 60),
-    ("mechanism_coverage_floor", 70 * 60),
+    ("mechanism_coverage_floor", 50 * 60),
     ("real_tool_execution", 25 * 60),
-    ("failure_phenotype_replay", 35 * 60),
+    ("failure_phenotype_replay", 25 * 60),
     ("interaction_scout", 30 * 60),
-    ("dose_activation_boundaries", 35 * 60),
-    ("negative_transfer_sentinels", 30 * 60),
+    ("dose_activation_boundaries", 30 * 60),
+    ("negative_transfer_sentinels", 25 * 60),
     ("information_gain_reserve", 25 * 60),
     ("frontier_gap_labs", 35 * 60),
     ("second_frontier_gap_labs", 4 * 60),
