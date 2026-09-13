@@ -1207,6 +1207,7 @@ class Test12Campaign:
         self.intervention_by_id = {str(row["id"]): row for row in self.interventions}
         self.allowed_partitions = {"DISCOVERY"}
         self.controls: dict[tuple[str, int], dict[str, Any]] = {}
+        self.invalid_controls: dict[tuple[str, int], dict[str, Any]] = {}
         self.rows: list[dict[str, Any]] = copy.deepcopy(self.resume_state.get("rows") or [])
         self.sequence = 1_000_000 + len(self.rows) if self.resume_state else 0
         self.phase_assertions: list[dict[str, Any]] = copy.deepcopy(
@@ -1240,6 +1241,8 @@ class Test12Campaign:
             "mid_controller_runway_stops": 0,
             "estimated_single_calls_avoided": 0,
             "explicit_exact_repeats_executed": 0,
+            "invalid_baseline_treatments_avoided": 0,
+            "invalid_control_retries_avoided": 0,
         }
         for key, value in (checkpoint.get("efficiency_counters") or {}).items():
             if key in self.efficiency_counters:
@@ -1256,24 +1259,27 @@ class Test12Campaign:
             if wall_seconds > 0:
                 self._observe_call_latency(wall_seconds)
             if intervention_id == "CONTROL":
-                if _capability_valid(row):
-                    self.controls[(fixture_id, seed)] = {
-                        "score": float(row.get("score") or 0.0),
-                        "valid_for_capability": True,
-                        "classification": copy.deepcopy(row.get("classification") or {}),
-                        "response_text": str(row.get("treatment_response_text") or ""),
-                        "experiment_id": row.get("experiment_id"),
-                        "metrics": {
-                            "prompt_eval_count": float((row.get("control_cost") or {}).get("prompt_tokens_observed") or 0),
-                            "eval_count": float((row.get("control_cost") or {}).get("output_tokens_observed") or 0),
-                        },
-                        "timing": {
-                            "client_latency_ns": int(
-                                float((row.get("control_cost") or {}).get("wall_seconds") or 0.0)
-                                * 1_000_000_000
-                            )
-                        },
-                    }
+                record = {
+                    "score": float(row.get("score") or 0.0),
+                    "valid_for_capability": bool(_capability_valid(row)),
+                    "classification": copy.deepcopy(row.get("classification") or {}),
+                    "response_text": str(row.get("treatment_response_text") or ""),
+                    "experiment_id": row.get("experiment_id"),
+                    "metrics": {
+                        "prompt_eval_count": float((row.get("control_cost") or {}).get("prompt_tokens_observed") or 0),
+                        "eval_count": float((row.get("control_cost") or {}).get("output_tokens_observed") or 0),
+                    },
+                    "timing": {
+                        "client_latency_ns": int(
+                            float((row.get("control_cost") or {}).get("wall_seconds") or 0.0)
+                            * 1_000_000_000
+                        )
+                    },
+                }
+                if record["valid_for_capability"]:
+                    self.controls[(fixture_id, seed)] = record
+                else:
+                    self.invalid_controls[(fixture_id, seed)] = record
                 continue
             if fixture_id and intervention_id and _capability_valid(row):
                 self.completed_treatment_ids.add((fixture_id, seed, intervention_id))
@@ -1402,6 +1408,9 @@ class Test12Campaign:
         key = (_fixture_id(case), int(seed))
         if not force and key in self.controls:
             return self.controls[key]
+        if not force and key in self.invalid_controls:
+            self.efficiency_counters["invalid_control_retries_avoided"] += 1
+            return self.invalid_controls[key]
         if not self.can_start(deadline):
             return None
         if not self._has_runway(deadline, 1):
@@ -1428,7 +1437,12 @@ class Test12Campaign:
             "metrics": copy.deepcopy(row.get("metrics") or {}),
             "timing": copy.deepcopy(row.get("timing") or {}),
         }
-        self.controls[key] = record
+        if valid:
+            self.controls[key] = record
+            self.invalid_controls.pop(key, None)
+        else:
+            self.invalid_controls[key] = record
+            self.controls.pop(key, None)
         self._record(case, row, phase="control", intervention={"id":"CONTROL","category":"CONTROL","mode":"control"}, control=record, seed=seed, aux=[])
         return record
 
@@ -1520,6 +1534,9 @@ class Test12Campaign:
 
         control = self.control(case, deadline, seed=seed)
         if control is None or not self.can_start(deadline):
+            return None
+        if not bool(control.get("valid_for_capability")):
+            self.efficiency_counters["invalid_baseline_treatments_avoided"] += 1
             return None
         if not self._has_runway(deadline, estimated_calls):
             self.efficiency_counters["insufficient_runway_treatments_skipped"] += 1
