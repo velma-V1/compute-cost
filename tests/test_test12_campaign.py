@@ -40,6 +40,7 @@ from compute_cost.test12_tuning import (
     _compile_frontier_gap_policy,
     _compile_second_gap_policy,
     _family_is_safe,
+    _priority_validation,
     _score_policy_rows,
     _tuning_row_hash,
     load_tuning_recovery,
@@ -1457,3 +1458,59 @@ def test_terminal_plan_forbids_full_rerun_recovery():
     assert plan["same_run_id_resume_required"] is True
     assert plan["atomic_evidence_salvage_required"] is True
     assert plan["winner_lock_must_survive_resume"] is True
+
+
+
+def test_priority_validation_spends_existing_budget_on_collection_gap_families_first():
+    cases = _cases()
+    validation = partition_test12_cases(cases)["VALIDATION"]
+    gap_families = {
+        "instruction_following_constraint_stacking",
+        "strict_structured_output",
+        "temporal_reasoning",
+    }
+    run = type("GapRun", (), {
+        "validation": validation,
+        "collection": {"collection_value_gap_families": sorted(gap_families)},
+    })()
+    selected = _priority_validation(run, 12)
+    assert len(selected) == 12
+    selected_families = [_family(row) for row in selected]
+    assert gap_families <= set(selected_families)
+    gap_levels = [
+        int(row.get("difficulty_level") or 0)
+        for row in selected
+        if _family(row) in gap_families
+    ]
+    assert gap_levels
+    assert max(gap_levels) >= 5
+
+
+def test_collection_value_gaps_remain_explicit_tuning_inputs():
+    value_completeness = {
+        "all_families_critical_value_ready": False,
+        "incomplete_families": [
+            "instruction_following_constraint_stacking",
+            "tool_selection",
+        ],
+        "families": {
+            "instruction_following_constraint_stacking": {
+                "critical_value_ready": False,
+                "missing_critical_value_dimensions": ["seed_stability"],
+                "advancement_ready": True,
+            },
+            "tool_selection": {
+                "critical_value_ready": False,
+                "missing_critical_value_dimensions": ["hard_case_lift"],
+                "advancement_ready": True,
+            },
+        },
+    }
+    gaps = sorted(str(value) for value in value_completeness["incomplete_families"])
+    state = {family: value_completeness["families"][family] for family in gaps}
+    assert gaps == [
+        "instruction_following_constraint_stacking",
+        "tool_selection",
+    ]
+    assert state["instruction_following_constraint_stacking"]["missing_critical_value_dimensions"] == ["seed_stability"]
+    assert state["tool_selection"]["missing_critical_value_dimensions"] == ["hard_case_lift"]
