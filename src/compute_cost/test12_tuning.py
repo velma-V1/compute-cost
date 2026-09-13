@@ -328,8 +328,24 @@ def _sanitize_collection_observations(
             (str(row.get("fixture_id") or ""), int(row.get("seed") or 0))
         )
         control_valid = bool(control and control.get("valid_for_capability"))
+        treatment_budget = int(
+            row.get("generation_budget")
+            or DEFAULT_TEST12_CONFIG["base_generation_budget"]
+        )
+        control_budget = int(
+            (control or {}).get("generation_budget")
+            or DEFAULT_TEST12_CONFIG["base_generation_budget"]
+        )
+        budget_comparison_valid = (
+            row.get("intervention_category") == "GENERATION_BUDGET"
+            or treatment_budget == control_budget
+        )
         row["control_valid_for_capability"] = control_valid
-        row["delta_valid"] = bool(own_valid and control_valid)
+        row["control_generation_budget"] = control_budget
+        row["budget_comparison_valid"] = bool(budget_comparison_valid)
+        row["delta_valid"] = bool(
+            own_valid and control_valid and budget_comparison_valid
+        )
         row["raw_delta_before_validity_filter"] = row.get("delta")
         if row["delta_valid"]:
             row["delta"] = float(row.get("score") or 0.0) - float(
