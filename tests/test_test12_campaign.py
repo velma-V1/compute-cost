@@ -47,6 +47,7 @@ from compute_cost.test12_tuning import (
     _score_policy_rows,
     _sanitize_collection_observations,
     _rebuild_collection_analytics,
+    _derive_generation_budget_calibration,
     _tuning_row_hash,
     load_tuning_recovery,
     _top_family_safe_policies,
@@ -1873,3 +1874,121 @@ def test_zero_clock_training_refinery_rejects_invalid_fake_rescue():
     assert built["counts"]["harness_to_weight_distillation"] == 0
     assert built["counts"]["weighted_preference_pairs"] == 0
     assert built["counts"]["failure_credit_records"] == 0
+
+
+
+def test_generation_budget_calibration_uses_truncation_as_runtime_signal():
+    family = "arithmetic_numerical_reasoning"
+    rows = [
+        {
+            "partition": "DISCOVERY",
+            "family_id": family,
+            "intervention_id": "CONTROL",
+            "intervention_category": "CONTROL",
+            "generation_budget": 256,
+            "valid_for_capability": False,
+            "score": 0.0,
+        },
+        {
+            "partition": "DISCOVERY",
+            "family_id": family,
+            "intervention_id": "CONTROL",
+            "intervention_category": "CONTROL",
+            "generation_budget": 256,
+            "valid_for_capability": False,
+            "score": 0.0,
+        },
+        {
+            "partition": "DISCOVERY",
+            "family_id": family,
+            "intervention_id": "BUDGET-512",
+            "intervention_category": "GENERATION_BUDGET",
+            "generation_budget": 512,
+            "valid_for_capability": True,
+            "score": 1.0,
+        },
+        {
+            "partition": "DISCOVERY",
+            "family_id": family,
+            "intervention_id": "BUDGET-1024",
+            "intervention_category": "GENERATION_BUDGET",
+            "generation_budget": 1024,
+            "valid_for_capability": True,
+            "score": 1.0,
+        },
+        {
+            "partition": "DISCOVERY",
+            "family_id": family,
+            "intervention_id": "BUDGET-1024",
+            "intervention_category": "GENERATION_BUDGET",
+            "generation_budget": 1024,
+            "valid_for_capability": True,
+            "score": 0.0,
+        },
+    ]
+    calibrated = _derive_generation_budget_calibration(rows)
+    info = calibrated["families"][family]
+    assert info["minimum_observed_valid_budget"] == 512
+    assert info["minimum_observed_passing_budget"] == 512
+    assert info["recommended_safe_baseline_budget"] == 1024
+    assert calibrated["recommended_safe_baseline_budget_by_family"][family] == 1024
+
+
+def test_sanitizer_requires_matched_budget_except_generation_budget_intervention():
+    raw = [
+        {
+            "partition": "DISCOVERY",
+            "fixture_id": "case-a",
+            "family_id": "arithmetic_numerical_reasoning",
+            "intervention_id": "CONTROL",
+            "intervention_category": "CONTROL",
+            "seed": 42,
+            "generation_budget": 1024,
+            "score": 0.0,
+            "classification": {
+                "result_class": "ANSWER_WRONG",
+                "valid_for_capability": True,
+            },
+        },
+        {
+            "partition": "DISCOVERY",
+            "fixture_id": "case-a",
+            "family_id": "arithmetic_numerical_reasoning",
+            "intervention_id": "CTRL-X",
+            "intervention_category": "PROMPT_CONTROL",
+            "seed": 42,
+            "generation_budget": 256,
+            "control_score": 0.0,
+            "score": 1.0,
+            "delta": 1.0,
+            "classification": {
+                "result_class": "ANSWER_CORRECT",
+                "valid_for_capability": True,
+            },
+        },
+        {
+            "partition": "DISCOVERY",
+            "fixture_id": "case-a",
+            "family_id": "arithmetic_numerical_reasoning",
+            "intervention_id": "BUDGET-512",
+            "intervention_category": "GENERATION_BUDGET",
+            "seed": 42,
+            "generation_budget": 512,
+            "control_score": 0.0,
+            "score": 1.0,
+            "delta": 1.0,
+            "classification": {
+                "result_class": "ANSWER_CORRECT",
+                "valid_for_capability": True,
+            },
+        },
+    ]
+    sanitized, _ = _sanitize_collection_observations(raw)
+    prompt = next(row for row in sanitized if row["intervention_id"] == "CTRL-X")
+    budget = next(row for row in sanitized if row["intervention_id"] == "BUDGET-512")
+    assert prompt["budget_comparison_valid"] is False
+    assert prompt["delta_valid"] is False
+    assert prompt["delta"] == 0.0
+    assert budget["budget_comparison_valid"] is True
+    assert budget["delta_valid"] is True
+    assert budget["delta"] == 1.0
