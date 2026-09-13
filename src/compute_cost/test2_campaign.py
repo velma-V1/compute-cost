@@ -87,6 +87,7 @@ DEFAULT_TEST2_CONFIG: dict[str, Any] = {
     "safety_call_cap": 10000,
     "generation_budget": 256,
     "generation_budget_by_family": {},
+    "generation_budget_ladder": [256, 512, 1024, 2048],
     "thinking_mode": False,
     "reasoning_effort": None,
     "bootstrap_samples": 500,
@@ -449,6 +450,7 @@ def _spec(
     label: str,
     cfg: dict[str, Any],
     baseline: bool,
+    generation_budget: int | None = None,
 ) -> ExperimentSpec:
     return ExperimentSpec(
         experiment_id=make_experiment_id(sequence, _fixture_id(case), label),
@@ -461,7 +463,9 @@ def _spec(
         thinking_mode=bool(cfg["thinking_mode"]),
         reasoning_effort=cfg.get("reasoning_effort"),
         generation_budget=int(
-            (cfg.get("generation_budget_by_family") or {}).get(
+            generation_budget
+            if generation_budget is not None
+            else (cfg.get("generation_budget_by_family") or {}).get(
                 _family(case),
                 cfg["generation_budget"],
             )
@@ -560,51 +564,75 @@ class Test2Campaign:
             return self.current_baselines[fixture_id]
         if not self.can_start(deadline):
             return None
-        self.sequence += 1
-        spec = _spec(
-            sequence=self.sequence,
-            case=case,
-            label=f"{phase}-control",
-            cfg=self.cfg,
-            baseline=True,
+
+        family = _family(case)
+        preferred = int(
+            (self.cfg.get("generation_budget_by_family") or {}).get(
+                family,
+                self.cfg["generation_budget"],
+            )
         )
-        label = f"test2 {phase} control {fixture_id}"
-        self._progress(label, True)
-        try:
-            row = execute_experiment(self.runner, case, spec, parent=None)
-        finally:
-            self._progress(label, False)
-        score = row.get("score")
-        valid = (row.get("classification") or {}).get("valid_for_capability") is True
-        numeric = (
-            float(score)
-            if valid and isinstance(score, (int, float)) and not isinstance(score, bool)
-            else 0.0
-        )
-        budget = int((row.get("experiment") or {}).get("generation_budget") or self.cfg["generation_budget"])
-        self.current_baseline_validity[fixture_id] = bool(valid)
-        self.current_baseline_budgets[fixture_id] = budget
-        if valid:
-            self.current_baselines[fixture_id] = numeric
-        else:
-            self.current_baselines.pop(fixture_id, None)
-        self._record(
-            case,
-            row,
-            phase=phase,
-            kind="control",
-            recipe={
-                "ingredient_ids": [],
-                "dose": 0.0,
-                "representation": "none",
-                "placement": "none",
-            },
-            baseline_score=numeric,
-            baseline_valid=bool(valid),
-            baseline_budget=budget,
-            source_key=None,
-        )
-        return numeric if valid else None
+        ladder = sorted({
+            preferred,
+            *[int(value) for value in self.cfg.get("generation_budget_ladder", [])],
+        })
+        budgets = [value for value in ladder if value >= preferred]
+        if not budgets:
+            budgets = [preferred]
+
+        last_invalid: dict[str, Any] | None = None
+        for budget in budgets:
+            if not self.can_start(deadline):
+                break
+            self.sequence += 1
+            spec = _spec(
+                sequence=self.sequence,
+                case=case,
+                label=f"{phase}-control-b{budget}",
+                cfg=self.cfg,
+                baseline=True,
+                generation_budget=budget,
+            )
+            label = f"test2 {phase} control {fixture_id} b{budget}"
+            self._progress(label, True)
+            try:
+                row = execute_experiment(self.runner, case, spec, parent=None)
+            finally:
+                self._progress(label, False)
+            score = row.get("score")
+            valid = (row.get("classification") or {}).get("valid_for_capability") is True
+            numeric = (
+                float(score)
+                if valid and isinstance(score, (int, float)) and not isinstance(score, bool)
+                else 0.0
+            )
+            self.current_baseline_validity[fixture_id] = bool(valid)
+            self.current_baseline_budgets[fixture_id] = int(budget)
+            self._record(
+                case,
+                row,
+                phase=phase,
+                kind="control",
+                recipe={
+                    "ingredient_ids": [],
+                    "dose": 0.0,
+                    "representation": "none",
+                    "placement": "none",
+                },
+                baseline_score=numeric,
+                baseline_valid=bool(valid),
+                baseline_budget=int(budget),
+                source_key=None,
+            )
+            if valid:
+                self.current_baselines[fixture_id] = numeric
+                self.cfg.setdefault("generation_budget_by_family", {})[family] = int(budget)
+                return numeric
+            last_invalid = row
+
+        self.current_baselines.pop(fixture_id, None)
+        self.current_baseline_validity[fixture_id] = False
+        return None
 
     def treatment(
         self,
@@ -641,12 +669,22 @@ class Test2Campaign:
         if not ids:
             return None
         self.sequence += 1
+        baseline_budget = int(
+            self.current_baseline_budgets.get(
+                fixture_id,
+                (self.cfg.get("generation_budget_by_family") or {}).get(
+                    _family(case),
+                    self.cfg["generation_budget"],
+                ),
+            )
+        )
         spec = _spec(
             sequence=self.sequence,
             case=case,
             label=label,
             cfg=self.cfg,
             baseline=False,
+            generation_budget=baseline_budget,
         )
         messages = build_treatment_messages(
             case,
@@ -676,15 +714,7 @@ class Test2Campaign:
             recipe=recipe,
             baseline_score=float(baseline),
             baseline_valid=True,
-            baseline_budget=int(
-                self.current_baseline_budgets.get(
-                    fixture_id,
-                    (self.cfg.get("generation_budget_by_family") or {}).get(
-                        _family(case),
-                        self.cfg["generation_budget"],
-                    ),
-                )
-            ),
+            baseline_budget=baseline_budget,
             source_key=source_key,
         )
 
@@ -1535,6 +1565,10 @@ def _build_finalization_contract(
         "thinking_mode": bool(campaign.cfg["thinking_mode"]),
         "reasoning_effort": campaign.cfg.get("reasoning_effort"),
         "generation_budget": int(campaign.cfg["generation_budget"]),
+        "generation_budget_by_family": copy.deepcopy(
+            campaign.cfg.get("generation_budget_by_family") or {}
+        ),
+        "generation_budget_ladder": list(campaign.cfg.get("generation_budget_ladder") or []),
         "temperature": 0.0,
         "seed": 42,
         "source_test1_run": campaign.handoff.get("run_id"),
