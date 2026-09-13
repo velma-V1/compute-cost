@@ -1232,6 +1232,37 @@ class TuningRun:
             resume_state=self.resume_state.get("campaign_recovery"),
         )
         self.campaign.allowed_partitions={"VALIDATION"}
+        budget_map = (
+            (collection.get("generation_budget_calibration") or {})
+            .get("recommended_safe_baseline_budget_by_family")
+            or {}
+        )
+        self.campaign.cfg["baseline_generation_budget_by_family"] = {
+            str(family): int(budget)
+            for family, budget in budget_map.items()
+        }
+        # Invalid recovered baselines were measured under the legacy operating
+        # budget. They are runtime evidence, not reusable capability baselines.
+        # Remove them from the ordinary cache so the corrected safe family
+        # budget can establish a fresh baseline once.
+        for key, invalid in list(self.campaign.invalid_controls.items()):
+            fixture_id, _seed = key
+            case = self.campaign.case_by_id.get(fixture_id)
+            if case is None:
+                continue
+            recommended = int(
+                self.campaign.cfg["baseline_generation_budget_by_family"].get(
+                    _family(case),
+                    self.campaign.cfg["base_generation_budget"],
+                )
+            )
+            observed = int(
+                invalid.get("generation_budget")
+                or self.campaign.cfg["base_generation_budget"]
+            )
+            if observed != recommended:
+                self.campaign.invalid_controls.pop(key, None)
+
         # Replace campaign bank with exact collection candidates so no mechanism
         # definition drifts between collection and tuning.
         collected=[
