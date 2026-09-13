@@ -1256,24 +1256,26 @@ class Test12Campaign:
             if wall_seconds > 0:
                 self._observe_call_latency(wall_seconds)
             if intervention_id == "CONTROL":
-                self.controls[(fixture_id, seed)] = {
-                    "score": float(row.get("score") or 0.0),
-                    "classification": copy.deepcopy(row.get("classification") or {}),
-                    "response_text": str(row.get("treatment_response_text") or ""),
-                    "experiment_id": row.get("experiment_id"),
-                    "metrics": {
-                        "prompt_eval_count": float((row.get("control_cost") or {}).get("prompt_tokens_observed") or 0),
-                        "eval_count": float((row.get("control_cost") or {}).get("output_tokens_observed") or 0),
-                    },
-                    "timing": {
-                        "client_latency_ns": int(
-                            float((row.get("control_cost") or {}).get("wall_seconds") or 0.0)
-                            * 1_000_000_000
-                        )
-                    },
-                }
+                if _capability_valid(row):
+                    self.controls[(fixture_id, seed)] = {
+                        "score": float(row.get("score") or 0.0),
+                        "valid_for_capability": True,
+                        "classification": copy.deepcopy(row.get("classification") or {}),
+                        "response_text": str(row.get("treatment_response_text") or ""),
+                        "experiment_id": row.get("experiment_id"),
+                        "metrics": {
+                            "prompt_eval_count": float((row.get("control_cost") or {}).get("prompt_tokens_observed") or 0),
+                            "eval_count": float((row.get("control_cost") or {}).get("output_tokens_observed") or 0),
+                        },
+                        "timing": {
+                            "client_latency_ns": int(
+                                float((row.get("control_cost") or {}).get("wall_seconds") or 0.0)
+                                * 1_000_000_000
+                            )
+                        },
+                    }
                 continue
-            if fixture_id and intervention_id:
+            if fixture_id and intervention_id and _capability_valid(row):
                 self.completed_treatment_ids.add((fixture_id, seed, intervention_id))
                 intervention = self.intervention_by_id.get(intervention_id)
                 if intervention is not None:
