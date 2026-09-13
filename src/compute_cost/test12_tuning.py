@@ -22,6 +22,8 @@ from .evidence import EvidenceStore
 from .test1_campaign import _balanced_cases, _family, _fixture_id, partition_cases
 from .test12_campaign import (
     COLLECTION_HARD_SECONDS,
+    DEFAULT_TEST12_CONFIG,
+    FAMILY_CONTROL_SURFACES,
     FRONTIER_GAP_SURFACES,
     SECOND_GAP_SURFACES,
     TEST2_CAPABILITY_FAMILIES,
@@ -30,11 +32,21 @@ from .test12_campaign import (
     _group_summary,
     _intervention_fingerprint,
     _rank_mechanisms,
+    mechanism_summary,
     build_intervention_bank,
     fresh_model_source,
     load_test12_recovery,
     _read_recovery_checkpoint,
     partition_test12_cases,
+)
+
+from .test12_value import (
+    build_control_response_tensor,
+    build_family_value_dossiers,
+    build_value_completeness,
+    build_frontier_shift_map,
+    build_compute_quality_elasticity,
+    build_negative_effect_exploitation,
 )
 
 TUNING_HARD_SECONDS = (6 * 60 * 60) + (15 * 60)
@@ -209,6 +221,159 @@ def load_tuning_recovery(run_dir: Path) -> dict[str, Any]:
         "campaign_recovery": campaign_recovery,
     }
 
+
+
+
+def _sanitize_collection_observations(
+    rows: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """Build a non-mutating capability-valid overlay over raw Collection rows."""
+    controls: dict[tuple[str, int], dict[str, Any]] = {}
+    for raw in rows:
+        if raw.get("intervention_id") != "CONTROL":
+            continue
+        row = copy.deepcopy(raw)
+        classification = row.get("classification") or {}
+        valid = classification.get("valid_for_capability") is True
+        row["valid_for_capability"] = bool(valid)
+        row["delta_valid"] = bool(valid)
+        controls[(str(row.get("fixture_id") or ""), int(row.get("seed") or 0))] = row
+
+    sanitized: list[dict[str, Any]] = []
+    invalid_controls = 0
+    invalid_treatments = 0
+    invalid_pairs = 0
+    invalid_classes: dict[str, int] = defaultdict(int)
+    for raw in rows:
+        row = copy.deepcopy(raw)
+        classification = row.get("classification") or {}
+        own_valid = classification.get("valid_for_capability") is True
+        row["valid_for_capability"] = bool(own_valid)
+        if row.get("intervention_id") == "CONTROL":
+            row["delta_valid"] = bool(own_valid)
+            if not own_valid:
+                invalid_controls += 1
+                invalid_classes[str(classification.get("result_class") or "UNKNOWN")] += 1
+            sanitized.append(row)
+            continue
+
+        control = controls.get(
+            (str(row.get("fixture_id") or ""), int(row.get("seed") or 0))
+        )
+        control_valid = bool(control and control.get("valid_for_capability"))
+        row["control_valid_for_capability"] = control_valid
+        row["delta_valid"] = bool(own_valid and control_valid)
+        row["raw_delta_before_validity_filter"] = row.get("delta")
+        if row["delta_valid"]:
+            row["delta"] = float(row.get("score") or 0.0) - float(
+                row.get("control_score") or 0.0
+            )
+        else:
+            row["delta"] = 0.0
+            invalid_pairs += 1
+            if not own_valid:
+                invalid_treatments += 1
+                invalid_classes[str(classification.get("result_class") or "UNKNOWN")] += 1
+            if not control_valid:
+                invalid_classes["INVALID_BASELINE_CONTROL"] += 1
+        sanitized.append(row)
+
+    report = {
+        "schema_version": 1,
+        "raw_observation_count": len(rows),
+        "sanitized_observation_count": len(sanitized),
+        "invalid_control_observations": invalid_controls,
+        "invalid_treatment_observations": invalid_treatments,
+        "invalid_capability_pairs": invalid_pairs,
+        "invalid_classes": dict(sorted(invalid_classes.items())),
+        "policy": "CAPABILITY_DELTA_REQUIRES_VALID_CONTROL_AND_VALID_TREATMENT",
+    }
+    return sanitized, report
+
+
+def _rebuild_collection_analytics(
+    rows: list[dict[str, Any]],
+    registry: dict[str, Any],
+) -> dict[str, Any]:
+    """Recompute contaminated Collection summaries from raw evidence only."""
+    candidates = [
+        copy.deepcopy(row)
+        for row in (registry.get("candidates") or [])
+        if isinstance(row, dict)
+    ]
+    by_id = {
+        str(row.get("id")): row
+        for row in candidates
+        if row.get("id")
+    }
+    grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for row in rows:
+        ident = str(row.get("intervention_id") or "")
+        if ident and ident != "CONTROL":
+            grouped[ident].append(row)
+
+    ranked = []
+    for ident, values in grouped.items():
+        summary = mechanism_summary(values, DEFAULT_TEST12_CONFIG)
+        candidate = by_id.get(ident) or {}
+        ranked.append({
+            "intervention_id": ident,
+            "category": candidate.get("category"),
+            **copy.deepcopy(summary),
+        })
+    ranked.sort(
+        key=lambda row: (
+            float(row.get("net_value", 0.0)),
+            float(row.get("value_per_call", 0.0)),
+        ),
+        reverse=True,
+    )
+    frontier = {
+        "schema_version": 1,
+        "sanitized_from_raw_collection": True,
+        "objective": "valid capability rescue minus valid capability regression and cost",
+        "ranked": ranked,
+        "pareto_candidates": [
+            row for row in ranked
+            if float(row.get("raw_value", 0.0)) > 0
+            and row.get("classification") != "CAPABILITY_HARM"
+        ][:25],
+    }
+
+    tensor = build_control_response_tensor(
+        rows,
+        candidates,
+        TEST2_CAPABILITY_FAMILIES,
+    )
+    dossiers = build_family_value_dossiers(
+        rows,
+        candidates,
+        TEST2_CAPABILITY_FAMILIES,
+        FAMILY_CONTROL_SURFACES,
+    )
+    completeness = build_value_completeness(dossiers)
+    frontier_shift = build_frontier_shift_map(
+        rows,
+        tensor,
+        TEST2_CAPABILITY_FAMILIES,
+    )
+    compute_elasticity = build_compute_quality_elasticity(
+        tensor,
+        TEST2_CAPABILITY_FAMILIES,
+    )
+    negative_exploitation = build_negative_effect_exploitation(
+        tensor,
+        TEST2_CAPABILITY_FAMILIES,
+    )
+    return {
+        "frontier": frontier,
+        "tensor": tensor,
+        "dossiers": dossiers,
+        "value_completeness": completeness,
+        "frontier_shift": frontier_shift,
+        "compute_elasticity": compute_elasticity,
+        "negative_exploitation": negative_exploitation,
+    }
 
 def load_collection(results_root: Path, run_id: str) -> dict[str, Any]:
     run_dir = results_root / run_id
