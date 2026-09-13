@@ -1257,12 +1257,38 @@ class TuningRun:
             str(family): int(budget)
             for family, budget in budget_map.items()
         }
-        # Invalid recovered baselines were measured under the legacy operating
-        # budget. They are runtime evidence, not reusable capability baselines.
-        # Remove them from the ordinary cache so the corrected safe family
-        # budget can establish a fresh baseline once.
-        for key, invalid in list(self.campaign.invalid_controls.items()):
-            fixture_id, _seed = key
+        # Recovered baselines were measured under the legacy operating
+        # budget. Keep only controls measured at the newly calibrated family
+        # budget; mismatched controls remain in raw evidence but are not reusable.
+        for cache in (self.campaign.controls, self.campaign.invalid_controls):
+            for key, recovered_control in list(cache.items()):
+                fixture_id, _seed = key
+                case = self.campaign.case_by_id.get(fixture_id)
+                if case is None:
+                    continue
+                recommended = int(
+                    self.campaign.cfg["baseline_generation_budget_by_family"].get(
+                        _family(case),
+                        self.campaign.cfg["base_generation_budget"],
+                    )
+                )
+                observed = int(
+                    recovered_control.get("generation_budget")
+                    or self.campaign.cfg["base_generation_budget"]
+                )
+                if observed != recommended:
+                    cache.pop(key, None)
+
+        # Recovered non-budget treatments must match the calibrated family
+        # operating budget before they can suppress or satisfy a future trial.
+        for recovered in list(self.campaign.rows):
+            intervention_id = str(recovered.get("intervention_id") or "")
+            if intervention_id in {"", "CONTROL"}:
+                continue
+            intervention = self.campaign.intervention_by_id.get(intervention_id)
+            if intervention is None or intervention.get("category") == "GENERATION_BUDGET":
+                continue
+            fixture_id = str(recovered.get("fixture_id") or "")
             case = self.campaign.case_by_id.get(fixture_id)
             if case is None:
                 continue
@@ -1273,11 +1299,17 @@ class TuningRun:
                 )
             )
             observed = int(
-                invalid.get("generation_budget")
+                recovered.get("generation_budget")
                 or self.campaign.cfg["base_generation_budget"]
             )
             if observed != recommended:
-                self.campaign.invalid_controls.pop(key, None)
+                seed = int(recovered.get("seed") or 0)
+                self.campaign.completed_treatment_ids.discard(
+                    (fixture_id, seed, intervention_id)
+                )
+                self.campaign.completed_treatment_signatures.discard(
+                    self.campaign._trial_signature(case, intervention, seed)
+                )
 
         # Replace campaign bank with exact collection candidates so no mechanism
         # definition drifts between collection and tuning.
@@ -1315,12 +1347,61 @@ class TuningRun:
             intervention=self.campaign.intervention_by_id.get(intervention_id)
             if intervention is None:
                 continue
+            fixture_id=str(row.get("fixture_id") or "")
+            case=self.campaign.case_by_id.get(fixture_id)
+            if case is None:
+                continue
+            recommended=int(
+                self.campaign.cfg["baseline_generation_budget_by_family"].get(
+                    _family(case),
+                    self.campaign.cfg["base_generation_budget"],
+                )
+            )
+            observed=int(
+                row.get("generation_budget")
+                or self.campaign.cfg["base_generation_budget"]
+            )
+            if (
+                intervention.get("category")!="GENERATION_BUDGET"
+                and observed!=recommended
+            ):
+                continue
             key=(
-                str(row.get("fixture_id") or ""),
+                fixture_id,
                 int(row.get("seed") or 0),
                 _intervention_fingerprint(intervention),
             )
             self.treatment_cache[key]=copy.deepcopy(row)
+
+        valid_policy_rows=[]
+        for row in self.rows:
+            fixture_id=str(row.get("fixture_id") or "")
+            case=self.campaign.case_by_id.get(fixture_id)
+            if case is None:
+                continue
+            recommended=int(
+                self.campaign.cfg["baseline_generation_budget_by_family"].get(
+                    _family(case),
+                    self.campaign.cfg["base_generation_budget"],
+                )
+            )
+            baseline_budget=int(
+                row.get("baseline_generation_budget")
+                or row.get("control_generation_budget")
+                or self.campaign.cfg["base_generation_budget"]
+            )
+            selected_id=str(row.get("selected_intervention_id") or "")
+            selected=self.campaign.intervention_by_id.get(selected_id)
+            if (
+                baseline_budget!=recommended
+                and not (
+                    selected is not None
+                    and selected.get("category")=="GENERATION_BUDGET"
+                )
+            ):
+                continue
+            valid_policy_rows.append(row)
+        self.rows=valid_policy_rows
 
         for row in self.rows:
             key=(
