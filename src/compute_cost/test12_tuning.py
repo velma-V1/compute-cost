@@ -219,6 +219,18 @@ def load_tuning_recovery(run_dir: Path) -> dict[str, Any]:
     quarantined_policy_rows: list[dict[str, Any]] = []
     for raw in rows:
         row = copy.deepcopy(raw)
+        if (
+            not sanitized_campaign_rows
+            and "delta_valid" not in row
+            and "valid_for_capability" not in row
+            and "control_valid_for_capability" not in row
+        ):
+            # Legacy/synthetic recovery records may predate campaign-level
+            # evidence capture entirely. Preserve them rather than inventing
+            # invalidity. Real runs with campaign evidence are reconstructed.
+            sanitized_policy_rows.append(row)
+            continue
+
         key = (str(row.get("fixture_id") or ""), int(row.get("seed") or 0))
         control = controls.get(key)
         control_valid = bool(control and control.get("valid_for_capability"))
