@@ -49,6 +49,7 @@ from .test12_value import (
     build_negative_effect_exploitation,
 )
 
+from .test12_model_manufacturing import build_zero_clock_model_manufacturing
 TUNING_HARD_SECONDS = (6 * 60 * 60) + (15 * 60)
 TUNING_ACTIVE_SECONDS = 6 * 60 * 60
 
@@ -603,6 +604,27 @@ def load_collection(results_root: Path, run_id: str) -> dict[str, Any]:
     frontier_shift = rebuilt["frontier_shift"]
     compute_elasticity = rebuilt["compute_elasticity"]
     sanitized_frontier = rebuilt["frontier"]
+    sanitized_zero_clock_model = build_zero_clock_model_manufacturing(
+        sanitized_collection_rows,
+        TEST2_CAPABILITY_FAMILIES,
+    )
+    sanitized_zero_clock_assets = {
+        "reliability_weighted_distillation": copy.deepcopy(
+            sanitized_zero_clock_model.get("reliable_distillation") or []
+        ),
+        "long_horizon_training_mix": copy.deepcopy(
+            sanitized_zero_clock_model.get("long_horizon_mix") or {}
+        ),
+        "preference_quality": copy.deepcopy(
+            sanitized_zero_clock_model.get("preference_quality") or []
+        ),
+        "failure_credit": copy.deepcopy(
+            sanitized_zero_clock_model.get("failure_credit") or []
+        ),
+        "calibration_verify": copy.deepcopy(
+            sanitized_zero_clock_model.get("calibration") or []
+        ),
+    }
 
     return {
         "run_id": run_id,
@@ -622,9 +644,11 @@ def load_collection(results_root: Path, run_id: str) -> dict[str, Any]:
         "compute_elasticity": compute_elasticity,
         "frontier_gap_maps": frontier_gap_maps,
         "second_gap_maps": second_gap_maps,
-        "zero_clock_model": zero_clock_model,
+        "zero_clock_model": sanitized_zero_clock_model,
+        "legacy_zero_clock_model": zero_clock_model,
         "opportunity_discovery": opportunity_discovery,
-        "zero_clock_assets": zero_clock_assets,
+        "zero_clock_assets": sanitized_zero_clock_assets,
+        "legacy_zero_clock_assets": zero_clock_assets,
         "frontier": sanitized_frontier,
         "legacy_frontier": _read_json(run_dir / "cost-value-frontier-1.2.json"),
         "activation": _read_json(run_dir / "activation-boundary-map.json"),
