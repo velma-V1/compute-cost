@@ -1110,6 +1110,16 @@ def _spec(
     )
 
 
+def _capability_valid(row: dict[str, Any]) -> bool:
+    """Whether a row may participate in capability/delta statistics."""
+    if "delta_valid" in row:
+        return bool(row.get("delta_valid"))
+    if "valid_for_capability" in row:
+        return bool(row.get("valid_for_capability"))
+    classification = row.get("classification") or {}
+    return classification.get("valid_for_capability") is True
+
+
 def _metric_number(row: dict[str, Any], key: str) -> float:
     value = (row.get("metrics") or {}).get(key)
     return float(value) if isinstance(value, (int, float)) and not isinstance(value, bool) else 0.0
@@ -1407,6 +1417,7 @@ class Test12Campaign:
         valid = (row.get("classification") or {}).get("valid_for_capability") is True
         record = {
             "score": float(score) if valid and isinstance(score, (int, float)) and not isinstance(score, bool) else 0.0,
+            "valid_for_capability": bool(valid),
             "classification": copy.deepcopy(row.get("classification") or {}),
             "response_text": str(row.get("response_text") or ""),
             "experiment_id": spec.experiment_id,
@@ -1748,6 +1759,10 @@ class Test12Campaign:
         score = row.get("score")
         valid = (row.get("classification") or {}).get("valid_for_capability") is True
         numeric = float(score) if valid and isinstance(score, (int, float)) and not isinstance(score, bool) else 0.0
+        control_valid = bool(control.get("valid_for_capability")) or (
+            (control.get("classification") or {}).get("valid_for_capability") is True
+        )
+        delta_valid = bool(valid and control_valid)
         aux_prompt = sum(float((item.get("metrics") or {}).get("prompt_eval_count") or 0) for item in aux)
         aux_output = sum(float((item.get("metrics") or {}).get("eval_count") or 0) for item in aux)
         aux_latency = sum(
@@ -1784,9 +1799,16 @@ class Test12Campaign:
                 if intervention.get("reflection_text") else None
             ),
             "classification": copy.deepcopy(row.get("classification") or {}),
+            "valid_for_capability": bool(valid),
+            "control_valid_for_capability": bool(control_valid),
+            "delta_valid": bool(delta_valid),
             "score": numeric,
             "control_score": float(control.get("score") or 0.0),
-            "delta": numeric - float(control.get("score") or 0.0),
+            "delta": (
+                numeric - float(control.get("score") or 0.0)
+                if delta_valid
+                else 0.0
+            ),
             "control_response_text": str(control.get("response_text") or ""),
             "treatment_response_text": str(row.get("response_text") or ""),
             "generation_budget": int((row.get("experiment") or {}).get("generation_budget") or self.cfg["base_generation_budget"]),
@@ -1860,7 +1882,9 @@ def _wilson(successes: int, total: int, z: float = 1.6448536269514722) -> list[f
 
 
 def mechanism_summary(rows: Iterable[dict[str, Any]], cfg: dict[str, Any]) -> dict[str, Any]:
-    data = [row for row in rows if row.get("intervention_id") not in {None, "CONTROL"}]
+    all_data = [row for row in rows if row.get("intervention_id") not in {None, "CONTROL"}]
+    invalid_data = [row for row in all_data if not _capability_valid(row)]
+    data = [row for row in all_data if _capability_valid(row)]
     fails = [row for row in data if float(row.get("control_score", 0.0)) < 1.0]
     passes = [row for row in data if float(row.get("control_score", 0.0)) >= 1.0]
     rescues = [row for row in fails if float(row.get("score", 0.0)) > float(row.get("control_score", 0.0))]
@@ -1924,6 +1948,7 @@ def mechanism_summary(rows: Iterable[dict[str, Any]], cfg: dict[str, Any]) -> di
     )
     return {
         "n": len(data),
+        "invalid_observations_excluded": len(invalid_data),
         "baseline_fail_trials": len(fails),
         "baseline_pass_trials": len(passes),
         "rescues": len(rescues),
@@ -1962,7 +1987,11 @@ def _source_headroom(campaign: Test12Campaign, partition: str = "DISCOVERY") -> 
     rows = campaign.partitions[partition]
     current: dict[str, list[float]] = defaultdict(list)
     for row in campaign.rows:
-        if row.get("intervention_id") == "CONTROL" and row.get("partition") == partition:
+        if (
+            row.get("intervention_id") == "CONTROL"
+            and row.get("partition") == partition
+            and _capability_valid(row)
+        ):
             current[str(row["fixture_id"])].append(float(row.get("score", 0.0)))
     baseline = {
         key: float(median(values))
@@ -2052,6 +2081,7 @@ def _control_row_for_fixture(
         if row.get("partition") == partition
         and row.get("intervention_id") == "CONTROL"
         and str(row.get("fixture_id")) == fixture_id
+        and _capability_valid(row)
     ]
     return values[-1] if values else None
 
@@ -2104,7 +2134,11 @@ def _baseline_family_stats(
 ) -> dict[str, dict[str, Any]]:
     by_family: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for row in campaign.rows:
-        if row.get("partition") == partition and row.get("intervention_id") == "CONTROL":
+        if (
+            row.get("partition") == partition
+            and row.get("intervention_id") == "CONTROL"
+            and _capability_valid(row)
+        ):
             by_family[str(row.get("family_id") or "")].append(row)
     result: dict[str, dict[str, Any]] = {}
     for family, rows in by_family.items():
@@ -2163,7 +2197,11 @@ def _unresolved_failure_cases(
 ) -> list[dict[str, Any]]:
     baseline: dict[str, float] = {}
     for row in campaign.rows:
-        if row.get("partition") != partition or row.get("intervention_id") != "CONTROL":
+        if (
+            row.get("partition") != partition
+            or row.get("intervention_id") != "CONTROL"
+            or not _capability_valid(row)
+        ):
             continue
         baseline[str(row.get("fixture_id"))] = float(row.get("score", 0.0))
     failed = [
@@ -2460,10 +2498,12 @@ def phase_baseline(campaign: Test12Campaign, deadline: float) -> dict[str, Any]:
         start,
         "balanced family frontier map + hardest-unseen escalation in strong families + maximum unique fixture discovery; no proof replication",
     )
-    rows = [
+    all_rows = [
         row for row in campaign.rows[start:]
         if row.get("intervention_id") == "CONTROL"
     ]
+    rows = [row for row in all_rows if _capability_valid(row)]
+    invalid_rows = [row for row in all_rows if not _capability_valid(row)]
     by_fixture: dict[str, list[float]] = defaultdict(list)
     by_family: dict[str, list[float]] = defaultdict(list)
     for row in rows:
@@ -2486,6 +2526,11 @@ def phase_baseline(campaign: Test12Campaign, deadline: float) -> dict[str, Any]:
             for key, values in by_family.items()
         },
         "capability_family_count": len(by_family),
+        "invalid_control_observations_excluded": len(invalid_rows),
+        "invalid_control_classes": sorted({
+            str((row.get("classification") or {}).get("result_class") or "UNKNOWN")
+            for row in invalid_rows
+        }),
     }
 
 
@@ -2553,6 +2598,7 @@ def _family_boundary_cases(
             row.get("family_id") == family
             and row.get("intervention_id") == "CONTROL"
             and row.get("fixture_id")
+            and _capability_valid(row)
         ):
             baseline_by_fixture[str(row["fixture_id"])].append(
                 float(row.get("score", 0.0))
