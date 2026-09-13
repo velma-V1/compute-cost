@@ -1814,7 +1814,19 @@ class Test12Campaign:
         control_valid = bool(control.get("valid_for_capability")) or (
             (control.get("classification") or {}).get("valid_for_capability") is True
         )
-        delta_valid = bool(valid and control_valid)
+        treatment_budget = int(
+            (row.get("experiment") or {}).get("generation_budget")
+            or self.cfg["base_generation_budget"]
+        )
+        control_budget = int(
+            control.get("generation_budget")
+            or self.cfg["base_generation_budget"]
+        )
+        budget_comparison_valid = (
+            str(intervention.get("category") or "") == "GENERATION_BUDGET"
+            or treatment_budget == control_budget
+        )
+        delta_valid = bool(valid and control_valid and budget_comparison_valid)
         aux_prompt = sum(float((item.get("metrics") or {}).get("prompt_eval_count") or 0) for item in aux)
         aux_output = sum(float((item.get("metrics") or {}).get("eval_count") or 0) for item in aux)
         aux_latency = sum(
@@ -1854,6 +1866,8 @@ class Test12Campaign:
             "valid_for_capability": bool(valid),
             "control_valid_for_capability": bool(control_valid),
             "delta_valid": bool(delta_valid),
+            "budget_comparison_valid": bool(budget_comparison_valid),
+            "control_generation_budget": int(control_budget),
             "score": numeric,
             "control_score": float(control.get("score") or 0.0),
             "delta": (
