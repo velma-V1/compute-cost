@@ -227,7 +227,14 @@ RULES = (
     "independent ensemble branches execute serially on one local GPU to avoid compute contention confounds",
     "A+B+A and other composition effects are measured rather than assumed additive",
     "residual failures are eligible for fine-tuning only after prompt controller compute context retry and tool-policy owners are tested",
-    "unused active time is allocated to uncertainty reduction and replication, never arbitrary repeated prompting",
+    "unused active time is allocated to new opportunity discovery before any replication",
+    "Test 1.2 Collection is an opportunity-discovery stage, not a proof stage; recurrence, robustness, and confidence-building belong to Run 2/Test 2",
+    "one genuine rescue is sufficient to create an opportunity candidate with explicit verification debt; Collection must not spend repeated trials proving that candidate",
+    "once a failing fixture is rescued, that fixture is deprioritized for further rescue search and clock moves to unresolved failures, unseen fixtures, new failure phenotypes, new families, or harder frontiers",
+    "where the model performs strongly, difficulty escalates toward the hardest unseen fixtures instead of repeating easy or already-passed cases",
+    "failure search prioritizes novel failure phenotypes and underexplored capability families over repeated instances of already-mapped failure classes",
+    "different seeds on the same fixture x intervention are verification work and are avoided in Collection unless required to resolve a safety ambiguity",
+    "negative-transfer discovery remains first-class, but controls are sampled across novel sentinels rather than repeatedly proving the same negative boundary",
     "the governing stop condition is fixed wall-clock time; model-call limits are runaway safety rails and never the optimization objective",
     "exact case x seed x intervention repeats are suppressed unless the experimental design changes seed/intervention state or explicitly marks allow_exact_repeat",
     "unmeasured baseline cases remain UNKNOWN and must never be silently counted as failures",
@@ -321,6 +328,7 @@ REQUIRED_OUTPUTS = (
     "test1.2-priority-queue.json",
     "test1.2-uncertainty-ledger.json",
     "test1.2-efficiency-audit.json",
+    "test1.2-opportunity-discovery-map.json",
     "test1.2-recovery-checkpoint.json",
     "test1.2-handoff.json",
     "tuning-example-corpus.jsonl",
@@ -351,6 +359,10 @@ DEFAULT_TEST12_CONFIG: dict[str, Any] = {
     "confirmation_mechanisms": 16,
     "minimum_phase_observations": 16,
     "router_confidence_threshold": 0.65,
+    "max_collection_sentinels_per_intervention": 2,
+    "novelty_failure_class_weight": 6.0,
+    "novelty_family_weight": 3.0,
+    "harder_frontier_weight": 2.0,
     "call_cost_penalty": 0.06,
     "token_cost_penalty": 0.00002,
     "latency_cost_penalty": 0.002,
@@ -775,19 +787,27 @@ def build_test12_plan(cases: list[dict[str, Any]], *, seed_run: str | None = Non
         "core_mechanism_count": len(CORE_INTERVENTIONS),
         "generated_prompt_control_count": len(generate_prompt_control_candidates()),
         "finite_control_grammar": copy.deepcopy(CONTROL_GRAMMAR),
-        "control_search_contract": "EVERY_DECLARED_CONTROL_CANDIDATE_GETS_MINIMUM_COVERAGE_BEFORE_REPLICATION_DEPTH_IS_ADAPTIVE",
+        "control_search_contract": "EVERY_DECLARED_CONTROL_CANDIDATE_GETS_MINIMUM_COVERAGE_THEN_CLOCK_SHIFTS_TO_NOVEL_OPPORTUNITY_DISCOVERY",
         "adaptive_allocation": {
             "coverage_floor_first": True,
             "screening_design": "BALANCED_COVERING_ARRAY_PLUS_FRACTIONAL_FACTORIAL",
             "then_allocate_by": [
+                "novel_failure_phenotype",
+                "unresolved_unique_fixture",
+                "harder_frontier_in_strong_family",
+                "new_control_category_for_unresolved_phenotype",
                 "expected_information_gain",
-                "rescue_probability",
-                "negative_transfer_risk",
-                "value_per_call",
+                "negative_transfer_boundary_novelty",
                 "family_coverage_gap",
             ],
-            "successive_halving": True,
-            "exact_failure_replay": True,
+            "successive_halving": False,
+            "exact_failure_replay": False,
+            "collection_role": "OPPORTUNITY_DISCOVERY",
+            "proof_owner": "RUN2_TEST2",
+            "rescue_handoff_after_first_success": True,
+            "failure_phenotype_diversity_first": True,
+            "strong_family_difficulty_escalation": True,
+            "same_fixture_seed_replication_in_collection": False,
             "oracle_routing_prohibited": True,
             "campaign_early_stop": False,
             "stopping_rule": "FIXED_WALL_CLOCK",
@@ -800,7 +820,7 @@ def build_test12_plan(cases: list[dict[str, Any]], *, seed_run: str | None = Non
             "full_rerun_recovery_prohibited": True,
             "same_run_id_resume_required": True,
             "atomic_evidence_salvage_required": True,
-            "adaptive_rule": "adapt replication depth only after mandatory breadth; never skip a declared control family or phase",
+            "adaptive_rule": "after mandatory breadth, maximize distinct opportunities; deprioritize rescued fixtures and repeated failure phenotypes; escalate difficulty where baseline performance is strong",
         },
         "required_outputs": list(REQUIRED_OUTPUTS),
         "scope_boundaries": {
@@ -866,8 +886,8 @@ def validate_test12_plan(plan: dict[str, Any]) -> None:
         raise ValueError("Test 1.2 must expose at least 30 core improvement mechanisms")
     if int(plan.get("generated_prompt_control_count", 0)) < 200:
         raise ValueError("Test 1.2 prompt/injection grammar is too small for full control-surface collection")
-    if plan.get("control_search_contract") != "EVERY_DECLARED_CONTROL_CANDIDATE_GETS_MINIMUM_COVERAGE_BEFORE_REPLICATION_DEPTH_IS_ADAPTIVE":
-        raise ValueError("Test 1.2 may not prune declared controls before minimum coverage")
+    if plan.get("control_search_contract") != "EVERY_DECLARED_CONTROL_CANDIDATE_GETS_MINIMUM_COVERAGE_THEN_CLOCK_SHIFTS_TO_NOVEL_OPPORTUNITY_DISCOVERY":
+        raise ValueError("Test 1.2 may not prune declared controls before minimum coverage or spend post-floor clock on proof replication")
     missing_outputs = [name for name in REQUIRED_OUTPUTS if name not in plan["required_outputs"]]
     if missing_outputs:
         raise ValueError(f"Test 1.2 output contract incomplete: {missing_outputs}")
@@ -1855,6 +1875,20 @@ def mechanism_summary(rows: Iterable[dict[str, Any]], cfg: dict[str, Any]) -> di
     else:
         classification = "UNCERTAIN"
 
+    discovery_status = (
+        "NEW_RESCUE_OPPORTUNITY"
+        if rescues
+        else "NEGATIVE_BOUNDARY_OPPORTUNITY"
+        if regressions
+        else "NO_OBSERVED_OPPORTUNITY"
+    )
+    verification_debt = {
+        "requires_run2_recurrence": bool(rescues),
+        "requires_run2_non_regression": bool(rescues or regressions),
+        "requires_run2_cross_fixture_validation": bool(rescues),
+        "collection_is_proof": False,
+    }
+
     raw_value = rescue_rate - 2.0 * cap_reg_rate
     cost_penalty = (
         float(cfg["call_cost_penalty"]) * mean_calls
@@ -1880,6 +1914,8 @@ def mechanism_summary(rows: Iterable[dict[str, Any]], cfg: dict[str, Any]) -> di
         "net_value": raw_value - cost_penalty,
         "value_per_call": raw_value / mean_calls if mean_calls > 0 else 0.0,
         "classification": classification,
+        "discovery_status": discovery_status,
+        "verification_debt": verification_debt,
         "fixture_ids": sorted({str(row.get("fixture_id")) for row in data}),
         "family_ids": sorted({str(row.get("family_id")) for row in data}),
     }
@@ -1967,6 +2003,299 @@ def _breadth_cover(
     return campaign.rows[start:]
 
 
+
+def _difficulty_band(level: int) -> str:
+    if level >= 9:
+        return "EDGE"
+    if level >= 6:
+        return "HARD"
+    if level >= 3:
+        return "MID"
+    return "EASY"
+
+
+def _control_row_for_fixture(
+    campaign: Test12Campaign,
+    fixture_id: str,
+    partition: str = "DISCOVERY",
+) -> dict[str, Any] | None:
+    values = [
+        row for row in campaign.rows
+        if row.get("partition") == partition
+        and row.get("intervention_id") == "CONTROL"
+        and str(row.get("fixture_id")) == fixture_id
+    ]
+    return values[-1] if values else None
+
+
+def _failure_phenotype(
+    campaign: Test12Campaign,
+    case: dict[str, Any],
+    partition: str = "DISCOVERY",
+) -> str:
+    fixture_id = _fixture_id(case)
+    control = _control_row_for_fixture(campaign, fixture_id, partition)
+    classification = (control or {}).get("classification") or {}
+    result_class = str(classification.get("result_class") or "UNKNOWN")
+    scorer = str(case.get("scorer") or case.get("task_type") or "UNKNOWN_SCORER")
+    subtype = str(
+        case.get("failure_mode")
+        or case.get("subtype")
+        or case.get("constraint_type")
+        or case.get("skill")
+        or "GENERIC"
+    )
+    return "|".join(
+        (
+            _family(case),
+            result_class,
+            scorer,
+            subtype,
+            _difficulty_band(int(case.get("difficulty_level") or 0)),
+        )
+    )
+
+
+def _rescued_fixture_ids(
+    campaign: Test12Campaign,
+    partition: str = "DISCOVERY",
+) -> set[str]:
+    return {
+        str(row.get("fixture_id"))
+        for row in campaign.rows
+        if row.get("partition") == partition
+        and row.get("intervention_id") not in {None, "CONTROL"}
+        and float(row.get("control_score", 0.0)) < 1.0
+        and float(row.get("score", 0.0)) >= 1.0
+    }
+
+
+def _baseline_family_stats(
+    campaign: Test12Campaign,
+    partition: str = "DISCOVERY",
+) -> dict[str, dict[str, Any]]:
+    by_family: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for row in campaign.rows:
+        if row.get("partition") == partition and row.get("intervention_id") == "CONTROL":
+            by_family[str(row.get("family_id") or "")].append(row)
+    result: dict[str, dict[str, Any]] = {}
+    for family, rows in by_family.items():
+        scores = [float(row.get("score", 0.0)) for row in rows]
+        passed_levels = [
+            int(row.get("difficulty_level") or 0)
+            for row in rows
+            if float(row.get("score", 0.0)) >= 1.0
+        ]
+        failed_levels = [
+            int(row.get("difficulty_level") or 0)
+            for row in rows
+            if float(row.get("score", 0.0)) < 1.0
+        ]
+        result[family] = {
+            "n": len(rows),
+            "pass_rate": (sum(1 for value in scores if value >= 1.0) / len(scores)) if scores else 0.0,
+            "max_pass_level": max(passed_levels) if passed_levels else -1,
+            "min_fail_level": min(failed_levels) if failed_levels else None,
+        }
+    return result
+
+
+def _unmeasured_frontier_cases(
+    campaign: Test12Campaign,
+    partition: str = "DISCOVERY",
+) -> list[dict[str, Any]]:
+    measured = {
+        str(row.get("fixture_id"))
+        for row in campaign.rows
+        if row.get("partition") == partition
+        and row.get("intervention_id") == "CONTROL"
+    }
+    stats = _baseline_family_stats(campaign, partition)
+    values = [
+        case for case in campaign.partitions[partition]
+        if _fixture_id(case) not in measured
+    ]
+    # Strong families get harder cases first. Weak/unknown families still get
+    # breadth, but do not consume clock repeating easy passes.
+    values.sort(
+        key=lambda case: (
+            -float((stats.get(_family(case)) or {}).get("pass_rate", 0.5)),
+            -int((stats.get(_family(case)) or {}).get("max_pass_level", -1)),
+            -int(case.get("difficulty_level") or 0),
+            _family(case),
+            _fixture_id(case),
+        )
+    )
+    return values
+
+
+def _unresolved_failure_cases(
+    campaign: Test12Campaign,
+    partition: str = "DISCOVERY",
+) -> list[dict[str, Any]]:
+    failed, _ = _source_headroom(campaign, partition)
+    rescued = _rescued_fixture_ids(campaign, partition)
+    treatment_count: dict[str, int] = defaultdict(int)
+    phenotype_count: dict[str, int] = defaultdict(int)
+    family_failure_count: dict[str, int] = defaultdict(int)
+    for case in failed:
+        phenotype_count[_failure_phenotype(campaign, case, partition)] += 1
+        family_failure_count[_family(case)] += 1
+    for row in campaign.rows:
+        if row.get("partition") != partition or row.get("intervention_id") in {None, "CONTROL"}:
+            continue
+        treatment_count[str(row.get("fixture_id") or "")] += 1
+
+    unresolved = [case for case in failed if _fixture_id(case) not in rescued]
+    unresolved.sort(
+        key=lambda case: (
+            phenotype_count[_failure_phenotype(campaign, case, partition)],
+            family_failure_count[_family(case)],
+            treatment_count[_fixture_id(case)],
+            -int(case.get("difficulty_level") or 0),
+            _family(case),
+            _fixture_id(case),
+        )
+    )
+    return unresolved
+
+
+def _opportunity_search(
+    campaign: Test12Campaign,
+    deadline: float,
+    *,
+    phase: str,
+    interventions: list[dict[str, Any]],
+    partition: str = "DISCOVERY",
+    max_trials: int | None = None,
+) -> list[dict[str, Any]]:
+    """Use Collection clock to discover distinct opportunities, never prove them."""
+    if not interventions:
+        return []
+    start = len(campaign.rows)
+    seed = int(campaign.cfg["seeds"][0])
+    trials = 0
+    while campaign.can_start(deadline):
+        if max_trials is not None and trials >= int(max_trials):
+            break
+
+        tried_pairs = {
+            (str(row.get("fixture_id")), str(row.get("intervention_id")))
+            for row in campaign.rows
+            if row.get("partition") == partition
+            and row.get("intervention_id") not in {None, "CONTROL"}
+        }
+        category_by_phenotype: dict[str, set[str]] = defaultdict(set)
+        intervention_trials: dict[str, int] = defaultdict(int)
+        for row in campaign.rows:
+            if row.get("partition") != partition or row.get("intervention_id") in {None, "CONTROL"}:
+                continue
+            fixture_id = str(row.get("fixture_id") or "")
+            case = campaign.case_by_id.get(fixture_id)
+            if case is not None:
+                category_by_phenotype[_failure_phenotype(campaign, case, partition)].add(
+                    str(row.get("intervention_category") or "")
+                )
+            intervention_trials[str(row.get("intervention_id") or "")] += 1
+
+        chosen_case = None
+        chosen_intervention = None
+        for case in _unresolved_failure_cases(campaign, partition):
+            fixture_id = _fixture_id(case)
+            phenotype = _failure_phenotype(campaign, case, partition)
+            available = [
+                intervention for intervention in interventions
+                if (fixture_id, str(intervention["id"])) not in tried_pairs
+            ]
+            if not available:
+                continue
+            available.sort(
+                key=lambda intervention: (
+                    1 if str(intervention.get("category") or "") in category_by_phenotype[phenotype] else 0,
+                    intervention_trials[str(intervention["id"])],
+                    str(intervention.get("category") or ""),
+                    str(intervention["id"]),
+                )
+            )
+            chosen_case = case
+            chosen_intervention = available[0]
+            break
+
+        if chosen_case is None:
+            unseen = _unmeasured_frontier_cases(campaign, partition)
+            if not unseen:
+                break
+            campaign.control(unseen[0], deadline, seed=seed, force=True)
+            continue
+
+        row = campaign.treatment(
+            chosen_case,
+            deadline,
+            phase=phase,
+            intervention=chosen_intervention,
+            seed=seed,
+        )
+        if row is not None:
+            trials += 1
+    return campaign.rows[start:]
+
+
+def _novel_sentinel_search(
+    campaign: Test12Campaign,
+    deadline: float,
+    *,
+    phase: str,
+    interventions: list[dict[str, Any]],
+    partition: str = "DISCOVERY",
+    max_per_intervention: int = 2,
+) -> list[dict[str, Any]]:
+    """Discover negative-transfer boundaries across novel sentinels, not seeds."""
+    if not interventions:
+        return []
+    start = len(campaign.rows)
+    seed = int(campaign.cfg["seeds"][0])
+    _, passed = _source_headroom(campaign, partition)
+    passed = sorted(
+        passed,
+        key=lambda case: (-int(case.get("difficulty_level") or 0), _family(case), _fixture_id(case)),
+    )
+    while campaign.can_start(deadline):
+        existing: dict[str, set[str]] = defaultdict(set)
+        for row in campaign.rows:
+            if (
+                row.get("partition") == partition
+                and row.get("intervention_id") not in {None, "CONTROL"}
+                and float(row.get("control_score", 0.0)) >= 1.0
+            ):
+                existing[str(row.get("intervention_id"))].add(str(row.get("fixture_id")))
+        candidates = [
+            intervention for intervention in interventions
+            if len(existing[str(intervention["id"])]) < int(max_per_intervention)
+        ]
+        if not candidates or not passed:
+            break
+        candidates.sort(
+            key=lambda intervention: (
+                len(existing[str(intervention["id"])]),
+                str(intervention.get("category") or ""),
+                str(intervention["id"]),
+            )
+        )
+        intervention = candidates[0]
+        used = existing[str(intervention["id"])]
+        sentinel = next((case for case in passed if _fixture_id(case) not in used), None)
+        if sentinel is None:
+            break
+        campaign.treatment(
+            sentinel,
+            deadline,
+            phase=phase,
+            intervention=intervention,
+            seed=seed,
+        )
+    return campaign.rows[start:]
+
+
 def _matrix(
     campaign: Test12Campaign,
     deadline: float,
@@ -2005,14 +2334,35 @@ def _coverage_cases(campaign: Test12Campaign, partition: str = "DISCOVERY") -> l
 
 
 def _rank_mechanisms(summary: dict[str, Any], campaign: Test12Campaign, limit: int) -> list[dict[str, Any]]:
+    """Rank discovery opportunities; proof-strength is deliberately secondary."""
     ranked = []
     for key, value in summary.items():
         iv = campaign.intervention_by_id.get(str(key))
         if iv is None:
             continue
+        discovery = str(value.get("discovery_status") or "")
         cls = str(value.get("classification"))
-        rank = {"STRONG_CONDITIONAL_RESCUE":5,"PROMISING_CONDITIONAL_RESCUE":4,"UNCERTAIN":2,"TRUNCATION_SENSITIVE":1,"NO_RESCUE_SIGNAL":0,"CAPABILITY_HARM":-10}.get(cls,0)
-        ranked.append((rank, float(value.get("net_value", 0.0)), float(value.get("value_per_call", 0.0)), str(key), iv))
+        discovery_rank = {
+            "NEW_RESCUE_OPPORTUNITY": 20,
+            "NEGATIVE_BOUNDARY_OPPORTUNITY": 8,
+            "NO_OBSERVED_OPPORTUNITY": 0,
+        }.get(discovery, 0)
+        proof_rank = {
+            "STRONG_CONDITIONAL_RESCUE": 5,
+            "PROMISING_CONDITIONAL_RESCUE": 4,
+            "UNCERTAIN": 2,
+            "TRUNCATION_SENSITIVE": 1,
+            "NO_RESCUE_SIGNAL": 0,
+            "CAPABILITY_HARM": -10,
+        }.get(cls, 0)
+        ranked.append((
+            discovery_rank,
+            proof_rank,
+            float(value.get("net_value", 0.0)),
+            float(value.get("value_per_call", 0.0)),
+            str(key),
+            iv,
+        ))
     ranked.sort(reverse=True)
     return [copy.deepcopy(row[-1]) for row in ranked[:limit]]
 
@@ -2061,33 +2411,18 @@ def phase_baseline(campaign: Test12Campaign, deadline: float) -> dict[str, Any]:
             break
         campaign.control(case, deadline, seed=primary_seed, force=True)
 
-    # Replicate a balanced slice across families and difficulty so instability is
-    # measurable without paying for full duplicate coverage.
-    first_rows = [
-        row for row in campaign.rows[start:]
-        if row.get("intervention_id") == "CONTROL"
-    ]
-    failures = [
-        campaign.case_by_id[str(row["fixture_id"])]
-        for row in first_rows
-        if float(row.get("score", 0.0)) < 1.0 and str(row["fixture_id"]) in campaign.case_by_id
-    ]
-    passes = [
-        campaign.case_by_id[str(row["fixture_id"])]
-        for row in first_rows
-        if float(row.get("score", 0.0)) >= 1.0 and str(row["fixture_id"]) in campaign.case_by_id
-    ]
-    replicate = _balanced_cases(failures, min(40, len(failures))) + _balanced_cases(passes, min(40, len(passes)))
-    for seed in [int(v) for v in campaign.cfg["seeds"][1:]]:
-        for case in replicate:
-            if not campaign.can_start(deadline):
-                break
-            campaign.control(case, deadline, seed=seed, force=True)
+    # Remaining baseline clock buys new frontier coverage. Strong families are
+    # pushed to their hardest unseen cases; recurrence moves to Run 2/Test 2.
+    while campaign.can_start(deadline):
+        unseen = _unmeasured_frontier_cases(campaign, "DISCOVERY")
+        if not unseen:
+            break
+        campaign.control(unseen[0], deadline, seed=primary_seed, force=True)
 
     campaign.positive_work(
         "baseline_capability_map",
         start,
-        "balanced full-family/difficulty capability map + targeted instability replication",
+        "balanced family frontier map + hardest-unseen escalation in strong families + maximum unique fixture discovery; no proof replication",
     )
     rows = [
         row for row in campaign.rows[start:]
@@ -2123,8 +2458,17 @@ def phase_reasoning_compute(campaign: Test12Campaign, deadline: float) -> dict[s
     start = len(campaign.rows)
     allowed = {"REASONING_MODE","GENERATION_BUDGET","CONTEXT_WINDOW","COMPUTE_COST_ROUTING"}
     interventions = [row for row in campaign.interventions if row["category"] in allowed]
-    rows = _matrix(campaign, deadline, phase="reasoning_compute_surface", interventions=interventions, cases=_coverage_cases(campaign), coverage_rounds=2)
-    campaign.positive_work("reasoning_compute_surface", start, "thinking effort x generation budget x context window with matched controls")
+    rows = _opportunity_search(
+        campaign,
+        deadline,
+        phase="reasoning_compute_surface",
+        interventions=interventions,
+    )
+    campaign.positive_work(
+        "reasoning_compute_surface",
+        start,
+        "compute controls search novel unresolved failure phenotypes; rescued fixtures immediately leave priority",
+    )
     return _group_summary(rows, campaign.cfg, lambda row: str(row["intervention_id"]))
 
 
@@ -2233,12 +2577,11 @@ def phase_family_control_floor(
     campaign: Test12Campaign,
     deadline: float,
 ) -> dict[str, Any]:
-    """Every canonical family sees every mandatory surface on its frontier.
+    """Give every family every mandatory surface while maximizing target diversity.
 
-    Each control surface is tested on both the hardest known pass and easiest
-    known fail when available. This turns a simple "did it help?" probe into an
-    activation-boundary experiment: when to use the block, when not to use it,
-    and whether it buys capability, reliability, or efficiency.
+    Manufacturing breadth is preserved, but surfaces are distributed across
+    different unresolved phenotypes and hard frontier cases instead of proving
+    the same pass/fail pair repeatedly.
     """
     start = len(campaign.rows)
     representatives = _representative_by_category(campaign)
@@ -2251,68 +2594,88 @@ def phase_family_control_floor(
         pool = by_family.get(family) or []
         if not pool:
             continue
-        probes = _family_boundary_cases(campaign, family, pool)
-        for category in FAMILY_CONTROL_SURFACES:
-            intervention = representatives.get(category)
-            if intervention is None:
-                continue
-            for case in probes:
-                if not campaign.can_start(deadline):
-                    break
-                campaign.treatment(
-                    case,
-                    deadline,
-                    phase="family_control_floor",
-                    intervention=intervention,
-                    seed=int(campaign.cfg["seeds"][0]),
-                )
-
-    # Push beyond the boundary: every family also receives three cheap
-    # amplifier probes on its hardest available DISCOVERY fixture. These are
-    # additive to the pass/fail boundary matrix and specifically search for
-    # frontier extension rather than merely recovery at the current edge.
-    hard_probe_categories = (
-        "PROMPT_CONTROL",
-        "REASONING_MODE",
-        "VERIFICATION",
-    )
-    for family in TEST2_CAPABILITY_FAMILIES:
-        pool = by_family.get(family) or []
-        if not pool:
-            continue
-        hardest = max(
-            pool,
-            key=lambda row: (
-                int(row.get("difficulty_level", 0)),
-                _fixture_id(row),
-            ),
+        unresolved = [
+            case for case in _unresolved_failure_cases(campaign)
+            if _family(case) == family
+        ]
+        passed = []
+        for case in pool:
+            control = _control_row_for_fixture(campaign, _fixture_id(case))
+            if control is not None and float(control.get("score", 0.0)) >= 1.0:
+                passed.append(case)
+        passed.sort(
+            key=lambda case: (-int(case.get("difficulty_level") or 0), _fixture_id(case))
         )
-        for category in hard_probe_categories:
+
+        used_target_counts: dict[str, int] = defaultdict(int)
+        used_phenotypes: dict[str, int] = defaultdict(int)
+        for category in FAMILY_CONTROL_SURFACES:
             if not campaign.can_start(deadline):
                 break
             intervention = representatives.get(category)
             if intervention is None:
                 continue
-            campaign.treatment(
-                hardest,
+
+            # Prefer a distinct unresolved phenotype. If this family is strong
+            # or currently has no unresolved failure, challenge its hardest pass.
+            candidates = list(unresolved) if unresolved else list(passed)
+            if not candidates:
+                unseen = [
+                    case for case in _unmeasured_frontier_cases(campaign)
+                    if _family(case) == family
+                ]
+                if unseen:
+                    campaign.control(unseen[0], deadline, seed=int(campaign.cfg["seeds"][0]), force=True)
+                    candidates = [unseen[0]]
+            if not candidates:
+                continue
+
+            candidates.sort(
+                key=lambda case: (
+                    used_phenotypes[_failure_phenotype(campaign, case)],
+                    used_target_counts[_fixture_id(case)],
+                    -int(case.get("difficulty_level") or 0),
+                    _fixture_id(case),
+                )
+            )
+            case = candidates[0]
+            row = campaign.treatment(
+                case,
                 deadline,
-                phase="family_frontier_extension",
+                phase="family_control_floor",
                 intervention=intervention,
                 seed=int(campaign.cfg["seeds"][0]),
             )
+            if row is not None:
+                used_target_counts[_fixture_id(case)] += 1
+                used_phenotypes[_failure_phenotype(campaign, case)] += 1
+                if float(row.get("control_score", 0.0)) < 1.0 and float(row.get("score", 0.0)) >= 1.0:
+                    unresolved = [
+                        value for value in unresolved
+                        if _fixture_id(value) != _fixture_id(case)
+                    ]
+
+    # Any remaining phase time is explicitly frontier/opportunity search.
+    if campaign.can_start(deadline):
+        rows = _opportunity_search(
+            campaign,
+            deadline,
+            phase="family_floor_opportunity_search",
+            interventions=[value for value in representatives.values()],
+        )
+    else:
+        rows = []
 
     campaign.positive_work(
         "family_control_floor",
         start,
-        "all 40 capability families x mandatory harness surfaces on pass-side/fail-side frontier probes",
+        "all 40 families x mandatory surfaces distributed across distinct phenotypes/hard frontiers; remainder searches new opportunities",
     )
-    rows = campaign.rows[start:]
     return _group_summary(
-        rows,
+        campaign.rows[start:],
         campaign.cfg,
         lambda row: f"{row['family_id']}|{row['intervention_category']}",
     )
-
 
 
 def phase_controller_screen(campaign: Test12Campaign, deadline: float) -> dict[str, Any]:
@@ -2320,7 +2683,7 @@ def phase_controller_screen(campaign: Test12Campaign, deadline: float) -> dict[s
     excluded = {"REASONING_MODE","GENERATION_BUDGET","CONTEXT_WINDOW","COMPUTE_COST_ROUTING"}
     interventions = [row for row in campaign.interventions if row["category"] not in excluded]
     fail, passed = _source_headroom(campaign)
-    failures = _balanced_cases(fail, min(64, len(fail)))
+    failures = _unresolved_failure_cases(campaign)[:96]
     sentinels = _balanced_cases(passed, min(64, len(passed)))
 
     # Non-negotiable breadth pass: every declared candidate receives coverage,
@@ -2335,8 +2698,8 @@ def phase_controller_screen(campaign: Test12Campaign, deadline: float) -> dict[s
         seed=int(campaign.cfg["seeds"][0]),
     )
 
-    # Replication depth is adaptive only after the complete breadth catalog has
-    # had its first look.
+    # After the breadth look, depth means new opportunities on unresolved
+    # phenotypes, not recurrence on already-rescued fixtures.
     depth_ids = {
         str(row["id"])
         for row in CORE_INTERVENTIONS
@@ -2345,20 +2708,17 @@ def phase_controller_screen(campaign: Test12Campaign, deadline: float) -> dict[s
     depth = [row for row in interventions if str(row["id"]) in depth_ids]
     if campaign.can_start(deadline):
         rows.extend(
-            _matrix(
+            _opportunity_search(
                 campaign,
                 deadline,
-                phase="mechanism_coverage_floor",
+                phase="mechanism_coverage_opportunity_search",
                 interventions=depth,
-                cases=_coverage_cases(campaign),
-                seeds=[int(v) for v in campaign.cfg["seeds"][:2]],
-                coverage_rounds=1,
             )
         )
     campaign.positive_work(
         "mechanism_coverage_floor",
         start,
-        "EVERY declared prompt/injection/retry/controller candidate receives rotating failure + sentinel coverage before replication is adaptive",
+        "EVERY declared candidate receives minimum rotating failure/sentinel coverage; remaining clock searches novel unresolved phenotypes instead of proof replication",
     )
     return _group_summary(rows, campaign.cfg, lambda row: str(row["intervention_id"]))
 
@@ -2367,9 +2727,33 @@ def phase_controller_screen(campaign: Test12Campaign, deadline: float) -> dict[s
 def phase_category_focus(campaign: Test12Campaign, deadline: float, *, phase: str, categories: set[str], target_cases: list[dict[str, Any]] | None = None) -> dict[str, Any]:
     start = len(campaign.rows)
     interventions = [row for row in campaign.interventions if row["category"] in categories]
-    cases = target_cases or _coverage_cases(campaign)
-    rows = _matrix(campaign, deadline, phase=phase, interventions=interventions, cases=cases)
-    campaign.positive_work(phase, start, "targeted category stress + non-target sentinels")
+    if target_cases:
+        allowed = {_fixture_id(case) for case in target_cases}
+        original = campaign.partitions["DISCOVERY"]
+        campaign.partitions["DISCOVERY"] = [
+            case for case in original if _fixture_id(case) in allowed
+        ]
+        try:
+            rows = _opportunity_search(
+                campaign,
+                deadline,
+                phase=phase,
+                interventions=interventions,
+            )
+        finally:
+            campaign.partitions["DISCOVERY"] = original
+    else:
+        rows = _opportunity_search(
+            campaign,
+            deadline,
+            phase=phase,
+            interventions=interventions,
+        )
+    campaign.positive_work(
+        phase,
+        start,
+        "targeted opportunity search across distinct unresolved failure phenotypes; recurrence deferred to Run 2",
+    )
     return _group_summary(rows, campaign.cfg, lambda row: str(row["intervention_id"]))
 
 
@@ -2385,7 +2769,11 @@ def _retry_cases(campaign: Test12Campaign) -> list[dict[str, Any]]:
             and not record.get("rescued_by_larger_budget")
         ):
             fixtures.append(campaign.case_by_id[fixture_id])
-    return _balanced_cases(fixtures, min(48, len(fixtures))) if fixtures else _coverage_cases(campaign)
+    if fixtures:
+        rescued = _rescued_fixture_ids(campaign)
+        fixtures = [case for case in fixtures if _fixture_id(case) not in rescued]
+        return _balanced_cases(fixtures, min(48, len(fixtures)))
+    return _unresolved_failure_cases(campaign)[:96]
 
 
 def _tool_cases(campaign: Test12Campaign) -> list[dict[str, Any]]:
@@ -2562,7 +2950,7 @@ def phase_composition(campaign: Test12Campaign, deadline: float, combined_summar
         deadline,
         phase="composition_interaction",
         interventions=compositions,
-        failure_cases=_balanced_cases(fail, min(16, len(fail))),
+        failure_cases=_unresolved_failure_cases(campaign)[:32],
         sentinel_cases=_balanced_cases(passed, min(16, len(passed))),
         seed=int(campaign.cfg["seeds"][0]),
     )
@@ -2571,20 +2959,17 @@ def phase_composition(campaign: Test12Campaign, deadline: float, combined_summar
         survivors = _rank_mechanisms(ranked, campaign, min(8, len(compositions)))
         if survivors:
             rows.extend(
-                _matrix(
+                _opportunity_search(
                     campaign,
                     deadline,
-                    phase="composition_interaction",
+                    phase="composition_opportunity_search",
                     interventions=survivors,
-                    cases=_coverage_cases(campaign),
-                    seeds=[int(campaign.cfg["seeds"][1])],
-                    coverage_rounds=1,
                 )
             )
     campaign.positive_work(
         "composition_interaction",
         start,
-        "all generated composition candidates receive first coverage; replication depth is adaptive",
+        "all generated compositions receive one breadth look; survivors search new unresolved phenotypes instead of proving prior rescues",
     )
     return _group_summary(rows, campaign.cfg, lambda row: str(row["intervention_id"]))
 
@@ -2594,9 +2979,17 @@ def phase_routing(campaign: Test12Campaign, deadline: float) -> dict[str, Any]:
     start = len(campaign.rows)
     ids = {"SELF-ROUTER","RISK-GATED-VERIFY","STOP-WHEN-SUFFICIENT"}
     interventions = [row for row in campaign.interventions if row["id"] in ids]
-    cases = _balanced_cases(campaign.partitions["DISCOVERY"], min(64, len(campaign.partitions["DISCOVERY"])))
-    rows = _matrix(campaign, deadline, phase="adaptive_routing", interventions=interventions, cases=cases)
-    campaign.positive_work("adaptive_routing", start, "deployment-valid routing using only visible prompt/model-generated state; no oracle family/difficulty routing")
+    rows = _opportunity_search(
+        campaign,
+        deadline,
+        phase="adaptive_routing",
+        interventions=interventions,
+    )
+    campaign.positive_work(
+        "adaptive_routing",
+        start,
+        "deployment-valid routing across unresolved/new hard failures; no oracle routing and no same-fixture proof loops",
+    )
     return _group_summary(rows, campaign.cfg, lambda row: str(row["intervention_id"]))
 
 
@@ -3652,19 +4045,26 @@ def phase_negative_transfer(
     sentinels = _balanced_cases(passed, min(64, len(passed)))
     if not candidates or not sentinels:
         return {}
-    rows = _matrix(
+    rows = _novel_sentinel_search(
         campaign,
         deadline,
         phase="negative_transfer_sentinels",
         interventions=candidates,
-        cases=sentinels,
-        seeds=[int(campaign.cfg["seeds"][1]), int(campaign.cfg["seeds"][2])],
-        coverage_rounds=1,
+        max_per_intervention=int(campaign.cfg["max_collection_sentinels_per_intervention"]),
     )
+    if campaign.can_start(deadline):
+        rows.extend(
+            _opportunity_search(
+                campaign,
+                deadline,
+                phase="negative_transfer_rescue_discovery",
+                interventions=candidates,
+            )
+        )
     campaign.positive_work(
         "negative_transfer_sentinels",
         start,
-        "highest-value controls challenged on balanced baseline-pass sentinels across families",
+        "sample novel negative boundaries per control, then return clock to unresolved rescue/frontier discovery",
     )
     return _group_summary(rows, campaign.cfg, lambda row: str(row["intervention_id"]))
 
@@ -3737,21 +4137,19 @@ def phase_reserve(campaign: Test12Campaign, deadline: float, summary: dict[str, 
     ]
     best = _rank_mechanisms(summary, campaign, 12)
     interventions = list({row["id"]: row for row in [*uncertain, *best]}.values()) or campaign.interventions[:12]
-    cases = _coverage_cases(campaign, "DISCOVERY")
     if campaign.can_start(deadline):
         rows.extend(
-            _matrix(
+            _opportunity_search(
                 campaign,
                 deadline,
                 phase="uncertainty_reserve",
                 interventions=interventions,
-                cases=cases,
             )
         )
     campaign.positive_work(
         "uncertainty_reserve",
         start,
-        "fill missing family x mandatory-surface evidence first, then reduce residual uncertainty",
+        "fill mandatory family/surface gaps, then maximize new phenotypes, unique rescues, unseen fixtures, and harder strong-family frontiers",
     )
     return _group_summary(rows, campaign.cfg, lambda row: str(row["intervention_id"]))
 
@@ -3777,6 +4175,70 @@ def _coverage_ledger(campaign: Test12Campaign) -> dict[str, Any]:
         for category in sorted({row["category"] for row in campaign.interventions})
     }
     return {"schema_version":1,"mechanisms":by_mechanism,"categories":categories}
+
+
+
+def _opportunity_discovery_map(campaign: Test12Campaign) -> dict[str, Any]:
+    controls = [
+        row for row in campaign.rows
+        if row.get("partition") == "DISCOVERY"
+        and row.get("intervention_id") == "CONTROL"
+    ]
+    treatments = [
+        row for row in campaign.rows
+        if row.get("partition") == "DISCOVERY"
+        and row.get("intervention_id") not in {None, "CONTROL"}
+    ]
+    failed_fixture_ids = {
+        str(row.get("fixture_id"))
+        for row in controls
+        if float(row.get("score", 0.0)) < 1.0
+    }
+    rescue_rows = [
+        row for row in treatments
+        if float(row.get("control_score", 0.0)) < 1.0
+        and float(row.get("score", 0.0)) >= 1.0
+    ]
+    rescued_fixture_ids = {str(row.get("fixture_id")) for row in rescue_rows}
+    rescue_pairs = {
+        (str(row.get("fixture_id")), str(row.get("intervention_id")))
+        for row in rescue_rows
+    }
+    treatment_pairs = {
+        (str(row.get("fixture_id")), str(row.get("intervention_id")))
+        for row in treatments
+    }
+
+    phenotypes: dict[str, set[str]] = defaultdict(set)
+    for fixture_id in failed_fixture_ids:
+        case = campaign.case_by_id.get(fixture_id)
+        if case is None:
+            continue
+        phenotypes[_failure_phenotype(campaign, case)].add(fixture_id)
+
+    family_stats = _baseline_family_stats(campaign)
+    return {
+        "schema_version": 1,
+        "collection_role": "OPPORTUNITY_DISCOVERY",
+        "proof_owner": "RUN2_TEST2",
+        "control_observations": len(controls),
+        "treatment_observations": len(treatments),
+        "unique_failed_fixtures": len(failed_fixture_ids),
+        "unique_rescued_fixtures": len(rescued_fixture_ids),
+        "unique_rescue_fixture_control_pairs": len(rescue_pairs),
+        "rescue_observations": len(rescue_rows),
+        "unique_failure_phenotypes": len(phenotypes),
+        "failure_phenotypes": {
+            key: sorted(values) for key, values in sorted(phenotypes.items())
+        },
+        "repeated_same_fixture_control_observations": max(0, len(treatments) - len(treatment_pairs)),
+        "rescued_fixture_search_policy": "HAND_OFF_AFTER_FIRST_RESCUE",
+        "same_fixture_seed_replication_policy": "RUN2_TEST2_ONLY",
+        "family_frontier_stats": family_stats,
+        "strong_family_difficulty_escalation": True,
+        "novel_failure_phenotype_priority": True,
+        "unresolved_failed_fixtures": sorted(failed_fixture_ids - rescued_fixture_ids),
+    }
 
 
 def _efficiency_audit(campaign: Test12Campaign) -> dict[str, Any]:
@@ -3839,7 +4301,7 @@ def _efficiency_audit(campaign: Test12Campaign) -> dict[str, Any]:
         "schema_version": 1,
         "stopping_rule": "FIXED_WALL_CLOCK",
         "model_call_cap_role": "RUNAWAY_SAFETY_RAIL_ONLY",
-        "objective": "maximize novel decision-changing model-building evidence per active wall-clock second",
+        "objective": "maximize distinct rescued fixtures, novel failure phenotypes, harder frontier discoveries, and actionable negative boundaries per active wall-clock second",
         "active_window_seconds": ACTIVE_SECONDS,
         "physical_model_calls_observed": physical_calls,
         "control_observations": len(controls),
@@ -4463,7 +4925,9 @@ def write_outputs(campaign: Test12Campaign, results: dict[str, Any]) -> None:
     store.write_json("test1.2-priority-queue.json", {"schema_version":1,"queue":queue}, producer="test1.2", stage="report")
     store.write_json("test1.2-uncertainty-ledger.json", {"schema_version":1,"unknowns":unknowns}, producer="test1.2", stage="report")
     efficiency_audit = _efficiency_audit(campaign)
+    opportunity_map = _opportunity_discovery_map(campaign)
     store.write_json("test1.2-efficiency-audit.json", efficiency_audit, producer="test1.2", stage="report")
+    store.write_json("test1.2-opportunity-discovery-map.json", opportunity_map, producer="test1.2", stage="report")
     store.write_json("test1.2-handoff.json", {
         "schema_version":1,
         "source_seed_run":campaign.source.get("run_id"),
@@ -4494,6 +4958,12 @@ def write_outputs(campaign: Test12Campaign, results: dict[str, Any]) -> None:
         "zero_clock_model_calls_added":zero_clock_training["zero_model_calls_added"],
         "zero_clock_active_test_seconds_added":zero_clock_training["zero_active_test_seconds_added"],
         "efficiency_audit":"test1.2-efficiency-audit.json",
+        "opportunity_discovery_map":"test1.2-opportunity-discovery-map.json",
+        "collection_role":"OPPORTUNITY_DISCOVERY",
+        "proof_owner":"RUN2_TEST2",
+        "unique_rescued_fixtures":opportunity_map["unique_rescued_fixtures"],
+        "unique_failure_phenotypes":opportunity_map["unique_failure_phenotypes"],
+        "unresolved_failed_fixtures":opportunity_map["unresolved_failed_fixtures"],
         "estimated_physical_calls_avoided":efficiency_audit["estimated_physical_calls_avoided"],
         "partial_controller_dead_ends":efficiency_audit["efficiency_counters"]["partial_controller_dead_ends"],
     }, producer="test1.2", stage="report")
