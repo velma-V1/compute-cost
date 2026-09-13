@@ -13,6 +13,8 @@ from compute_cost.test12_campaign import (
     _family_surface_gap_queue,
     _row_integrity_hash,
     _source_headroom,
+    _unmeasured_frontier_cases,
+    _unresolved_failure_cases,
     load_test12_recovery,
     CONTROL_GRAMMAR,
     CORE_INTERVENTIONS,
@@ -155,10 +157,17 @@ def test_collection_plan_is_full_campaign_under_14_hour_two_run_contract():
     assert plan["prohibited_partitions"] == ["TEST2_BLIND", "TEST3_PROTECTED"]
     assert plan["generated_prompt_control_count"] >= 200
     assert plan["control_search_contract"] == (
-        "EVERY_DECLARED_CONTROL_CANDIDATE_GETS_MINIMUM_COVERAGE_BEFORE_REPLICATION_DEPTH_IS_ADAPTIVE"
+        "EVERY_DECLARED_CONTROL_CANDIDATE_GETS_MINIMUM_COVERAGE_THEN_CLOCK_SHIFTS_TO_NOVEL_OPPORTUNITY_DISCOVERY"
     )
     assert plan["adaptive_allocation"]["coverage_floor_first"] is True
-    assert plan["adaptive_allocation"]["successive_halving"] is True
+    assert plan["adaptive_allocation"]["successive_halving"] is False
+    assert plan["adaptive_allocation"]["exact_failure_replay"] is False
+    assert plan["adaptive_allocation"]["collection_role"] == "OPPORTUNITY_DISCOVERY"
+    assert plan["adaptive_allocation"]["proof_owner"] == "RUN2_TEST2"
+    assert plan["adaptive_allocation"]["rescue_handoff_after_first_success"] is True
+    assert plan["adaptive_allocation"]["failure_phenotype_diversity_first"] is True
+    assert plan["adaptive_allocation"]["strong_family_difficulty_escalation"] is True
+    assert plan["adaptive_allocation"]["same_fixture_seed_replication_in_collection"] is False
     assert plan["adaptive_allocation"]["oracle_routing_prohibited"] is True
     assert plan["adaptive_allocation"]["campaign_early_stop"] is False
     assert plan["adaptive_allocation"]["stopping_rule"] == "FIXED_WALL_CLOCK"
@@ -195,6 +204,7 @@ def test_collection_plan_is_full_campaign_under_14_hour_two_run_contract():
         "dynamic-replanning-map.json",
         "second-frontier-gap-value-map.json",
         "test1.2-efficiency-audit.json",
+        "test1.2-opportunity-discovery-map.json",
     }:
         assert required in plan["required_outputs"]
 
@@ -1514,3 +1524,154 @@ def test_collection_value_gaps_remain_explicit_tuning_inputs():
     ]
     assert state["instruction_following_constraint_stacking"]["missing_critical_value_dimensions"] == ["seed_stability"]
     assert state["tool_selection"]["missing_critical_value_dimensions"] == ["hard_case_lift"]
+
+
+
+def test_collection_discovery_hands_off_after_one_full_rescue():
+    row = {
+        "intervention_id": "CTRL-X",
+        "control_score": 0.0,
+        "score": 1.0,
+        "classification": {"result_class": "WRONG_ANSWER"},
+        "model_calls_per_application": 1,
+        "cost": {
+            "prompt_tokens_observed": 10,
+            "output_tokens_observed": 10,
+            "wall_seconds": 0.1,
+        },
+    }
+    summary = test12_module.mechanism_summary(
+        [row],
+        test12_module.DEFAULT_TEST12_CONFIG,
+    )
+    assert summary["full_rescues"] == 1
+    assert summary["discovery_status"] == "NEW_RESCUE_OPPORTUNITY"
+    assert summary["verification_debt"]["collection_is_proof"] is False
+    assert summary["verification_debt"]["requires_run2_recurrence"] is True
+
+
+def test_unresolved_failure_queue_prefers_rare_failure_phenotype_and_excludes_rescued():
+    family = TEST2_CAPABILITY_FAMILIES[0]
+    cases = [
+        {
+            "id": "common-1",
+            "category": family,
+            "difficulty_level": 6,
+            "prompt": "x",
+            "scorer": "exact",
+        },
+        {
+            "id": "common-2",
+            "category": family,
+            "difficulty_level": 7,
+            "prompt": "x",
+            "scorer": "exact",
+        },
+        {
+            "id": "common-3",
+            "category": family,
+            "difficulty_level": 8,
+            "prompt": "x",
+            "scorer": "exact",
+        },
+        {
+            "id": "rare-1",
+            "category": family,
+            "difficulty_level": 9,
+            "prompt": "x",
+            "scorer": "exact",
+        },
+    ]
+    rows = []
+    for case in cases:
+        rows.append({
+            "partition": "DISCOVERY",
+            "intervention_id": "CONTROL",
+            "fixture_id": case["id"],
+            "family_id": family,
+            "difficulty_level": case["difficulty_level"],
+            "score": 0.0,
+            "classification": {
+                "result_class": "RARE_FAILURE"
+                if case["id"] == "rare-1"
+                else "COMMON_FAILURE"
+            },
+        })
+    fake = type("FakeCampaign", (), {
+        "rows": rows,
+        "partitions": {"DISCOVERY": cases},
+    })()
+    ordered = _unresolved_failure_cases(fake)
+    assert ordered[0]["id"] == "rare-1"
+
+    fake.rows.append({
+        "partition": "DISCOVERY",
+        "intervention_id": "CTRL-X",
+        "intervention_category": "PROMPT_CONTROL",
+        "fixture_id": "rare-1",
+        "family_id": family,
+        "difficulty_level": 9,
+        "control_score": 0.0,
+        "score": 1.0,
+        "classification": {"result_class": "PASS"},
+    })
+    ordered = _unresolved_failure_cases(fake)
+    assert "rare-1" not in {row["id"] for row in ordered}
+
+
+def test_strong_family_frontier_escalates_to_harder_unseen_cases():
+    strong = TEST2_CAPABILITY_FAMILIES[0]
+    weak = TEST2_CAPABILITY_FAMILIES[1]
+    strong_seen = {
+        "id": "strong-seen",
+        "category": strong,
+        "difficulty_level": 8,
+        "prompt": "x",
+        "scorer": "exact",
+    }
+    strong_hard = {
+        "id": "strong-hard",
+        "category": strong,
+        "difficulty_level": 10,
+        "prompt": "x",
+        "scorer": "exact",
+    }
+    weak_seen = {
+        "id": "weak-seen",
+        "category": weak,
+        "difficulty_level": 5,
+        "prompt": "x",
+        "scorer": "exact",
+    }
+    weak_hard = {
+        "id": "weak-hard",
+        "category": weak,
+        "difficulty_level": 10,
+        "prompt": "x",
+        "scorer": "exact",
+    }
+    fake = type("FakeCampaign", (), {
+        "rows": [
+            {
+                "partition": "DISCOVERY",
+                "intervention_id": "CONTROL",
+                "fixture_id": "strong-seen",
+                "family_id": strong,
+                "difficulty_level": 8,
+                "score": 1.0,
+            },
+            {
+                "partition": "DISCOVERY",
+                "intervention_id": "CONTROL",
+                "fixture_id": "weak-seen",
+                "family_id": weak,
+                "difficulty_level": 5,
+                "score": 0.0,
+            },
+        ],
+        "partitions": {
+            "DISCOVERY": [strong_seen, strong_hard, weak_seen, weak_hard],
+        },
+    })()
+    ordered = _unmeasured_frontier_cases(fake)
+    assert ordered[0]["id"] == "strong-hard"
