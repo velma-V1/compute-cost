@@ -237,6 +237,9 @@ RULES = (
     "residual failures are eligible for fine-tuning only after prompt controller compute context retry and tool-policy owners are tested",
     "unused active time is allocated to new opportunity discovery before any replication",
     "Test 1.2 Collection is an opportunity-discovery stage, not a proof stage; recurrence, robustness, and confidence-building belong to Run 2/Test 2",
+    "runtime semantics questions 1-6 and 9-10 are measured before ordinary capability discovery so downstream scores cannot inherit an unverified Ollama contract",
+    "paired auditor/executor questions 32-34 and 38 are measured before manufacturing so role specialization is observed rather than assumed",
+    "gpt-oss sampling compares temperature=1.0 and top_p=1.0 against the local runtime path rather than inheriting defaults silently",
     "one genuine rescue is sufficient to create an opportunity candidate with explicit verification debt; Collection must not spend repeated trials proving that candidate",
     "once a failing fixture is rescued, that fixture is deprioritized for further rescue search and clock moves to unresolved failures, unseen fixtures, new failure phenotypes, new families, or harder frontiers",
     "where the model performs strongly, difficulty escalates toward the hardest unseen fixtures instead of repeating easy or already-passed cases",
@@ -792,6 +795,16 @@ def build_test12_plan(cases: list[dict[str, Any]], *, seed_run: str | None = Non
         ),
         "family_control_surfaces": list(FAMILY_CONTROL_SURFACES),
         "improvement_surface": list(IMPROVEMENT_SURFACE),
+        "foundation_question_count": len(FOUNDATION_QUESTIONS),
+        "foundation_priority_order": [
+            [1,2,3,4,5,6],
+            [11,12,13],
+            [32,33,34,38],
+            [7,8,9,10],
+            list(range(14,46)),
+        ],
+        "runtime_semantics_gate_required": True,
+        "role_specialization_gate_required": True,
         "core_mechanism_count": len(CORE_INTERVENTIONS),
         "generated_prompt_control_count": len(generate_prompt_control_candidates()),
         "finite_control_grammar": copy.deepcopy(CONTROL_GRAMMAR),
@@ -5039,10 +5052,14 @@ def run_test12_campaign(
         counters_before = copy.deepcopy(campaign.efficiency_counters)
         run_id = getattr(runner.store, "run_id", None)
         physical_before = int(getattr(runner, "_model_call_counts", {}).get(run_id, 0)) if run_id else 0
-        if phase_name == "baseline_capability_map":
+        if phase_name == "runtime_semantics_gate":
+            results["runtime_semantics"] = run_runtime_semantics_gate(campaign, deadline)
+        elif phase_name == "baseline_capability_map":
             results["baseline"] = phase_baseline(campaign, deadline)
         elif phase_name == "fractional_compute_surface":
             results["reasoning"] = phase_reasoning_compute(campaign, deadline)
+        elif phase_name == "role_specialization_gate":
+            results["role_specialization"] = run_role_specialization_lab(campaign, deadline)
         elif phase_name == "capability_family_manufacturing_floor":
             results["family_floor"] = phase_family_control_floor(campaign, deadline)
         elif phase_name == "mechanism_coverage_floor":
