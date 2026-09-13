@@ -86,6 +86,7 @@ DEFAULT_TEST2_CONFIG: dict[str, Any] = {
     "expected_calls": 4100,
     "safety_call_cap": 10000,
     "generation_budget": 256,
+    "generation_budget_by_family": {},
     "thinking_mode": False,
     "reasoning_effort": None,
     "bootstrap_samples": 500,
@@ -459,7 +460,12 @@ def _spec(
         changed_variable="baseline" if baseline else "prompt_variant",
         thinking_mode=bool(cfg["thinking_mode"]),
         reasoning_effort=cfg.get("reasoning_effort"),
-        generation_budget=int(cfg["generation_budget"]),
+        generation_budget=int(
+            (cfg.get("generation_budget_by_family") or {}).get(
+                _family(case),
+                cfg["generation_budget"],
+            )
+        ),
         context_request=None,
         temperature=0.0,
         seed=42,
@@ -493,6 +499,15 @@ class Test2Campaign:
         self.sequence = 0
         self.rows: list[dict[str, Any]] = []
         self.current_baselines: dict[str, float] = dict(handoff.get("baselines") or {})
+        self.current_baseline_validity: dict[str, bool] = {
+            str(key): True for key in self.current_baselines
+        }
+        self.current_baseline_budgets: dict[str, int] = {}
+        inherited_budgets = handoff.get("generation_budget_by_family") or {}
+        if inherited_budgets:
+            self.cfg["generation_budget_by_family"] = {
+                str(family): int(value) for family, value in inherited_budgets.items()
+            }
         self.noise_sigma = max(
             EPSILON_NOISE,
             float((handoff.get("noise_model") or {}).get("global_noise_sigma", EPSILON_NOISE)),
@@ -566,7 +581,13 @@ class Test2Campaign:
             if valid and isinstance(score, (int, float)) and not isinstance(score, bool)
             else 0.0
         )
-        self.current_baselines[fixture_id] = numeric
+        budget = int((row.get("experiment") or {}).get("generation_budget") or self.cfg["generation_budget"])
+        self.current_baseline_validity[fixture_id] = bool(valid)
+        self.current_baseline_budgets[fixture_id] = budget
+        if valid:
+            self.current_baselines[fixture_id] = numeric
+        else:
+            self.current_baselines.pop(fixture_id, None)
         self._record(
             case,
             row,
@@ -579,9 +600,11 @@ class Test2Campaign:
                 "placement": "none",
             },
             baseline_score=numeric,
+            baseline_valid=bool(valid),
+            baseline_budget=budget,
             source_key=None,
         )
-        return numeric
+        return numeric if valid else None
 
     def treatment(
         self,
@@ -607,7 +630,11 @@ class Test2Campaign:
             refreshed = self.control(case, deadline, phase=phase, blind=blind, force=True)
             if refreshed is not None:
                 baseline = refreshed
-        if baseline is None or not self.can_start(deadline):
+        if (
+            baseline is None
+            or not self.current_baseline_validity.get(fixture_id, False)
+            or not self.can_start(deadline)
+        ):
             return None
 
         ids = [str(value) for value in recipe.get("ingredient_ids") or []]
@@ -648,6 +675,16 @@ class Test2Campaign:
             kind=kind,
             recipe=recipe,
             baseline_score=float(baseline),
+            baseline_valid=True,
+            baseline_budget=int(
+                self.current_baseline_budgets.get(
+                    fixture_id,
+                    (self.cfg.get("generation_budget_by_family") or {}).get(
+                        _family(case),
+                        self.cfg["generation_budget"],
+                    ),
+                )
+            ),
             source_key=source_key,
         )
 
@@ -660,6 +697,8 @@ class Test2Campaign:
         kind: str,
         recipe: dict[str, Any],
         baseline_score: float,
+        baseline_valid: bool,
+        baseline_budget: int,
         source_key: str | None,
     ) -> dict[str, Any]:
         score = row.get("score")
@@ -669,6 +708,12 @@ class Test2Campaign:
             if valid and isinstance(score, (int, float)) and not isinstance(score, bool)
             else 0.0
         )
+        treatment_budget = int(
+            (row.get("experiment") or {}).get("generation_budget")
+            or self.cfg["generation_budget"]
+        )
+        budget_valid = treatment_budget == int(baseline_budget)
+        delta_valid = bool(valid and baseline_valid and budget_valid)
         record = {
             "schema_version": 1,
             "timestamp_utc": self.runner._utc(),
@@ -680,9 +725,15 @@ class Test2Campaign:
             "partition": self._partition(case),
             "experiment_id": (row.get("experiment") or {}).get("experiment_id"),
             "classification": copy.deepcopy(row.get("classification") or {}),
+            "valid_for_capability": bool(valid),
+            "baseline_valid_for_capability": bool(baseline_valid),
+            "baseline_generation_budget": int(baseline_budget),
+            "treatment_generation_budget": treatment_budget,
+            "budget_comparison_valid": bool(budget_valid),
+            "delta_valid": bool(delta_valid),
             "score": numeric,
             "baseline_score": baseline_score,
-            "delta": numeric - baseline_score,
+            "delta": (numeric - baseline_score) if delta_valid else 0.0,
             "recipe": copy.deepcopy(recipe),
             "source_key": source_key,
             "timing": copy.deepcopy(row.get("timing") or {}),
@@ -704,6 +755,8 @@ def _effect_map(
     samples: dict[str, dict[str, Any]] = {}
     for row in rows:
         if row.get("kind") == "control":
+            continue
+        if row.get("delta_valid") is not True:
             continue
         key = key_fn(row)
         grouped[key].append(float(row.get("delta", 0.0)))
