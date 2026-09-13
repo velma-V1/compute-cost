@@ -521,10 +521,41 @@ def load_collection(results_root: Path, run_id: str) -> dict[str, Any]:
         "calibration_verify": _read_jsonl(run_dir / "calibration-verify-supervision-corpus.jsonl"),
     }
     registry = _read_json(run_dir / "full-control-candidate-registry.json")
+
+    # The original Collection reports are immutable evidence artifacts, but
+    # pre-validity-fix runs may have derived capability deltas from invalid
+    # generations. Rebuild an analytical overlay directly from raw evidence.
+    raw_collection_rows = _read_jsonl(run_dir / "test1.2-observations.jsonl")
+    sanitized_collection_rows, collection_sanitization = (
+        _sanitize_collection_observations(raw_collection_rows)
+    )
+    rebuilt = _rebuild_collection_analytics(
+        sanitized_collection_rows,
+        registry,
+    )
+    value_completeness = rebuilt["value_completeness"]
+    collection_value_gap_families = sorted(
+        str(value)
+        for value in (value_completeness.get("incomplete_families") or [])
+    )
+    collection_value_gaps = {
+        family: copy.deepcopy(
+            ((value_completeness.get("families") or {}).get(family) or {})
+        )
+        for family in collection_value_gap_families
+    }
+    improvement_dossiers = rebuilt["dossiers"]
+    negative_exploitation = rebuilt["negative_exploitation"]
+    frontier_shift = rebuilt["frontier_shift"]
+    compute_elasticity = rebuilt["compute_elasticity"]
+    sanitized_frontier = rebuilt["frontier"]
+
     return {
         "run_id": run_id,
         "run_dir": str(run_dir),
         "registry": registry,
+        "collection_sanitization": collection_sanitization,
+        "sanitized_collection_observations": sanitized_collection_rows,
         "coverage": coverage,
         "family_coverage": family_coverage,
         "manufacturing_map": manufacturing_map,
@@ -540,7 +571,8 @@ def load_collection(results_root: Path, run_id: str) -> dict[str, Any]:
         "zero_clock_model": zero_clock_model,
         "opportunity_discovery": opportunity_discovery,
         "zero_clock_assets": zero_clock_assets,
-        "frontier": _read_json(run_dir / "cost-value-frontier-1.2.json"),
+        "frontier": sanitized_frontier,
+        "legacy_frontier": _read_json(run_dir / "cost-value-frontier-1.2.json"),
         "activation": _read_json(run_dir / "activation-boundary-map.json"),
         "negative": _read_json(run_dir / "negative-transfer-map-1.2.json"),
         "fine_tuning": _read_json(run_dir / "fine-tuning-readiness-map-1.2.json"),
