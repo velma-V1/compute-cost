@@ -53,6 +53,7 @@ TUNING_PHASES = (
 
 REQUIRED_COLLECTION_FILES = (
     "test1.2-observations.jsonl",
+    "test1.2-opportunity-discovery-map.json",
     "full-control-candidate-registry.json",
     "control-grammar-coverage.json",
     "mechanism-coverage-ledger.json",
@@ -311,6 +312,11 @@ def load_collection(results_root: Path, run_id: str) -> dict[str, Any]:
         for name in expected_second_labs
     ):
         raise ValueError("one or more second-gap maps are missing measured output")
+    opportunity_discovery = _read_json(run_dir / "test1.2-opportunity-discovery-map.json")
+    if opportunity_discovery.get("collection_role") != "OPPORTUNITY_DISCOVERY":
+        raise ValueError("collection opportunity-discovery contract drifted")
+    if opportunity_discovery.get("proof_owner") != "RUN2_TEST2":
+        raise ValueError("collection incorrectly claims proof ownership")
     zero_clock_model = _read_json(run_dir / "zero-clock-model-manufacturing-map.json")
     if zero_clock_model.get("zero_model_calls_added") is not True:
         raise ValueError("zero-clock model refinery must add zero model calls")
@@ -357,6 +363,7 @@ def load_collection(results_root: Path, run_id: str) -> dict[str, Any]:
         "frontier_gap_maps": frontier_gap_maps,
         "second_gap_maps": second_gap_maps,
         "zero_clock_model": zero_clock_model,
+        "opportunity_discovery": opportunity_discovery,
         "zero_clock_assets": zero_clock_assets,
         "frontier": _read_json(run_dir / "cost-value-frontier-1.2.json"),
         "activation": _read_json(run_dir / "activation-boundary-map.json"),
@@ -474,15 +481,27 @@ def _candidate_registry(collection: dict[str, Any], limit: int) -> list[dict[str
             continue
         if row.get("classification") == "CAPABILITY_HARM":
             continue
-        ranked.append((float(row.get("net_value", 0.0)), float(row.get("value_per_call",0.0)), ident))
+        discovery_rank = {
+            "NEW_RESCUE_OPPORTUNITY": 3,
+            "NEGATIVE_BOUNDARY_OPPORTUNITY": 1,
+            "NO_OBSERVED_OPPORTUNITY": 0,
+        }.get(str(row.get("discovery_status") or ""), 0)
+        ranked.append((
+            discovery_rank,
+            int(row.get("rescues") or 0),
+            float(row.get("net_value", 0.0)),
+            float(row.get("value_per_call", 0.0)),
+            ident,
+        ))
     ranked.sort(reverse=True)
     result = []
-    for _, __, ident in ranked[:limit]:
+    for _, __, ___, ____, ident in ranked[:limit]:
         item = by_id[ident]
         item["collection_rank_source"] = next(
             (row for row in (collection.get("frontier") or {}).get("ranked", []) if row.get("intervention_id") == ident),
             {},
         )
+        item["verification_owner"] = "RUN2_TEST2"
         result.append(item)
     return result
 
@@ -1513,6 +1532,9 @@ def run_test12_tuning(
         "zero_clock_model_manufacturing":copy.deepcopy(
             collection.get("zero_clock_model") or {}
         ),
+        "collection_opportunity_discovery":copy.deepcopy(
+            collection.get("opportunity_discovery") or {}
+        ),
         "direct_default_when_unmatched":True,
         "oracle_routing_prohibited":True,
         "hard_ceiling_total_seconds":TUNING_HARD_SECONDS+COLLECTION_HARD_SECONDS,
@@ -1592,6 +1614,11 @@ def run_test12_tuning(
         "resolved_collection_value_gap_families":resolved_collection_value_gap_families,
         "unresolved_collection_value_gap_families":unresolved_collection_value_gap_families,
         "collection_value_gaps_are_tuning_priorities_not_preflight_blockers":True,
+        "collection_role":"OPPORTUNITY_DISCOVERY",
+        "proof_owner":"RUN2_TEST2",
+        "collection_opportunity_discovery":copy.deepcopy(
+            collection.get("opportunity_discovery") or {}
+        ),
         "no_additional_characterization_test_required":True,
         "recovery_policy":{
             "full_rerun_allowed":False,
