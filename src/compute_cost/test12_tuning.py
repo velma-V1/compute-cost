@@ -693,16 +693,41 @@ def _score_policy_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
             "mean_calls":0.0,
             "net_value":-999.0,
         }
-    scores=[float(row.get("score") or 0.0) for row in rows]
-    control_scores=[float(row.get("control_score") or 0.0) for row in rows]
-    deltas=[float(row.get("delta") or 0.0) for row in rows]
+    valid_rows=[
+        row for row in rows
+        if row.get("delta_valid") is True
+        or (
+            "delta_valid" not in row
+            and row.get("valid_for_capability") is not False
+            and row.get("control_valid_for_capability") is not False
+        )
+    ]
+    invalid_count=len(rows)-len(valid_rows)
+    if not valid_rows:
+        return {
+            "n":0,
+            "raw_n":len(rows),
+            "invalid_observations_excluded":invalid_count,
+            "mean_score":0.0,
+            "pass_rate":0.0,
+            "mean_control_score":0.0,
+            "mean_delta":0.0,
+            "regression_rate":1.0,
+            "mean_calls":0.0,
+            "net_value":-999.0,
+        }
+    scores=[float(row.get("score") or 0.0) for row in valid_rows]
+    control_scores=[float(row.get("control_score") or 0.0) for row in valid_rows]
+    deltas=[float(row.get("delta") or 0.0) for row in valid_rows]
     regressions=sum(1 for value in deltas if value < 0)
-    calls=[float(row.get("model_calls") or 0.0) for row in rows]
+    calls=[float(row.get("model_calls") or 0.0) for row in valid_rows]
     mean_delta=mean(deltas)
     regression_rate=regressions/len(rows)
     mean_calls=mean(calls)
     return {
-        "n":len(rows),
+        "n":len(valid_rows),
+        "raw_n":len(rows),
+        "invalid_observations_excluded":invalid_count,
         "mean_score":mean(scores),
         "pass_rate":sum(1 for value in scores if value >= 1.0)/len(scores),
         "mean_control_score":mean(control_scores),
@@ -713,7 +738,7 @@ def _score_policy_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
         "regression_rate":regression_rate,
         "mean_calls":mean_calls,
         "net_value":mean_delta - 0.08*mean_calls - 2.0*regression_rate,
-        "families":sorted({str(row.get("family_id")) for row in rows}),
+        "families":sorted({str(row.get("family_id")) for row in valid_rows}),
     }
 
 
@@ -988,6 +1013,9 @@ class TuningRun:
         if control is None:
             return None
         control_score=float(control.get("score") or 0.0)
+        control_valid=bool(control.get("valid_for_capability")) or (
+            (control.get("classification") or {}).get("valid_for_capability") is True
+        )
         policy_id=str(policy["policy_id"])
         if policy["mode"]=="direct":
             row={
@@ -995,6 +1023,9 @@ class TuningRun:
                 "family_id":_family(case),"seed":seed,"control_score":control_score,
                 "score":control_score,"delta":0.0,"model_calls":0,"route":"DIRECT",
                 "selected_intervention_id":None,
+                "valid_for_capability":control_valid,
+                "control_valid_for_capability":control_valid,
+                "delta_valid":control_valid,
             }
         else:
             router_aux=None
@@ -1019,6 +1050,9 @@ class TuningRun:
                     "family_id":_family(case),"seed":seed,"control_score":control_score,
                     "score":score,"delta":0.0,"model_calls":calls,"route":route or "DIRECT",
                     "selected_intervention_id":None,
+                    "valid_for_capability":control_valid,
+                    "control_valid_for_capability":control_valid,
+                    "delta_valid":control_valid,
                 }
             else:
                 trial=self._treatment_trial(selected,case,deadline,seed=seed)
@@ -1029,8 +1063,15 @@ class TuningRun:
                     "schema_version":1,"policy_id":policy_id,"fixture_id":_fixture_id(case),
                     "family_id":_family(case),"seed":seed,"control_score":control_score,
                     "score":float(trial.get("score") or 0.0),
-                    "delta":float(trial.get("score") or 0.0)-control_score,
+                    "delta":(
+                        float(trial.get("score") or 0.0)-control_score
+                        if trial.get("delta_valid") is True
+                        else 0.0
+                    ),
                     "model_calls":calls,"route":route,
+                    "valid_for_capability":bool(trial.get("valid_for_capability")),
+                    "control_valid_for_capability":control_valid,
+                    "delta_valid":trial.get("delta_valid") is True,
                     "selected_intervention_id":selected.get("id"),
                     "trial":trial,
                 }
