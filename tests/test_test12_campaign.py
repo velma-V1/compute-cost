@@ -45,6 +45,8 @@ from compute_cost.test12_tuning import (
     _family_is_safe,
     _priority_validation,
     _score_policy_rows,
+    _sanitize_collection_observations,
+    _rebuild_collection_analytics,
     _tuning_row_hash,
     load_tuning_recovery,
     _top_family_safe_policies,
@@ -88,6 +90,8 @@ from compute_cost.test12_value import (
     build_value_completeness,
     observation_value_index,
 )
+
+from compute_cost.test12_model_manufacturing import build_zero_clock_model_manufacturing
 
 
 def _cases(n: int = 800):
@@ -1717,3 +1721,155 @@ def test_run2_prioritizes_new_rescue_opportunity_over_replicated_null():
     selected = _candidate_registry(collection, 1)
     assert [row["id"] for row in selected] == ["NEW"]
     assert selected[0]["verification_owner"] == "RUN2_TEST2"
+
+
+
+def test_invalid_runtime_rows_never_create_capability_rescues_or_regressions():
+    family = "arithmetic_numerical_reasoning"
+    raw = [
+        {
+            "partition": "DISCOVERY",
+            "fixture_id": "fake-rescue",
+            "family_id": family,
+            "intervention_id": "CONTROL",
+            "intervention_category": "CONTROL",
+            "seed": 42,
+            "score": 0.0,
+            "classification": {
+                "result_class": "THINK_TRUNCATED",
+                "valid_for_capability": False,
+            },
+        },
+        {
+            "partition": "DISCOVERY",
+            "fixture_id": "fake-rescue",
+            "family_id": family,
+            "intervention_id": "CTRL-X",
+            "intervention_category": "PROMPT_CONTROL",
+            "seed": 42,
+            "control_score": 0.0,
+            "score": 1.0,
+            "delta": 1.0,
+            "task_text": "task",
+            "control_response_text": "",
+            "treatment_response_text": "ok",
+            "classification": {
+                "result_class": "ANSWER_CORRECT",
+                "valid_for_capability": True,
+            },
+            "cost": {"wall_seconds": 1.0},
+            "control_cost": {"wall_seconds": 1.0},
+            "model_calls_per_application": 1,
+        },
+        {
+            "partition": "DISCOVERY",
+            "fixture_id": "fake-regression",
+            "family_id": family,
+            "intervention_id": "CONTROL",
+            "intervention_category": "CONTROL",
+            "seed": 42,
+            "score": 1.0,
+            "classification": {
+                "result_class": "ANSWER_CORRECT",
+                "valid_for_capability": True,
+            },
+        },
+        {
+            "partition": "DISCOVERY",
+            "fixture_id": "fake-regression",
+            "family_id": family,
+            "intervention_id": "CTRL-X",
+            "intervention_category": "PROMPT_CONTROL",
+            "seed": 42,
+            "control_score": 1.0,
+            "score": 0.0,
+            "delta": -1.0,
+            "task_text": "task2",
+            "control_response_text": "ok",
+            "treatment_response_text": "",
+            "classification": {
+                "result_class": "THINK_TRUNCATED",
+                "valid_for_capability": False,
+            },
+            "cost": {"wall_seconds": 1.0},
+            "control_cost": {"wall_seconds": 1.0},
+            "model_calls_per_application": 1,
+        },
+    ]
+    sanitized, report = _sanitize_collection_observations(raw)
+    treatments = [row for row in sanitized if row["intervention_id"] == "CTRL-X"]
+    assert all(row["delta_valid"] is False for row in treatments)
+    assert all(row["delta"] == 0.0 for row in treatments)
+    assert report["invalid_capability_pairs"] == 2
+
+    rebuilt = _rebuild_collection_analytics(
+        sanitized,
+        {"candidates": [{"id": "CTRL-X", "category": "PROMPT_CONTROL"}]},
+    )
+    summary = next(
+        row for row in rebuilt["frontier"]["ranked"]
+        if row["intervention_id"] == "CTRL-X"
+    )
+    assert summary["rescues"] == 0
+    assert summary["regressions"] == 0
+    assert summary["invalid_observations_excluded"] == 2
+
+
+def test_tuning_policy_score_excludes_invalid_runtime_outcomes():
+    rows = [
+        {
+            "family_id": "arithmetic_numerical_reasoning",
+            "score": 1.0,
+            "control_score": 0.0,
+            "delta": 1.0,
+            "delta_valid": False,
+            "model_calls": 1,
+        },
+        {
+            "family_id": "arithmetic_numerical_reasoning",
+            "score": 1.0,
+            "control_score": 1.0,
+            "delta": 0.0,
+            "delta_valid": True,
+            "model_calls": 1,
+        },
+    ]
+    scored = _score_policy_rows(rows)
+    assert scored["raw_n"] == 2
+    assert scored["n"] == 1
+    assert scored["invalid_observations_excluded"] == 1
+    assert scored["mean_delta"] == 0.0
+    assert scored["regression_rate"] == 0.0
+
+
+def test_zero_clock_training_refinery_rejects_invalid_fake_rescue():
+    rows = [
+        {
+            "partition": "DISCOVERY",
+            "fixture_id": "fake-rescue",
+            "family_id": "arithmetic_numerical_reasoning",
+            "difficulty_level": 5,
+            "intervention_id": "CTRL-X",
+            "intervention_category": "PROMPT_CONTROL",
+            "task_text": "2+2?",
+            "control_response_text": "",
+            "treatment_response_text": "4",
+            "control_score": 0.0,
+            "score": 1.0,
+            "delta": 1.0,
+            "delta_valid": False,
+            "valid_for_capability": True,
+            "control_valid_for_capability": False,
+            "model_calls_per_application": 1,
+            "cost": {"wall_seconds": 1.0},
+            "control_cost": {"wall_seconds": 1.0},
+        }
+    ]
+    built = build_zero_clock_model_manufacturing(
+        rows,
+        ["arithmetic_numerical_reasoning"],
+    )
+    assert built["invalid_capability_rows_excluded"] == 1
+    assert built["counts"]["harness_to_weight_distillation"] == 0
+    assert built["counts"]["weighted_preference_pairs"] == 0
+    assert built["counts"]["failure_credit_records"] == 0
