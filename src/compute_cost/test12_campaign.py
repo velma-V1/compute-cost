@@ -1418,7 +1418,22 @@ class Test12Campaign:
             self.efficiency_counters["estimated_single_calls_avoided"] += 1
             return None
         self.sequence += 1
-        spec = _spec(self.sequence, case, f"control-s{seed}", self.cfg, None, seed=seed, baseline=True)
+        family_budget_map = self.cfg.get("baseline_generation_budget_by_family") or {}
+        baseline_budget = int(
+            family_budget_map.get(
+                _family(case),
+                self.cfg["base_generation_budget"],
+            )
+        )
+        spec = _spec(
+            self.sequence,
+            case,
+            f"control-s{seed}",
+            self.cfg,
+            {"generation_budget": baseline_budget},
+            seed=seed,
+            baseline=True,
+        )
         label = f"test1.2 control {_fixture_id(case)} s{seed}"
         self._progress(label, True)
         try:
@@ -1434,6 +1449,7 @@ class Test12Campaign:
             "classification": copy.deepcopy(row.get("classification") or {}),
             "response_text": str(row.get("response_text") or ""),
             "experiment_id": spec.experiment_id,
+            "generation_budget": int(spec.generation_budget),
             "metrics": copy.deepcopy(row.get("metrics") or {}),
             "timing": copy.deepcopy(row.get("timing") or {}),
         }
@@ -1538,6 +1554,17 @@ class Test12Campaign:
         if not bool(control.get("valid_for_capability")):
             self.efficiency_counters["invalid_baseline_treatments_avoided"] += 1
             return None
+
+        effective_intervention = copy.deepcopy(intervention)
+        if (
+            effective_intervention.get("category") != "GENERATION_BUDGET"
+            and effective_intervention.get("generation_budget") is None
+        ):
+            effective_intervention["generation_budget"] = int(
+                control.get("generation_budget")
+                or self.cfg["base_generation_budget"]
+            )
+
         if not self._has_runway(deadline, estimated_calls):
             self.efficiency_counters["insufficient_runway_treatments_skipped"] += 1
             self.efficiency_counters["estimated_runway_dead_end_calls_avoided"] += estimated_calls
@@ -1553,7 +1580,7 @@ class Test12Campaign:
 
         def add_aux(stage: str, msgs: list[dict[str, str]]) -> str:
             nonlocal controller_aborted
-            row = self._aux(case, deadline, stage=stage, messages=msgs, intervention=intervention, seed=seed, call_index=len(aux)+1)
+            row = self._aux(case, deadline, stage=stage, messages=msgs, intervention=effective_intervention, seed=seed, call_index=len(aux)+1)
             if row is None:
                 controller_aborted = True
                 return ""
@@ -1754,7 +1781,7 @@ class Test12Campaign:
                 self.efficiency_counters["physical_calls_spent_without_scored_result"] += len(aux)
             return None
         self.sequence += 1
-        spec = _spec(self.sequence, case, f"{phase}-{intervention['id']}-s{seed}", self.cfg, intervention, seed=seed)
+        spec = _spec(self.sequence, case, f"{phase}-{intervention['id']}-s{seed}", self.cfg, effective_intervention, seed=seed)
         label = f"test1.2 {phase} {_fixture_id(case)} {intervention['id']}"
         self._progress(label, True)
         try:
