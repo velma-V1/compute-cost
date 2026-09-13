@@ -613,7 +613,14 @@ def build_family_value_dossiers(
     for family in families:
         family_rows = [row for row in rows if row.get("family_id") == family]
         treatment_rows = [
-            row for row in family_rows if row.get("intervention_id") != "CONTROL"
+            row for row in family_rows
+            if row.get("intervention_id") != "CONTROL"
+            and _row_valid_for_capability(row)
+        ]
+        invalid_treatment_rows = [
+            row for row in family_rows
+            if row.get("intervention_id") != "CONTROL"
+            and not _row_valid_for_capability(row)
         ]
         responses = entries_by_family.get(family, [])
         baseline = (frontier_map.get("families") or {}).get(family, {}).get(
@@ -901,6 +908,11 @@ def build_family_value_dossiers(
         dossiers[family] = {
             "family_id": family,
             "baseline": baseline,
+            "invalid_treatment_observations_excluded": len(invalid_treatment_rows),
+            "invalid_treatment_classes": sorted({
+                str((row.get("classification") or {}).get("result_class") or "UNKNOWN")
+                for row in invalid_treatment_rows
+            }),
             "critical_value_ready": not missing_critical,
             "missing_critical_value_dimensions": missing_critical,
             "value_dimensions": dimensions,
@@ -984,6 +996,8 @@ def contrastive_negative_corpus(
     result = []
     for row in rows:
         if row.get("intervention_id") in {None, "CONTROL"}:
+            continue
+        if not _row_valid_for_capability(row):
             continue
         delta = _number(row.get("delta"))
         if delta >= 0:
