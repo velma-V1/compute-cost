@@ -232,11 +232,16 @@ def load_collection(results_root: Path, run_id: str) -> dict[str, Any]:
     if int(manufacturing_map.get("family_count", 0)) != 40:
         raise ValueError("collection manufacturing map does not contain all 40 capability families")
     value_completeness = _read_json(run_dir / "family-value-completeness.json")
-    if not value_completeness.get("all_families_critical_value_ready"):
-        raise ValueError(
-            "collection lacks critical improvement information for capability families: "
-            + ", ".join(value_completeness.get("incomplete_families") or [])
+    collection_value_gap_families = sorted(
+        str(value)
+        for value in (value_completeness.get("incomplete_families") or [])
+    )
+    collection_value_gaps = {
+        family: copy.deepcopy(
+            ((value_completeness.get("families") or {}).get(family) or {})
         )
+        for family in collection_value_gap_families
+    }
     improvement_dossiers = _read_json(run_dir / "capability-improvement-dossiers.json")
     negative_exploitation = _read_json(run_dir / "negative-effect-exploitation-map.json")
     frontier_shift = _read_json(run_dir / "frontier-shift-map.json")
@@ -343,6 +348,8 @@ def load_collection(results_root: Path, run_id: str) -> dict[str, Any]:
         "family_coverage": family_coverage,
         "manufacturing_map": manufacturing_map,
         "value_completeness": value_completeness,
+        "collection_value_gap_families": collection_value_gap_families,
+        "collection_value_gaps": collection_value_gaps,
         "improvement_dossiers": improvement_dossiers,
         "negative_exploitation": negative_exploitation,
         "frontier_shift": frontier_shift,
@@ -1012,6 +1019,47 @@ def _balanced_validation(run: TuningRun, n: int) -> list[dict[str,Any]]:
     return _balanced_cases(run.validation,min(n,len(run.validation)))
 
 
+def _priority_validation(run: TuningRun, n: int) -> list[dict[str, Any]]:
+    """Spend existing validation budget on unresolved Collection gaps first."""
+    limit = min(int(n), len(run.validation))
+    gap_families = set(run.collection.get("collection_value_gap_families") or [])
+    if not gap_families:
+        return _balanced_validation(run, limit)
+
+    gaps = [case for case in run.validation if _family(case) in gap_families]
+    rest = [case for case in run.validation if _family(case) not in gap_families]
+    # Within unresolved families, buy the hardest evidence first while still
+    # balancing across families. This directly targets hard-case/frontier gaps.
+    gaps = sorted(
+        gaps,
+        key=lambda case: (
+            -int(case.get("difficulty_level") or 0),
+            _family(case),
+            _fixture_id(case),
+        ),
+    )
+    selected: list[dict[str, Any]] = []
+    seen_per_family: dict[str, int] = defaultdict(int)
+    while gaps and len(selected) < limit:
+        gaps.sort(
+            key=lambda case: (
+                seen_per_family[_family(case)],
+                -int(case.get("difficulty_level") or 0),
+                _family(case),
+                _fixture_id(case),
+            )
+        )
+        case = gaps.pop(0)
+        selected.append(case)
+        seen_per_family[_family(case)] += 1
+
+    if len(selected) < limit:
+        selected.extend(
+            _balanced_cases(rest, min(limit - len(selected), len(rest)))
+        )
+    return selected[:limit]
+
+
 def _balanced_partition(cases: list[dict[str, Any]], n: int | None = None) -> list[dict[str, Any]]:
     limit = len(cases) if n is None else min(int(n), len(cases))
     return _balanced_cases(cases, limit)
@@ -1219,26 +1267,26 @@ def run_test12_tuning(
         run._write_checkpoint()
 
         if phase_name=="validation_baseline":
-            cases0=_balanced_validation(run,min(len(run.validation),128))
+            cases0=_priority_validation(run,min(len(run.validation),128))
             for case in cases0:
                 if not run.can_start(deadline): break
                 run.baseline(case,deadline,seed=42)
             scores={}
         elif phase_name=="candidate_harness_screen":
-            scores=_evaluate(run,current,_balanced_validation(run,int(run.cfg["screen_cases"])),deadline,seeds=[42])
+            scores=_evaluate(run,current,_priority_validation(run,int(run.cfg["screen_cases"])),deadline,seeds=[42])
             current=_top_policies(current,scores,max(8,len(current)//2))
         elif phase_name=="successive_halving":
             scores={}
             for n in run.cfg["halving_cases"]:
                 if not run.can_start(deadline): break
-                stage=_evaluate(run,current,_balanced_validation(run,int(n)),deadline,seeds=[42])
+                stage=_evaluate(run,current,_priority_validation(run,int(n)),deadline,seeds=[42])
                 scores.update(stage)
                 current=_top_policies(current,stage,max(int(run.cfg["final_candidates"]),len(current)//2))
         elif phase_name=="routing_and_boundary_tuning":
-            scores=_evaluate(run,current,_balanced_validation(run,min(96,len(run.validation))),deadline,seeds=[42,43])
+            scores=_evaluate(run,current,_priority_validation(run,min(96,len(run.validation))),deadline,seeds=[42,43])
             current=_top_policies(current,scores,int(run.cfg["final_candidates"]))
         elif phase_name=="residual_failure_replay":
-            scores=_evaluate(run,current,_balanced_validation(run,len(run.validation)),deadline,seeds=[43])
+            scores=_evaluate(run,current,_priority_validation(run,len(run.validation)),deadline,seeds=[43])
         elif phase_name=="final_validation_lock":
             final_start=len(run.rows)
             scores=_evaluate(
@@ -1388,6 +1436,20 @@ def run_test12_tuning(
     blind_pass=_acceptance_pass(blind_summary,max_regression,minimum_pass_rate)
     protected_pass=_acceptance_pass(protected_summary,max_regression,minimum_pass_rate)
 
+    collection_value_gap_families=sorted(
+        str(value)
+        for value in (collection.get("collection_value_gap_families") or [])
+    )
+    collection_value_gaps=copy.deepcopy(collection.get("collection_value_gaps") or {})
+    resolved_collection_value_gap_families=[]
+    unresolved_collection_value_gap_families=[]
+    for family in collection_value_gap_families:
+        payload=winner_family_validation.get(family)
+        if payload and _family_is_safe(payload,max_regression,minimum_pass_rate):
+            resolved_collection_value_gap_families.append(family)
+        else:
+            unresolved_collection_value_gap_families.append(family)
+
     certified_families=[]
     for family in TEST2_CAPABILITY_FAMILIES:
         validation_payload=winner_family_validation.get(family)
@@ -1461,6 +1523,10 @@ def run_test12_tuning(
         "terminal_decision":terminal_decision,
         "certified_capability_families":certified_families,
         "blocked_capability_families":blocked_families,
+        "collection_value_gap_families":collection_value_gap_families,
+        "resolved_collection_value_gap_families":resolved_collection_value_gap_families,
+        "unresolved_collection_value_gap_families":unresolved_collection_value_gap_families,
+        "collection_value_gaps":collection_value_gaps,
     }
     runner.store.write_json("successive-halving-ledger.json",{"schema_version":1,"stages":ledger},producer="test1.2-tuning",stage="report")
     runner.store.write_json("compiled-harness-policy.json",compiled,producer="test1.2-tuning",stage="report")
@@ -1476,6 +1542,9 @@ def run_test12_tuning(
         "test2_blind_acceptance":blind_summary,
         "test3_protected_acceptance":protected_summary,
         "acceptance_family_validation":acceptance_family_validation,
+        "collection_value_gap_families":collection_value_gap_families,
+        "resolved_collection_value_gap_families":resolved_collection_value_gap_families,
+        "unresolved_collection_value_gap_families":unresolved_collection_value_gap_families,
         "terminal_decision":terminal_decision,
     },producer="test1.2-tuning",stage="report")
     runner.store.write_json("do-not-use-registry.json",{"schema_version":1,"keys":sorted(do_not_use)},producer="test1.2-tuning",stage="report")
@@ -1519,6 +1588,10 @@ def run_test12_tuning(
         "terminal_decision":terminal_decision,
         "certified_capability_families":certified_families,
         "blocked_capability_families":blocked_families,
+        "collection_value_gap_families":collection_value_gap_families,
+        "resolved_collection_value_gap_families":resolved_collection_value_gap_families,
+        "unresolved_collection_value_gap_families":unresolved_collection_value_gap_families,
+        "collection_value_gaps_are_tuning_priorities_not_preflight_blockers":True,
         "no_additional_characterization_test_required":True,
         "recovery_policy":{
             "full_rerun_allowed":False,
@@ -1597,6 +1670,9 @@ def run_test12_tuning(
         "frontier_gap_policy":frontier_gap_policy,
         "second_gap_policy":second_gap_policy,
         "evidence_reuse":copy.deepcopy(run.reuse_counters),
+        "collection_value_gap_families":collection_value_gap_families,
+        "resolved_collection_value_gap_families":resolved_collection_value_gap_families,
+        "unresolved_collection_value_gap_families":unresolved_collection_value_gap_families,
         "no_additional_characterization_test_required":True,
         "next_action":(
             "INSTALL_MODEL_AND_COMPILED_POLICY_IN_INVERTED"
