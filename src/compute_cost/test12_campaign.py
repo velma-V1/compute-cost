@@ -1838,6 +1838,7 @@ def mechanism_summary(rows: Iterable[dict[str, Any]], cfg: dict[str, Any]) -> di
     fails = [row for row in data if float(row.get("control_score", 0.0)) < 1.0]
     passes = [row for row in data if float(row.get("control_score", 0.0)) >= 1.0]
     rescues = [row for row in fails if float(row.get("score", 0.0)) > float(row.get("control_score", 0.0))]
+    full_rescues = [row for row in fails if float(row.get("score", 0.0)) >= 1.0]
     regressions = [row for row in passes if float(row.get("score", 0.0)) < float(row.get("control_score", 0.0))]
     cap_reg = [
         row for row in regressions
@@ -1877,7 +1878,7 @@ def mechanism_summary(rows: Iterable[dict[str, Any]], cfg: dict[str, Any]) -> di
 
     discovery_status = (
         "NEW_RESCUE_OPPORTUNITY"
-        if rescues
+        if full_rescues
         else "NEGATIVE_BOUNDARY_OPPORTUNITY"
         if regressions
         else "NO_OBSERVED_OPPORTUNITY"
@@ -1900,6 +1901,7 @@ def mechanism_summary(rows: Iterable[dict[str, Any]], cfg: dict[str, Any]) -> di
         "baseline_fail_trials": len(fails),
         "baseline_pass_trials": len(passes),
         "rescues": len(rescues),
+        "full_rescues": len(full_rescues),
         "regressions": len(regressions),
         "capability_regressions": len(cap_reg),
         "truncation_regressions": len(trunc_reg),
@@ -2133,7 +2135,15 @@ def _unresolved_failure_cases(
     campaign: Test12Campaign,
     partition: str = "DISCOVERY",
 ) -> list[dict[str, Any]]:
-    failed, _ = _source_headroom(campaign, partition)
+    baseline: dict[str, float] = {}
+    for row in campaign.rows:
+        if row.get("partition") != partition or row.get("intervention_id") != "CONTROL":
+            continue
+        baseline[str(row.get("fixture_id"))] = float(row.get("score", 0.0))
+    failed = [
+        case for case in campaign.partitions[partition]
+        if _fixture_id(case) in baseline and baseline[_fixture_id(case)] < 1.0
+    ]
     rescued = _rescued_fixture_ids(campaign, partition)
     treatment_count: dict[str, int] = defaultdict(int)
     phenotype_count: dict[str, int] = defaultdict(int)
