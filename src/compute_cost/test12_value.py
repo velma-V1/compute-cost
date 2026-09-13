@@ -1036,7 +1036,15 @@ def observation_value_index(
     for row in rows:
         channels = {"RAW_EVIDENCE", "COST_ACCOUNTING"}
         intervention_id = str(row.get("intervention_id") or "")
-        if intervention_id == "CONTROL":
+        valid = _row_valid_for_capability(row)
+        if not valid:
+            channels.update(
+                {
+                    "INVALID_FOR_CAPABILITY",
+                    "RUNTIME_OR_CAPTURE_EVIDENCE",
+                }
+            )
+        elif intervention_id == "CONTROL":
             channels.update(
                 {
                     "BASELINE_CAPABILITY",
