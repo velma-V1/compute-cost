@@ -278,6 +278,11 @@ REQUIRED_TEST11_FILES = (
 
 REQUIRED_OUTPUTS = (
     "test1.2-source-audit.json",
+    "gpt-oss-runtime-semantics-map.json",
+    "gpt-oss-role-specialization-map.json",
+    "gpt-oss-foundation-question-ledger.json",
+    "test1.2-foundation-observations.jsonl",
+    "test1.2-role-specialization-observations.jsonl",
     "test1.2-plan.json",
     "mechanism-registry.json",
     "full-control-candidate-registry.json",
@@ -4937,6 +4942,24 @@ def write_outputs(campaign: Test12Campaign, results: dict[str, Any]) -> None:
         "source_priority_items":len((campaign.source.get("priority_queue") or {}).get("queue",[]) or []),
         "source_ingredients":len((campaign.source.get("ingredient_registry") or {}).get("ingredients",[]) or []),
     }, producer="test1.2", stage="report")
+    runtime_semantics = copy.deepcopy(results.get("runtime_semantics") or {
+        "schema_version":1,
+        "questions_answered":[],
+        "status":"UNMEASURED",
+    })
+    role_specialization = copy.deepcopy(results.get("role_specialization") or {
+        "schema_version":1,
+        "questions_answered":[],
+        "status":"UNMEASURED",
+    })
+    foundation_ledger = foundation_question_ledger(runtime_semantics, role_specialization)
+    store.write_json("gpt-oss-runtime-semantics-map.json", runtime_semantics, producer="test1.2", stage="report")
+    store.write_json("gpt-oss-role-specialization-map.json", role_specialization, producer="test1.2", stage="report")
+    store.write_json("gpt-oss-foundation-question-ledger.json", foundation_ledger, producer="test1.2", stage="report")
+    if not (store.run_dir / "test1.2-foundation-observations.jsonl").is_file():
+        store.append_jsonl("test1.2-foundation-observations.jsonl", {"schema_version":1,"record_type":"EMPTY_FOUNDATION_OBSERVATIONS"})
+    if not (store.run_dir / "test1.2-role-specialization-observations.jsonl").is_file():
+        store.append_jsonl("test1.2-role-specialization-observations.jsonl", {"schema_version":1,"record_type":"EMPTY_ROLE_SPECIALIZATION_OBSERVATIONS"})
     store.write_json("mechanism-registry.json", {"schema_version":1,"mechanisms":campaign.interventions,"surface":list(IMPROVEMENT_SURFACE)}, producer="test1.2", stage="report")
     store.write_json("mechanism-coverage-ledger.json", _coverage_ledger(campaign), producer="test1.2", stage="report")
     store.write_json("reasoning-compute-map.json", {"schema_version":1,"effects":results.get("reasoning",{})}, producer="test1.2", stage="report")
@@ -4963,6 +4986,10 @@ def write_outputs(campaign: Test12Campaign, results: dict[str, Any]) -> None:
         "schema_version":1,
         "source_seed_run":campaign.source.get("run_id"),
         "priority_queue":queue,
+        "runtime_semantics_map":"gpt-oss-runtime-semantics-map.json",
+        "role_specialization_map":"gpt-oss-role-specialization-map.json",
+        "foundation_question_ledger":"gpt-oss-foundation-question-ledger.json",
+        "foundation_missing_critical_ids":foundation_ledger["missing_critical_foundation_ids"],
         "fine_tuning_candidates":list((fine.get("candidates") or {}).keys()),
         "negative_transfer_keys":sorted(negative),
         "improvement_surface":list(IMPROVEMENT_SURFACE),
