@@ -1533,7 +1533,10 @@ def test_collection_discovery_hands_off_after_one_full_rescue():
         "intervention_id": "CTRL-X",
         "control_score": 0.0,
         "score": 1.0,
-        "classification": {"result_class": "WRONG_ANSWER"},
+        "classification": {"result_class": "ANSWER_CORRECT", "valid_for_capability": True},
+        "valid_for_capability": True,
+        "control_valid_for_capability": True,
+        "delta_valid": True,
         "model_calls_per_application": 1,
         "cost": {
             "prompt_tokens_observed": 10,
@@ -1614,7 +1617,10 @@ def test_unresolved_failure_queue_prefers_rare_failure_phenotype_and_excludes_re
         "difficulty_level": 9,
         "control_score": 0.0,
         "score": 1.0,
-        "classification": {"result_class": "PASS"},
+        "valid_for_capability": True,
+        "control_valid_for_capability": True,
+        "delta_valid": True,
+        "classification": {"result_class": "ANSWER_CORRECT", "valid_for_capability": True},
     })
     ordered = _unresolved_failure_cases(fake)
     assert "rare-1" not in {row["id"] for row in ordered}
