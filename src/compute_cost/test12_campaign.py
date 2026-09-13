@@ -1265,6 +1265,10 @@ class Test12Campaign:
                     "classification": copy.deepcopy(row.get("classification") or {}),
                     "response_text": str(row.get("treatment_response_text") or ""),
                     "experiment_id": row.get("experiment_id"),
+                    "generation_budget": int(
+                        row.get("generation_budget")
+                        or self.cfg["base_generation_budget"]
+                    ),
                     "metrics": {
                         "prompt_eval_count": float((row.get("control_cost") or {}).get("prompt_tokens_observed") or 0),
                         "eval_count": float((row.get("control_cost") or {}).get("output_tokens_observed") or 0),
