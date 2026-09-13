@@ -203,6 +203,57 @@ def load_tuning_recovery(run_dir: Path) -> dict[str, Any]:
                 continue
             rows.append(row)
     campaign_recovery = load_test12_recovery(run_dir)
+
+    sanitized_campaign_rows, campaign_sanitization = _sanitize_collection_observations(
+        list(campaign_recovery.get("rows") or [])
+    )
+    campaign_recovery["rows"] = sanitized_campaign_rows
+
+    controls = {
+        (str(row.get("fixture_id") or ""), int(row.get("seed") or 0)): row
+        for row in sanitized_campaign_rows
+        if row.get("intervention_id") == "CONTROL"
+    }
+    sanitized_policy_rows: list[dict[str, Any]] = []
+    quarantined_policy_rows: list[dict[str, Any]] = []
+    for raw in rows:
+        row = copy.deepcopy(raw)
+        key = (str(row.get("fixture_id") or ""), int(row.get("seed") or 0))
+        control = controls.get(key)
+        control_valid = bool(control and control.get("valid_for_capability"))
+        trial = row.get("trial") if isinstance(row.get("trial"), dict) else None
+        if trial is not None:
+            classification = trial.get("classification") or {}
+            treatment_valid = (
+                trial.get("valid_for_capability") is True
+                or classification.get("valid_for_capability") is True
+            )
+        else:
+            treatment_valid = control_valid
+
+        row["control_valid_for_capability"] = control_valid
+        row["valid_for_capability"] = bool(treatment_valid)
+        row["delta_valid"] = bool(control_valid and treatment_valid)
+        row["raw_delta_before_validity_filter"] = row.get("delta")
+        if row["delta_valid"]:
+            row["delta"] = float(row.get("score") or 0.0) - float(
+                row.get("control_score") or 0.0
+            )
+            sanitized_policy_rows.append(row)
+        else:
+            row["delta"] = 0.0
+            row["recovery_quarantined_invalid"] = True
+            quarantined_policy_rows.append(row)
+
+    rows = sanitized_policy_rows
+    if quarantined_policy_rows and not checkpoint.get("winner_lock_sha256"):
+        # Evidence remains on disk, but phase completion derived from contaminated
+        # policy rows is reopened. Elapsed budget and physical-call counters are
+        # intentionally not reset.
+        checkpoint["completed_phases"] = []
+        checkpoint["current_phase"] = None
+        checkpoint["current_policy_ids"] = []
+
     atomic_checkpoint = campaign_recovery.get("checkpoint") or {}
     if float(atomic_checkpoint.get("active_seconds_used") or 0.0) > float(
         checkpoint.get("active_seconds_used") or 0.0
@@ -219,6 +270,9 @@ def load_tuning_recovery(run_dir: Path) -> dict[str, Any]:
         "rows": rows,
         "issues": issues,
         "campaign_recovery": campaign_recovery,
+        "campaign_sanitization": campaign_sanitization,
+        "quarantined_policy_rows": quarantined_policy_rows,
+        "quarantined_policy_observation_count": len(quarantined_policy_rows),
     }
 
 
