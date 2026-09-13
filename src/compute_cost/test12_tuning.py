@@ -1456,6 +1456,10 @@ class TuningRun:
             # Runtime/capture failures are evidence, not policy outcomes. Do not
             # spend router or treatment calls behind an invalid baseline.
             return None
+        baseline_budget=int(
+            control.get("generation_budget")
+            or self.campaign.cfg["base_generation_budget"]
+        )
         policy_id=str(policy["policy_id"])
         if policy["mode"]=="direct":
             row={
@@ -1465,6 +1469,9 @@ class TuningRun:
                 "selected_intervention_id":None,
                 "valid_for_capability":control_valid,
                 "control_valid_for_capability":control_valid,
+                "baseline_generation_budget":baseline_budget,
+                "treatment_generation_budget":baseline_budget,
+                "budget_comparison_valid":True,
                 "delta_valid":control_valid,
             }
         else:
@@ -1492,6 +1499,9 @@ class TuningRun:
                     "selected_intervention_id":None,
                     "valid_for_capability":control_valid,
                     "control_valid_for_capability":control_valid,
+                    "baseline_generation_budget":baseline_budget,
+                    "treatment_generation_budget":baseline_budget,
+                    "budget_comparison_valid":True,
                     "delta_valid":control_valid,
                 }
             else:
@@ -1499,19 +1509,34 @@ class TuningRun:
                 if trial is None:
                     return None
                 calls=int(trial.get("model_calls_per_application") or 0)+(1 if router_aux else 0)
+                treatment_budget=int(
+                    trial.get("generation_budget")
+                    or self.campaign.cfg["base_generation_budget"]
+                )
+                budget_comparison_valid=(
+                    selected.get("category")=="GENERATION_BUDGET"
+                    or treatment_budget==baseline_budget
+                )
+                trial_delta_valid=bool(
+                    trial.get("delta_valid") is True
+                    and budget_comparison_valid
+                )
                 row={
                     "schema_version":1,"policy_id":policy_id,"fixture_id":_fixture_id(case),
                     "family_id":_family(case),"seed":seed,"control_score":control_score,
                     "score":float(trial.get("score") or 0.0),
                     "delta":(
                         float(trial.get("score") or 0.0)-control_score
-                        if trial.get("delta_valid") is True
+                        if trial_delta_valid
                         else 0.0
                     ),
                     "model_calls":calls,"route":route,
                     "valid_for_capability":bool(trial.get("valid_for_capability")),
                     "control_valid_for_capability":control_valid,
-                    "delta_valid":trial.get("delta_valid") is True,
+                    "baseline_generation_budget":baseline_budget,
+                    "treatment_generation_budget":treatment_budget,
+                    "budget_comparison_valid":budget_comparison_valid,
+                    "delta_valid":trial_delta_valid,
                     "selected_intervention_id":selected.get("id"),
                     "trial":trial,
                 }
