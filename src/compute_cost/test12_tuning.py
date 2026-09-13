@@ -358,6 +358,104 @@ def _sanitize_collection_observations(
     return sanitized, report
 
 
+
+
+def _derive_generation_budget_calibration(
+    rows: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Turn truncation-heavy Collection evidence into a safe baseline budget map.
+
+    Only CONTROL and pure GENERATION_BUDGET rows are used so prompt/controller
+    effects cannot masquerade as budget effects. Capability validity measures
+    whether a final answer was produced; correctness is reported separately.
+    """
+    by_family_budget: dict[str, dict[int, list[dict[str, Any]]]] = defaultdict(
+        lambda: defaultdict(list)
+    )
+    for row in rows:
+        if row.get("partition") != "DISCOVERY":
+            continue
+        if (
+            row.get("intervention_id") != "CONTROL"
+            and row.get("intervention_category") != "GENERATION_BUDGET"
+        ):
+            continue
+        budget = int(row.get("generation_budget") or 0)
+        if budget <= 0:
+            continue
+        by_family_budget[str(row.get("family_id") or "")][budget].append(row)
+
+    configured = sorted(
+        {int(DEFAULT_TEST12_CONFIG["base_generation_budget"])}
+        | {int(value) for value in DEFAULT_TEST12_CONFIG["generation_budgets"]}
+    )
+    maximum_budget = max(configured)
+    families: dict[str, Any] = {}
+    recommended: dict[str, int] = {}
+
+    for family in TEST2_CAPABILITY_FAMILIES:
+        budget_rows = by_family_budget.get(family) or {}
+        levels: dict[str, Any] = {}
+        qualifying: list[int] = []
+        any_valid: list[int] = []
+        any_pass: list[int] = []
+        for budget in configured:
+            values = list(budget_rows.get(budget) or [])
+            valid = [
+                row for row in values
+                if row.get("valid_for_capability") is True
+            ]
+            passes = [
+                row for row in valid
+                if float(row.get("score") or 0.0) >= 1.0
+            ]
+            valid_rate = len(valid) / len(values) if values else None
+            pass_rate = len(passes) / len(valid) if valid else None
+            levels[str(budget)] = {
+                "n": len(values),
+                "valid_final_answers": len(valid),
+                "valid_final_answer_rate": valid_rate,
+                "passes_among_valid": len(passes),
+                "pass_rate_among_valid": pass_rate,
+            }
+            if valid:
+                any_valid.append(budget)
+            if passes:
+                any_pass.append(budget)
+            if len(valid) >= 2 and valid_rate is not None and valid_rate >= 0.80:
+                qualifying.append(budget)
+
+        if qualifying:
+            safe_budget = min(qualifying)
+            basis = "AT_LEAST_2_VALID_AND_80_PERCENT_VALID"
+        elif any_valid:
+            # Sparse Collection evidence: use the largest observed budget that
+            # actually produced a final answer rather than extrapolating a small
+            # budget from one lucky sample.
+            safe_budget = max(any_valid)
+            basis = "SPARSE_EVIDENCE_MAX_OBSERVED_VALID_BUDGET"
+        else:
+            safe_budget = maximum_budget
+            basis = "NO_VALID_FINAL_ANSWER_OBSERVED_USE_MAX_TESTED_BUDGET"
+
+        recommended[family] = int(safe_budget)
+        families[family] = {
+            "levels": levels,
+            "minimum_observed_valid_budget": min(any_valid) if any_valid else None,
+            "minimum_observed_passing_budget": min(any_pass) if any_pass else None,
+            "recommended_safe_baseline_budget": int(safe_budget),
+            "recommendation_basis": basis,
+        }
+
+    return {
+        "schema_version": 1,
+        "purpose": "CAPABILITY_VALID_BASELINE_NOT_ACCURACY_INFLATION",
+        "families": families,
+        "recommended_safe_baseline_budget_by_family": recommended,
+        "maximum_tested_budget": maximum_budget,
+        "invalid_outputs_are_not_capability_failures": True,
+    }
+
 def _rebuild_collection_analytics(
     rows: list[dict[str, Any]],
     registry: dict[str, Any],
@@ -616,6 +714,9 @@ def load_collection(results_root: Path, run_id: str) -> dict[str, Any]:
     frontier_shift = rebuilt["frontier_shift"]
     compute_elasticity = rebuilt["compute_elasticity"]
     sanitized_frontier = rebuilt["frontier"]
+    budget_calibration = _derive_generation_budget_calibration(
+        sanitized_collection_rows
+    )
     sanitized_zero_clock_model = build_zero_clock_model_manufacturing(
         sanitized_collection_rows,
         TEST2_CAPABILITY_FAMILIES,
@@ -643,6 +744,7 @@ def load_collection(results_root: Path, run_id: str) -> dict[str, Any]:
         "run_dir": str(run_dir),
         "registry": registry,
         "collection_sanitization": collection_sanitization,
+        "generation_budget_calibration": budget_calibration,
         "sanitized_collection_observations": sanitized_collection_rows,
         "coverage": coverage,
         "family_coverage": family_coverage,
