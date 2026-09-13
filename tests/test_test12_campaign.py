@@ -39,6 +39,7 @@ from compute_cost.test12_toollab import (
 from compute_cost.test12_tuning import (
     TUNING_HARD_SECONDS,
     _acceptance_pass,
+    _candidate_registry,
     _compile_frontier_gap_policy,
     _compile_second_gap_policy,
     _family_is_safe,
@@ -1675,3 +1676,38 @@ def test_strong_family_frontier_escalates_to_harder_unseen_cases():
     })()
     ordered = _unmeasured_frontier_cases(fake)
     assert ordered[0]["id"] == "strong-hard"
+
+
+
+def test_run2_prioritizes_new_rescue_opportunity_over_replicated_null():
+    collection = {
+        "registry": {
+            "candidates": [
+                {"id": "NEW", "category": "PROMPT_CONTROL"},
+                {"id": "OLD-NULL", "category": "VERIFICATION"},
+            ],
+        },
+        "frontier": {
+            "ranked": [
+                {
+                    "intervention_id": "OLD-NULL",
+                    "classification": "NO_RESCUE_SIGNAL",
+                    "discovery_status": "NO_OBSERVED_OPPORTUNITY",
+                    "rescues": 0,
+                    "net_value": 100.0,
+                    "value_per_call": 100.0,
+                },
+                {
+                    "intervention_id": "NEW",
+                    "classification": "UNCERTAIN",
+                    "discovery_status": "NEW_RESCUE_OPPORTUNITY",
+                    "rescues": 1,
+                    "net_value": -0.5,
+                    "value_per_call": -0.5,
+                },
+            ],
+        },
+    }
+    selected = _candidate_registry(collection, 1)
+    assert [row["id"] for row in selected] == ["NEW"]
+    assert selected[0]["verification_owner"] == "RUN2_TEST2"
