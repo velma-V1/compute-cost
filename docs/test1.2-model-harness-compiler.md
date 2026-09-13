@@ -470,6 +470,21 @@ This is **not** claimed to be native provider function calling or access to
 external tools. The compiled policy can later be mapped onto MCP/Docker/real
 tools while retaining the measured controller rules.
 
+## Collection opportunity-discovery law
+
+Collection is optimized for **breadth of new opportunity**, not proof depth.
+
+- A full rescue creates an opportunity candidate immediately. The candidate carries verification debt into Run 2; Collection does not spend repeated seeds proving it.
+- Once a failing fixture is rescued, it leaves the priority rescue queue.
+- Failure search prioritizes rare/novel failure phenotypes, underexplored capability families, and control categories not yet tried on that phenotype.
+- Families that remain strong are pushed toward harder unseen fixtures and higher difficulty boundaries instead of receiving redundant easy confirmations.
+- Repeated instances of an already-mapped failure class are lower value than a new failure phenotype.
+- Negative-transfer search samples novel sentinels for actionable boundaries, then returns clock to unresolved failures/frontier expansion.
+- Mandatory family × control-surface breadth remains intact; the redesign changes **where remaining clock goes**, not the 40-family capability contract.
+- Run 2/Test 2 owns recurrence, robustness, cross-fixture validation, non-regression proof, and final confidence.
+
+The collection emits `test1.2-opportunity-discovery-map.json` with unique failing fixtures, unique rescued fixtures, distinct failure phenotypes, unresolved failures, family frontier state, and same-pair repetition metrics. Legacy completed Test 1.2 collections remain valid inputs to Run 2.
+
 ## Tuning / compile run
 
 The second run consumes only a collection that passed complete control
