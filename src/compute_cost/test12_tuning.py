@@ -1267,6 +1267,10 @@ class TuningRun:
         control_valid=bool(control.get("valid_for_capability")) or (
             (control.get("classification") or {}).get("valid_for_capability") is True
         )
+        if not control_valid:
+            # Runtime/capture failures are evidence, not policy outcomes. Do not
+            # spend router or treatment calls behind an invalid baseline.
+            return None
         policy_id=str(policy["policy_id"])
         if policy["mode"]=="direct":
             row={
