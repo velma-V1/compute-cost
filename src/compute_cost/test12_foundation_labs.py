@@ -70,6 +70,19 @@ CRITICAL_FOUNDATION_IDS = frozenset(
     row["id"] for row in FOUNDATION_QUESTIONS if row["critical"]
 )
 
+OUTPUT_CONTRACT_FAMILIES = frozenset({
+    "instruction_following_constraint_stacking",
+    "strict_structured_output",
+    "extraction_transformation",
+    "tool_selection",
+    "tool_argument_correctness",
+    "tool_error_recovery",
+    "format_robustness",
+    "prompt_instruction_conflict_handling",
+    "composite_agent_tasks",
+})
+
+
 
 def _json_ok(text: str) -> bool:
     try:
@@ -216,7 +229,7 @@ def run_runtime_semantics_gate(campaign: Any, deadline: float) -> dict[str, Any]
     """Answer interface questions 1-6, 9-10 before normal Collection search."""
     rows: list[dict[str, Any]] = []
     base_options = {
-        "num_predict": 96,
+        "num_predict": 256,
         "temperature": 1.0,
         "top_p": 1.0,
         "seed": 42,
@@ -258,26 +271,24 @@ def run_runtime_semantics_gate(campaign: Any, deadline: float) -> dict[str, Any]
         if row is not None:
             rows.append(row)
 
-    # Measure native format=json behavior once per capability family.
-    for case in _representative_cases(campaign):
-        if not campaign.can_start(deadline):
-            break
-        prompt = (
-            str(case.get("prompt") or "")
-            + "\nReturn a JSON object with exactly one string field named answer."
-        )
-        row = _invoke_probe(
-            campaign,
-            deadline,
-            probe_id=f"runtime-format-json-{_fixture_id(case)}",
-            question_ids=[2,3,6,21,22,23],
-            family_id=_family(case),
-            messages=[{"role":"user","content":prompt}],
-            options=base_options,
-            request_fields={"think":"medium","format":"json"},
-        )
-        if row is not None:
-            rows.append(row)
+    # Interface-level JSON probe only. Family-level contract behavior is
+    # measured after Stage-0 budget calibration so budget truncation cannot be
+    # mistaken for format failure.
+    simple_format = _invoke_probe(
+        campaign,
+        deadline,
+        probe_id="runtime-format-json-simple",
+        question_ids=[2,3,6],
+        family_id="RUNTIME_SEMANTICS",
+        messages=[{
+            "role":"user",
+            "content":'Return exactly a JSON object with one field: {"answer":"OK"}.',
+        }],
+        options=base_options,
+        request_fields={"think":"low","format":"json"},
+    )
+    if simple_format is not None:
+        rows.append(simple_format)
 
     # Real Ollama tool-call boundary. This checks parser/termination semantics;
     # deterministic synthetic tool correctness remains covered elsewhere.
@@ -338,20 +349,30 @@ def run_runtime_semantics_gate(campaign: Any, deadline: float) -> dict[str, Any]
     for row in rows:
         by_family[str(row.get("family_id") or "UNKNOWN")].append(row)
 
-    format_rates = {}
-    for family, values in by_family.items():
-        format_rows = [row for row in values if str(row.get("probe_id","")).startswith("runtime-format-json-")]
-        if not format_rows:
-            continue
-        format_rates[family] = {
-            "n": len(format_rows),
-            "empty_content_with_thinking_rate": (
-                sum(1 for row in format_rows if row["content_empty"] and row["thinking_present"])
-                / len(format_rows)
+    format_rows = [
+        row for row in rows
+        if str(row.get("probe_id","")).startswith("runtime-format-json-")
+    ]
+    format_rates = {
+        "RUNTIME_SEMANTICS": {
+            "n":len(format_rows),
+            "empty_content_with_thinking_rate":(
+                sum(
+                    1 for row in format_rows
+                    if row["content_empty"] and row["thinking_present"]
+                ) / len(format_rows)
+                if format_rows else None
             ),
-            "json_parse_rate": sum(1 for row in format_rows if row["json_parse_ok"]) / len(format_rows),
-            "thinking_leak_rate": sum(1 for row in format_rows if row["thinking_markup_in_content"]) / len(format_rows),
+            "json_parse_rate":(
+                sum(1 for row in format_rows if row["json_parse_ok"]) / len(format_rows)
+                if format_rows else None
+            ),
+            "thinking_leak_rate":(
+                sum(1 for row in format_rows if row["thinking_markup_in_content"]) / len(format_rows)
+                if format_rows else None
+            ),
         }
+    }
 
     false_row = next((row for row in rows if row["probe_id"] == "runtime-think-false"), None)
     if false_row is None:
@@ -410,6 +431,154 @@ def run_runtime_semantics_gate(campaign: Any, deadline: float) -> dict[str, Any]
         "observation_count":len(rows),
     }
 
+
+
+def run_output_contract_gate(
+    campaign: Any,
+    deadline: float,
+    *,
+    replicates: int = 2,
+) -> dict[str, Any]:
+    """Compare structured-output contracts at calibrated family budgets."""
+    cases = [
+        case for case in _representative_cases(campaign)
+        if _family(case) in OUTPUT_CONTRACT_FAMILIES
+    ]
+    seeds = list(campaign.cfg.get("seeds") or [42, 43])[:replicates]
+    if len(seeds) < replicates:
+        base = seeds[-1] if seeds else 42
+        seeds.extend(base + i + 1 for i in range(replicates - len(seeds)))
+
+    schema = {
+        "type":"object",
+        "required":["answer"],
+        "additionalProperties":False,
+        "properties":{"answer":{"type":"string"}},
+    }
+    modes = (
+        ("INSTRUCTION_ONLY", {}),
+        ("NATIVE_JSON", {"format":"json"}),
+        ("JSON_SCHEMA", {"format":schema}),
+    )
+    observations: list[dict[str, Any]] = []
+
+    for case in cases:
+        if not campaign.can_start(deadline):
+            break
+        family = _family(case)
+        budget = int(
+            (getattr(campaign, "baseline_generation_budget_by_family", {}) or {}).get(
+                family,
+                campaign.cfg.get("base_generation_budget", 256),
+            )
+        )
+        prompt = (
+            str(case.get("prompt") or "")
+            + "\n\nReturn a JSON object with exactly one string field named answer. "
+            + "Put your final answer inside that field and output no other text."
+        )
+        for mode, extra_fields in modes:
+            for seed in seeds:
+                if not campaign.can_start(deadline):
+                    break
+                row = _invoke_probe(
+                    campaign,
+                    deadline,
+                    probe_id=(
+                        f"output-contract-{mode.lower()}-"
+                        f"{_fixture_id(case)}-s{seed}"
+                    ),
+                    question_ids=[2,21,22,23,24],
+                    family_id=family,
+                    messages=[{"role":"user","content":prompt}],
+                    options={
+                        "num_predict":budget,
+                        "temperature":1.0,
+                        "top_p":1.0,
+                        "seed":int(seed),
+                    },
+                    request_fields={"think":"medium", **extra_fields},
+                )
+                if row is None:
+                    continue
+                row["output_contract_mode"] = mode
+                row["operating_budget"] = budget
+                row["valid_final_answer"] = bool(
+                    row.get("ok")
+                    and not row.get("content_empty")
+                    and row.get("done_reason") != "length"
+                )
+                observations.append(row)
+
+    families: dict[str, Any] = {}
+    unresolved: list[str] = []
+    for family in sorted({_family(case) for case in cases}):
+        family_rows = [
+            row for row in observations
+            if row.get("family_id") == family
+        ]
+        mode_rows: dict[str, Any] = {}
+        ranked: list[tuple[float, float, float, str]] = []
+        for mode, _ in modes:
+            values = [
+                row for row in family_rows
+                if row.get("output_contract_mode") == mode
+            ]
+            valid = [row for row in values if row.get("valid_final_answer")]
+            parsed = [row for row in valid if row.get("json_parse_ok")]
+            valid_rate = len(valid) / len(values) if values else 0.0
+            parse_rate = len(parsed) / len(values) if values else 0.0
+            empty_thinking_rate = (
+                sum(
+                    1 for row in values
+                    if row.get("content_empty") and row.get("thinking_present")
+                ) / len(values)
+                if values else 0.0
+            )
+            eval_counts = [
+                int(row["eval_count"])
+                for row in values
+                if isinstance(row.get("eval_count"), int)
+            ]
+            mean_eval = (
+                sum(eval_counts) / len(eval_counts)
+                if eval_counts else None
+            )
+            mode_rows[mode] = {
+                "attempts":len(values),
+                "valid_final_answer_rate":valid_rate,
+                "json_parse_rate":parse_rate,
+                "empty_content_with_thinking_rate":empty_thinking_rate,
+                "mean_eval_count":mean_eval,
+            }
+            if values:
+                ranked.append((
+                    parse_rate,
+                    valid_rate,
+                    -(mean_eval if mean_eval is not None else 1e12),
+                    mode,
+                ))
+        ranked.sort(reverse=True)
+        recommended = ranked[0][3] if ranked and ranked[0][0] > 0 else None
+        if recommended is None:
+            unresolved.append(family)
+        families[family] = {
+            "modes":mode_rows,
+            "recommended_contract":recommended,
+            "selection_rule":"MAX_PARSE_RATE_THEN_VALID_RATE_THEN_MIN_EVAL_COUNT",
+        }
+
+    return {
+        "schema_version":1,
+        "stage":"STAGE0_OUTPUT_CONTRACT_CHARACTERIZATION",
+        "questions_answered":[2,21,22,23,24],
+        "replicates":int(replicates),
+        "families":families,
+        "unresolved_families":sorted(unresolved),
+        "all_target_families_have_contract":not bool(unresolved),
+        "observation_count":len(observations),
+        "budget_source":"STAGE0_REPLICATED_SAFE_FAMILY_BUDGET",
+    }
 
 
 def _round_up_budget(value: float, ladder: list[int]) -> int:
@@ -655,6 +824,7 @@ def build_runtime_characterization_profile(
     campaign: Any,
     runtime_semantics: dict[str, Any],
     budget_characterization: dict[str, Any],
+    output_contracts: dict[str, Any],
     role_specialization: dict[str, Any],
 ) -> dict[str, Any]:
     runtime_snapshot = {}
@@ -671,6 +841,7 @@ def build_runtime_characterization_profile(
     runtime_answered = set(runtime_semantics.get("questions_answered") or [])
     role_answered = set(role_specialization.get("questions_answered") or [])
     budget_answered = set(budget_characterization.get("questions_answered") or [])
+    output_answered = set(output_contracts.get("questions_answered") or [])
 
     gate_reasons = []
     if not critical_runtime.issubset(runtime_answered):
@@ -683,6 +854,8 @@ def build_runtime_characterization_profile(
         gate_reasons.append("THINKING_CHANNEL_LEAK_OBSERVED")
     if not budget_characterization.get("all_families_reproducibly_valid"):
         gate_reasons.append("FAMILY_BUDGET_CALIBRATION_INCOMPLETE")
+    if not {2,21,22,23,24}.issubset(output_answered):
+        gate_reasons.append("OUTPUT_CONTRACT_CHARACTERIZATION_INCOMPLETE")
     if not {32,33,34,35,36,37,38}.issubset(role_answered):
         gate_reasons.append("ROLE_SPECIALIZATION_INCOMPLETE")
     family_count = len(
@@ -723,6 +896,7 @@ def build_runtime_characterization_profile(
         "identity":identity,
         "runtime_semantics":copy.deepcopy(runtime_semantics),
         "budget_characterization":copy.deepcopy(budget_characterization),
+        "output_contracts":copy.deepcopy(output_contracts),
         "role_specialization":copy.deepcopy(role_specialization),
         "minimum_valid_matched_role_families":minimum_role_families,
         "minimum_auditor_depth_pairs":minimum_depth_pairs,
@@ -1209,7 +1383,9 @@ def foundation_question_ledger(
     owners = {
         **{i:"runtime_semantics_gate" for i in (1,2,3,4,5,6,9,10)},
         **{i:"fractional_compute_surface" for i in range(11,21)},
-        **{i:"output_contract_and_existing_format_families" for i in range(21,27)},
+        **{i:"output_contract_gate" for i in range(21,25)},
+        25:"output_contract_follow_on",
+        26:"output_contract_and_existing_format_families",
         **{i:"context/frontier labs" for i in range(27,32)},
         **{i:"role_specialization_gate" for i in (32,33,34,38)},
         **{i:"role_specialization_gate" for i in (35,36,37)},
