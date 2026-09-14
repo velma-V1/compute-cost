@@ -87,7 +87,6 @@ DEFAULT_TEST2_CONFIG: dict[str, Any] = {
     "safety_call_cap": 10000,
     "generation_budget": 256,
     "generation_budget_by_family": {},
-    "generation_budget_ladder": [256, 512, 1024, 2048],
     "thinking_mode": False,
     "reasoning_effort": None,
     "bootstrap_samples": 500,
@@ -144,6 +143,8 @@ def build_test2_plan(cases: list[dict[str, Any]], *, test1_run: str | None = Non
         "required_outputs": list(REQUIRED_OUTPUTS),
         "stage_role": "DEDICATED_PROOF_RECURRENCE_ROBUSTNESS_DISTILLATION",
         "test12_exact_control_execution_required": True,
+        "runtime_characterization_profile_required_for_test12": True,
+        "in_run_budget_calibration_prohibited": True,
         "legacy_recipe_translation_to_test12_prohibited": True,
         "finalization_contract": {
             "system_recipe": True,
@@ -577,73 +578,59 @@ class Test2Campaign:
             return None
 
         family = _family(case)
-        preferred = int(
+        budget = int(
             (self.cfg.get("generation_budget_by_family") or {}).get(
                 family,
                 self.cfg["generation_budget"],
             )
         )
-        ladder = sorted({
-            preferred,
-            *[int(value) for value in self.cfg.get("generation_budget_ladder", [])],
-        })
-        budgets = [value for value in ladder if value >= preferred]
-        if not budgets:
-            budgets = [preferred]
+        self.sequence += 1
+        spec = _spec(
+            sequence=self.sequence,
+            case=case,
+            label=f"{phase}-control-b{budget}",
+            cfg=self.cfg,
+            baseline=True,
+            generation_budget=budget,
+        )
+        label = f"test2 {phase} control {fixture_id} b{budget}"
+        self._progress(label, True)
+        try:
+            row = execute_experiment(self.runner, case, spec, parent=None)
+        finally:
+            self._progress(label, False)
 
-        last_invalid: dict[str, Any] | None = None
-        for budget in budgets:
-            if not self.can_start(deadline):
-                break
-            self.sequence += 1
-            spec = _spec(
-                sequence=self.sequence,
-                case=case,
-                label=f"{phase}-control-b{budget}",
-                cfg=self.cfg,
-                baseline=True,
-                generation_budget=budget,
-            )
-            label = f"test2 {phase} control {fixture_id} b{budget}"
-            self._progress(label, True)
-            try:
-                row = execute_experiment(self.runner, case, spec, parent=None)
-            finally:
-                self._progress(label, False)
-            score = row.get("score")
-            valid = (row.get("classification") or {}).get("valid_for_capability") is True
-            numeric = (
-                float(score)
-                if valid and isinstance(score, (int, float)) and not isinstance(score, bool)
-                else 0.0
-            )
-            self.current_baseline_validity[fixture_id] = bool(valid)
-            self.current_baseline_budgets[fixture_id] = int(budget)
-            self._record(
-                case,
-                row,
-                phase=phase,
-                kind="control",
-                recipe={
-                    "ingredient_ids": [],
-                    "dose": 0.0,
-                    "representation": "none",
-                    "placement": "none",
-                },
-                baseline_score=numeric,
-                baseline_valid=bool(valid),
-                baseline_budget=int(budget),
-                source_key=None,
-            )
-            if valid:
-                self.current_baselines[fixture_id] = numeric
-                self.cfg.setdefault("generation_budget_by_family", {})[family] = int(budget)
-                return numeric
-            last_invalid = row
+        score = row.get("score")
+        valid = (row.get("classification") or {}).get("valid_for_capability") is True
+        numeric = (
+            float(score)
+            if valid and isinstance(score, (int, float)) and not isinstance(score, bool)
+            else 0.0
+        )
+        self.current_baseline_validity[fixture_id] = bool(valid)
+        self.current_baseline_budgets[fixture_id] = int(budget)
+        if valid:
+            self.current_baselines[fixture_id] = numeric
+        else:
+            self.current_baselines.pop(fixture_id, None)
 
-        self.current_baselines.pop(fixture_id, None)
-        self.current_baseline_validity[fixture_id] = False
-        return None
+        self._record(
+            case,
+            row,
+            phase=phase,
+            kind="control",
+            recipe={
+                "ingredient_ids": [],
+                "dose": 0.0,
+                "representation": "none",
+                "placement": "none",
+            },
+            baseline_score=numeric,
+            baseline_valid=bool(valid),
+            baseline_budget=int(budget),
+            source_key=None,
+        )
+        return numeric if valid else None
 
     def treatment(
         self,
@@ -1581,7 +1568,6 @@ def _build_finalization_contract(
         "generation_budget_by_family": copy.deepcopy(
             campaign.cfg.get("generation_budget_by_family") or {}
         ),
-        "generation_budget_ladder": list(campaign.cfg.get("generation_budget_ladder") or []),
         "temperature": 0.0,
         "seed": 42,
         "source_test1_run": campaign.handoff.get("run_id"),
