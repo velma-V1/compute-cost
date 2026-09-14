@@ -751,6 +751,8 @@ DEFAULT_TEST12_CONFIG: dict[str, Any] = {
     "promotion_rescue_rate": 0.25,
     "promotion_max_capability_regression_rate": 0.10,
     "max_classification_censoring_rate": 0.20,
+    "cell_null_max_wilson_upper": 0.10,
+    "cell_harm_max_wilson_width": 0.35,
     "max_promoted_mechanisms": 16,
     "max_source_recipes": 8,
     "max_composition_arms": 24,
