@@ -774,7 +774,7 @@ class Test2Campaign:
             "delta_valid": bool(delta_valid),
             "score": numeric,
             "baseline_score": baseline_score,
-            "delta": (numeric - baseline_score) if delta_valid else 0.0,
+            "delta": (numeric - baseline_score) if delta_valid else None,
             "recipe": copy.deepcopy(recipe),
             "source_key": source_key,
             "timing": copy.deepcopy(row.get("timing") or {}),
@@ -1167,7 +1167,9 @@ def phase_purple_unicorn(
         )
         if observation is not None:
             result_class = str((observation.get("classification") or {}).get("result_class"))
-            if result_class != "ANSWER_CORRECT" or float(observation.get("delta", 0.0)) < (-0.5 * campaign.noise_sigma):
+            if observation.get("delta_valid") is not True:
+                continue
+            if result_class != "ANSWER_CORRECT" or float(observation["delta"]) < (-0.5 * campaign.noise_sigma):
                 key = f"{_family(case)}|{_fixture_id(case)}|{_recipe_key(recipe)}"
                 records[key] = {
                     "family_id": _family(case),
@@ -1242,7 +1244,7 @@ def phase_knockout(
                 label=f"knockout-{label}-" + _recipe_key(variant),
                 source_key=_recipe_key(recipe),
             )
-            if row is not None:
+            if row is not None and row.get("delta_valid") is True and row.get("delta") is not None:
                 observed[label].append(float(row["delta"]))
             cursor += 1
 
