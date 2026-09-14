@@ -1278,8 +1278,6 @@ def build_runtime_characterization_profile(
         gate_reasons.append("OUTPUT_CONTRACT_TARGET_COVERAGE_INCOMPLETE")
     if not {32,33,34,35,36,37,38}.issubset(role_answered):
         gate_reasons.append("ROLE_SPECIALIZATION_INCOMPLETE")
-    if role_specialization.get("auditor_executor_thesis_status") != "SUPPORTED":
-        gate_reasons.append("AUDITOR_EXECUTOR_THESIS_NOT_SUPPORTED")
     family_count = len(
         (budget_characterization.get("families") or {})
     )
@@ -1333,6 +1331,14 @@ def build_runtime_characterization_profile(
         "budget_characterization":copy.deepcopy(budget_characterization),
         "output_contracts":copy.deepcopy(output_contracts),
         "role_specialization":copy.deepcopy(role_specialization),
+        "architecture_thesis":{
+            "status":role_specialization.get("auditor_executor_thesis_status"),
+            "supported":role_specialization.get("auditor_executor_thesis_status") == "SUPPORTED",
+            "full_inverted_campaign_allowed":(
+                role_specialization.get("auditor_executor_thesis_status") == "SUPPORTED"
+            ),
+            "decision_separate_from_runtime_instrument_validity":True,
+        },
         "auditor_trust_boundary":{
             "minimum_valid_observations_per_probe":trust_minimum,
             "coverage_sufficient":trust_coverage_ok,
@@ -1363,6 +1369,7 @@ def build_runtime_characterization_profile(
             "thinking_channel_may_not_enter_scoring":True,
             "capability_claim_requires_this_profile":True,
             "runtime_version_must_match":True,
+            "architecture_thesis_is_separate_decision_gate":True,
         },
     }
     stable = json.dumps(payload, sort_keys=True, separators=(",",":"), default=str)
