@@ -1063,7 +1063,7 @@ def run_runtime_budget_characterization(
             if headroom_eval_counts else None
         )
         headroom_cap = (
-            int((headroom_rows[0].get("requested_num_predict") or 0))
+            int(safe_budget)
             if headroom_rows else None
         )
         headroom_cap_saturation = (
