@@ -2527,3 +2527,80 @@ def test_control_redundancy_map_clusters_shared_rescue_mechanisms():
     assert len(cluster["alternate_intervention_ids"]) == 1
     assert set(result["representative_intervention_ids"]) <= {"CTRL-A", "CTRL-B"}
     assert set(result["alternate_intervention_ids"]) <= {"CTRL-A", "CTRL-B"}
+
+
+
+def test_stage0_budget_search_screens_before_confirmation(monkeypatch):
+    family = "arithmetic_numerical_reasoning"
+    calls = []
+
+    class FakeCampaign:
+        cfg = {
+            "base_generation_budget": 256,
+            "stage0_budget_ladder": [256, 512, 1024, 2048, 4096],
+            "generation_budgets": [256, 512, 1024, 2048],
+            "seeds": [42, 43, 44],
+        }
+        partitions = {
+            "DISCOVERY": [{
+                "id": "budget-screen-case",
+                "category": family,
+                "difficulty_level": 8,
+                "prompt": "hard",
+                "scorer": "exact",
+                "expected": "ok",
+            }]
+        }
+
+        @staticmethod
+        def can_start(_deadline):
+            return True
+
+    def fake_probe(
+        campaign,
+        deadline,
+        *,
+        probe_id,
+        question_ids,
+        family_id,
+        messages,
+        options,
+        request_fields=None,
+        case=None,
+    ):
+        budget = int(options["num_predict"])
+        seed = int(options["seed"])
+        calls.append((budget, seed))
+        valid = budget >= 1024
+        return {
+            "probe_id": probe_id,
+            "question_ids": question_ids,
+            "family_id": family_id,
+            "ok": True,
+            "content_empty": not valid,
+            "done_reason": "stop" if valid else "length",
+            "score": 1.0 if valid else None,
+            "request": {"options": {"seed": seed}},
+            "eval_count": budget if not valid else budget - 8,
+        }
+
+    monkeypatch.setattr(foundation_module, "_invoke_probe", fake_probe)
+    result = foundation_module.run_runtime_budget_characterization(
+        FakeCampaign(),
+        999.0,
+        replicates=3,
+        safety_factor=1.5,
+    )
+
+    assert calls == [
+        (256, 42),
+        (512, 42),
+        (1024, 42),
+        (1024, 43),
+        (1024, 44),
+    ]
+    assert result["screen_calls"] == 3
+    assert result["confirmation_calls"] == 2
+    assert result["calls_used"] == 5
+    assert result["families"][family]["search_strategy"] == "SCREEN_ESCALATE_CONFIRM"
+    assert result["resolved_generation_budget_by_family"][family] == 2048
