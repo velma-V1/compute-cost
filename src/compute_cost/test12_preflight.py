@@ -90,7 +90,10 @@ def _applicability(
     family: str,
 ) -> tuple[str, str]:
     if mechanism.get("implementation_status") == "UNBUILT":
-        return "unbuilt", "DECLARED_MECHANISM_LACKS_DELIVERY_PLUMBING"
+        return "unbuilt", str(
+            mechanism.get("implementation_basis")
+            or "DECLARED_MECHANISM_LACKS_DELIVERY_PLUMBING"
+        )
     decision = mechanism_applicability(
         mechanism["representative"],
         family,
@@ -217,13 +220,13 @@ def build_test12_cell_budget_plan(
                 "compiler_condition_expressible": True,
             })
 
-    eligible = [
-        cell for cell in cells
-        if cell["applicability"] in {"yes", "untested"}
+    unresolved_applicability = [
+        cell for cell in cells if cell["applicability"] == "untested"
     ]
-    explicit_yes = [
+    eligible = [
         cell for cell in cells if cell["applicability"] == "yes"
     ]
+    explicit_yes = list(eligible)
 
     matrix_seconds = sum(
         int(seconds)
