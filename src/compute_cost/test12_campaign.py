@@ -532,6 +532,7 @@ DEFAULT_TEST12_CONFIG: dict[str, Any] = {
     "max_collection_sentinels_per_intervention": 2,
     "max_variants_per_surviving_mechanism": 4,
     "baseline_pass_sentinel_surfaces_per_family": 2,
+    "mechanism_screen_sentinel_reserve": 12,
     "novelty_failure_class_weight": 6.0,
     "novelty_family_weight": 3.0,
     "harder_frontier_weight": 2.0,
@@ -3012,6 +3013,10 @@ def _opportunity_search(
             available = [
                 intervention for intervention in interventions
                 if (fixture_id, str(intervention["id"])) not in tried_pairs
+                and mechanism_applicability(
+                    intervention,
+                    _family(case),
+                )["status"] != "NOT_APPLICABLE"
             ]
             if not available:
                 continue
@@ -3077,6 +3082,14 @@ def _novel_sentinel_search(
         candidates = [
             intervention for intervention in interventions
             if len(existing[str(intervention["id"])]) < int(max_per_intervention)
+            and any(
+                mechanism_applicability(
+                    intervention,
+                    _family(case),
+                )["status"] != "NOT_APPLICABLE"
+                and _fixture_id(case) not in existing[str(intervention["id"])]
+                for case in passed
+            )
         ]
         if not candidates or not passed:
             break
@@ -3089,7 +3102,17 @@ def _novel_sentinel_search(
         )
         intervention = candidates[0]
         used = existing[str(intervention["id"])]
-        sentinel = next((case for case in passed if _fixture_id(case) not in used), None)
+        sentinel = next(
+            (
+                case for case in passed
+                if _fixture_id(case) not in used
+                and mechanism_applicability(
+                    intervention,
+                    _family(case),
+                )["status"] != "NOT_APPLICABLE"
+            ),
+            None,
+        )
         if sentinel is None:
             break
         campaign.treatment(
