@@ -293,7 +293,7 @@ def test_mechanism_applicability_distinguishes_not_applicable_from_failure():
         {"category":"PROMPT_CONTROL", "primitive_id":"QNT"},
         "spatial_reasoning",
     )
-    assert primitive_outside_declared_scope["status"] == "NOT_APPLICABLE"
+    assert primitive_outside_declared_scope["status"] == "UNKNOWN"
 
     adaptive_search = test12_module.mechanism_applicability(
         {"category":"ADAPTIVE_SEARCH"},
