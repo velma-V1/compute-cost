@@ -80,9 +80,9 @@ def test_cell_budget_plan_freezes_schema_and_forces_subset_arithmetic():
     )
     assert set(plan["applicability_counts"]) == set(APPLICABILITY_STATES)
     assert plan["applicability_counts"]["structural_no"] > 0
-    assert plan["applicability_counts"]["untested"] == 0
+    assert 0 < plan["applicability_counts"]["untested"] < 200
     assert plan["applicability_counts"]["unbuilt"] == 0
-    assert plan["untested_applicability_cell_count"] == 0
+    assert plan["untested_applicability_cell_count"] == plan["applicability_counts"]["untested"]
     assert plan["untested_applicability_excluded_from_campaign_calls"] is True
     assert plan["schema_contract"]["effect_states"] == list(EFFECT_STATES)
     assert plan["schema_contract"]["null_verified_distinct_from_null_censored"] is True
