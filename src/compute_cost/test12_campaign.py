@@ -1744,10 +1744,16 @@ class Test12Campaign:
         }
         self.interventions = list(merged_interventions.values())
         self.intervention_by_id = {str(row["id"]): row for row in self.interventions}
-        cell_budget_path = runner.store.run_dir / "test1.2-cell-budget-plan.json"
         self.priority_cell_keys: set[str] = set()
         self.priority_cell_scenario = None
-        if cell_budget_path.is_file():
+        store = getattr(runner, "store", None)
+        run_dir = getattr(store, "run_dir", None)
+        cell_budget_path = (
+            Path(run_dir) / "test1.2-cell-budget-plan.json"
+            if run_dir is not None
+            else None
+        )
+        if cell_budget_path is not None and cell_budget_path.is_file():
             try:
                 cell_budget = json.loads(cell_budget_path.read_text(encoding="utf-8"))
                 scenario_name = str(
