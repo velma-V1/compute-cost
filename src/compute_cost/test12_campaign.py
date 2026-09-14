@@ -424,6 +424,7 @@ REQUIRED_OUTPUTS = (
     "test1.2-runtime-canaries.jsonl",
     "test1.2-block-reassessments.jsonl",
     "test1.2-plan.json",
+    "measurement-decision-ledger.json",
     "mechanism-registry.json",
     "full-control-candidate-registry.json",
     "control-grammar-coverage.json",
@@ -7236,6 +7237,21 @@ def write_outputs(campaign: Test12Campaign, results: dict[str, Any]) -> None:
     )
     tuning_rows = _tuning_corpus_rows(campaign)
     harness_blueprint = _harness_policy_blueprint(campaign)
+    decision_contracts = measurement_decision_contracts()
+    validate_measurement_decision_contracts(decision_contracts)
+    store.write_json(
+        "measurement-decision-ledger.json",
+        {
+            "schema_version":1,
+            "rule":(
+                "MODEL_CALL_MEASUREMENTS_REQUIRE_UNIQUE_OUTCOME_TO_ACTION_FORKS; "
+                "ZERO_CALL_SIZING_METRICS_MAY_BE_NONDECISIONAL"
+            ),
+            "contracts":decision_contracts,
+        },
+        producer="test1.2",
+        stage="preregistered-decision-contract",
+    )
     store.write_json("full-control-candidate-registry.json", {
         "schema_version":1,
         "candidates":campaign.interventions,
@@ -7522,6 +7538,8 @@ def write_outputs(campaign: Test12Campaign, results: dict[str, Any]) -> None:
         "schema_version":1,
         "source_seed_run":campaign.source.get("run_id"),
         "priority_queue":queue,
+        "measurement_decision_ledger":"measurement-decision-ledger.json",
+        "measurement_decision_rule":"MODEL_CALL_MEASUREMENTS_REQUIRE_UNIQUE_OUTCOME_TO_ACTION_FORKS",
         "runtime_semantics_map":"gpt-oss-runtime-semantics-map.json",
         "runtime_characterization_profile":"runtime-characterization-profile.json",
         "output_contract_map":"gpt-oss-output-contract-map.json",
