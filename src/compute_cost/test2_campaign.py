@@ -572,6 +572,7 @@ def load_test1_handoff(
             "runtime-characterization-profile.json",
             "test1.2-handoff.json",
             "test1.2-opportunity-discovery-map.json",
+            "test1.2-observations.jsonl",
         ]
         missing = [name for name in required if not (collection_dir / name).is_file()]
         if missing:
@@ -644,13 +645,53 @@ def load_test1_handoff(
             })
 
         opportunity = _read_json(collection_dir / "test1.2-opportunity-discovery-map.json")
-        unresolved_ids = list(opportunity.get("unresolved_failed_fixture_ids") or [])
+        unresolved_ids = [
+            str(value)
+            for value in (opportunity.get("unresolved_failed_fixtures") or [])
+        ]
+        collection_observations = _read_jsonl(
+            collection_dir / "test1.2-observations.jsonl"
+        )
+        valid_failure_baseline_by_fixture: dict[str, dict[str, Any]] = {}
+        for row in collection_observations:
+            fixture_id = str(row.get("fixture_id") or "")
+            if fixture_id not in unresolved_ids:
+                continue
+            classification = row.get("classification") or {}
+            capability_valid = bool(
+                row.get("valid_for_capability") is True
+                or classification.get("valid_for_capability") is True
+            )
+            if (
+                row.get("intervention_id") == "CONTROL"
+                and capability_valid
+                and float(row.get("score") or 0.0) < 1.0
+            ):
+                valid_failure_baseline_by_fixture[fixture_id] = row
+
+        missing_failure_provenance = sorted(
+            set(unresolved_ids) - set(valid_failure_baseline_by_fixture)
+        )
+        if missing_failure_provenance:
+            raise ValueError(
+                "Test 1.2 unresolved failure lacks valid baseline provenance: "
+                + ", ".join(missing_failure_provenance)
+            )
+
         failures = {
             "failures":[
                 {
                     "fixture_id":fixture_id,
-                    "classification":{"result_class":"UNRESOLVED"},
-                    "partition":"VALIDATION",
+                    "family_id":valid_failure_baseline_by_fixture[fixture_id].get("family_id"),
+                    "difficulty_level":valid_failure_baseline_by_fixture[fixture_id].get("difficulty_level"),
+                    "classification":copy.deepcopy(
+                        valid_failure_baseline_by_fixture[fixture_id].get("classification") or {}
+                    ),
+                    "valid_for_capability":True,
+                    "partition":valid_failure_baseline_by_fixture[fixture_id].get("partition") or "DISCOVERY",
+                    "source_experiment_id":valid_failure_baseline_by_fixture[fixture_id].get("experiment_id"),
+                    "source_collection_run":collection_run,
+                    "source_evidence_kind":"CAPABILITY_VALID_UNRESOLVED_BASELINE_FAILURE",
                 }
                 for fixture_id in unresolved_ids
             ]
