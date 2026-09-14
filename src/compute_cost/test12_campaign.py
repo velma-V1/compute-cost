@@ -1310,6 +1310,11 @@ class Test12Campaign:
         self.runtime_canary_count = int(
             checkpoint.get("runtime_canary_count") or 0
         )
+        self.runtime_canary_last_pass_active_seconds: float | None = (
+            float(checkpoint["runtime_canary_last_pass_active_seconds"])
+            if checkpoint.get("runtime_canary_last_pass_active_seconds") is not None
+            else None
+        )
         self.efficiency_counters: dict[str, int] = {
             "exact_duplicate_treatments_skipped": 0,
             "insufficient_runway_treatments_skipped": 0,
@@ -1423,6 +1428,7 @@ class Test12Campaign:
             "runtime_canary_recent_ratios": list(self.runtime_canary_recent_ratios),
             "runtime_canary_failed": self.runtime_canary_failed,
             "runtime_canary_count": self.runtime_canary_count,
+            "runtime_canary_last_pass_active_seconds": self.runtime_canary_last_pass_active_seconds,
             "last_experiment_id": (
                 self.rows[-1].get("experiment_id") if self.rows else None
             ),
