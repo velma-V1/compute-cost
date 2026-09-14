@@ -159,6 +159,26 @@ def _read_jsonl(path: Path) -> list[dict[str, Any]]:
     return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
 
 
+def _runtime_identity_mismatches(
+    source_profile: dict[str, Any],
+    current_runtime: dict[str, Any],
+) -> list[str]:
+    """Return exact-model/runtime identity fields that drifted since Collection."""
+    source_identity = source_profile.get("identity") or {}
+    current_identity = {
+        "model": current_runtime.get("model"),
+        "runtime_version": current_runtime.get("version"),
+        "model_size_bytes": current_runtime.get("model_size_bytes"),
+        "model_info": current_runtime.get("model_info"),
+    }
+    return [
+        key
+        for key in ("model", "runtime_version", "model_size_bytes", "model_info")
+        if source_identity.get(key) is not None
+        and current_identity.get(key) != source_identity.get(key)
+    ]
+
+
 def _tuning_row_hash(row: dict[str, Any]) -> str:
     stable = {key: value for key, value in row.items() if key != "tuning_observation_sha256"}
     payload = json.dumps(stable, sort_keys=True, separators=(",", ":"), default=str)
@@ -603,6 +623,11 @@ def load_collection(results_root: Path, run_id: str) -> dict[str, Any]:
     problems = EvidenceStore(results_root, run_id).verify_manifest_paths(REQUIRED_COLLECTION_FILES)
     if problems:
         raise ValueError(f"collection consumed-artifact verification failed: {problems}")
+    runtime_profile = _read_json(run_dir / "runtime-characterization-profile.json")
+    if runtime_profile.get("gate_passed") is not True:
+        raise ValueError(
+            "collection Stage-0 runtime characterization did not pass"
+        )
     coverage = _read_json(run_dir / "control-grammar-coverage.json")
     if not coverage.get("all_declared_candidates_tested"):
         raise ValueError("collection did not exercise every declared control candidate")
@@ -799,6 +824,7 @@ def load_collection(results_root: Path, run_id: str) -> dict[str, Any]:
         "run_id": run_id,
         "run_dir": str(run_dir),
         "registry": registry,
+        "runtime_profile": runtime_profile,
         "collection_sanitization": collection_sanitization,
         "generation_budget_calibration": budget_calibration,
         "sanitized_collection_observations": sanitized_collection_rows,
@@ -1859,6 +1885,21 @@ def run_test12_tuning(
 ) -> list[dict[str,Any]]:
     assert runner.store is not None
     collection=load_collection(Path(runner.results_root),collection_run)
+    current_runtime_path = Path(runner.store.run_dir) / "runtime.json"
+    if not current_runtime_path.is_file():
+        raise ValueError(
+            "Test 1.2 tuning requires current runtime.json identity evidence"
+        )
+    current_runtime = _read_json(current_runtime_path)
+    identity_mismatches = _runtime_identity_mismatches(
+        collection.get("runtime_profile") or {},
+        current_runtime,
+    )
+    if identity_mismatches:
+        raise ValueError(
+            "Test 1.2 tuning runtime identity drift from Collection: "
+            + ", ".join(identity_mismatches)
+        )
     plan=build_tuning_plan(cases,collection_run=collection_run)
     validate_tuning_plan(plan)
     runner.store.write_json("test1.2-tuning-plan.json",plan,producer="test1.2-tuning",stage="preflight")
