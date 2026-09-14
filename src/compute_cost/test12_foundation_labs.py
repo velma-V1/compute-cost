@@ -1446,6 +1446,95 @@ def _spread_cases(cases: list[dict[str, Any]], limit: int) -> list[dict[str, Any
     return [cases[index] for index in indexes]
 
 
+def _auditor_executor_thesis_summary(
+    pairs: list[dict[str, Any]],
+    *,
+    target_valid_pairs: int,
+    minimum_valid_pairs: int,
+    alpha: float,
+) -> dict[str, Any]:
+    """Matched-fixture mechanism test for the inverted architecture.
+
+    The inferential vote is the discordant matched pair: auditor-correct /
+    executor-wrong versus executor-correct / auditor-wrong. Ties carry no vote.
+    """
+    valid = [
+        row for row in pairs
+        if isinstance(row, dict)
+        and isinstance(row.get("executor_correct"), bool)
+        and isinstance(row.get("auditor_correct"), bool)
+    ]
+    n = len(valid)
+    executor_accuracy = (
+        sum(1 for row in valid if row["executor_correct"]) / n
+        if n else None
+    )
+    auditor_accuracy = (
+        sum(1 for row in valid if row["auditor_correct"]) / n
+        if n else None
+    )
+    advantage = (
+        float(auditor_accuracy) - float(executor_accuracy)
+        if auditor_accuracy is not None and executor_accuracy is not None
+        else None
+    )
+    auditor_only = sum(
+        1 for row in valid
+        if row["auditor_correct"] and not row["executor_correct"]
+    )
+    executor_only = sum(
+        1 for row in valid
+        if row["executor_correct"] and not row["auditor_correct"]
+    )
+    discordant = auditor_only + executor_only
+    p_value = (
+        min(
+            1.0,
+            sum(
+                math.comb(discordant, k)
+                for k in range(auditor_only, discordant + 1)
+            ) / (2.0 ** discordant),
+        )
+        if discordant else 1.0
+    )
+
+    if n < int(minimum_valid_pairs):
+        status = "INSUFFICIENT_VALID_MATCHED_PAIRS"
+    elif (
+        advantage is not None
+        and advantage > 0.0
+        and auditor_only > executor_only
+        and p_value <= float(alpha)
+    ):
+        status = "SUPPORTED"
+    elif advantage is not None and advantage <= 0.0:
+        status = "NOT_SUPPORTED"
+    else:
+        status = "INCONCLUSIVE_NO_SIGNIFICANT_AUDITOR_ADVANTAGE"
+
+    return {
+        "schema_version":1,
+        "status":status,
+        "decision_role":"INVERTED_ARCHITECTURE_MECHANISM_GATE",
+        "target_valid_pairs":int(target_valid_pairs),
+        "minimum_valid_pairs":int(minimum_valid_pairs),
+        "valid_pair_count":n,
+        "family_count":len({
+            str(row.get("family_id") or "UNKNOWN") for row in valid
+        }),
+        "executor_accuracy":executor_accuracy,
+        "auditor_accuracy":auditor_accuracy,
+        "auditor_minus_executor_accuracy":advantage,
+        "auditor_only_wins":auditor_only,
+        "executor_only_wins":executor_only,
+        "discordant_pair_count":discordant,
+        "one_sided_exact_p_value":p_value,
+        "alpha":float(alpha),
+        "unit_of_independence":"fixture",
+        "full_campaign_allowed":status == "SUPPORTED",
+    }
+
+
 def _audit_case_with_reasoning(
     case: dict[str, Any],
     candidate: str,
