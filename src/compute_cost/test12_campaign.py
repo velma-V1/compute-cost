@@ -157,8 +157,10 @@ from .test12_model_manufacturing import (
 )
 from .test12_foundation_labs import (
     FOUNDATION_QUESTIONS,
+    build_runtime_characterization_profile,
     foundation_question_ledger,
     run_role_specialization_lab,
+    run_runtime_budget_characterization,
     run_runtime_semantics_gate,
 )
 
@@ -172,15 +174,15 @@ CALL_START_CUTOFF_SECONDS = COLLECTION_ACTIVE_SECONDS
 # Campaign-level early stop is prohibited; only replication depth may adapt after mandatory breadth.
 PHASES = (
     ("runtime_semantics_gate", 20 * 60),
-    ("baseline_capability_map", 35 * 60),
-    ("fractional_compute_surface", 25 * 60),
+    ("runtime_budget_characterization", 30 * 60),
     ("role_specialization_gate", 20 * 60),
+    ("baseline_capability_map", 35 * 60),
     ("capability_family_manufacturing_floor", 100 * 60),
     ("mechanism_coverage_floor", 50 * 60),
     ("real_tool_execution", 25 * 60),
     ("failure_phenotype_replay", 25 * 60),
     ("interaction_scout", 30 * 60),
-    ("dose_activation_boundaries", 30 * 60),
+    ("dose_activation_boundaries", 25 * 60),
     ("negative_transfer_sentinels", 25 * 60),
     ("information_gain_reserve", 25 * 60),
     ("frontier_gap_labs", 35 * 60),
@@ -237,6 +239,7 @@ RULES = (
     "residual failures are eligible for fine-tuning only after prompt controller compute context retry and tool-policy owners are tested",
     "unused active time is allocated to new opportunity discovery before any replication",
     "Test 1.2 Collection is an opportunity-discovery stage, not a proof stage; recurrence, robustness, and confidence-building belong to Run 2/Test 2",
+    "Stage 0 runtime characterization must pass before any capability claim: exact runtime semantics, replicated family generation budgets, and role economics are prerequisites",
     "runtime semantics questions 1-6 and 9-10 are measured before ordinary capability discovery so downstream scores cannot inherit an unverified Ollama contract",
     "paired auditor/executor questions 32-34 and 38 are measured before manufacturing so role specialization is observed rather than assumed",
     "gpt-oss sampling compares temperature=1.0 and top_p=1.0 against the local runtime path rather than inheriting defaults silently",
@@ -279,6 +282,7 @@ REQUIRED_TEST11_FILES = (
 REQUIRED_OUTPUTS = (
     "test1.2-source-audit.json",
     "gpt-oss-runtime-semantics-map.json",
+    "runtime-characterization-profile.json",
     "gpt-oss-role-specialization-map.json",
     "gpt-oss-foundation-question-ledger.json",
     "test1.2-foundation-observations.jsonl",
@@ -809,7 +813,10 @@ def build_test12_plan(cases: list[dict[str, Any]], *, seed_run: str | None = Non
             list(range(14,46)),
         ],
         "runtime_semantics_gate_required": True,
+        "runtime_budget_characterization_required": True,
         "role_specialization_gate_required": True,
+        "stage0_runtime_characterization_required": True,
+        "stage0_must_pass_before_capability_claims": True,
         "core_mechanism_count": len(CORE_INTERVENTIONS),
         "generated_prompt_control_count": len(generate_prompt_control_candidates()),
         "finite_control_grammar": copy.deepcopy(CONTROL_GRAMMAR),
@@ -1208,6 +1215,11 @@ class Test12Campaign:
         self.allowed_partitions = {"DISCOVERY"}
         self.controls: dict[tuple[str, int], dict[str, Any]] = {}
         self.invalid_controls: dict[tuple[str, int], dict[str, Any]] = {}
+        self.baseline_generation_budget_by_family: dict[str, int] = copy.deepcopy(
+            (self.phase_results.get("runtime_characterization") or {}).get(
+                "resolved_generation_budget_by_family"
+            ) or {}
+        )
         self.rows: list[dict[str, Any]] = copy.deepcopy(self.resume_state.get("rows") or [])
         self.sequence = 1_000_000 + len(self.rows) if self.resume_state else 0
         self.phase_assertions: list[dict[str, Any]] = copy.deepcopy(
@@ -1422,7 +1434,7 @@ class Test12Campaign:
             self.efficiency_counters["estimated_single_calls_avoided"] += 1
             return None
         self.sequence += 1
-        family_budget_map = self.cfg.get("baseline_generation_budget_by_family") or {}
+        family_budget_map = self.baseline_generation_budget_by_family
         baseline_budget = int(
             family_budget_map.get(
                 _family(case),
@@ -5056,6 +5068,22 @@ def write_outputs(campaign: Test12Campaign, results: dict[str, Any]) -> None:
         "source_priority_items":len((campaign.source.get("priority_queue") or {}).get("queue",[]) or []),
         "source_ingredients":len((campaign.source.get("ingredient_registry") or {}).get("ingredients",[]) or []),
     }, producer="test1.2", stage="report")
+    runtime_characterization = copy.deepcopy(
+        results.get("runtime_characterization") or {
+            "schema_version":1,
+            "stage":"STAGE0_RUNTIME_CHARACTERIZATION",
+            "gate_passed":False,
+            "gate_failures":["PROFILE_NOT_AVAILABLE"],
+            "capability_claims_allowed":False,
+            "resolved_generation_budget_by_family":{},
+        }
+    )
+    store.write_json(
+        "runtime-characterization-profile.json",
+        runtime_characterization,
+        producer="test1.2-stage0",
+        stage="report",
+    )
     runtime_semantics = copy.deepcopy(results.get("runtime_semantics") or {
         "schema_version":1,
         "questions_answered":[],
@@ -5101,6 +5129,11 @@ def write_outputs(campaign: Test12Campaign, results: dict[str, Any]) -> None:
         "source_seed_run":campaign.source.get("run_id"),
         "priority_queue":queue,
         "runtime_semantics_map":"gpt-oss-runtime-semantics-map.json",
+        "runtime_characterization_profile":"runtime-characterization-profile.json",
+        "runtime_characterization_profile_sha256":runtime_characterization.get("profile_sha256"),
+        "resolved_generation_budget_by_family":copy.deepcopy(
+            runtime_characterization.get("resolved_generation_budget_by_family") or {}
+        ),
         "role_specialization_map":"gpt-oss-role-specialization-map.json",
         "foundation_question_ledger":"gpt-oss-foundation-question-ledger.json",
         "foundation_missing_critical_ids":foundation_ledger["missing_critical_foundation_ids"],
@@ -5195,12 +5228,39 @@ def run_test12_campaign(
         physical_before = int(getattr(runner, "_model_call_counts", {}).get(run_id, 0)) if run_id else 0
         if phase_name == "runtime_semantics_gate":
             results["runtime_semantics"] = run_runtime_semantics_gate(campaign, deadline)
-        elif phase_name == "baseline_capability_map":
-            results["baseline"] = phase_baseline(campaign, deadline)
-        elif phase_name == "fractional_compute_surface":
-            results["reasoning"] = phase_reasoning_compute(campaign, deadline)
+        elif phase_name == "runtime_budget_characterization":
+            results["budget_characterization"] = run_runtime_budget_characterization(
+                campaign, deadline
+            )
+            if campaign.can_start(deadline):
+                results["reasoning"] = phase_reasoning_compute(campaign, deadline)
         elif phase_name == "role_specialization_gate":
             results["role_specialization"] = run_role_specialization_lab(campaign, deadline)
+            profile = build_runtime_characterization_profile(
+                campaign,
+                results.get("runtime_semantics") or {},
+                results.get("budget_characterization") or {},
+                results.get("role_specialization") or {},
+            )
+            results["runtime_characterization"] = profile
+            campaign.baseline_generation_budget_by_family = copy.deepcopy(
+                profile.get("resolved_generation_budget_by_family") or {}
+            )
+            runner.store.write_json(
+                "runtime-characterization-profile.json",
+                profile,
+                producer="test1.2-stage0",
+                stage="runtime-characterization",
+            )
+            if not profile.get("gate_passed"):
+                raise ValueError(
+                    "Stage 0 runtime characterization failed; capability testing is blocked: "
+                    + ", ".join(profile.get("gate_failures") or [])
+                )
+        elif phase_name == "baseline_capability_map":
+            if not (results.get("runtime_characterization") or {}).get("gate_passed"):
+                raise ValueError("Stage 0 runtime characterization must pass before baseline capability mapping")
+            results["baseline"] = phase_baseline(campaign, deadline)
         elif phase_name == "capability_family_manufacturing_floor":
             results["family_floor"] = phase_family_control_floor(campaign, deadline)
         elif phase_name == "mechanism_coverage_floor":
