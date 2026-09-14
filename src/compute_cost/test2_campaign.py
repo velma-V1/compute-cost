@@ -4355,17 +4355,20 @@ def write_test2_outputs(
     store = campaign.runner.store
     store.write_json(
         "recurrence-map.json",
-        {"schema_version": 1, "recipes": recurrence},
+        _report_payload(campaign, {"schema_version":1, "recipes":recurrence}),
         producer="test2",
         stage="report",
     )
     store.write_json(
         "proof-value-scheduler.json",
-        copy.deepcopy(campaign.proof_scheduler_audit) or {
-            "schema_version":1,
-            "mode":"LEGACY_OR_NO_EXACT_SCHEDULER",
-            "candidates":{},
-        },
+        _report_payload(
+            campaign,
+            copy.deepcopy(campaign.proof_scheduler_audit) or {
+                "schema_version":1,
+                "mode":"LEGACY_OR_NO_EXACT_SCHEDULER",
+                "candidates":{},
+            },
+        ),
         producer="test2",
         stage="report",
     )
@@ -4375,35 +4378,47 @@ def write_test2_outputs(
     }
     store.write_json(
         "higher-order-hypergraph.json",
-        {"schema_version": 1, "hyperedges": hyperedges},
+        _report_payload(campaign, {"schema_version":1, "hyperedges":hyperedges}),
         producer="test2",
         stage="report",
     )
     store.write_json(
         "failure-phenotype-registry.json",
-        {"schema_version": 1, "phenotypes": recovery.get("phenotypes") or {}},
+        _report_payload(
+            campaign,
+            {"schema_version":1, "phenotypes":recovery.get("phenotypes") or {}},
+        ),
         producer="test2",
         stage="report",
     )
     store.write_json(
         "failure-recovery-matrix.json",
-        {"schema_version": 1, "matrix": recovery.get("matrix") or {}},
+        _report_payload(
+            campaign,
+            {"schema_version":1, "matrix":recovery.get("matrix") or {}},
+        ),
         producer="test2",
         stage="report",
     )
     store.write_json(
         "negative-transfer-boundaries.json",
-        {"schema_version": 1, "boundaries": negative_transfer},
+        _report_payload(
+            campaign,
+            {"schema_version":1, "boundaries":negative_transfer},
+        ),
         producer="test2",
         stage="report",
     )
     store.write_json(
         "harm-sentinel-evidence.json",
-        {
-            "schema_version":1,
-            "policy":"VERIFIED_CONTROL_REQUIRES_DEDICATED_BASELINE_PASS_HARM_EVIDENCE_AND_WILSON90_UPPER_BOUND_AT_OR_BELOW_CEILING",
-            "recipes":copy.deepcopy(campaign.harm_evidence),
-        },
+        _report_payload(
+            campaign,
+            {
+                "schema_version":1,
+                "policy":"VERIFIED_CONTROL_REQUIRES_DEDICATED_BASELINE_PASS_HARM_EVIDENCE_AND_WILSON90_UPPER_BOUND_AT_OR_BELOW_CEILING",
+                "recipes":copy.deepcopy(campaign.harm_evidence),
+            },
+        ),
         producer="test2",
         stage="report",
     )
@@ -4422,7 +4437,7 @@ def write_test2_outputs(
     )
     store.write_json(
         "knockout-registry.json",
-        {"schema_version": 1, "recipes": knockouts},
+        _report_payload(campaign, {"schema_version":1, "recipes":knockouts}),
         producer="test2",
         stage="report",
     )
@@ -4430,7 +4445,7 @@ def write_test2_outputs(
     blind_payload = copy.deepcopy(blind)
     store.write_json(
         "blind-confirmation-results.json",
-        blind_payload,
+        _report_payload(campaign, blind_payload),
         producer="test2",
         stage="report",
     )
@@ -4491,13 +4506,13 @@ def write_test2_outputs(
     )
     store.write_json(
         "model-limit-registry.json",
-        {"schema_version": 1, **limits},
+        _report_payload(campaign, {"schema_version":1, **limits}),
         producer="test2",
         stage="report",
     )
     store.write_json(
         "fine-tuning-candidate-queue.json",
-        {"schema_version": 1, "candidates": finetune},
+        _report_payload(campaign, {"schema_version":1, "candidates":finetune}),
         producer="test2",
         stage="report",
     )
@@ -4531,7 +4546,7 @@ def write_test2_outputs(
     stopping = _build_harness_stopping_rules(campaign, blind, limits)
     store.write_json(
         "harness-stopping-rules.json",
-        stopping,
+        _report_payload(campaign, stopping),
         producer="test2",
         stage="decision",
     )
@@ -4541,9 +4556,11 @@ def write_test2_outputs(
     ]
     store.write_json(
         "test3-protected-manifest.json",
-        {
-            "schema_version": 1,
-            "partition": "TEST3_PROTECTED",
+        _report_payload(
+            campaign,
+            {
+                "schema_version":1,
+                "partition":"TEST3_PROTECTED",
             "fixture_ids": protected_ids,
             "fixture_count": len(protected_ids),
             "exposed_by_test2": False,
@@ -4557,23 +4574,27 @@ def write_test2_outputs(
             "cross_run_reuse_prohibited":True,
             "must_claim_holdout_before_exposure":True,
             "next_cycle_partition_must_not_exist_during_current_cycle_discovery":True,
-        },
+            },
+        ),
         producer="test2",
         stage="report",
     )
     store.write_json(
         "test3-dataset-manifest.json",
-        {
-            "schema_version": 1,
-            "train_eligible_examples": [
+        _report_payload(
+            campaign,
+            {
+                "schema_version":1,
+                "train_eligible_examples":[
                 row for row in dataset
                 if row.get("train_eligible") is True
                 and row.get("partition") in {"DISCOVERY", "VALIDATION"}
             ],
             "protected_fixture_ids": protected_ids,
             "candidate_phenotypes": [row["phenotype_id"] for row in finetune],
-            "leakage_rule": "TEST3_PROTECTED fixtures and siblings derived from them are forbidden from training",
-        },
+                "leakage_rule":"TEST3_PROTECTED fixtures and siblings derived from them are forbidden from training",
+            },
+        ),
         producer="test2",
         stage="report",
     )
@@ -4597,7 +4618,7 @@ def write_test2_outputs(
     }
     store.write_json(
         "holdout-replenishment-plan.json",
-        replenishment,
+        _report_payload(campaign, replenishment),
         producer="test2",
         stage="holdout-governance",
     )
@@ -4625,7 +4646,7 @@ def write_test2_outputs(
         })
     store.write_json(
         "remaining-unknowns.json",
-        {"schema_version": 1, "unknowns": unresolved},
+        _report_payload(campaign, {"schema_version":1, "unknowns":unresolved}),
         producer="test2",
         stage="report",
     )
@@ -4633,7 +4654,7 @@ def write_test2_outputs(
     latency = _latency_envelope(campaign)
     store.write_json(
         "latency-resource-envelope.json",
-        latency,
+        _report_payload(campaign, latency),
         producer="test2",
         stage="report",
     )
@@ -4655,25 +4676,25 @@ def write_test2_outputs(
     acceptance["training_asset_yield"] = copy.deepcopy(training_yield)
     store.write_json(
         "inverted-finalization-contract.json",
-        contract,
+        _report_payload(campaign, contract),
         producer="test2",
         stage="report",
     )
     store.write_json(
         "final-acceptance-manifest.json",
-        acceptance,
+        _report_payload(campaign, acceptance),
         producer="test2",
         stage="report",
     )
     store.write_json(
         "rollback-configuration.json",
-        rollback,
+        _report_payload(campaign, rollback),
         producer="test2",
         stage="report",
     )
     store.write_json(
         "exact-model-configuration.json",
-        contract["model_configuration"],
+        _report_payload(campaign, contract["model_configuration"]),
         producer="test2",
         stage="report",
     )
