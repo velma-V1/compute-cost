@@ -6800,8 +6800,9 @@ def _mechanism_family_knowledge_table(
         if ident:
             mechanism_members[intervention_to_mechanism[ident]].append(intervention)
 
-    min_null = max(3, int(campaign.cfg.get("decision_complete_valid_observations", 3)))
     max_censor = float(campaign.cfg.get("max_classification_censoring_rate", 0.20))
+    null_max_upper = float(campaign.cfg.get("cell_null_max_wilson_upper", 0.10))
+    harm_max_width = float(campaign.cfg.get("cell_harm_max_wilson_width", 0.35))
 
     def obs_id(row: dict[str, Any]) -> str:
         return str(
@@ -6924,13 +6925,12 @@ def _mechanism_family_knowledge_table(
         member_ids = {
             str(row.get("id") or "") for row in members if row.get("id")
         }
-        implementation_status = str(
-            representative.get("implementation_status") or "BUILT"
-        )
+        implementation = mechanism_implementation_status(representative)
+        implementation_status = str(implementation["status"])
         for family in TEST2_CAPABILITY_FAMILIES:
             if implementation_status == "UNBUILT":
                 applicability = "unbuilt"
-                applicability_basis = "DECLARED_MECHANISM_LACKS_DELIVERY_PLUMBING"
+                applicability_basis = str(implementation["basis"])
             else:
                 decision = mechanism_applicability(representative, family)
                 raw = str(decision.get("status") or "UNKNOWN")
