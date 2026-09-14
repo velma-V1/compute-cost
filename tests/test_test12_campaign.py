@@ -2197,3 +2197,159 @@ def test_tuning_recovery_preserves_legacy_holdout_exposure(tmp_path):
     )
     assert "test2_blind_acceptance" not in recovered["checkpoint"]["completed_phases"]
     assert "test3_protected_acceptance" not in recovered["checkpoint"]["completed_phases"]
+
+
+
+def test_role_specialization_uses_calibrated_family_budget(monkeypatch):
+    calls = []
+
+    class Store:
+        @staticmethod
+        def append_jsonl(*args, **kwargs):
+            return None
+
+    class Runner:
+        store = Store()
+
+    class Campaign:
+        runner = Runner()
+        cfg = {"base_generation_budget": 256}
+        baseline_generation_budget_by_family = {
+            "arithmetic_numerical_reasoning": 1024
+        }
+
+        @staticmethod
+        def can_start(deadline):
+            return True
+
+    case = {
+        "id": "role-a",
+        "category": "arithmetic_numerical_reasoning",
+        "family_id": "arithmetic_numerical_reasoning",
+        "prompt": "2+2?",
+        "scorer": "exact",
+        "expected": "4",
+    }
+    monkeypatch.setattr(
+        foundation_module,
+        "_representative_cases",
+        lambda campaign: [case],
+    )
+
+    def fake_probe(campaign, deadline, **kwargs):
+        calls.append(kwargs)
+        probe_id = kwargs["probe_id"]
+        auditor = "auditor" in probe_id
+        return {
+            "probe_id": probe_id,
+            "family_id": kwargs["family_id"],
+            "ok": True,
+            "content_empty": False,
+            "done_reason": "stop",
+            "content": "ACCEPT" if auditor else "4",
+            "score": 1.0,
+            "eval_count": 20 if auditor else 40,
+        }
+
+    monkeypatch.setattr(foundation_module, "_invoke_probe", fake_probe)
+    result = foundation_module.run_role_specialization_lab(Campaign(), 999.0)
+
+    assert result["matched_family_count"] == 1
+    assert result["invalid_executor_observations_excluded"] == 0
+    assert result["invalid_auditor_observations_excluded"] == 0
+    assert all(call["options"]["num_predict"] == 1024 for call in calls)
+
+
+def test_stage0_profile_rejects_nominal_role_questions_without_valid_coverage(tmp_path):
+    (tmp_path / "runtime.json").write_text(
+        json.dumps({
+            "model": "gpt-oss:20b",
+            "version": "test-runtime",
+            "model_size_bytes": 1,
+            "model_info": {},
+        }),
+        encoding="utf-8",
+    )
+
+    class Store:
+        run_dir = tmp_path
+
+    class Runner:
+        store = Store()
+        model = "gpt-oss:20b"
+
+    class Campaign:
+        runner = Runner()
+
+    runtime = {
+        "questions_answered": [1, 2, 3, 4, 5, 6, 9, 10],
+        "thinking_markup_leak_count": 0,
+    }
+    budgets = {
+        "questions_answered": list(range(11, 21)),
+        "all_families_reproducibly_valid": True,
+        "families": {f"family-{i}": {} for i in range(40)},
+        "resolved_generation_budget_by_family": {
+            f"family-{i}": 512 for i in range(40)
+        },
+    }
+    role = {
+        "questions_answered": [32, 33, 34, 38],
+        "matched_family_count": 0,
+        "executor_accuracy": None,
+        "auditor_low_accuracy": None,
+        "auditor_high_accuracy": None,
+    }
+    profile = foundation_module.build_runtime_characterization_profile(
+        Campaign(), runtime, budgets, role
+    )
+    assert profile["gate_passed"] is False
+    assert "ROLE_SPECIALIZATION_VALID_MATCHED_COVERAGE_INSUFFICIENT" in profile["gate_failures"]
+    assert "ROLE_SPECIALIZATION_VALID_SCORE_MISSING" in profile["gate_failures"]
+
+
+def test_stage0_profile_rejects_thinking_channel_leak(tmp_path):
+    (tmp_path / "runtime.json").write_text(
+        json.dumps({
+            "model": "gpt-oss:20b",
+            "version": "test-runtime",
+            "model_size_bytes": 1,
+            "model_info": {},
+        }),
+        encoding="utf-8",
+    )
+
+    class Store:
+        run_dir = tmp_path
+
+    class Runner:
+        store = Store()
+        model = "gpt-oss:20b"
+
+    class Campaign:
+        runner = Runner()
+
+    runtime = {
+        "questions_answered": [1, 2, 3, 4, 5, 6, 9, 10],
+        "thinking_markup_leak_count": 1,
+    }
+    budgets = {
+        "questions_answered": list(range(11, 21)),
+        "all_families_reproducibly_valid": True,
+        "families": {f"family-{i}": {} for i in range(40)},
+        "resolved_generation_budget_by_family": {
+            f"family-{i}": 512 for i in range(40)
+        },
+    }
+    role = {
+        "questions_answered": [32, 33, 34, 38],
+        "matched_family_count": 8,
+        "executor_accuracy": 0.8,
+        "auditor_low_accuracy": 0.8,
+        "auditor_high_accuracy": 0.9,
+    }
+    profile = foundation_module.build_runtime_characterization_profile(
+        Campaign(), runtime, budgets, role
+    )
+    assert profile["gate_passed"] is False
+    assert "THINKING_CHANNEL_LEAK_OBSERVED" in profile["gate_failures"]
