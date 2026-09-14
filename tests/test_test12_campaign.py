@@ -4399,16 +4399,19 @@ def test_compiler_proof_manifest_rations_only_policy_reachable_cells():
         {
             "family_id":family_a,
             "selected_intervention_id":"CTRL-A",
+            "model_calls":3,
             "delta_valid":True,
         },
         {
             "family_id":family_a,
             "selected_intervention_id":"CTRL-A",
+            "model_calls":3,
             "delta_valid":True,
         },
         {
             "family_id":family_b,
             "selected_intervention_id":"CTRL-A",
+            "model_calls":3,
             "delta_valid":True,
         },
     ]
