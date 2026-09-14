@@ -2071,7 +2071,7 @@ def run_test12_tuning(
         "blind_acceptance_is_tuning_input":False,
         "protected_acceptance_is_tuning_input":False,
         "terminal_decision":terminal_decision,
-        "certified_capability_families":provisionally_validated_families,
+        "provisionally_validated_capability_families":provisionally_validated_families,
         "blocked_capability_families":blocked_families,
         "collection_value_gap_families":collection_value_gap_families,
         "resolved_collection_value_gap_families":resolved_collection_value_gap_families,
@@ -2114,40 +2114,45 @@ def run_test12_tuning(
     }
     runner.store.write_json("fine-tuning-qualification.json",qualification,producer="test1.2-tuning",stage="report")
 
-    final_acceptance={
+    provisional_result={
         "schema_version":1,
-        "onboarding_complete":True,
+        "artifact_role":"PROVISIONAL_PRE_TEST2_VALIDATION_RESULT",
+        "onboarding_complete":False,
+        "release_authorized":False,
         "winner_policy_id":winner.get("policy_id"),
         "winner_lock_sha256":winner_lock_hash,
-        "winner_locked_before_holdouts":True,
+        "winner_locked_before_test2":True,
         "holdouts_used_for_tuning_or_selection":False,
+        "test2_blind_exposed":False,
+        "test3_protected_exposed":False,
         "validation_family_safe":family_safe,
-        "all_40_families_competent":all_40_families_competent,
-        "minimum_acceptance_pass_rate":minimum_pass_rate,
+        "all_40_families_validation_competent":all_40_families_competent,
+        "minimum_validation_pass_rate":minimum_pass_rate,
         "maximum_capability_regression_rate":max_regression,
         "test2_blind":{
+            "status":"RESERVED_UNTOUCHED_FOR_TEST2_PROOF",
             "summary":blind_summary,
-            "passed":blind_pass,
-            "policy_scores":blind_scores,
         },
         "test3_protected":{
+            "status":"RESERVED_UNTOUCHED_FOR_FINAL_RELEASE_ACCEPTANCE",
             "summary":protected_summary,
-            "passed":protected_pass,
-            "policy_scores":protected_scores,
         },
         "terminal_decision":terminal_decision,
-        "certified_capability_families":provisionally_validated_families,
+        "provisionally_validated_capability_families":provisionally_validated_families,
         "blocked_capability_families":blocked_families,
         "collection_value_gap_families":collection_value_gap_families,
         "resolved_collection_value_gap_families":resolved_collection_value_gap_families,
         "unresolved_collection_value_gap_families":unresolved_collection_value_gap_families,
-        "collection_value_gaps_are_tuning_priorities_not_preflight_blockers":True,
+        "collection_value_gaps_are_validation_priorities_not_release_evidence":True,
         "collection_role":"OPPORTUNITY_DISCOVERY",
+        "compiler_role":"VALIDATION_ONLY_POLICY_LOCK",
         "proof_owner":"RUN2_TEST2",
-        "collection_opportunity_discovery":copy.deepcopy(
-            collection.get("opportunity_discovery") or {}
+        "final_release_owner":"FRESH_PROTECTED_ACCEPTANCE",
+        "next_action":(
+            "RUN_TEST2_PROOF_STAGE"
+            if terminal_decision!="REJECT_BEFORE_TEST2"
+            else "DO_NOT_ADVANCE_TO_TEST2_WITH_THIS_CANDIDATE"
         ),
-        "no_additional_characterization_test_required":True,
         "recovery_policy":{
             "full_rerun_allowed":False,
             "interruption_action":"RESUME_SAME_RUN_ID",
@@ -2165,60 +2170,54 @@ def run_test12_tuning(
     }
     runner.store.write_json(
         "test1.2-final-acceptance.json",
-        final_acceptance,
+        provisional_result,
         producer="test1.2-tuning",
-        stage="terminal-acceptance",
+        stage="provisional-compiler",
     )
 
     capability_contract={
         "schema_version":1,
         "model":getattr(runner,"model",None),
+        "status":"PROVISIONAL_PENDING_TEST2_PROOF",
         "terminal_decision":terminal_decision,
+        "deployable":False,
         "mode":(
-            "ALL_CERTIFIED_CAPABILITIES"
-            if terminal_decision=="FULL_INVERTED_INTEGRATION"
-            else "CAPABILITY_ALLOWLIST"
-            if terminal_decision=="CONSTRAINED_CAPABILITY_SCOPED_INTEGRATION"
+            "PROVISIONAL_TEST2_CANDIDATE"
+            if terminal_decision!="REJECT_BEFORE_TEST2"
             else "DISABLED"
         ),
-        "allowed_capability_families":(
-            list(TEST2_CAPABILITY_FAMILIES)
-            if terminal_decision=="FULL_INVERTED_INTEGRATION"
-            else provisionally_validated_families
-            if terminal_decision=="CONSTRAINED_CAPABILITY_SCOPED_INTEGRATION"
+        "provisionally_validated_capability_families":(
+            provisionally_validated_families
+            if terminal_decision!="REJECT_BEFORE_TEST2"
             else []
         ),
-        "blocked_capability_families":(
-            []
-            if terminal_decision=="FULL_INVERTED_INTEGRATION"
-            else blocked_families
-            if terminal_decision=="CONSTRAINED_CAPABILITY_SCOPED_INTEGRATION"
-            else list(TEST2_CAPABILITY_FAMILIES)
-        ),
+        "blocked_capability_families":blocked_families,
         "unmatched_task_policy":"DIRECT_OR_STRONGER_MODEL_FALLBACK",
-        "scope_enforcement_required":terminal_decision!="FULL_INVERTED_INTEGRATION",
         "winner_lock_sha256":winner_lock_hash,
-        "acceptance_artifact":"test1.2-final-acceptance.json",
+        "validation_artifact":"test1.2-final-acceptance.json",
+        "test2_proof_required":True,
+        "fresh_protected_release_acceptance_required":True,
     }
     runner.store.write_json(
         "integration-capability-contract.json",
         capability_contract,
         producer="test1.2-tuning",
-        stage="terminal-acceptance",
+        stage="provisional-compiler",
     )
 
     integration_package={
         "schema_version":1,
-        "package_type":"INVERTED_MODEL_ONBOARDING_TERMINAL_PACKAGE",
+        "package_type":"INVERTED_MODEL_ONBOARDING_PROVISIONAL_PACKAGE",
         "model":getattr(runner,"model",None),
-        "onboarding_complete":True,
+        "onboarding_complete":False,
+        "release_authorized":False,
         "terminal_decision":terminal_decision,
         "collection_run":collection_run,
         "winner_policy":winner,
         "winner_lock_sha256":winner_lock_hash,
         "compiled_harness_policy":"compiled-harness-policy.json",
         "capability_contract":"integration-capability-contract.json",
-        "final_acceptance":"test1.2-final-acceptance.json",
+        "validation_result":"test1.2-final-acceptance.json",
         "do_not_use_registry":"do-not-use-registry.json",
         "route_map":route_map,
         "tool_execution_policy":tool_execution_policy,
@@ -2228,19 +2227,17 @@ def run_test12_tuning(
         "collection_value_gap_families":collection_value_gap_families,
         "resolved_collection_value_gap_families":resolved_collection_value_gap_families,
         "unresolved_collection_value_gap_families":unresolved_collection_value_gap_families,
-        "no_additional_characterization_test_required":True,
+        "test2_blind_exposed":False,
+        "test3_protected_exposed":False,
         "next_action":(
-            "INSTALL_MODEL_AND_COMPILED_POLICY_IN_INVERTED"
-            if terminal_decision=="FULL_INVERTED_INTEGRATION"
-            else "INSTALL_MODEL_WITH_CAPABILITY_ALLOWLIST_AND_FALLBACKS"
-            if terminal_decision=="CONSTRAINED_CAPABILITY_SCOPED_INTEGRATION"
-            else "DO_NOT_ADD_MODEL_TO_INVERTED"
+            "RUN_TEST2_PROOF_STAGE"
+            if terminal_decision!="REJECT_BEFORE_TEST2"
+            else "DO_NOT_ADVANCE_TO_TEST2_WITH_THIS_CANDIDATE"
         ),
         "optional_future_weight_improvement":{
-            "is_onboarding_dependency":False,
             "qualification":"fine-tuning-qualification.json",
             "training_corpus":"fine-tuning-training-corpus.jsonl",
-            "note":"changing model weights creates a new model version and therefore a new onboarding event",
+            "note":"weight tuning is considered only after Test 2 establishes the persistent capability floor or the harness ceiling is reached",
         },
         "total_two_run_hard_ceiling_seconds":TUNING_HARD_SECONDS+COLLECTION_HARD_SECONDS,
     }
@@ -2248,27 +2245,33 @@ def run_test12_tuning(
         "inverted-model-integration-package.json",
         integration_package,
         producer="test1.2-tuning",
-        stage="terminal-acceptance",
+        stage="provisional-compiler",
     )
 
     terminal_handoff={
         "schema_version":1,
-        "state":"TEST1.2_MODEL_ONBOARDING_COMPLETE",
+        "state":"TEST1.2_PROVISIONAL_COMPILER_COMPLETE",
         "terminal_decision":terminal_decision,
         "integration_package":"inverted-model-integration-package.json",
+        "winner_lock_sha256":winner_lock_hash,
         "test2_proof_stage_required":True,
         "test2_role":"RECURRENCE_ROBUSTNESS_NEGATIVE_TRANSFER_DISTILLATION_PROOF",
-        "no_test3_followup_required":True,
-        "no_additional_characterization_test_required_before_test2":True,
-        "next_action":"RUN_TEST2_PROOF_STAGE_BEFORE_FINAL_INSTALL",
-        "recovery_policy":final_acceptance["recovery_policy"],
-        "new_onboarding_event_only_if":final_acceptance["new_onboarding_event_only_if"],
+        "test2_blind_reserved_and_unexposed":True,
+        "test3_protected_reserved_and_unexposed":True,
+        "fresh_protected_final_acceptance_required":True,
+        "next_action":(
+            "RUN_TEST2_PROOF_STAGE"
+            if terminal_decision!="REJECT_BEFORE_TEST2"
+            else "STOP_CANDIDATE"
+        ),
+        "recovery_policy":provisional_result["recovery_policy"],
+        "new_onboarding_event_only_if":provisional_result["new_onboarding_event_only_if"],
     }
     runner.store.write_json(
         "test1.2-terminal-handoff.json",
         terminal_handoff,
         producer="test1.2-tuning",
-        stage="terminal-acceptance",
+        stage="provisional-compiler",
     )
 
     runner.store.write_json("model-harness-card.json",{
@@ -2278,16 +2281,17 @@ def run_test12_tuning(
         "compiled_policy":"compiled-harness-policy.json",
         "validated_policy_summary":winner_summary,
         "validated_family_summaries":winner_family_validation,
-        "test2_blind_acceptance":blind_summary,
-        "test3_protected_acceptance":protected_summary,
+        "test2_blind_acceptance":{"status":"UNTOUCHED_RESERVED_FOR_TEST2"},
+        "test3_protected_acceptance":{"status":"UNTOUCHED_RESERVED_FOR_FINAL_RELEASE"},
         "frontier_gap_policy":frontier_gap_policy,
         "second_gap_policy":second_gap_policy,
         "zero_clock_model_manufacturing":copy.deepcopy(
             collection.get("zero_clock_model") or {}
         ),
-        "all_40_families_non_regressing":family_safe,
-        "release_status":terminal_decision,
-        "certified_capability_families":provisionally_validated_families,
+        "all_40_families_non_regressing_on_validation":family_safe,
+        "release_status":"PENDING_TEST2_PROOF",
+        "provisional_decision":terminal_decision,
+        "provisionally_validated_capability_families":provisionally_validated_families,
         "blocked_capability_families":blocked_families,
         "fine_tuning_qualification":qualification,
         "zero_clock_training_assets":{
@@ -2302,13 +2306,13 @@ def run_test12_tuning(
                 "calibration-verify-supervision-corpus.jsonl",
             ],
         },
-        "blind_partitions_touched":True,
+        "blind_partitions_touched":False,
         "holdouts_used_for_tuning_or_selection":False,
-        "onboarding_complete":True,
-        "no_additional_characterization_test_required_before_test2":True,
+        "onboarding_complete":False,
         "test2_proof_stage_required":True,
+        "fresh_protected_release_acceptance_required":True,
         "integration_package":"inverted-model-integration-package.json",
         "total_two_run_hard_ceiling_hours":(TUNING_HARD_SECONDS+COLLECTION_HARD_SECONDS)/3600.0,
     },producer="test1.2-tuning",stage="report")
-    run._write_checkpoint(state="ONBOARDING_COMPLETE")
+    run._write_checkpoint(state="PROVISIONAL_COMPILER_COMPLETE")
     return run.rows
