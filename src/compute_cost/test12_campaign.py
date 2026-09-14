@@ -430,6 +430,7 @@ REQUIRED_OUTPUTS = (
     "mechanism-coverage-ledger.json",
     "capability-family-coverage.json",
     "capability-floor-registry.json",
+    "harness-applicability-registry.json",
     "capability-building-block-manufacturing-map.json",
     "capability-improvement-dossiers.json",
     "family-value-completeness.json",
@@ -6289,6 +6290,7 @@ def reanalyze_test12_collection(
 
     redundancy = _control_redundancy_map(campaign)
     capability_floor = _capability_floor_registry(campaign)
+    applicability = _harness_applicability_registry(campaign)
 
     store.write_json(
         "control-redundancy-map.json",
@@ -6301,6 +6303,12 @@ def reanalyze_test12_collection(
         capability_floor,
         producer="test1.2-zero-call-reanalysis",
         stage="construct-validity-floor",
+    )
+    store.write_json(
+        "harness-applicability-registry.json",
+        applicability,
+        producer="test1.2-zero-call-reanalysis",
+        stage="harness-applicability",
     )
 
     unknown_validity_rows = sum(
@@ -6339,11 +6347,18 @@ def reanalyze_test12_collection(
         "construct_boundary_family_count":capability_floor.get(
             "boundary_family_count", 0
         ),
+        "harness_gap_candidate_family_count":len(
+            applicability.get("harness_gap_candidate_families") or []
+        ),
+        "harness_gap_candidate_families":copy.deepcopy(
+            applicability.get("harness_gap_candidate_families") or []
+        ),
         "legacy_unknown_validity_row_count":unknown_validity_rows,
         "legacy_unknown_validity_policy":"UNKNOWN_IS_NOT_CAPABILITY_EVIDENCE",
         "outputs":[
             "control-redundancy-map.json",
             "capability-floor-registry.json",
+            "harness-applicability-registry.json",
             "test1.2-zero-call-reanalysis.json",
         ],
     }
@@ -6359,6 +6374,7 @@ def reanalyze_test12_collection(
         handoff.update({
             "control_redundancy_map":"control-redundancy-map.json",
             "capability_floor_registry":"capability-floor-registry.json",
+            "harness_applicability_registry":"harness-applicability-registry.json",
             "zero_call_reanalysis":"test1.2-zero-call-reanalysis.json",
             "redundancy_cluster_count":redundancy.get("cluster_count", 0),
             "redundancy_clustered_control_count":redundancy.get(
