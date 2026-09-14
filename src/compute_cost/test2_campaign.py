@@ -2480,6 +2480,14 @@ def phase_blind(
     }
 
 
+
+def _row_capability_valid(row: dict[str, Any]) -> bool:
+    if row.get("valid_for_capability") is True:
+        return True
+    classification = row.get("classification") or {}
+    return classification.get("valid_for_capability") is True
+
+
 def _build_model_limit_and_finetuning(
     campaign: Test2Campaign,
     recovery: dict[str, Any],
@@ -2525,11 +2533,18 @@ def _build_model_limit_and_finetuning(
             str((row.get("classification") or {}).get("result_class"))
             for row in rows
         })
-        valid_rows = [
-            row for row in rows
-            if (row.get("classification") or {}).get("valid_for_capability") is True
-        ]
-        invalid_rows = [row for row in rows if row not in valid_rows]
+        valid_rows = [row for row in rows if _row_capability_valid(row)]
+        invalid_rows = [row for row in rows if not _row_capability_valid(row)]
+        valid_fixture_ids = sorted({
+            str(row["fixture_id"])
+            for row in valid_rows
+            if row.get("fixture_id")
+        })
+        invalid_fixture_ids = sorted({
+            str(row["fixture_id"])
+            for row in invalid_rows
+            if row.get("fixture_id")
+        })
         recoveries = recovery_by_phenotype.get(phenotype, [])
         general = [row for row in recoveries if row.get("status") == "GENERAL_RECOVERY"]
         best_general = max(
@@ -2537,26 +2552,31 @@ def _build_model_limit_and_finetuning(
             key=lambda row: float(row.get("success_rate", 0.0)),
             default=None,
         )
-        cases = [campaign.case_by_id.get(fixture_id) for fixture_id in fixture_ids]
-        observable_target = all(
+        valid_cases = [
+            campaign.case_by_id.get(fixture_id)
+            for fixture_id in valid_fixture_ids
+        ]
+        observable_target = bool(valid_cases) and all(
             case is not None and case.get("scorer") is not None and "expected" in case
-            for case in cases
+            for case in valid_cases
         )
         levels = [
             int(case.get("difficulty_level", 0))
-            for case in cases
+            for case in valid_cases
             if case is not None
         ]
 
         if invalid_rows and not valid_rows:
             toolish = any("tool" in family.lower() for family in family_ids)
             owner = "TOOL_SOLVABLE" if toolish else "SYSTEM_SOLVABLE"
+        elif invalid_rows and valid_rows:
+            owner = "SYSTEM_DISAMBIGUATION_REQUIRED"
         elif not observable_target:
             owner = "DATA_SOLVABLE"
         elif best_general is not None:
             recipe_len = len((best_general.get("recipe") or {}).get("ingredient_ids") or [])
             owner = "PROMPT_SOLVABLE" if recipe_len <= 1 else "RECIPE_SOLVABLE"
-        elif len(fixture_ids) >= min_failures:
+        elif len(valid_fixture_ids) >= min_failures:
             # Recurrent residual failures at the extreme edge are retained as a
             # measured base-model capability limit rather than automatically
             # converted into training data. Lower/mid-level recurrent failures
@@ -2572,8 +2592,12 @@ def _build_model_limit_and_finetuning(
         entry = {
             "phenotype_id": phenotype,
             "owner": owner,
-            "independent_fixture_count": len(fixture_ids),
+            "independent_fixture_count": len(valid_fixture_ids),
+            "valid_independent_fixture_count": len(valid_fixture_ids),
+            "invalid_fixture_count": len(invalid_fixture_ids),
             "fixture_ids": fixture_ids,
+            "valid_fixture_ids": valid_fixture_ids,
+            "invalid_fixture_ids": invalid_fixture_ids,
             "family_ids": family_ids,
             "difficulty_levels": sorted(levels),
             "result_classes": result_classes,
@@ -2594,11 +2618,12 @@ def _build_model_limit_and_finetuning(
                 **copy.deepcopy(entry),
                 "qualification": {
                     "recurrent": True,
-                    "independent": len(fixture_ids) >= min_failures,
+                    "independent": len(valid_fixture_ids) >= min_failures,
                     "model_owned": True,
-                    "prior_generalization_evidence": len(fixture_ids) >= min_failures,
+                    "prior_generalization_evidence": len(valid_fixture_ids) >= min_failures,
                     "cheaper_prompt_recipe_owner_resolved": best_general is None,
                     "tool_system_owner_resolved": not invalid_rows,
+                    "all_source_failures_capability_valid": not invalid_rows,
                     "observable_target": observable_target,
                     "protected_fixtures_excluded": True,
                     "negative_transfer_evidence_available": negative_transfer_available,
@@ -2607,7 +2632,7 @@ def _build_model_limit_and_finetuning(
                 "next_action": "TEST3_FINE_TUNING_QUALIFICATION",
             }
             finetune.append(package)
-            for fixture_id in fixture_ids:
+            for fixture_id in valid_fixture_ids:
                 case = campaign.case_by_id.get(fixture_id)
                 if case is None or campaign._partition(case) == "TEST3_PROTECTED":
                     continue
@@ -2620,12 +2645,16 @@ def _build_model_limit_and_finetuning(
                     "expected": copy.deepcopy(case.get("expected")),
                     "scorer": case.get("scorer"),
                     "partition": campaign._partition(case),
-                    "train_eligible": campaign._partition(case) in {"DISCOVERY", "VALIDATION"},
+                    "train_eligible": bool(
+                        campaign._partition(case) in {"DISCOVERY", "VALIDATION"}
+                        and fixture_id in valid_fixture_ids
+                    ),
                     "source_experiment_ids": [
                         str(row.get("experiment_id"))
-                        for row in rows
+                        for row in valid_rows
                         if row.get("fixture_id") == fixture_id and row.get("experiment_id")
                     ],
+                    "source_evidence_capability_valid": True,
                 })
     return {"phenotypes": limits}, finetune, dataset
 
