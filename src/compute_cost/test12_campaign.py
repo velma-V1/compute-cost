@@ -6977,11 +6977,34 @@ def _mechanism_family_knowledge_table(
             censoring_rate = (
                 len(censored) / len(raw_rows) if raw_rows else 0.0
             )
+            non_null_count = len(positive) + len(negative)
+            null_interval = (
+                _wilson(non_null_count, len(valid))
+                if valid else (0.0, 1.0)
+            )
+            null_precision_met = bool(
+                valid
+                and non_null_count == 0
+                and float(null_interval[1]) <= null_max_upper
+            )
+            harm_interval = (
+                _wilson(len(breaks), len(pass_population))
+                if pass_population else (0.0, 1.0)
+            )
+            harm_interval_width = float(harm_interval[1] - harm_interval[0])
+            harm_precision_met = bool(
+                pass_population
+                and harm_interval_width <= harm_max_width
+            )
 
-            if breaks:
+            if breaks and harm_precision_met:
                 effect = "harmful"
-                signal_rows = breaks
-                effect_basis = "VALID_BASELINE_PASS_REGRESSION"
+                signal_rows = pass_population
+                effect_basis = "BASELINE_PASS_REGRESSION_WITH_PRECISE_WILSON_INTERVAL"
+            elif breaks:
+                effect = "unknown"
+                signal_rows = valid
+                effect_basis = "HARM_SIGNAL_BELOW_INTERVAL_PRECISION_FLOOR"
             elif positive:
                 effect = "conditional"
                 signal_rows = positive
@@ -6989,27 +7012,22 @@ def _mechanism_family_knowledge_table(
                     "VALID_POSITIVE_DISCOVERY_REQUIRES_TEST2_PROMOTION"
                 )
             elif (
-                len(zero) >= min_null
-                and not negative
+                null_precision_met
                 and censoring_rate <= max_censor
             ):
                 effect = "null_verified"
                 signal_rows = valid
                 effect_basis = (
-                    "DECISION_COMPLETE_VALID_ZERO_DELTA_WITH_BOUNDED_CENSORING"
+                    "ZERO_NON_NULL_EVENTS_WITH_WILSON_UPPER_BOUND_BELOW_POLICY_LIMIT"
                 )
             elif censored and not valid:
                 effect = "null_censored"
                 signal_rows = []
                 effect_basis = "NO_CAPABILITY_VALID_EFFECT_OBSERVATION"
-            elif censored and not positive and not breaks and len(valid) < min_null:
-                effect = "null_censored"
-                signal_rows = valid
-                effect_basis = "INSUFFICIENT_VALID_ROWS_WITH_CENSORING"
             else:
                 effect = "unknown"
                 signal_rows = valid
-                effect_basis = "INSUFFICIENT_DECISION_COMPLETE_EVIDENCE"
+                effect_basis = "INSUFFICIENT_INTERVAL_PRECISION_OR_EFFECT_EVIDENCE"
             effect_counts[effect] += 1
 
             condition = {
