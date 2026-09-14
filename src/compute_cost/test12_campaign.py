@@ -1471,6 +1471,248 @@ class Test12Campaign:
         remaining = min(deadline, self.active_end, self.call_start_cutoff) - self.clock()
         return remaining >= (estimate * max(1, int(physical_calls)) + 0.25)
 
+    def _physical_model_calls(self) -> int:
+        store = getattr(self.runner, "store", None)
+        run_id = getattr(store, "run_id", None)
+        return (
+            int(getattr(self.runner, "_model_call_counts", {}).get(run_id, 0))
+            if run_id else 0
+        )
+
+    def _active_elapsed(self) -> float:
+        return max(0.0, self.clock() - self.start)
+
+    def _execute_runtime_canary(
+        self,
+        deadline: float,
+        *,
+        role: str,
+    ) -> dict[str, Any] | None:
+        if not self._has_runway(deadline, 1):
+            return None
+        budget = int(self.cfg.get("runtime_canary_budget", 256))
+        case = {
+            "id":"test1.2-runtime-canary",
+            "category":"RUNTIME_CANARY",
+            "family_id":"RUNTIME_CANARY",
+            "difficulty_level":0,
+            "prompt":"Reply with exactly CANARY_OK and nothing else.",
+            "scorer":"exact",
+            "expected":"CANARY_OK",
+        }
+        self.sequence += 1
+        spec = _spec(
+            self.sequence,
+            case,
+            f"runtime-canary-{role.lower()}-{self.runtime_canary_count + 1}",
+            self.cfg,
+            {
+                "id":"RUNTIME-CANARY",
+                "category":"RUNTIME_CANARY",
+                "mode":"single",
+                "reasoning_effort":"low",
+                "generation_budget":budget,
+                "temperature":0.0,
+            },
+            seed=991,
+        )
+        row = execute_experiment(
+            self.runner,
+            case,
+            spec,
+            parent=None,
+        )
+        latency_seconds = _latency_seconds(row)
+        eval_count = (row.get("metrics") or {}).get("eval_count")
+        throughput = (
+            float(eval_count) / float(latency_seconds)
+            if isinstance(eval_count, (int, float))
+            and not isinstance(eval_count, bool)
+            and float(eval_count) > 0
+            and latency_seconds > 0
+            else None
+        )
+        valid = bool(
+            (row.get("classification") or {}).get("valid_for_capability") is True
+            and isinstance(row.get("score"), (int, float))
+            and not isinstance(row.get("score"), bool)
+            and float(row.get("score")) >= 1.0
+        )
+        if (
+            self.runtime_canary_baseline_tps is None
+            and valid
+            and throughput is not None
+        ):
+            self.runtime_canary_baseline_tps = float(throughput)
+        ratio = (
+            float(throughput) / float(self.runtime_canary_baseline_tps)
+            if throughput is not None
+            and self.runtime_canary_baseline_tps is not None
+            and self.runtime_canary_baseline_tps > 0
+            else None
+        )
+        active_seconds = self._active_elapsed()
+        record = {
+            "schema_version":1,
+            "record_type":"RUNTIME_CANARY",
+            "role":role,
+            "active_seconds":active_seconds,
+            "physical_model_calls_at_probe":self._physical_model_calls(),
+            "valid":valid,
+            "score":row.get("score"),
+            "result_class":(
+                (row.get("classification") or {}).get("result_class")
+            ),
+            "done_reason":(
+                (row.get("generation") or {}).get("normalized",{}).get(
+                    "done_reason"
+                )
+                or (row.get("classification") or {}).get("done_reason")
+            ),
+            "generation_budget":budget,
+            "eval_count":eval_count,
+            "wall_seconds":latency_seconds,
+            "tokens_per_second":throughput,
+            "baseline_tokens_per_second":self.runtime_canary_baseline_tps,
+            "throughput_ratio_to_baseline":ratio,
+            "excluded_from_capability_statistics":True,
+            "excluded_from_latency_ratio":True,
+            "excluded_from_campaign_rows":True,
+        }
+        self.runtime_canary_count += 1
+        self.runner.store.append_jsonl(
+            "test1.2-runtime-canaries.jsonl",
+            record,
+        )
+        return record
+
+    def maybe_runtime_canary(
+        self,
+        deadline: float,
+        *,
+        force: bool = False,
+    ) -> None:
+        if not self.runtime_profile_sha256:
+            return
+        if self.runtime_canary_failed:
+            raise ValueError(
+                "runtime canary invariant already failed; campaign evidence after "
+                "the last passing canary must remain quarantined"
+            )
+        now_active = self._active_elapsed()
+        interval = float(
+            self.cfg.get("runtime_canary_interval_seconds", 600)
+        )
+        if (
+            not force
+            and self.runtime_canary_last_active_seconds is not None
+            and now_active - self.runtime_canary_last_active_seconds < interval
+        ):
+            return
+
+        scheduled = self._execute_runtime_canary(
+            deadline,
+            role="BASELINE" if self.runtime_canary_baseline_tps is None else "SCHEDULED",
+        )
+        if scheduled is None:
+            return
+        self.runtime_canary_last_active_seconds = now_active
+
+        single_limit = 1.0 - float(
+            self.cfg.get("runtime_canary_single_drop_fraction", 0.25)
+        )
+        sustained_limit = 1.0 - float(
+            self.cfg.get("runtime_canary_sustained_drop_fraction", 0.15)
+        )
+        sustained_count = max(
+            2,
+            int(self.cfg.get("runtime_canary_sustained_count", 3)),
+        )
+        ratio = scheduled.get("throughput_ratio_to_baseline")
+        if isinstance(ratio, (int, float)) and not isinstance(ratio, bool):
+            self.runtime_canary_recent_ratios.append(float(ratio))
+            self.runtime_canary_recent_ratios = (
+                self.runtime_canary_recent_ratios[-sustained_count:]
+            )
+
+        invalid = scheduled.get("valid") is not True
+        single_suspect = bool(
+            isinstance(ratio, (int, float))
+            and not isinstance(ratio, bool)
+            and float(ratio) < single_limit
+        )
+        sustained_suspect = bool(
+            len(self.runtime_canary_recent_ratios) >= sustained_count
+            and all(
+                value < sustained_limit
+                for value in self.runtime_canary_recent_ratios[-sustained_count:]
+            )
+        )
+        suspect = invalid or single_suspect or sustained_suspect
+
+        if not suspect:
+            self.runtime_canary_last_pass_active_seconds = now_active
+            return
+
+        confirmation = self._execute_runtime_canary(
+            deadline,
+            role="IMMEDIATE_CONFIRMATION",
+        )
+        confirm_ratio = (
+            confirmation.get("throughput_ratio_to_baseline")
+            if confirmation else None
+        )
+        confirm_invalid = bool(
+            confirmation is None or confirmation.get("valid") is not True
+        )
+        confirm_single_bad = bool(
+            isinstance(confirm_ratio, (int, float))
+            and not isinstance(confirm_ratio, bool)
+            and float(confirm_ratio) < single_limit
+        )
+        confirm_sustained_bad = bool(
+            sustained_suspect
+            and isinstance(confirm_ratio, (int, float))
+            and not isinstance(confirm_ratio, bool)
+            and float(confirm_ratio) < sustained_limit
+        )
+
+        if confirm_invalid or confirm_single_bad or confirm_sustained_bad:
+            self.runtime_canary_failed = True
+            failure = {
+                "schema_version":1,
+                "record_type":"RUNTIME_CANARY_STOP",
+                "active_seconds":self._active_elapsed(),
+                "quarantine_after_active_seconds":self.runtime_canary_last_pass_active_seconds,
+                "scheduled_probe":copy.deepcopy(scheduled),
+                "confirmation_probe":copy.deepcopy(confirmation),
+                "stop_reason":(
+                    "INVALID_CANARY"
+                    if invalid or confirm_invalid
+                    else (
+                        "SUSTAINED_THROUGHPUT_DRIFT"
+                        if sustained_suspect
+                        else "SINGLE_CANARY_THROUGHPUT_DROP_CONFIRMED"
+                    )
+                ),
+            }
+            self.runner.store.write_json(
+                "test1.2-runtime-canary-stop.json",
+                failure,
+                producer="test1.2",
+                stage="runtime-canary",
+            )
+            self._write_recovery_checkpoint(
+                state="RUNTIME_CANARY_FAILED"
+            )
+            raise ValueError(
+                "runtime canary failed; campaign stopped and evidence after the "
+                "last passing canary boundary is quarantined"
+            )
+
+        self.runtime_canary_last_pass_active_seconds = self._active_elapsed()
+
+
     def partition_name(self, case: dict[str, Any]) -> str:
         fixture_id = _fixture_id(case)
         for name, rows in self.partitions.items():
