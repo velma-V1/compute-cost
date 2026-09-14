@@ -7374,14 +7374,51 @@ def _harness_policy_blueprint(campaign: Test12Campaign) -> dict[str, Any]:
 
 
 def _capability_family_coverage(campaign: Test12Campaign) -> dict[str, Any]:
+    surface_obligations: dict[str, set[str]] = {}
+    surface_inapplicable: dict[str, set[str]] = {}
+    for family in TEST2_CAPABILITY_FAMILIES:
+        required: set[str] = set()
+        excluded: set[str] = set()
+        for surface in FAMILY_CONTROL_SURFACES:
+            members = [
+                row for row in campaign.interventions
+                if str(row.get("category") or "") == surface
+            ]
+            statuses = {
+                mechanism_applicability(row, family)["status"]
+                for row in members
+            }
+            if statuses and statuses <= {"NOT_APPLICABLE"}:
+                excluded.add(surface)
+            else:
+                required.add(surface)
+        surface_obligations[family] = required
+        surface_inapplicable[family] = excluded
+
     families: dict[str, Any] = {}
     for family in TEST2_CAPABILITY_FAMILIES:
-        rows = [row for row in campaign.rows if row.get("family_id") == family]
-        controls = [row for row in rows if row.get("intervention_id") != "CONTROL"]
-        baseline = [row for row in rows if row.get("intervention_id") == "CONTROL"]
+        rows = [
+            row for row in campaign.rows
+            if row.get("family_id") == family
+        ]
+        controls = [
+            row for row in rows
+            if row.get("intervention_id") not in {None, "CONTROL"}
+        ]
+        valid_controls = [
+            row for row in controls
+            if row.get("delta_valid") is True
+            and row.get("valid_for_capability") is True
+            and row.get("control_valid_for_capability") is True
+        ]
+        baseline = [
+            row for row in rows
+            if row.get("intervention_id") == "CONTROL"
+            and _capability_valid(row)
+        ]
         surfaces = sorted({
             str(row.get("intervention_category"))
-            for row in controls
+            for row in valid_controls
             if row.get("intervention_category")
         })
         levels = sorted({
@@ -7389,40 +7426,71 @@ def _capability_family_coverage(campaign: Test12Campaign) -> dict[str, Any]:
             for row in rows
             if isinstance(row.get("difficulty_level"), int)
         })
-        missing = sorted(set(FAMILY_CONTROL_SURFACES) - set(surfaces))
+        required = surface_obligations[family]
+        excluded = surface_inapplicable[family]
+        missing = sorted(required - set(surfaces))
         families[family] = {
-            "baseline_observations": len(baseline),
-            "treatment_observations": len(controls),
-            "difficulty_levels_observed": levels,
-            "control_surfaces_observed": surfaces,
-            "missing_control_surfaces": missing,
-            "manufacturing_ready": bool(baseline) and not missing,
+            "baseline_observations":len(baseline),
+            "treatment_observations":len(controls),
+            "valid_treatment_observations":len(valid_controls),
+            "difficulty_levels_observed":levels,
+            "valid_control_surfaces_observed":surfaces,
+            "required_applicable_or_unknown_control_surfaces":sorted(required),
+            "structurally_inapplicable_control_surfaces":sorted(excluded),
+            "missing_required_control_surfaces":missing,
+            "manufacturing_ready":bool(baseline) and not missing,
+            "readiness_unit":"APPLICABLE_OR_UNKNOWN_CONTROL_SURFACE",
+            "structurally_inapplicable_is_not_missing":True,
         }
     return {
-        "schema_version": 1,
-        "required_family_count": len(TEST2_CAPABILITY_FAMILIES),
-        "families": families,
-        "missing_families": [
+        "schema_version":2,
+        "required_family_count":len(TEST2_CAPABILITY_FAMILIES),
+        "readiness_unit":"APPLICABLE_OR_UNKNOWN_CONTROL_SURFACE",
+        "families":families,
+        "missing_families":[
             family for family, row in families.items()
             if row["baseline_observations"] == 0
         ],
-        "not_manufacturing_ready": [
+        "not_manufacturing_ready":[
             family for family, row in families.items()
             if not row["manufacturing_ready"]
         ],
-        "all_families_manufacturing_ready": all(
+        "all_families_manufacturing_ready":all(
             row["manufacturing_ready"] for row in families.values()
         ),
     }
 
 
 def _capability_building_block_map(campaign: Test12Campaign) -> dict[str, Any]:
+    surface_obligations: dict[str, set[str]] = {}
+    surface_inapplicable: dict[str, set[str]] = {}
+    for family in TEST2_CAPABILITY_FAMILIES:
+        required: set[str] = set()
+        excluded: set[str] = set()
+        for surface in FAMILY_CONTROL_SURFACES:
+            members = [
+                row for row in campaign.interventions
+                if str(row.get("category") or "") == surface
+            ]
+            statuses = {
+                mechanism_applicability(row, family)["status"]
+                for row in members
+            }
+            if statuses and statuses <= {"NOT_APPLICABLE"}:
+                excluded.add(surface)
+            else:
+                required.add(surface)
+        surface_obligations[family] = required
+        surface_inapplicable[family] = excluded
     records: dict[str, Any] = {}
     for family in TEST2_CAPABILITY_FAMILIES:
         rows = [
             row for row in campaign.rows
             if row.get("family_id") == family
             and row.get("intervention_id") not in {None, "CONTROL"}
+            and row.get("delta_valid") is True
+            and row.get("valid_for_capability") is True
+            and row.get("control_valid_for_capability") is True
         ]
         by_intervention: dict[str, list[dict[str, Any]]] = defaultdict(list)
         for row in rows:
@@ -7487,11 +7555,18 @@ def _capability_building_block_map(campaign: Test12Campaign) -> dict[str, Any]:
             "harmful_controls": harms[:12],
             "null_controls": nulls[:12],
             "candidate_building_blocks": candidate_blocks,
-            "manufacturing_status": (
+            "required_applicable_or_unknown_surfaces":sorted(
+                surface_obligations[family]
+            ),
+            "structurally_inapplicable_surfaces":sorted(
+                surface_inapplicable[family]
+            ),
+            "manufacturing_status":(
                 "READY_FOR_TEST1.3_BLOCK_MANUFACTURING"
-                if set(FAMILY_CONTROL_SURFACES) <= set(by_surface)
+                if surface_obligations[family] <= set(by_surface)
                 else "MORE_COLLECTION_REQUIRED"
             ),
+            "readiness_unit":"APPLICABLE_OR_UNKNOWN_CONTROL_SURFACE",
         }
     return {
         "schema_version": 1,
