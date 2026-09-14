@@ -1853,11 +1853,6 @@ def run_test12_tuning(
     final_confirmation_rows=[]
     winner_locked: dict[str, Any] | None = copy.deepcopy(run.winner_locked)
     winner_lock_hash: str | None = run.winner_lock_hash
-    blind_rows: list[dict[str, Any]] = []
-    protected_rows: list[dict[str, Any]] = []
-    blind_scores: dict[str, Any] = {}
-    protected_scores: dict[str, Any] = {}
-
     resume_phase=str(checkpoint.get("current_phase") or "")
     resume_phase_elapsed=float(checkpoint.get("current_phase_elapsed_seconds") or 0.0)
     for phase_name,seconds in TUNING_PHASES:
@@ -1927,40 +1922,6 @@ def run_test12_tuning(
             current=[winner_locked]
             run.current_policy_ids=[str(winner_locked["policy_id"])]
             run._write_checkpoint()
-        elif phase_name=="test2_blind_acceptance":
-            if winner_locked is None:
-                winner_locked=copy.deepcopy(
-                    current[0] if current else {"policy_id":"DIRECT","mode":"direct"}
-                )
-                winner_lock_hash=_policy_lock_hash(winner_locked)
-                run.winner_locked=copy.deepcopy(winner_locked)
-                run.winner_lock_hash=winner_lock_hash
-                current=[winner_locked]
-            scores, blind_rows = _evaluate_acceptance(
-                run,
-                winner_locked,
-                run.test2_blind,
-                deadline,
-                primary_seed=45,
-            )
-            blind_scores=copy.deepcopy(scores)
-        elif phase_name=="test3_protected_acceptance":
-            if winner_locked is None:
-                winner_locked=copy.deepcopy(
-                    current[0] if current else {"policy_id":"DIRECT","mode":"direct"}
-                )
-                winner_lock_hash=_policy_lock_hash(winner_locked)
-                run.winner_locked=copy.deepcopy(winner_locked)
-                run.winner_lock_hash=winner_lock_hash
-                current=[winner_locked]
-            scores, protected_rows = _evaluate_acceptance(
-                run,
-                winner_locked,
-                run.test3_protected,
-                deadline,
-                primary_seed=46,
-            )
-            protected_scores=copy.deepcopy(scores)
         else:
             raise ValueError(f"unknown Test 1.2 tuning phase: {phase_name}")
 
@@ -1982,24 +1943,6 @@ def run_test12_tuning(
         if not run.can_start(run.active_end): break
 
     winner=winner_locked or (current[0] if current else {"policy_id":"DIRECT","mode":"direct"})
-    if not blind_rows:
-        blind_rows=[
-            row for row in run.rows
-            if row.get("policy_id")==winner["policy_id"]
-            and row.get("partition")=="TEST2_BLIND"
-        ]
-        blind_scores={
-            str(winner["policy_id"]):_score_policy_rows(blind_rows)
-        } if blind_rows else {}
-    if not protected_rows:
-        protected_rows=[
-            row for row in run.rows
-            if row.get("policy_id")==winner["policy_id"]
-            and row.get("partition")=="TEST3_PROTECTED"
-        ]
-        protected_scores={
-            str(winner["policy_id"]):_score_policy_rows(protected_rows)
-        } if protected_rows else {}
     winner_rows=[
         row for row in run.rows
         if row.get("policy_id")==winner["policy_id"]
@@ -2013,19 +1956,11 @@ def run_test12_tuning(
         winner_family_validation=(
             _score_policies_by_family(winner_rows).get(str(winner["policy_id"])) or {}
         )
-    blind_summary=_score_policy_rows([
-        row for row in blind_rows if row.get("policy_id")==winner["policy_id"]
-    ])
-    protected_summary=_score_policy_rows([
-        row for row in protected_rows if row.get("policy_id")==winner["policy_id"]
-    ])
-    acceptance_rows=[
-        row for row in [*blind_rows,*protected_rows]
-        if row.get("policy_id")==winner["policy_id"]
-    ]
-    acceptance_family_validation=(
-        _score_policies_by_family(acceptance_rows).get(str(winner["policy_id"])) or {}
-    )
+    blind_summary={"status":"NOT_EXPOSED_RESERVED_FOR_TEST2","n":0}
+    protected_summary={"status":"NOT_EXPOSED_RESERVED_FOR_FINAL_ACCEPTANCE","n":0}
+    blind_scores={}
+    protected_scores={}
+    acceptance_family_validation={}
     missing_winner_families=sorted(
         set(TEST2_CAPABILITY_FAMILIES) - set(winner_family_validation)
     )
@@ -2042,9 +1977,6 @@ def run_test12_tuning(
     family_safe=not missing_winner_families and not regressing_winner_families
     max_regression=float(run.cfg["max_capability_regression_rate"])
     minimum_pass_rate=float(run.cfg["minimum_acceptance_pass_rate"])
-    blind_pass=_acceptance_pass(blind_summary,max_regression,minimum_pass_rate)
-    protected_pass=_acceptance_pass(protected_summary,max_regression,minimum_pass_rate)
-
     collection_value_gap_families=sorted(
         str(value)
         for value in (collection.get("collection_value_gap_families") or [])
@@ -2059,24 +1991,28 @@ def run_test12_tuning(
         else:
             unresolved_collection_value_gap_families.append(family)
 
-    certified_families=[]
+    provisionally_validated_families=[]
     for family in TEST2_CAPABILITY_FAMILIES:
         validation_payload=winner_family_validation.get(family)
-        if not validation_payload or not _family_is_safe(validation_payload,max_regression,minimum_pass_rate):
-            continue
-        holdout_payload=acceptance_family_validation.get(family)
-        if holdout_payload and not _family_is_safe(holdout_payload,max_regression,minimum_pass_rate):
-            continue
-        certified_families.append(family)
-    blocked_families=sorted(set(TEST2_CAPABILITY_FAMILIES)-set(certified_families))
-    all_40_families_competent=len(certified_families)==len(TEST2_CAPABILITY_FAMILIES)
+        if validation_payload and _family_is_safe(
+            validation_payload,
+            max_regression,
+            minimum_pass_rate,
+        ):
+            provisionally_validated_families.append(family)
+    blocked_families=sorted(
+        set(TEST2_CAPABILITY_FAMILIES)-set(provisionally_validated_families)
+    )
+    all_40_families_competent=(
+        len(provisionally_validated_families)==len(TEST2_CAPABILITY_FAMILIES)
+    )
 
-    if family_safe and all_40_families_competent and blind_pass and protected_pass:
-        terminal_decision="FULL_INVERTED_INTEGRATION"
-    elif certified_families and int(protected_summary.get("n",0))>0:
-        terminal_decision="CONSTRAINED_CAPABILITY_SCOPED_INTEGRATION"
+    if family_safe and all_40_families_competent:
+        terminal_decision="PROVISIONAL_READY_FOR_TEST2"
+    elif provisionally_validated_families:
+        terminal_decision="PROVISIONAL_CONSTRAINED_FOR_TEST2"
     else:
-        terminal_decision="REJECT_MODEL_ADDITION"
+        terminal_decision="REJECT_BEFORE_TEST2"
 
     route_map=winner.get("route_map") or {}
     do_not_use=[
@@ -2128,12 +2064,14 @@ def run_test12_tuning(
         "direct_default_when_unmatched":True,
         "oracle_routing_prohibited":True,
         "hard_ceiling_total_seconds":TUNING_HARD_SECONDS+COLLECTION_HARD_SECONDS,
-        "winner_locked_before_holdouts":True,
+        "winner_locked_before_test2":True,
+        "test2_blind_exposed":False,
+        "test3_protected_exposed":False,
         "winner_lock_sha256":winner_lock_hash,
         "blind_acceptance_is_tuning_input":False,
         "protected_acceptance_is_tuning_input":False,
         "terminal_decision":terminal_decision,
-        "certified_capability_families":certified_families,
+        "certified_capability_families":provisionally_validated_families,
         "blocked_capability_families":blocked_families,
         "collection_value_gap_families":collection_value_gap_families,
         "resolved_collection_value_gap_families":resolved_collection_value_gap_families,
@@ -2198,7 +2136,7 @@ def run_test12_tuning(
             "policy_scores":protected_scores,
         },
         "terminal_decision":terminal_decision,
-        "certified_capability_families":certified_families,
+        "certified_capability_families":provisionally_validated_families,
         "blocked_capability_families":blocked_families,
         "collection_value_gap_families":collection_value_gap_families,
         "resolved_collection_value_gap_families":resolved_collection_value_gap_families,
@@ -2246,7 +2184,7 @@ def run_test12_tuning(
         "allowed_capability_families":(
             list(TEST2_CAPABILITY_FAMILIES)
             if terminal_decision=="FULL_INVERTED_INTEGRATION"
-            else certified_families
+            else provisionally_validated_families
             if terminal_decision=="CONSTRAINED_CAPABILITY_SCOPED_INTEGRATION"
             else []
         ),
@@ -2349,7 +2287,7 @@ def run_test12_tuning(
         ),
         "all_40_families_non_regressing":family_safe,
         "release_status":terminal_decision,
-        "certified_capability_families":certified_families,
+        "certified_capability_families":provisionally_validated_families,
         "blocked_capability_families":blocked_families,
         "fine_tuning_qualification":qualification,
         "zero_clock_training_assets":{
