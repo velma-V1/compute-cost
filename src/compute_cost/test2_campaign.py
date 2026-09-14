@@ -2327,12 +2327,90 @@ def phase_recurrence(campaign: Test2Campaign, deadline: float) -> dict[str, dict
 
 def _recovery_candidates(campaign: Test2Campaign, case: dict[str, Any]) -> list[dict[str, Any]]:
     if campaign.handoff.get("handoff_mode") == "TEST12_EXACT":
-        result = []
-        for index, recipe in enumerate(campaign.recipes[: int(campaign.cfg["max_recovery_recipes"])]):
+        family = _family(case)
+        max_recipes = max(1, int(campaign.cfg["max_recovery_recipes"]))
+        reserve = max(
+            0,
+            min(
+                max_recipes - 1,
+                int(campaign.cfg.get("recovery_exploration_reserve", 1)),
+            ),
+        )
+        statuses = campaign.proof_scheduler_audit.get("candidates") or {}
+
+        ranked: list[tuple[tuple[Any, ...], dict[str, Any]]] = []
+        for recipe in campaign.recipes:
+            if recipe.get("proof_lane") not in {"promotion", "unknown_resolution"}:
+                continue
+            status = statuses.get(_recipe_key(recipe)) or {}
+            resolved_positive = bool(
+                status.get("settled") is True
+                and status.get("scientific_resolution") == "POSITIVE"
+            )
+            same_family = str(recipe.get("proof_family_id") or "") == family
+            calls = (((recipe.get("bound_cost") or {}).get("calls") or {}).get("mean"))
+            cost = (
+                float(calls)
+                if isinstance(calls, (int, float)) and not isinstance(calls, bool)
+                else 1e12
+            )
+            if same_family and resolved_positive:
+                bucket = 0
+                selection_class = "SAME_FAMILY_VERIFIED"
+            elif same_family:
+                bucket = 1
+                selection_class = "SAME_FAMILY_UNRESOLVED"
+            elif resolved_positive:
+                bucket = 2
+                selection_class = "VERIFIED_TRANSFER_CANDIDATE"
+            else:
+                bucket = 3
+                selection_class = "LOW_COST_CROSS_FAMILY_EXPLORATION"
+
             exact = copy.deepcopy(recipe)
-            exact["_proof_seed"] = 45 + (index % 3)
-            result.append(exact)
-        return result
+            exact["_recovery_selection_class"] = selection_class
+            ranked.append((
+                (
+                    bucket,
+                    cost,
+                    int(recipe.get("compiler_queue_index") or 0),
+                    _recipe_key(recipe),
+                ),
+                exact,
+            ))
+
+        ranked.sort(key=lambda item: item[0])
+        core_slots = max(1, max_recipes - reserve)
+        selected: list[dict[str, Any]] = []
+        selected_interventions: set[str] = set()
+        remaining: list[dict[str, Any]] = []
+        for _, recipe in ranked:
+            ident = str(recipe.get("intervention_id") or "")
+            if ident and ident in selected_interventions:
+                continue
+            if len(selected) < core_slots:
+                selected.append(recipe)
+                if ident:
+                    selected_interventions.add(ident)
+            else:
+                remaining.append(recipe)
+
+        if reserve and remaining:
+            for recipe in remaining:
+                if len(selected) >= max_recipes:
+                    break
+                ident = str(recipe.get("intervention_id") or "")
+                if ident and ident in selected_interventions:
+                    continue
+                exploratory = copy.deepcopy(recipe)
+                exploratory["_recovery_selection_class"] = "EXPLICIT_EXPLORATION_RESERVE"
+                selected.append(exploratory)
+                if ident:
+                    selected_interventions.add(ident)
+
+        for index, recipe in enumerate(selected):
+            recipe["_proof_seed"] = 45 + (index % 3)
+        return selected
 
     family = _family(case)
     result: list[dict[str, Any]] = []
@@ -2882,7 +2960,189 @@ def phase_purple_unicorn(
     campaign: Test2Campaign,
     deadline: float,
     recurrence: dict[str, dict[str, Any]],
+    negative_transfer: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    negative_transfer = negative_transfer or {}
+    records: dict[str, Any] = {}
+
+    if campaign.handoff.get("handoff_mode") == "TEST12_EXACT":
+        statuses = campaign.proof_scheduler_audit.get("candidates") or {}
+        lane_rank = {
+            "harm":0,
+            "censoring":1,
+            "unknown_resolution":2,
+            "promotion":3,
+        }
+        recipes = sorted(
+            [
+                copy.deepcopy(recipe)
+                for recipe in campaign.recipes
+                if recipe.get("proof_lane") in lane_rank
+            ],
+            key=lambda recipe: (
+                lane_rank.get(str(recipe.get("proof_lane")), 9),
+                (
+                    0
+                    if not (statuses.get(_recipe_key(recipe)) or {}).get("settled")
+                    else 1
+                ),
+                int(recipe.get("compiler_queue_index") or 0),
+                _recipe_key(recipe),
+            ),
+        )
+
+        target_families: list[str] = []
+        for recipe in recipes:
+            family = str(recipe.get("proof_family_id") or "")
+            if family and family not in target_families:
+                target_families.append(family)
+        for key in negative_transfer:
+            for case in campaign.partitions["VALIDATION"]:
+                family = _family(case)
+                if family in str(key) and family not in target_families:
+                    target_families.append(family)
+
+        targeted_cases = sorted(
+            [
+                case for case in campaign.partitions["VALIDATION"]
+                if _family(case) in set(target_families)
+            ],
+            key=lambda case: (
+                -int(case.get("difficulty_level", 0)),
+                _family(case),
+                _fixture_id(case),
+            ),
+        )
+        targeted_calls = 0
+        cursor = 0
+        targeted_limit = len(targeted_cases) * max(1, len(recipes)) * 2
+        while (
+            targeted_cases
+            and recipes
+            and campaign.can_start(deadline)
+            and cursor < targeted_limit
+        ):
+            recipe = copy.deepcopy(recipes[cursor % len(recipes)])
+            family = str(recipe.get("proof_family_id") or "")
+            family_cases = [
+                case for case in targeted_cases
+                if not family or _family(case) == family
+            ] or targeted_cases
+            case = family_cases[(cursor // max(1, len(recipes))) % len(family_cases)]
+            recipe["_proof_seed"] = 47 + (cursor % 3)
+            observation = campaign.treatment(
+                case,
+                deadline,
+                phase="purple_unicorn",
+                kind="unicorn_probe",
+                recipe=recipe,
+                label="unicorn-" + _recipe_key(recipe),
+                source_key="policy-reachable-boundary-search",
+            )
+            targeted_calls += 1
+            if (
+                observation is not None
+                and observation.get("delta_valid") is True
+            ):
+                result_class = str(
+                    (observation.get("classification") or {}).get("result_class")
+                )
+                if (
+                    result_class != "ANSWER_CORRECT"
+                    or float(observation["delta"]) < (-0.5 * campaign.noise_sigma)
+                ):
+                    key = f"{_family(case)}|{_fixture_id(case)}|{_recipe_key(recipe)}"
+                    records[key] = {
+                        "family_id":_family(case),
+                        "fixture_id":_fixture_id(case),
+                        "difficulty_level":int(case.get("difficulty_level", 0)),
+                        "recipe":recipe,
+                        "result_class":result_class,
+                        "delta":observation.get("delta"),
+                        "experiment_id":observation.get("experiment_id"),
+                        "status":"REPRODUCIBLE_CANDIDATE",
+                        "next_action":"MAP_LOCAL_FAILURE_REGION",
+                        "search_scope":"POLICY_REACHABLE_TARGETED",
+                    }
+            cursor += 1
+
+        open_reserve_limit = max(
+            0,
+            int(campaign.cfg.get("unicorn_open_reserve_max_calls", 24)),
+        )
+        open_cases = sorted(
+            campaign.partitions["VALIDATION"],
+            key=lambda case: (
+                -int(case.get("difficulty_level", 0)),
+                _family(case),
+                _fixture_id(case),
+            ),
+        )
+        open_calls = 0
+        cursor = 0
+        open_recipes = sorted(
+            [copy.deepcopy(row) for row in campaign.recipes],
+            key=lambda recipe: (
+                int(recipe.get("compiler_queue_index") or 0),
+                _recipe_key(recipe),
+            ),
+        )
+        while (
+            open_cases
+            and open_recipes
+            and campaign.can_start(deadline)
+            and open_calls < open_reserve_limit
+        ):
+            case = open_cases[(cursor // len(open_recipes)) % len(open_cases)]
+            recipe = copy.deepcopy(open_recipes[cursor % len(open_recipes)])
+            recipe["_proof_seed"] = 53 + (cursor % 3)
+            observation = campaign.treatment(
+                case,
+                deadline,
+                phase="purple_unicorn",
+                kind="unicorn_probe",
+                recipe=recipe,
+                label="unicorn-open-" + _recipe_key(recipe),
+                source_key="explicit-open-ended-reserve",
+            )
+            open_calls += 1
+            if (
+                observation is not None
+                and observation.get("delta_valid") is True
+            ):
+                result_class = str(
+                    (observation.get("classification") or {}).get("result_class")
+                )
+                if (
+                    result_class != "ANSWER_CORRECT"
+                    or float(observation["delta"]) < (-0.5 * campaign.noise_sigma)
+                ):
+                    key = f"{_family(case)}|{_fixture_id(case)}|{_recipe_key(recipe)}"
+                    records[key] = {
+                        "family_id":_family(case),
+                        "fixture_id":_fixture_id(case),
+                        "difficulty_level":int(case.get("difficulty_level", 0)),
+                        "recipe":recipe,
+                        "result_class":result_class,
+                        "delta":observation.get("delta"),
+                        "experiment_id":observation.get("experiment_id"),
+                        "status":"REPRODUCIBLE_CANDIDATE",
+                        "next_action":"MAP_LOCAL_FAILURE_REGION",
+                        "search_scope":"OPEN_ENDED_RESERVE",
+                    }
+            cursor += 1
+
+        campaign.unicorn_search_audit = {
+            "mode":"POLICY_REACHABLE_BOUNDARY_SEARCH_WITH_BOUNDED_OPEN_RESERVE",
+            "target_families":target_families,
+            "targeted_recipe_count":len(recipes),
+            "targeted_calls":targeted_calls,
+            "open_reserve_call_cap":open_reserve_limit,
+            "open_reserve_calls":open_calls,
+            "effect_size_used_for_ordering":False,
+        }
+        return records
+
     source_unknowns = list((campaign.handoff.get("uncertainty") or {}).get("unknowns", []) or [])
     source_negative = list((campaign.handoff.get("negative_effects") or {}).get("effects", []) or [])
     target_families: list[str] = []
@@ -2904,25 +3164,21 @@ def phase_purple_unicorn(
             _fixture_id(case),
         )
     )
-    recipes = []
-    for summary in recurrence.values():
-        if summary.get("classification") in {"STRONG", "PROMISING", "UNCERTAIN"}:
-            recipes.append(copy.deepcopy(summary["recipe"]))
-    recipes = recipes[:8] or [copy.deepcopy(row) for row in campaign.recipes[:4]]
+    recipes = [
+        copy.deepcopy(summary["recipe"])
+        for key, summary in sorted(recurrence.items())
+        if summary.get("classification") in {"STRONG", "PROMISING", "UNCERTAIN"}
+    ][:8] or [copy.deepcopy(row) for row in campaign.recipes[:4]]
 
-    records: dict[str, Any] = {}
     cursor = 0
     while candidates and recipes and campaign.can_start(deadline):
         case = candidates[(cursor // len(recipes)) % len(candidates)]
         recipe = copy.deepcopy(recipes[cursor % len(recipes)])
-        if recipe.get("exact_test12_intervention") is not None:
-            recipe["_proof_seed"] = 47 + (cursor % 3)
-        else:
-            mode = cursor % 3
-            if mode == 1:
-                recipe["ingredient_ids"] = list(reversed(recipe["ingredient_ids"]))
-            elif mode == 2 and recipe["ingredient_ids"]:
-                recipe["ingredient_ids"] = list(recipe["ingredient_ids"]) + [recipe["ingredient_ids"][0]]
+        mode = cursor % 3
+        if mode == 1:
+            recipe["ingredient_ids"] = list(reversed(recipe["ingredient_ids"]))
+        elif mode == 2 and recipe["ingredient_ids"]:
+            recipe["ingredient_ids"] = list(recipe["ingredient_ids"]) + [recipe["ingredient_ids"][0]]
         observation = campaign.treatment(
             case,
             deadline,
@@ -2930,30 +3186,32 @@ def phase_purple_unicorn(
             kind="unicorn_probe",
             recipe=recipe,
             label="unicorn-" + _recipe_key(recipe),
-            source_key="boundary-search",
+            source_key="standalone-boundary-search",
         )
-        if observation is not None:
+        if observation is not None and observation.get("delta_valid") is True:
             result_class = str((observation.get("classification") or {}).get("result_class"))
-            if observation.get("delta_valid") is not True:
-                continue
             if result_class != "ANSWER_CORRECT" or float(observation["delta"]) < (-0.5 * campaign.noise_sigma):
                 key = f"{_family(case)}|{_fixture_id(case)}|{_recipe_key(recipe)}"
                 records[key] = {
-                    "family_id": _family(case),
-                    "fixture_id": _fixture_id(case),
-                    "difficulty_level": int(case.get("difficulty_level", 0)),
-                    "recipe": recipe,
-                    "result_class": result_class,
-                    "delta": observation.get("delta"),
-                    "experiment_id": observation.get("experiment_id"),
-                    "status": "REPRODUCIBLE_CANDIDATE",
-                    "next_action": "MAP_LOCAL_FAILURE_REGION",
+                    "family_id":_family(case),
+                    "fixture_id":_fixture_id(case),
+                    "difficulty_level":int(case.get("difficulty_level", 0)),
+                    "recipe":recipe,
+                    "result_class":result_class,
+                    "delta":observation.get("delta"),
+                    "experiment_id":observation.get("experiment_id"),
+                    "status":"REPRODUCIBLE_CANDIDATE",
+                    "next_action":"MAP_LOCAL_FAILURE_REGION",
+                    "search_scope":"STANDALONE_NON_TEST1.2",
                 }
         cursor += 1
         if cursor >= len(candidates) * len(recipes) * 3:
             break
+    campaign.unicorn_search_audit = {
+        "mode":"STANDALONE_NON_TEST1.2",
+        "effect_size_used_for_ordering":False,
+    }
     return records
-
 
 def phase_knockout(
     campaign: Test2Campaign,
@@ -2964,10 +3222,12 @@ def phase_knockout(
         records: dict[str, Any] = {}
         ranked_exact = sorted(
             recurrence.items(),
-            key=lambda item: float(item[1].get("normalized_effect", 0.0)),
-            reverse=True,
+            key=lambda item: (
+                int(((item[1].get("recipe") or {}).get("compiler_queue_index") or 0)),
+                item[0],
+            ),
         )
-        for key, summary in ranked_exact[:8]:
+        for key, summary in ranked_exact:
             recipe = copy.deepcopy(summary.get("recipe") or {})
             if not recipe or recipe.get("exact_test12_intervention") is None:
                 continue
@@ -2983,11 +3243,7 @@ def phase_knockout(
             }
         return records
 
-    ranked = sorted(
-        recurrence.items(),
-        key=lambda item: float(item[1].get("normalized_effect", 0.0)),
-        reverse=True,
-    )
+    ranked = sorted(recurrence.items(), key=lambda item: item[0])
     recipes = [
         copy.deepcopy(summary["recipe"])
         for _, summary in ranked
