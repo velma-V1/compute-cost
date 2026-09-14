@@ -519,7 +519,13 @@ def mechanism_implementation_status(
 
     missing: list[list[str]] = []
     for alternatives in REQUIRED_INTERVENTION_FIELDS.get(mode, ()):
-        if not any(intervention.get(field) not in {None, ""} for field in alternatives):
+        present = False
+        for field in alternatives:
+            value = intervention.get(field)
+            if value is not None and value != "":
+                present = True
+                break
+        if not present:
             missing.append(list(alternatives))
     if missing:
         return {
