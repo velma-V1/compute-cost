@@ -1,3 +1,158 @@
+# REVIEW ROUND 4 — STOP REVIEWING, START MEASURING
+
+This round changes execution order, not the scientific firewall.
+
+The governing distinction is now:
+
+```
+instrument validity
+    !=
+architecture-thesis validity
+```
+
+Stage 0 certifies the exact model/runtime/quantization instrument. A failed
+auditor/executor thesis no longer falsely marks that runtime profile invalid.
+Instead the thesis is a separate decision gate:
+
+```
+Stage 0 instrument characterization
+    ↓
+matched auditor/executor thesis
+    ↓
+SUPPORTED          NOT SUPPORTED / INCONCLUSIVE
+    ↓                         ↓
+full Test 1.2               stop inverted campaign
+campaign                    preserve valid Stage-0 evidence
+```
+
+The thesis uses matched fixtures, fresh current-runtime execution, Stage-0
+family budgets, temperature 1.0, and an exact matched-pair sign test over
+discordant outcomes. The current target is 100 valid matched pairs with a
+60-pair minimum. This is the first direct mechanism test of whether the model
+is more reliable as an auditor than as an executor.
+
+## Zero-call analyses are now executable immediately
+
+A completed Collection can now be reanalyzed without rerunning the model:
+
+```powershell
+compute-cost gpt20b-test1.2-reanalyze --collection-run <COLLECTION_RUN_ID>
+```
+
+This verifies the Collection's manifest-declared raw intervention registry and
+observation stream, leaves those raw files unchanged, and regenerates:
+
+- `control-redundancy-map.json`
+- `capability-floor-registry.json`
+- `test1.2-zero-call-reanalysis.json`
+
+It then refreshes the derived handoff fields and re-finalizes the manifest.
+
+Unknown legacy validity remains UNKNOWN and is not promoted into capability
+evidence merely to increase the floor count.
+
+## Redundancy taxonomy correction
+
+Redundancy clusters are now outcome-blind.
+
+Cluster membership may use only intervention semantics. Rescue co-occurrence
+and harm co-occurrence are prohibited from defining mechanism membership.
+
+Parameterized sweeps such as reasoning effort, generation budget, context
+window, and temperature may share one mechanism with multiple variants.
+Different named retry, verification, planning, memory, tool, routing, or other
+controller mechanisms are not merged merely because they share an execution
+topology.
+
+Valid Collection outcomes may rank the first representative *after* semantic
+membership is frozen. They cannot change cluster membership.
+
+## Capability-floor registry
+
+The zero-call floor registry separates:
+
+```
+BASELINE_CAPABLE
+HARNESS_RECOVERABLE
+UNRESOLVED_PARTIAL_CONTROL_SEARCH
+CONFIRMED_DECLARED_HARNESS_FLOOR
+```
+
+A fixture is a confirmed declared harness floor only when:
+
+1. its baseline failure is explicitly capability-valid;
+2. no explicitly valid paired intervention rescues it; and
+3. every declared intervention was validly tested on that fixture.
+
+Therefore a historical claim such as "54 fixtures resisted all controls" is
+not inherited automatically. The current validity firewall must independently
+support that statement.
+
+The family section also reports whether the benchmark actually exhibits a
+measured capability boundary rather than only passes, only failures, or no
+valid measurements. This is the construct-validity check previously missing.
+
+## Stage-0 budget and state measurements
+
+Stage 0 now explicitly measures:
+
+- cross-call A → B → A state isolation;
+- tested headroom rather than inferred headroom;
+- cap saturation;
+- natural-stop rate;
+- emitted-token elasticity;
+- budget-filling versus task-limited behavior;
+- overthinking corruption at the selected headroom budget.
+
+Questions 15–16 are no longer declared answered merely because a boundary was
+found. Excess-budget behavior must actually be probed.
+
+## Campaign structure
+
+There is no standalone 100–150-call throughput calibration gate.
+
+After Stage 0 and a supported auditor/executor thesis, the real campaign starts
+immediately.
+
+The campaign is reassessed every approximately 500 **experimental physical
+model calls**. Runtime canary calls are excluded from this block count.
+
+Block 1 is explicitly:
+
+```
+BLOCK1_CALIBRATION_AND_REAL_EVIDENCE
+```
+
+Throughput / evidence-yield measurements are sizing and diagnostic parameters,
+not GO/NO-GO criteria.
+
+Runtime canaries run on wall-clock cadence (default 600 seconds), are excluded
+from capability and latency-ratio statistics, and receive an immediate
+confirmation probe when suspect. Confirmed runtime drift stops the campaign
+and quarantines evidence after the last passing canary boundary.
+
+## Review stopping rule
+
+The external design review has reached the point where remaining findings are
+predominantly parameter choices rather than decision-changing structural
+defects.
+
+The next action is measurement, in this order:
+
+```
+1. run zero-call Collection reanalysis
+2. run fresh Stage 0
+3. run matched auditor/executor thesis
+4. if supported, enter Test 1.2 immediately
+5. reassess at each ~500 experimental-call block
+6. keep 10-minute runtime canaries active
+```
+
+Do not insert another standalone calibration campaign unless new evidence
+reveals a decision-changing measurement-integrity defect.
+
+---
+
 # CURRENT REVIEW STATUS
 
 **Branch:** `build/gpt20b-test1.2-full-improvement`  
