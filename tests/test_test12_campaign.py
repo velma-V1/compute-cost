@@ -2693,3 +2693,122 @@ def test_output_contract_gate_uses_calibrated_family_budget(monkeypatch):
     }
     assert result["budget_source"] == "STAGE0_REPLICATED_SAFE_FAMILY_BUDGET"
     assert result["questions_answered"] == [2, 21, 22, 23, 24]
+
+
+
+def test_stage0_builds_shadow_early_truncation_threshold(monkeypatch):
+    family = "arithmetic_numerical_reasoning"
+
+    class FakeCampaign:
+        cfg = {
+            "base_generation_budget": 256,
+            "stage0_budget_ladder": [256, 512, 1024, 2048],
+            "generation_budgets": [256, 512, 1024],
+            "seeds": [42, 43, 44],
+        }
+        partitions = {
+            "DISCOVERY": [{
+                "id": "shadow-budget-case",
+                "category": family,
+                "difficulty_level": 8,
+                "prompt": "hard",
+                "scorer": "exact",
+                "expected": "ok",
+            }]
+        }
+
+        @staticmethod
+        def can_start(_deadline):
+            return True
+
+    def fake_probe(
+        campaign,
+        deadline,
+        *,
+        probe_id,
+        question_ids,
+        family_id,
+        messages,
+        options,
+        request_fields=None,
+        case=None,
+    ):
+        budget = int(options["num_predict"])
+        seed = int(options["seed"])
+        valid = budget >= 1024
+        prefix = {42: 6, 43: 7, 44: 8}.get(seed, 6)
+        return {
+            "probe_id":probe_id,
+            "question_ids":question_ids,
+            "family_id":family_id,
+            "ok":True,
+            "content_empty":not valid,
+            "done_reason":"stop" if valid else "length",
+            "score":1.0 if valid else None,
+            "request":{"options":{"seed":seed}},
+            "eval_count":budget if not valid else budget - 8,
+            "phase_metrics":{
+                "thinking_chunks":20 if not valid else prefix,
+                "answer_chunks":1 if valid else 0,
+                "thinking_chunks_before_first_answer":prefix if valid else 20,
+                "thinking_chars_before_first_answer":prefix * 4 if valid else 80,
+            },
+        }
+
+    monkeypatch.setattr(foundation_module, "_invoke_probe", fake_probe)
+    result = foundation_module.run_runtime_budget_characterization(
+        FakeCampaign(),
+        999.0,
+        replicates=3,
+        safety_factor=1.5,
+    )
+
+    policy = result["early_truncation_shadow_policy"]["families"][family]
+    assert policy["status"] == "SHADOW_ONLY"
+    assert policy["activation_allowed"] is False
+    assert policy["live_abort_supported_by_current_transport"] is False
+    assert policy["calibration_max_valid_pre_answer_thinking_chunks"] == 8
+    assert policy["thinking_chunk_threshold"] == 12
+    assert policy["historical_invalid_no_answer_observations"] == 2
+    assert policy["historical_shadow_hits"] == 2
+
+
+def test_early_truncation_shadow_report_never_enables_live_abort():
+    calibration = {
+        "families": {
+            "family-a": {
+                "thinking_chunk_threshold": 10,
+                "status": "SHADOW_ONLY",
+            }
+        }
+    }
+
+    class Campaign:
+        rows = [
+            {
+                "family_id":"family-a",
+                "early_truncation_shadow_prediction":True,
+                "early_truncation_shadow_actual_truncation":True,
+            },
+            {
+                "family_id":"family-a",
+                "early_truncation_shadow_prediction":True,
+                "early_truncation_shadow_actual_truncation":False,
+            },
+            {
+                "family_id":"family-a",
+                "early_truncation_shadow_prediction":False,
+                "early_truncation_shadow_actual_truncation":False,
+            },
+        ]
+
+    report = test12_module._early_truncation_shadow_report(
+        Campaign(),
+        calibration,
+    )
+    assert report["status"] == "SHADOW_ONLY"
+    assert report["activation_allowed"] is False
+    assert report["live_abort_supported_by_current_transport"] is False
+    assert report["global"]["true_positive"] == 1
+    assert report["global"]["false_positive"] == 1
+    assert report["promotion_still_blocked_by_transport"] is True
