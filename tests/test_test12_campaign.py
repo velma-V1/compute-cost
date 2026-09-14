@@ -293,7 +293,7 @@ def test_mechanism_applicability_distinguishes_not_applicable_from_failure():
         {"category":"PROMPT_CONTROL", "primitive_id":"QNT"},
         "spatial_reasoning",
     )
-    assert primitive_outside_declared_scope["status"] == "UNKNOWN"
+    assert primitive_outside_declared_scope["status"] == "NOT_APPLICABLE"
 
     adaptive_search = test12_module.mechanism_applicability(
         {"category":"ADAPTIVE_SEARCH"},
@@ -306,6 +306,23 @@ def test_mechanism_applicability_distinguishes_not_applicable_from_failure():
         "arithmetic_numerical_reasoning",
     )
     assert unknown["status"] == "UNKNOWN"
+
+
+def test_mechanism_implementation_audit_turns_missing_plumbing_into_backlog():
+    built = test12_module.mechanism_implementation_status({
+        "id":"SEARCH",
+        "category":"ADAPTIVE_SEARCH",
+        "mode":"adaptive_search",
+    })
+    assert built["status"] == "BUILT"
+
+    unbuilt = test12_module.mechanism_implementation_status({
+        "id":"FUTURE",
+        "category":"FUTURE_MECHANISM",
+        "mode":"future_mode_without_execution_branch",
+    })
+    assert unbuilt["status"] == "UNBUILT"
+    assert unbuilt["basis"] == "INTERVENTION_MODE_HAS_NO_EXECUTION_BRANCH"
 
 
 def test_harness_applicability_registry_reports_family_gap_without_outcomes():
