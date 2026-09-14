@@ -512,13 +512,17 @@ def run_runtime_budget_characterization(
         if reproducible_boundary is None:
             unresolved.append(family)
             safe_budget = max(ladder)
+            safety_headroom_available = False
             basis = "NO_REPRODUCIBLE_VALID_BOUNDARY"
         else:
-            safe_budget = _round_up_budget(
-                float(reproducible_boundary) * float(safety_factor),
-                ladder,
-            )
-            basis = "K_OF_K_VALID_BOUNDARY_WITH_SAFETY_FACTOR"
+            required_safe_budget = float(reproducible_boundary) * float(safety_factor)
+            safety_headroom_available = required_safe_budget <= max(ladder)
+            safe_budget = _round_up_budget(required_safe_budget, ladder)
+            if not safety_headroom_available:
+                unresolved.append(family)
+                basis = "REPRODUCIBLE_BOUNDARY_FOUND_BUT_TESTED_LADDER_LACKS_SAFETY_HEADROOM"
+            else:
+                basis = "K_OF_K_VALID_BOUNDARY_WITH_SAFETY_FACTOR"
 
         families[family] = {
             "fixture_id":_fixture_id(case),
@@ -533,6 +537,7 @@ def run_runtime_budget_characterization(
             "minimum_reproducibly_passing_budget":reproducible_pass_boundary,
             "resolved_safe_baseline_budget":int(safe_budget),
             "safety_factor":float(safety_factor),
+            "safety_headroom_available":bool(safety_headroom_available),
             "resolution_basis":basis,
         }
 
