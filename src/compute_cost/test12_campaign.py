@@ -1132,7 +1132,10 @@ def _spec(
 
 
 def _capability_valid(row: dict[str, Any]) -> bool:
-    """Whether a row may participate in capability/delta statistics."""
+    """Whether a row may participate in capability/delta statistics.
+
+    Missing validity metadata is UNKNOWN, never implicit evidence.
+    """
     if "delta_valid" in row:
         return bool(row.get("delta_valid"))
     if "valid_for_capability" in row:
@@ -1140,7 +1143,7 @@ def _capability_valid(row: dict[str, Any]) -> bool:
     classification = row.get("classification")
     if isinstance(classification, dict) and "valid_for_capability" in classification:
         return classification.get("valid_for_capability") is True
-    return True
+    return False
 
 
 def _metric_number(row: dict[str, Any], key: str) -> float:
@@ -1930,6 +1933,7 @@ class Test12Campaign:
             "intervention_category": str(intervention.get("category") or "CONTROL"),
             "intervention_mode": str(intervention.get("mode") or "control"),
             "intervention_label": intervention.get("label"),
+            "intervention_semantic_hash": _intervention_fingerprint(intervention),
             "primitive_id": intervention.get("primitive_id"),
             "placement": intervention.get("placement"),
             "representation": intervention.get("representation"),
@@ -1948,7 +1952,7 @@ class Test12Campaign:
             "delta_valid": bool(delta_valid),
             "censored_for_capability": bool(censored_for_capability),
             "censoring_class": (
-                "CONTROL_EXCEEDS_BASELINE_BUDGET"
+                result_class
                 if censored_for_capability
                 else None
             ),
@@ -5963,6 +5967,12 @@ def write_outputs(campaign: Test12Campaign, results: dict[str, Any]) -> None:
         "protected_partitions_exposed":False,
         "next_test":"TEST1.2_TUNING_RUN",
         "full_control_candidate_coverage":grammar_coverage,
+        "intervention_semantic_hashes":{
+            str(row["id"]):_intervention_fingerprint(row)
+            for row in campaign.interventions
+            if row.get("id")
+        },
+        "intervention_semantic_hash_contract":"FROZEN_CONTROLLER_DEFINITION_EXCLUDING_RUNTIME_DERIVED_STATE",
         "tuning_example_count":len(tuning_rows),
         "harness_policy_blueprint":"harness-policy-blueprint.json",
         "capability_building_block_manufacturing_map":"capability-building-block-manufacturing-map.json",
