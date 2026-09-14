@@ -337,7 +337,9 @@ def test_final_recipe_cannot_be_shipping_verified_without_harm_evidence():
             }
         },
     )
-    assert safe[0]["verified_for_shipping"] is True
+    assert safe[0]["scientifically_supported"] is True
+    assert safe[0]["verified_for_shipping"] is False
+    assert safe[0]["shipping_block_reason"] == "NON_TEST1.2_PROVENANCE"
 
 
 def test_test2_control_does_not_mutate_resolved_family_budget(monkeypatch):
