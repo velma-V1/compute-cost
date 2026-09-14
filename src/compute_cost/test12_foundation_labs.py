@@ -777,6 +777,7 @@ def run_runtime_budget_characterization(
     cases = _representative_cases(campaign)
     total_screen_calls = 0
     total_confirmation_calls = 0
+    total_headroom_calls = 0
 
     def run_one(
         case: dict[str, Any],
@@ -785,7 +786,7 @@ def run_runtime_budget_characterization(
         seed: int,
         role: str,
     ) -> dict[str, Any] | None:
-        nonlocal total_screen_calls, total_confirmation_calls
+        nonlocal total_screen_calls, total_confirmation_calls, total_headroom_calls
         row = _invoke_probe(
             campaign,
             deadline,
@@ -810,11 +811,7 @@ def run_runtime_budget_characterization(
             and not row.get("content_empty")
             and row.get("done_reason") != "length"
         )
-        if role == "SCREEN":
-            total_screen_calls += 1
-        else:
-            total_confirmation_calls += 1
-        return row
+        if role == "SCREEN":\n            total_screen_calls += 1\n        elif role == "HEADROOM":\n            total_headroom_calls += 1\n        else:\n            total_confirmation_calls += 1\n        return row
 
     for case in cases:
         if not campaign.can_start(deadline):
@@ -925,6 +922,34 @@ def run_runtime_budget_characterization(
                         ),
                     )
                 ),
+                "eval_hit_budget_rate":(
+                    sum(1 for row in obs if row.get("eval_hit_budget") is True)
+                    / len(obs)
+                    if obs else None
+                ),
+                "natural_stop_rate":(
+                    sum(1 for row in obs if row.get("done_reason") != "length")
+                    / len(obs)
+                    if obs else None
+                ),
+                "mean_cap_saturation":(
+                    (
+                        sum(
+                            int(row["eval_count"])
+                            for row in obs
+                            if isinstance(row.get("eval_count"), int)
+                        )
+                        / max(
+                            1,
+                            sum(
+                                1 for row in obs
+                                if isinstance(row.get("eval_count"), int)
+                            ),
+                        )
+                    )
+                    / float(budget)
+                    if obs else None
+                ),
             }
 
             if (
@@ -936,6 +961,10 @@ def run_runtime_budget_characterization(
                 if len(passed) == replicates:
                     reproducible_pass_boundary = int(budget)
                 break
+
+        headroom_rows: list[dict[str, Any]] = []
+        budget_expansion_allowed = True
+        overthink_corruption_observed = False
 
         if reproducible_boundary is None:
             unresolved.append(family)
@@ -955,15 +984,133 @@ def run_runtime_budget_characterization(
                     "LACKS_SAFETY_HEADROOM"
                 )
             else:
-                basis = (
-                    "SCREEN_THEN_K_OF_K_CONFIRMATION_WITH_SAFETY_FACTOR"
-                )
+                basis = "SCREEN_THEN_K_OF_K_CONFIRMATION_WITH_TESTED_HEADROOM"
+
+                # The operating budget must be observed, not inferred. Probe the
+                # selected headroom budget under independent seeds and measure
+                # whether the model naturally stops or expands to consume the cap.
+                if int(safe_budget) > int(reproducible_boundary):
+                    for seed in seeds[: min(2, len(seeds))]:
+                        if not campaign.can_start(deadline):
+                            break
+                        row = run_one(
+                            case,
+                            family,
+                            int(safe_budget),
+                            int(seed),
+                            "HEADROOM",
+                        )
+                        if row is not None:
+                            headroom_rows.append(row)
+
+                    headroom_valid = [
+                        row for row in headroom_rows
+                        if row.get("capability_valid_final_answer") is True
+                    ]
+                    boundary_level_for_safety = levels.get(
+                        str(reproducible_boundary), {}
+                    )
+                    boundary_was_reproducibly_passing = bool(
+                        boundary_level_for_safety.get("attempts") == replicates
+                        and boundary_level_for_safety.get("passes") == replicates
+                    )
+                    headroom_has_regression = bool(
+                        boundary_was_reproducibly_passing
+                        and any(
+                            row.get("capability_valid_final_answer") is True
+                            and float(row.get("score") or 0.0) < 1.0
+                            for row in headroom_rows
+                        )
+                    )
+                    headroom_has_invalid = bool(
+                        headroom_rows
+                        and len(headroom_valid) != len(headroom_rows)
+                    )
+                    overthink_corruption_observed = headroom_has_regression
+                    if headroom_has_regression or headroom_has_invalid:
+                        # Larger is not automatically safer. Fall back to the
+                        # k/k valid boundary rather than promoting an unstable
+                        # headroom cap into the rest of the experiment.
+                        safe_budget = int(reproducible_boundary)
+                        budget_expansion_allowed = False
+                        safety_headroom_available = False
+                        basis = (
+                            "REPRODUCIBLE_BOUNDARY_USED_BECAUSE_HEADROOM_"
+                            "SHOWED_INVALIDITY_OR_OVERTHINK_CORRUPTION"
+                        )
 
         boundary_level = (
             levels.get(str(reproducible_boundary), {})
             if reproducible_boundary is not None
             else {}
         )
+
+        headroom_eval_counts = [
+            int(row["eval_count"])
+            for row in headroom_rows
+            if isinstance(row.get("eval_count"), int)
+        ]
+        headroom_mean_eval = (
+            sum(headroom_eval_counts) / len(headroom_eval_counts)
+            if headroom_eval_counts else None
+        )
+        headroom_cap = (
+            int((headroom_rows[0].get("requested_num_predict") or 0))
+            if headroom_rows else None
+        )
+        headroom_cap_saturation = (
+            float(headroom_mean_eval) / float(headroom_cap)
+            if headroom_mean_eval is not None and headroom_cap
+            else None
+        )
+        boundary_mean_eval = boundary_level.get("mean_eval_count")
+        boundary_cap_saturation = boundary_level.get("mean_cap_saturation")
+        emitted_token_elasticity = None
+        if (
+            isinstance(boundary_mean_eval, (int, float))
+            and boundary_mean_eval > 0
+            and isinstance(headroom_mean_eval, (int, float))
+            and headroom_mean_eval > 0
+            and reproducible_boundary is not None
+            and headroom_cap is not None
+            and headroom_cap > reproducible_boundary
+        ):
+            emitted_token_elasticity = (
+                math.log(float(headroom_mean_eval) / float(boundary_mean_eval))
+                / math.log(float(headroom_cap) / float(reproducible_boundary))
+            )
+
+        if emitted_token_elasticity is None:
+            elasticity_class = "UNMEASURED"
+        elif emitted_token_elasticity < 0.35:
+            elasticity_class = "TASK_LIMITED"
+        elif emitted_token_elasticity < 0.80:
+            elasticity_class = "MIXED"
+        else:
+            elasticity_class = "BUDGET_FILLING"
+
+        budget_elasticity = {
+            "boundary_budget": reproducible_boundary,
+            "boundary_mean_eval_count": boundary_mean_eval,
+            "boundary_cap_saturation": boundary_cap_saturation,
+            "headroom_budget_tested": headroom_cap,
+            "headroom_probe_count": len(headroom_rows),
+            "headroom_valid_count": sum(
+                1 for row in headroom_rows
+                if row.get("capability_valid_final_answer") is True
+            ),
+            "headroom_mean_eval_count": headroom_mean_eval,
+            "headroom_cap_saturation": headroom_cap_saturation,
+            "emitted_token_elasticity": emitted_token_elasticity,
+            "elasticity_class": elasticity_class,
+            "budget_expansion_allowed": budget_expansion_allowed,
+            "overthink_corruption_observed": overthink_corruption_observed,
+            "interpretation": (
+                "ELASTICITY_NEAR_ZERO_MEANS_TASK_LIMITED; "
+                "ELASTICITY_NEAR_ONE_MEANS_BUDGET_FILLING"
+            ),
+        }
+
         max_valid_prefix = boundary_level.get(
             "max_valid_pre_answer_thinking_chunks"
         )
@@ -1021,7 +1168,7 @@ def run_runtime_budget_characterization(
             "safety_factor":float(safety_factor),
             "safety_headroom_available":bool(safety_headroom_available),
             "resolution_basis":basis,
-            "early_truncation_shadow_policy":shadow_policy,
+            "budget_elasticity":budget_elasticity,\n            "budget_expansion_allowed":budget_expansion_allowed,\n            "overthink_corruption_observed":overthink_corruption_observed,\n            "early_truncation_shadow_policy":shadow_policy,
         }
 
     expected_families = sorted({_family(case) for case in cases})
@@ -1036,18 +1183,28 @@ def run_runtime_budget_characterization(
         family:copy.deepcopy(payload.get("early_truncation_shadow_policy") or {})
         for family, payload in families.items()
     }
+    budget_questions_answered = [11,12,13,14,17,18,19,20]
+    if total_headroom_calls > 0:
+        budget_questions_answered.extend([15,16])
+
+    elasticity_classes = {
+        family: str(
+            (payload.get("budget_elasticity") or {}).get(
+                "elasticity_class", "UNMEASURED"
+            )
+        )
+        for family, payload in families.items()
+    }
     return {
         "schema_version":1,
         "stage":"STAGE0_RUNTIME_CHARACTERIZATION",
-        "questions_answered":[11,12,13,14,15,16,17,18,19,20],
+        "questions_answered":sorted(budget_questions_answered),
         "replicates_required":int(replicates),
         "safety_factor":float(safety_factor),
         "budget_ladder":list(ladder),
         "search_strategy":"SCREEN_ESCALATE_CONFIRM",
         "screen_calls":total_screen_calls,
-        "confirmation_calls":total_confirmation_calls,
-        "calls_used":total_screen_calls + total_confirmation_calls,
-        "families":families,
+        "confirmation_calls":total_confirmation_calls,\n        "headroom_calls":total_headroom_calls,\n        "calls_used":total_screen_calls + total_confirmation_calls + total_headroom_calls,\n        "budget_elasticity_by_family":elasticity_classes,\n        "budget_filling_family_count":sum(1 for value in elasticity_classes.values() if value == "BUDGET_FILLING"),\n        "overthink_corruption_family_count":sum(1 for payload in families.values() if payload.get("overthink_corruption_observed") is True),\n        "families":families,
         "resolved_generation_budget_by_family":resolved,
         "early_truncation_shadow_policy":{
             "schema_version":1,
