@@ -959,6 +959,33 @@ class Test2Campaign:
         self.treatment_calls = 0
         self.harm_evidence: dict[str, Any] = {}
         self.recipes = source_recipes(handoff, limit=int(self.cfg["top_recipes"]))
+        self.exact_test12: Test12Campaign | None = None
+        if handoff.get("handoff_mode") == "TEST12_EXACT":
+            source = fresh_model_source(cases)
+            source["baselines"] = {}
+            exact = Test12Campaign(
+                runner,
+                cases,
+                source,
+                clock=clock,
+                started_monotonic=self.start,
+            )
+            exact.active_end = self.active_end
+            exact.call_start_cutoff = self.call_start_cutoff
+            exact.baseline_generation_budget_by_family = copy.deepcopy(
+                self.generation_budget_by_family
+            )
+            exact_controls = [
+                copy.deepcopy(row["exact_test12_intervention"])
+                for row in self.recipes
+                if row.get("exact_test12_intervention")
+            ]
+            exact.interventions = exact_controls
+            exact.intervention_by_id = {
+                str(row["id"]): row for row in exact_controls if row.get("id")
+            }
+            exact.allowed_partitions = {"DISCOVERY", "VALIDATION"}
+            self.exact_test12 = exact
 
     def can_start(self, deadline: float) -> bool:
         return self.clock() < min(deadline, self.active_end, self.call_start_cutoff)
@@ -1001,6 +1028,68 @@ class Test2Campaign:
     def control(self, case: dict[str, Any], deadline: float, *, phase: str, blind: bool = False, force: bool = False) -> float | None:
         self._assert_partition_allowed(case, blind=blind)
         fixture_id = _fixture_id(case)
+        if self.exact_test12 is not None:
+            self.exact_test12.allowed_partitions = (
+                {"TEST2_BLIND"} if blind else {"DISCOVERY", "VALIDATION"}
+            )
+            seed = 48 if blind else 42
+            record = self.exact_test12.control(
+                case,
+                deadline,
+                seed=seed,
+                force=force,
+            )
+            if record is None:
+                return None
+            valid = bool(record.get("valid_for_capability"))
+            score = float(record.get("score") or 0.0)
+            budget = int(
+                record.get("generation_budget")
+                or self.generation_budget_by_family.get(
+                    _family(case), self.cfg["generation_budget"]
+                )
+            )
+            self.current_baseline_validity[fixture_id] = valid
+            self.current_baseline_budgets[fixture_id] = budget
+            if valid:
+                self.current_baselines[fixture_id] = score
+            else:
+                self.current_baselines.pop(fixture_id, None)
+            if force or not any(
+                row.get("kind") == "control"
+                and row.get("fixture_id") == fixture_id
+                and row.get("phase") == phase
+                for row in self.rows
+            ):
+                out = {
+                    "schema_version":1,
+                    "timestamp_utc":self.runner._utc(),
+                    "phase":phase,
+                    "kind":"control",
+                    "fixture_id":fixture_id,
+                    "family_id":_family(case),
+                    "difficulty_level":int(case.get("difficulty_level",0)),
+                    "partition":self._partition(case),
+                    "experiment_id":record.get("experiment_id"),
+                    "classification":copy.deepcopy(record.get("classification") or {}),
+                    "valid_for_capability":valid,
+                    "baseline_valid_for_capability":valid,
+                    "baseline_generation_budget":budget,
+                    "treatment_generation_budget":budget,
+                    "budget_comparison_valid":True,
+                    "delta_valid":False,
+                    "score":score,
+                    "baseline_score":score,
+                    "delta":None,
+                    "recipe":{"exact_test12_control":"CONTROL"},
+                    "source_key":None,
+                    "timing":{"wall_s":float((record.get("timing") or {}).get("client_latency_ns") or 0)/1_000_000_000.0},
+                    "evidence_refs":{},
+                }
+                self.rows.append(out)
+                self.runner.store.append_jsonl("test2-observations.jsonl", out)
+            return score if valid else None
+
         if not force and fixture_id in self.current_baselines:
             return self.current_baselines[fixture_id]
         if not self.can_start(deadline):
@@ -1077,6 +1166,110 @@ class Test2Campaign:
         self._assert_partition_allowed(case, blind=blind)
         if not self.can_start(deadline):
             return None
+
+        if self.exact_test12 is not None:
+            exact_recipe = recipe.get("exact_test12_intervention")
+            if not isinstance(exact_recipe, dict):
+                return None
+            discovery_hash = str(recipe.get("discovery_semantic_hash") or "")
+            current_hash = _intervention_fingerprint(exact_recipe)
+            if discovery_hash and current_hash != discovery_hash:
+                raise ValueError(
+                    f"Test 2 semantic drift for exact control {exact_recipe.get('id')}"
+                )
+            proof_seed = int(
+                recipe.get("_proof_seed")
+                or {
+                    "recurrence_higher_order":42,
+                    "failure_recovery":45,
+                    "negative_transfer":46,
+                    "purple_unicorn":47,
+                    "knockout_distillation":49,
+                    "blind_confirmation":50,
+                    "censoring_cost_tradeoff":51,
+                }.get(phase, 42)
+            )
+            intervention = copy.deepcopy(exact_recipe)
+            own_budget_probe = generation_budget_override is not None
+            if own_budget_probe:
+                intervention["generation_budget"] = int(generation_budget_override)
+            proof_hash = _intervention_fingerprint(intervention)
+            exact_semantic_match = proof_hash == current_hash
+
+            self.exact_test12.allowed_partitions = (
+                {"TEST2_BLIND"} if blind else {"DISCOVERY", "VALIDATION"}
+            )
+            exact_row = self.exact_test12.treatment(
+                case,
+                deadline,
+                phase=f"test2-{phase}",
+                intervention=intervention,
+                seed=proof_seed,
+            )
+            if exact_row is None:
+                return None
+
+            classification = copy.deepcopy(exact_row.get("classification") or {})
+            valid = bool(exact_row.get("valid_for_capability"))
+            delta_valid = exact_row.get("delta_valid") is True and not own_budget_probe
+            result_class = str(classification.get("result_class") or "")
+            censored = bool(
+                not valid
+                and result_class in CENSORING_CLASSES
+            )
+            record = {
+                "schema_version":1,
+                "timestamp_utc":self.runner._utc(),
+                "phase":phase,
+                "kind":kind,
+                "fixture_id":_fixture_id(case),
+                "family_id":_family(case),
+                "difficulty_level":int(case.get("difficulty_level",0)),
+                "partition":self._partition(case),
+                "experiment_id":exact_row.get("experiment_id"),
+                "classification":classification,
+                "valid_for_capability":valid,
+                "baseline_valid_for_capability":bool(
+                    exact_row.get("control_valid_for_capability")
+                ),
+                "baseline_generation_budget":int(
+                    exact_row.get("control_generation_budget")
+                    or self.generation_budget_by_family.get(
+                        _family(case), self.cfg["generation_budget"]
+                    )
+                ),
+                "treatment_generation_budget":int(
+                    exact_row.get("generation_budget")
+                    or self.cfg["generation_budget"]
+                ),
+                "budget_comparison_valid":bool(
+                    exact_row.get("budget_comparison_valid")
+                ),
+                "delta_valid":bool(delta_valid),
+                "score":float(exact_row.get("score") or 0.0),
+                "baseline_score":float(exact_row.get("control_score") or 0.0),
+                "delta":(
+                    float(exact_row["delta"])
+                    if delta_valid and exact_row.get("delta") is not None
+                    else None
+                ),
+                "recipe":copy.deepcopy(recipe),
+                "source_key":source_key,
+                "semantic_hash_discovery":current_hash,
+                "semantic_hash_proof":proof_hash,
+                "semantic_hash_match":exact_semantic_match,
+                "own_budget_cost_probe":own_budget_probe,
+                "censored_for_capability":censored,
+                "censoring_class":(
+                    "CONTROL_EXCEEDS_BASELINE_BUDGET" if censored else None
+                ),
+                "timing":{"wall_s":float((exact_row.get("cost") or {}).get("wall_seconds") or 0.0)},
+                "evidence_refs":copy.deepcopy(exact_row.get("evidence_refs") or {}),
+            }
+            self.rows.append(record)
+            self.runner.store.append_jsonl("test2-observations.jsonl", record)
+            self.treatment_calls += 1
+            return record
 
         fixture_id = _fixture_id(case)
         baseline = self.current_baselines.get(fixture_id)
