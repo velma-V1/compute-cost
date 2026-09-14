@@ -1713,6 +1713,121 @@ class Test12Campaign:
         self.runtime_canary_last_pass_active_seconds = self._active_elapsed()
 
 
+    def maybe_block_reassessment(self) -> None:
+        """Emit an evidence-preserving reassessment every configured call block."""
+        if self.capability_call_origin is None:
+            return
+        block_size = max(
+            1,
+            int(self.cfg.get("campaign_block_physical_calls", 500)),
+        )
+        capability_calls = max(
+            0,
+            self._physical_model_calls() - int(self.capability_call_origin),
+        )
+        while capability_calls >= (self.block_index + 1) * block_size:
+            block_number = self.block_index + 1
+            block_rows = self.rows[self.block_row_start:]
+            capability_rows = [
+                row for row in block_rows
+                if str(row.get("intervention_id") or "") != "CONTROL"
+            ]
+            valid = [
+                row for row in capability_rows
+                if row.get("delta_valid") is True
+            ]
+            censored = [
+                row for row in capability_rows
+                if row.get("censored_for_capability") is True
+            ]
+            positive = [
+                row for row in valid
+                if isinstance(row.get("delta"), (int, float))
+                and not isinstance(row.get("delta"), bool)
+                and float(row.get("delta")) > 0.0
+            ]
+            negative = [
+                row for row in valid
+                if isinstance(row.get("delta"), (int, float))
+                and not isinstance(row.get("delta"), bool)
+                and float(row.get("delta")) < 0.0
+            ]
+            families = sorted({
+                str(row.get("family_id") or "UNKNOWN")
+                for row in valid
+            })
+            censoring_rate = (
+                len(censored) / len(capability_rows)
+                if capability_rows else None
+            )
+            positive_rate = (
+                len(positive) / len(valid) if valid else None
+            )
+            if self.runtime_canary_failed:
+                recommendation = "STOP_RUNTIME_DRIFT"
+            elif not valid and capability_rows:
+                recommendation = "REVIEW_ZERO_VALID_YIELD"
+            elif (
+                isinstance(censoring_rate, (int, float))
+                and censoring_rate > 0.50
+            ):
+                recommendation = (
+                    "REVIEW_RUNTIME_SEMANTICS_WITHOUT_DISCARDING_VALID_EVIDENCE"
+                )
+            else:
+                recommendation = "CONTINUE"
+
+            event = {
+                "schema_version":1,
+                "block_number":block_number,
+                "block_role":(
+                    "BLOCK1_CALIBRATION_AND_REAL_EVIDENCE"
+                    if block_number == 1 else "EVIDENCE_BLOCK"
+                ),
+                "configured_block_physical_calls":block_size,
+                "capability_physical_calls_observed":capability_calls,
+                "block_call_floor":(block_number - 1) * block_size,
+                "block_call_ceiling":block_number * block_size,
+                "campaign_rows_in_block":len(block_rows),
+                "treatment_rows_in_block":len(capability_rows),
+                "proof_eligible_rows_in_block":len(valid),
+                "censored_rows_in_block":len(censored),
+                "positive_rows_in_block":len(positive),
+                "negative_rows_in_block":len(negative),
+                "censoring_rate":censoring_rate,
+                "positive_signal_rate_among_valid":positive_rate,
+                "proof_eligible_rows_per_configured_call":(
+                    len(valid) / float(block_size)
+                ),
+                "valid_family_count":len(families),
+                "valid_families":families,
+                "runtime_canary_count":self.runtime_canary_count,
+                "runtime_canary_failed":self.runtime_canary_failed,
+                "stage0_budget_filling_family_count":int(
+                    (
+                        self.phase_results.get("budget_characterization") or {}
+                    ).get("budget_filling_family_count") or 0
+                ),
+                "stage0_overthink_corruption_family_count":int(
+                    (
+                        self.phase_results.get("budget_characterization") or {}
+                    ).get("overthink_corruption_family_count") or 0
+                ),
+                "throughput_metric_role":"SIZING_AND_DIAGNOSTIC_NOT_GO_NO_GO",
+                "recommendation":recommendation,
+                "automatic_stop":recommendation == "STOP_RUNTIME_DRIFT",
+            }
+            self.runner.store.append_jsonl(
+                "test1.2-block-reassessments.jsonl",
+                event,
+            )
+            self.block_index = block_number
+            self.block_row_start = len(self.rows)
+            self._write_recovery_checkpoint(
+                state=f"BLOCK_{block_number}_REASSESSED"
+            )
+
+
     def partition_name(self, case: dict[str, Any]) -> str:
         fixture_id = _fixture_id(case)
         for name, rows in self.partitions.items():
