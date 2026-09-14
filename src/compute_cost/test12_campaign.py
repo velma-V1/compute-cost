@@ -3288,8 +3288,18 @@ def phase_adaptive_search(
         "schema_version": 1,
         "tested_families": sorted({str(row.get("family_id")) for row in rows}),
         "observations": len(rows),
-        "rescues": sum(1 for row in rows if float(row.get("delta", 0.0)) > 0),
-        "regressions": sum(1 for row in rows if float(row.get("delta", 0.0)) < 0),
+        "rescues": sum(
+            1 for row in rows
+            if row.get("delta_valid") is True
+            and row.get("delta") is not None
+            and float(row["delta"]) > 0
+        ),
+        "regressions": sum(
+            1 for row in rows
+            if row.get("delta_valid") is True
+            and row.get("delta") is not None
+            and float(row["delta"]) < 0
+        ),
         "rows": rows,
     }
 
@@ -3341,9 +3351,24 @@ def phase_metamorphic_reliability(
         "schema_version": 1,
         "family_count": len({str(row.get("family_id")) for row in rows}),
         "observations": len(rows),
-        "stable": sum(1 for row in rows if float(row.get("delta", 0.0)) == 0.0),
-        "improved": sum(1 for row in rows if float(row.get("delta", 0.0)) > 0.0),
-        "regressed": sum(1 for row in rows if float(row.get("delta", 0.0)) < 0.0),
+        "stable": sum(
+            1 for row in rows
+            if row.get("delta_valid") is True
+            and row.get("delta") is not None
+            and float(row["delta"]) == 0.0
+        ),
+        "improved": sum(
+            1 for row in rows
+            if row.get("delta_valid") is True
+            and row.get("delta") is not None
+            and float(row["delta"]) > 0.0
+        ),
+        "regressed": sum(
+            1 for row in rows
+            if row.get("delta_valid") is True
+            and row.get("delta") is not None
+            and float(row["delta"]) < 0.0
+        ),
         "rows": rows,
     }
 
@@ -3605,10 +3630,16 @@ def phase_reflection_transfer(
         "n": len(rows),
         "families": sorted({str(row.get("family_id")) for row in rows}),
         "sibling_rescues": sum(
-            1 for row in rows if float(row.get("delta", 0.0)) > 0
+            1 for row in rows
+            if row.get("delta_valid") is True
+            and row.get("delta") is not None
+            and float(row["delta"]) > 0
         ),
         "negative_transfer": sum(
-            1 for row in rows if float(row.get("delta", 0.0)) < 0
+            1 for row in rows
+            if row.get("delta_valid") is True
+            and row.get("delta") is not None
+            and float(row["delta"]) < 0
         ),
         "rows": rows,
     }
@@ -4456,7 +4487,10 @@ def _efficiency_audit(campaign: Test12Campaign) -> dict[str, Any]:
             row for row in rows if row.get("intervention_id") not in {None, "CONTROL"}
         ]
         score_changes = [
-            row for row in treatment_rows if float(row.get("delta", 0.0)) != 0.0
+            row for row in treatment_rows
+            if row.get("delta_valid") is True
+            and row.get("delta") is not None
+            and float(row["delta"]) != 0.0
         ]
         per_phase[phase] = {
             "observations": len(rows),
