@@ -1,3 +1,208 @@
+# REVIEW ROUND 1 — IMPLEMENTATION RESOLUTION
+
+**Round-1 external review basis:** commit `81ecec37d56cfed7c6617c28596d6a3b7b31ac90`  
+**Current corrected branch:** `build/gpt20b-test1.2-full-improvement`  
+**Latest validated scientific-fix head:** `a8440bda4ceeeb2dfe9a72ee90dcae65b6e02351`  
+**CI:** Python 3.11 PASS + Python 3.12 PASS
+
+The first external reviewer found five material issues. They have been implemented as follows.
+
+## A1 — Undefined deltas persisted as numeric zero — FIXED
+
+Scientific contract is now:
+
+```
+delta_valid == false  =>  delta == null
+```
+
+This applies to:
+
+- Test 1.2 Collection;
+- Test 1.2 recovery/sanitization;
+- Test 1.2 tuning policy rows;
+- Test 2 observations.
+
+Consumers have been hardened to refuse undefined deltas instead of coercing them back to zero.
+
+Regression tests explicitly assert that invalid observations serialize `delta: null`.
+
+## A2 — One-observation mutable family budget ratchet — FIXED
+
+Budget calibration is now owned by **Stage 0 Runtime Characterization**, not Test 2.
+
+Stage 0:
+
+- uses 3 independent replicates by default;
+- does not accept the first lucky completion;
+- finds the first 3/3 capability-valid generation boundary;
+- applies a safety factor (default 1.5);
+- rounds upward to the tested budget ladder;
+- writes the resolved family budgets into a hashed runtime-characterization profile;
+- does not mutate campaign config while measuring the boundary.
+
+Test 2:
+
+- consumes resolved family budgets as immutable proof inputs;
+- no longer learns or ratchets family budgets while proof is running;
+- records the budget used for every baseline and treatment.
+
+## A3 — Informative censoring — FIXED AS A FIRST-CLASS OUTCOME
+
+Matched-budget truncation is no longer treated as a null result.
+
+Rows may now carry:
+
+```
+censored_for_capability = true
+censoring_class = CONTROL_EXCEEDS_BASELINE_BUDGET
+```
+
+Per-control summaries include:
+
+- raw observations;
+- valid comparable observations;
+- censored observations;
+- censoring rate.
+
+If censoring exceeds the configured threshold, classification becomes:
+
+```
+CENSORING_DOMINATED
+```
+
+and ordinary null/pruning claims are prohibited.
+
+Test 2 also contains a separate **own-budget capability+cost probe**. A censored control can be retried with bounded extra compute, but that result is explicitly classified as a capability-plus-cost finding and may never be counted as a matched-budget rescue.
+
+## A4 — Harm invariant unfalsifiable — FIXED WITH DEDICATED HARM SEEKING
+
+Test 2 now builds a baseline-pass sentinel pool and deliberately attacks it with candidate controls.
+
+Default verification requirement:
+
+- at least 16 valid baseline-pass sentinel observations per control;
+- at least 4 distinct capability families;
+- explicit break count and break rate;
+- explicit censoring rate;
+- maximum accepted break rate = 5%.
+
+A recipe cannot receive `verified_for_shipping = true` without sufficient dedicated harm evidence.
+
+The artifact:
+
+```
+harm-sentinel-evidence.json
+```
+
+contains the proof.
+
+## A5 — Runtime-semantics conformance invariant missing — FIXED
+
+Stage 0 is now a hard prerequisite before capability claims.
+
+It produces:
+
+```
+runtime-characterization-profile.json
+```
+
+bound to:
+
+- exact model;
+- exact runtime version;
+- model information / quant context exposed by runtime;
+- runtime semantics;
+- replicated family generation budgets;
+- role-specialization evidence.
+
+Capability observations are blocked unless the Stage-0 profile exists and passed.
+
+Every Test 1.2 capability row carries:
+
+```
+runtime_characterization_profile_sha256
+scoring_source_channel = content
+```
+
+The scoring path explicitly declares that the thinking channel is excluded.
+
+## Stage ownership after Round 1
+
+```
+STAGE 0
+runtime semantics
+replicated safe operating budgets
+role economics
+        ↓
+TEST 1.2
+opportunity discovery
+failure phenotypes
+harder frontiers
+unique valid rescues
+        ↓
+TEST 2
+recurrence
+generalization
+harm seeking
+censoring/cost tradeoffs
+robustness
+blind proof
+        ↓
+COMPILER / ACCEPTANCE
+verified controls only
+routing / vetoes / limits
+release / constrain / reject
+```
+
+## STILL STOP-CLOSED — DO NOT BYPASS
+
+### Exact Test 1.2 → Test 2 control execution
+
+Test 2's legacy recipe language is not semantically equivalent to the full Test 1.2 intervention language.
+
+Until a shared exact-control executor is implemented, Test 2 intentionally rejects a Test 1.2 handoff rather than translating it approximately.
+
+The required architecture is:
+
+```
+single canonical intervention definition
+           ↓
+single shared renderer/executor
+       ↙           ↘
+Test 1.2          Test 2
+discovery         proof
+```
+
+Required invariant:
+
+```
+proof_semantic_hash == discovery_semantic_hash
+```
+
+Do not remove the fail-closed guard merely to make a campaign run.
+
+## ROUND-2 REVIEW PRIORITIES
+
+The next reviewer must now focus on items not fully reviewed in Round 1:
+
+1. shared exact-control executor and semantic hashing;
+2. cluster-aware inference and multiple-comparison control;
+3. training-asset firewall through `test12_model_manufacturing.py`;
+4. tuning/recovery correctness through `test12_tuning.py`;
+5. raw Ollama channel semantics through `runtimes/ollama.py`;
+6. classification validity rules;
+7. EvidenceStore / manifest / protected-partition isolation;
+8. zero-call reanalysis products:
+   - per-control censoring audit,
+   - rescue-signature redundancy clustering,
+   - unresolved capability-floor registry;
+9. whether Stage-0 budget calibration should use smarter bracket/bisect search while preserving replicated validity;
+10. whether auditor-versus-executor evidence is deep enough to make an architectural decision.
+
+**Do not recommend another long run until these are reviewed.**
+
+---
+
 # TEST 1.2 + TEST 2 EXTERNAL SCIENTIFIC REVIEW HANDOFF
 
 **Repository:** `velma-V1/compute-cost`  
