@@ -71,7 +71,7 @@ def _capability_valid(row: dict[str, Any]) -> bool:
     classification = row.get("classification")
     if isinstance(classification, dict) and "valid_for_capability" in classification:
         return classification.get("valid_for_capability") is True
-    return True
+    return False
 
 
 def _eligible_training_row(row: dict[str, Any]) -> bool:
