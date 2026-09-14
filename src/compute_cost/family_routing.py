@@ -239,6 +239,12 @@ def evaluate_family_classifier(
         "top1_accuracy": (correct / evaluated) if evaluated else None,
         "evaluation_scope": "EXISTING_SYNTHETIC_FIXTURE_CORPUS_ONLY",
         "generalization_claim": False,
+        "confusion_pair_semantics": "HYPOTHESIS_SET_NOT_MEASURED_ADJACENCY",
+        "runtime_harm_adjacency_eligible_by_default": False,
+        "adjacency_followup_requirement": (
+            "INDEPENDENT_HELDOUT_OR_FIELD_CONFIRMATION_BEFORE_"
+            "CONFUSION_PAIR_CAN_ENABLE_HARM_ADJACENCY"
+        ),
         "prototype_holdout_policy": "EASIEST_FIXTURE_PER_FAMILY_EXCLUDED_FROM_EVALUATION",
         "confidence_semantics": classifier.get("confidence_semantics"),
         "families": families,
