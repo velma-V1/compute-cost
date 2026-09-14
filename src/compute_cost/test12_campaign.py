@@ -1453,6 +1453,7 @@ class Test12Campaign:
             "explicit_exact_repeats_executed": 0,
             "invalid_baseline_treatments_avoided": 0,
             "invalid_control_retries_avoided": 0,
+            "structurally_inapplicable_treatments_skipped": 0,
         }
         for key, value in (checkpoint.get("efficiency_counters") or {}).items():
             if key in self.efficiency_counters:
@@ -2124,6 +2125,10 @@ class Test12Campaign:
         seed: int,
     ) -> dict[str, Any] | None:
         self.assert_allowed(case)
+        applicability = mechanism_applicability(intervention, _family(case))
+        if applicability["status"] == "NOT_APPLICABLE":
+            self.efficiency_counters["structurally_inapplicable_treatments_skipped"] += 1
+            return None
         self.maybe_runtime_canary(deadline)
         self.maybe_block_reassessment()
         signature = self._trial_signature(case, intervention, seed)
@@ -2477,6 +2482,10 @@ class Test12Campaign:
             "intervention_category": str(intervention.get("category") or "CONTROL"),
             "intervention_mode": str(intervention.get("mode") or "control"),
             "intervention_label": intervention.get("label"),
+            "mechanism_applicability": mechanism_applicability(
+                intervention,
+                family_id,
+            ),
             "intervention_semantic_hash": _intervention_fingerprint(intervention),
             "primitive_id": intervention.get("primitive_id"),
             "placement": intervention.get("placement"),
