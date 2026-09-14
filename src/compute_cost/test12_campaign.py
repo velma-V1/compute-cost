@@ -288,6 +288,7 @@ REQUIRED_OUTPUTS = (
     "gpt-oss-runtime-semantics-map.json",
     "runtime-characterization-profile.json",
     "gpt-oss-output-contract-map.json",
+    "early-truncation-shadow-policy.json",
     "gpt-oss-role-specialization-map.json",
     "gpt-oss-foundation-question-ledger.json",
     "test1.2-foundation-observations.jsonl",
@@ -1250,6 +1251,13 @@ class Test12Campaign:
                 "profile_sha256"
             )
         )
+        self.early_truncation_shadow_by_family: dict[str, Any] = copy.deepcopy(
+            (
+                (self.phase_results.get("budget_characterization") or {})
+                .get("early_truncation_shadow_policy")
+                or {}
+            ).get("families") or {}
+        )
         self.current_phase: str | None = None
         self.current_phase_started: float | None = None
         self.current_phase_elapsed_base = 0.0
@@ -1873,6 +1881,35 @@ class Test12Campaign:
         prompt_tokens = aux_prompt + _metric_number(row, "prompt_eval_count")
         output_tokens = aux_output + _metric_number(row, "eval_count")
         latency_s = aux_latency + _latency_seconds(row)
+
+        family_id = _family(case)
+        shadow_policy = (
+            self.early_truncation_shadow_by_family.get(family_id) or {}
+        )
+        shadow_threshold = shadow_policy.get("thinking_chunk_threshold")
+        phase_metrics = row.get("phase_metrics") or {}
+        answer_chunks = int(phase_metrics.get("answer_chunks") or 0)
+        if answer_chunks > 0:
+            pre_answer_chunks = phase_metrics.get(
+                "thinking_chunks_before_first_answer"
+            )
+        else:
+            pre_answer_chunks = phase_metrics.get("thinking_chunks")
+        if (
+            isinstance(shadow_threshold, int)
+            and isinstance(pre_answer_chunks, int)
+        ):
+            shadow_prediction = pre_answer_chunks >= shadow_threshold
+        else:
+            shadow_prediction = None
+        shadow_actual_truncation = result_class in CENSORING_CLASSES
+        shadow_false_positive = bool(
+            shadow_prediction is True and not shadow_actual_truncation
+        )
+        shadow_true_positive = bool(
+            shadow_prediction is True and shadow_actual_truncation
+        )
+
         result = {
             "schema_version": 1,
             "timestamp_utc": self.runner._utc(),
@@ -1880,7 +1917,7 @@ class Test12Campaign:
             "scoring_source_channel": "content",
             "phase": phase,
             "fixture_id": _fixture_id(case),
-            "family_id": _family(case),
+            "family_id": family_id,
             "task_text": str(case.get("prompt") or ""),
             "difficulty_level": int(case.get("difficulty_level", 0)),
             "partition": self.partition_name(case),
@@ -1911,6 +1948,13 @@ class Test12Campaign:
                 if censored_for_capability
                 else None
             ),
+            "early_truncation_shadow_status": shadow_policy.get("status"),
+            "early_truncation_shadow_threshold": shadow_threshold,
+            "early_truncation_shadow_pre_answer_chunks": pre_answer_chunks,
+            "early_truncation_shadow_prediction": shadow_prediction,
+            "early_truncation_shadow_actual_truncation": shadow_actual_truncation,
+            "early_truncation_shadow_true_positive": shadow_true_positive,
+            "early_truncation_shadow_false_positive": shadow_false_positive,
             "budget_comparison_valid": bool(budget_comparison_valid),
             "control_generation_budget": int(control_budget),
             "score": numeric,
@@ -4507,6 +4551,91 @@ def _opportunity_discovery_map(campaign: Test12Campaign) -> dict[str, Any]:
     }
 
 
+def _early_truncation_shadow_report(
+    campaign: Test12Campaign,
+    calibration: dict[str, Any],
+) -> dict[str, Any]:
+    by_family: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for row in campaign.rows:
+        if row.get("early_truncation_shadow_prediction") is None:
+            continue
+        by_family[str(row.get("family_id") or "")].append(row)
+
+    family_reports: dict[str, Any] = {}
+    total_tp = total_fp = total_fn = total_tn = 0
+    for family, rows in sorted(by_family.items()):
+        tp = sum(
+            1 for row in rows
+            if row.get("early_truncation_shadow_prediction") is True
+            and row.get("early_truncation_shadow_actual_truncation") is True
+        )
+        fp = sum(
+            1 for row in rows
+            if row.get("early_truncation_shadow_prediction") is True
+            and row.get("early_truncation_shadow_actual_truncation") is False
+        )
+        fn = sum(
+            1 for row in rows
+            if row.get("early_truncation_shadow_prediction") is False
+            and row.get("early_truncation_shadow_actual_truncation") is True
+        )
+        tn = sum(
+            1 for row in rows
+            if row.get("early_truncation_shadow_prediction") is False
+            and row.get("early_truncation_shadow_actual_truncation") is False
+        )
+        total_tp += tp
+        total_fp += fp
+        total_fn += fn
+        total_tn += tn
+        family_reports[family] = {
+            "n":len(rows),
+            "true_positive":tp,
+            "false_positive":fp,
+            "false_negative":fn,
+            "true_negative":tn,
+            "precision":tp/(tp+fp) if (tp+fp) else None,
+            "recall":tp/(tp+fn) if (tp+fn) else None,
+            "false_positive_rate":fp/(fp+tn) if (fp+tn) else None,
+            "threshold":(
+                (
+                    (calibration.get("families") or {})
+                    .get(family, {})
+                ).get("thinking_chunk_threshold")
+            ),
+        }
+
+    activation_eligible = bool(
+        (total_tp + total_fp) >= 20
+        and total_fp == 0
+        and total_tp >= 5
+    )
+    return {
+        "schema_version":1,
+        "status":"SHADOW_ONLY",
+        "activation_allowed":False,
+        "live_abort_supported_by_current_transport":False,
+        "promotion_candidate_based_on_observed_shadow_evidence":activation_eligible,
+        "promotion_still_blocked_by_transport":True,
+        "global":{
+            "n":total_tp+total_fp+total_fn+total_tn,
+            "true_positive":total_tp,
+            "false_positive":total_fp,
+            "false_negative":total_fn,
+            "true_negative":total_tn,
+            "precision":total_tp/(total_tp+total_fp) if (total_tp+total_fp) else None,
+            "recall":total_tp/(total_tp+total_fn) if (total_tp+total_fn) else None,
+            "false_positive_rate":total_fp/(total_fp+total_tn) if (total_fp+total_tn) else None,
+        },
+        "families":family_reports,
+        "calibration":copy.deepcopy(calibration),
+        "activation_contract":(
+            "REQUIRES_INDEPENDENT_SHADOW_EVIDENCE_AND_LIVE_STREAM_TRANSPORT_"
+            "WITH_EXPLICIT_CANCELLATION_SEMANTICS"
+        ),
+    }
+
+
 def _efficiency_audit(campaign: Test12Campaign) -> dict[str, Any]:
     controls = [
         row for row in campaign.rows if row.get("intervention_id") == "CONTROL"
@@ -5394,6 +5523,23 @@ def write_outputs(campaign: Test12Campaign, results: dict[str, Any]) -> None:
     foundation_ledger = foundation_question_ledger(runtime_semantics, role_specialization)
     store.write_json("gpt-oss-runtime-semantics-map.json", runtime_semantics, producer="test1.2", stage="report")
     store.write_json("gpt-oss-output-contract-map.json", output_contracts, producer="test1.2", stage="report")
+    shadow_calibration = copy.deepcopy(
+        (
+            (results.get("budget_characterization") or {})
+            .get("early_truncation_shadow_policy")
+            or {}
+        )
+    )
+    early_truncation_shadow = _early_truncation_shadow_report(
+        campaign,
+        shadow_calibration,
+    )
+    store.write_json(
+        "early-truncation-shadow-policy.json",
+        early_truncation_shadow,
+        producer="test1.2",
+        stage="report",
+    )
     store.write_json("gpt-oss-role-specialization-map.json", role_specialization, producer="test1.2", stage="report")
     store.write_json("gpt-oss-foundation-question-ledger.json", foundation_ledger, producer="test1.2", stage="report")
     if not (store.run_dir / "test1.2-foundation-observations.jsonl").is_file():
@@ -5436,6 +5582,7 @@ def write_outputs(campaign: Test12Campaign, results: dict[str, Any]) -> None:
         "runtime_semantics_map":"gpt-oss-runtime-semantics-map.json",
         "runtime_characterization_profile":"runtime-characterization-profile.json",
         "output_contract_map":"gpt-oss-output-contract-map.json",
+        "early_truncation_shadow_policy":"early-truncation-shadow-policy.json",
         "runtime_characterization_profile_sha256":runtime_characterization.get("profile_sha256"),
         "resolved_generation_budget_by_family":copy.deepcopy(
             runtime_characterization.get("resolved_generation_budget_by_family") or {}
@@ -5545,6 +5692,13 @@ def run_test12_campaign(
                 (results["budget_characterization"] or {}).get(
                     "resolved_generation_budget_by_family"
                 ) or {}
+            )
+            campaign.early_truncation_shadow_by_family = copy.deepcopy(
+                (
+                    (results["budget_characterization"] or {})
+                    .get("early_truncation_shadow_policy")
+                    or {}
+                ).get("families") or {}
             )
         elif phase_name == "output_contract_gate":
             results["output_contracts"] = run_output_contract_gate(
