@@ -5991,6 +5991,18 @@ def reanalyze_test12_collection(
             + json.dumps(problems, sort_keys=True)
         )
 
+    handoff_path = run_dir / "test1.2-handoff.json"
+    if handoff_path.is_file():
+        handoff_problems = store.verify_manifest_paths(
+            ["test1.2-handoff.json"]
+        )
+        if handoff_problems:
+            raise ValueError(
+                "Test 1.2 zero-call reanalysis refuses an unverified derived "
+                "handoff before any artifact mutation: "
+                + json.dumps(handoff_problems, sort_keys=True)
+            )
+
     source_manifest_sha256 = None
     manifest_path = run_dir / EvidenceStore.MANIFEST_NAME
     prior_manifest: dict[str, Any] = {}
@@ -6110,17 +6122,7 @@ def reanalyze_test12_collection(
         stage="summary",
     )
 
-    handoff_path = run_dir / "test1.2-handoff.json"
     if handoff_path.is_file():
-        handoff_problems = store.verify_manifest_paths(
-            ["test1.2-handoff.json"]
-        )
-        if handoff_problems:
-            raise ValueError(
-                "Test 1.2 zero-call reanalysis refuses to mutate an "
-                "unverified derived handoff: "
-                + json.dumps(handoff_problems, sort_keys=True)
-            )
         handoff = _read_json(handoff_path)
         handoff.update({
             "control_redundancy_map":"control-redundancy-map.json",
