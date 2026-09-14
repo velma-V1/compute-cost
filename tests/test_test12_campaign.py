@@ -4440,6 +4440,63 @@ def test_compiler_proof_manifest_rations_only_policy_reachable_cells():
     assert manifest["training_stage"]["implementation_authorized"] is False
 
 
+def test_compiler_cost_admissibility_allows_rare_expensive_conditional_route():
+    family = "formal_logic_deduction"
+    collection = {
+        "run_id":"collection",
+        "mechanism_family_knowledge":{
+            "cells":{
+                "MECH|"+family:{
+                    "mechanism_key":"MECH",
+                    "member_intervention_ids":["CTRL-A"],
+                    "family_id":family,
+                    "applicability":"yes",
+                    "effect":"conditional",
+                    "conditions":{
+                        "status":"POPULATED",
+                        "predicate":{
+                            "predicate_language":"STRUCTURED_EXACT_OBSERVED_SCOPE_V1",
+                        },
+                    },
+                    "cost":{
+                        "calls":{"mean":3.0},
+                    },
+                    "effect_observation_binding":["obs"],
+                    "harm":{"status":"UNMEASURED"},
+                    "null_evidence":{"precision_met":False},
+                },
+            },
+        },
+        "unaided_model_capability":{"families":{family:{"status":"MEASURED"}}},
+    }
+    winner = {
+        "policy_id":"ROUTER",
+        "mode":"router",
+        "route_map":{"VERIFY":"CTRL-A"},
+    }
+    manifest = _build_test2_proof_manifest(
+        collection,
+        winner,
+        [{
+            "family_id":family,
+            "selected_intervention_id":"CTRL-A",
+            "model_calls":4,
+            "delta_valid":True,
+        }],
+        {"mean_calls":1.2},
+    )
+
+    assert len(manifest["queues"]["promotion"]) == 1
+    cell = manifest["queues"]["promotion"][0]
+    assert cell["policy_expected_mean_calls"] == pytest.approx(1.2)
+    assert cell["conditional_route_call_budget"] == pytest.approx(4.0)
+    assert cell["mean_measured_calls"] == pytest.approx(3.0)
+    assert cell["cost_fits_policy_budget"] is True
+    assert cell["cost_admissibility_basis"] == (
+        "OBSERVED_COMPILED_ROUTE_BUDGET_NOT_GLOBAL_POLICY_MEAN"
+    )
+
+
 def test_knowledge_table_distinguishes_verified_null_from_censored_null():
     class Runner:
         model = "fake-model"
