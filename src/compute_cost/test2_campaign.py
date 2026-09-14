@@ -2565,13 +2565,12 @@ def _latency_envelope(campaign: Test2Campaign) -> dict[str, Any]:
     }
 
 
-_FINALIZATION_CAMPAIGN_CONTEXT: "Test2Campaign | None" = None
-
-
 def _final_recipe_registry(
     knockouts: dict[str, Any],
     blind: dict[str, Any],
     harm_evidence: dict[str, Any] | None = None,
+    *,
+    campaign: Test2Campaign | None = None,
 ) -> list[dict[str, Any]]:
     blind_effects = blind.get("effects") or {}
     harm_evidence = harm_evidence or {}
@@ -2601,11 +2600,11 @@ def _final_recipe_registry(
         for ident in referenced_ids:
             matching_recipe = next(
                 (
-                    recipe for recipe in getattr(_FINALIZATION_CAMPAIGN_CONTEXT, "recipes", [])
+                    recipe for recipe in getattr(campaign, "recipes", [])
                     if str(recipe.get("intervention_id") or "") == ident
                 ),
                 None,
-            ) if _FINALIZATION_CAMPAIGN_CONTEXT is not None else None
+            ) if campaign is not None else None
             if matching_recipe is None:
                 harm_by_intervention[ident] = {
                     "verification_status":"MISSING_HARM_EVIDENCE",
@@ -2694,12 +2693,12 @@ def _build_finalization_contract(
     finetune: list[dict[str, Any]],
     latency: dict[str, Any],
 ) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
-    global _FINALIZATION_CAMPAIGN_CONTEXT
-    _FINALIZATION_CAMPAIGN_CONTEXT = campaign
-    try:
-        recipes = _final_recipe_registry(knockouts, blind, campaign.harm_evidence)
-    finally:
-        _FINALIZATION_CAMPAIGN_CONTEXT = None
+    recipes = _final_recipe_registry(
+        knockouts,
+        blind,
+        campaign.harm_evidence,
+        campaign=campaign,
+    )
     verified_recipes = [row for row in recipes if row.get("verified_for_shipping") is True]
     primary = verified_recipes[0] if verified_recipes else {
         "recipe_id": "REC-NONE",
