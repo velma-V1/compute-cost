@@ -161,6 +161,7 @@ from .test12_foundation_labs import (
     FOUNDATION_QUESTIONS,
     build_runtime_characterization_profile,
     foundation_question_ledger,
+    run_output_contract_gate,
     run_role_specialization_lab,
     run_runtime_budget_characterization,
     run_runtime_semantics_gate,
@@ -175,8 +176,9 @@ CALL_START_CUTOFF_SECONDS = COLLECTION_ACTIVE_SECONDS
 # Seven-hours-twenty-nine-minutes active; the extra 15 minutes is reserved for preflight/finalization.
 # Campaign-level early stop is prohibited; only replication depth may adapt after mandatory breadth.
 PHASES = (
-    ("runtime_semantics_gate", 20 * 60),
+    ("runtime_semantics_gate", 10 * 60),
     ("runtime_budget_characterization", 30 * 60),
+    ("output_contract_gate", 10 * 60),
     ("role_specialization_gate", 20 * 60),
     ("baseline_capability_map", 35 * 60),
     ("capability_family_manufacturing_floor", 100 * 60),
@@ -285,6 +287,7 @@ REQUIRED_OUTPUTS = (
     "test1.2-source-audit.json",
     "gpt-oss-runtime-semantics-map.json",
     "runtime-characterization-profile.json",
+    "gpt-oss-output-contract-map.json",
     "gpt-oss-role-specialization-map.json",
     "gpt-oss-foundation-question-ledger.json",
     "test1.2-foundation-observations.jsonl",
@@ -819,6 +822,7 @@ def build_test12_plan(cases: list[dict[str, Any]], *, seed_run: str | None = Non
         ],
         "runtime_semantics_gate_required": True,
         "runtime_budget_characterization_required": True,
+        "output_contract_gate_required": True,
         "role_specialization_gate_required": True,
         "stage0_runtime_characterization_required": True,
         "stage0_must_pass_before_capability_claims": True,
@@ -5376,6 +5380,12 @@ def write_outputs(campaign: Test12Campaign, results: dict[str, Any]) -> None:
         "questions_answered":[],
         "status":"UNMEASURED",
     })
+    output_contracts = copy.deepcopy(results.get("output_contracts") or {
+        "schema_version":1,
+        "questions_answered":[],
+        "status":"UNMEASURED",
+        "families":{},
+    })
     role_specialization = copy.deepcopy(results.get("role_specialization") or {
         "schema_version":1,
         "questions_answered":[],
@@ -5383,6 +5393,7 @@ def write_outputs(campaign: Test12Campaign, results: dict[str, Any]) -> None:
     })
     foundation_ledger = foundation_question_ledger(runtime_semantics, role_specialization)
     store.write_json("gpt-oss-runtime-semantics-map.json", runtime_semantics, producer="test1.2", stage="report")
+    store.write_json("gpt-oss-output-contract-map.json", output_contracts, producer="test1.2", stage="report")
     store.write_json("gpt-oss-role-specialization-map.json", role_specialization, producer="test1.2", stage="report")
     store.write_json("gpt-oss-foundation-question-ledger.json", foundation_ledger, producer="test1.2", stage="report")
     if not (store.run_dir / "test1.2-foundation-observations.jsonl").is_file():
@@ -5424,6 +5435,7 @@ def write_outputs(campaign: Test12Campaign, results: dict[str, Any]) -> None:
         "priority_queue":queue,
         "runtime_semantics_map":"gpt-oss-runtime-semantics-map.json",
         "runtime_characterization_profile":"runtime-characterization-profile.json",
+        "output_contract_map":"gpt-oss-output-contract-map.json",
         "runtime_characterization_profile_sha256":runtime_characterization.get("profile_sha256"),
         "resolved_generation_budget_by_family":copy.deepcopy(
             runtime_characterization.get("resolved_generation_budget_by_family") or {}
@@ -5534,12 +5546,17 @@ def run_test12_campaign(
                     "resolved_generation_budget_by_family"
                 ) or {}
             )
+        elif phase_name == "output_contract_gate":
+            results["output_contracts"] = run_output_contract_gate(
+                campaign, deadline
+            )
         elif phase_name == "role_specialization_gate":
             results["role_specialization"] = run_role_specialization_lab(campaign, deadline)
             profile = build_runtime_characterization_profile(
                 campaign,
                 results.get("runtime_semantics") or {},
                 results.get("budget_characterization") or {},
+                results.get("output_contracts") or {},
                 results.get("role_specialization") or {},
             )
             results["runtime_characterization"] = profile
