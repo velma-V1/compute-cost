@@ -8789,6 +8789,7 @@ def write_outputs(campaign: Test12Campaign, results: dict[str, Any]) -> None:
         "field_learning_contract":"docs/FIELD-TRAFFIC-TO-VERIFIED-FIXTURE-PIPELINE.md",
         "field_policy_update_from_unverified_outcomes":False,
         "field_fixture_generation_only":True,
+        "unaided_model_capability_profile":"unaided-model-capability-profile.json",
         "mechanism_family_knowledge_table":"mechanism-family-knowledge-table.json",
         "runtime_semantics_map":"gpt-oss-runtime-semantics-map.json",
         "runtime_characterization_profile":"runtime-characterization-profile.json",
