@@ -538,6 +538,110 @@ def test_exact_policy_finalization_requires_blind_harm_and_local_cell_proof():
     )
     assert blocked[0]["verified_for_shipping"] is False
 
+def test_aggregate_validity_reports_unresolved_units_instead_of_absorbing_them():
+    unresolved_fireable = test2_module._aggregate_unit_validity([
+        {"cell_key":"a","evidence_resolved":True,"route_fireable":True},
+        {"cell_key":"b","evidence_resolved":False,"route_fireable":True},
+    ])
+    assert unresolved_fireable["unresolved_unit_count"] == 1
+    assert unresolved_fireable["unresolved_fireable_count"] == 1
+    assert unresolved_fireable["aggregate_shipping_valid"] is False
+
+    unresolved_disabled = test2_module._aggregate_unit_validity([
+        {"cell_key":"a","evidence_resolved":True,"route_fireable":True},
+        {"cell_key":"b","evidence_resolved":False,"route_fireable":False},
+    ])
+    assert unresolved_disabled["unresolved_unit_count"] == 1
+    assert unresolved_disabled["unresolved_fireable_count"] == 0
+    assert unresolved_disabled["aggregate_shipping_valid"] is True
+
+
+def test_cell_resolution_explicitly_disables_unresolved_route_before_blind():
+    def make_recipe(ident, family, lane, index):
+        intervention = {"id":ident,"category":"PROMPT_CONTROL","mode":"single"}
+        semantic = test2_module._intervention_fingerprint(intervention)
+        return {
+            "intervention_id":ident,
+            "exact_test12_intervention":intervention,
+            "discovery_semantic_hash":semantic,
+            "proof_cell_key":f"MECH|{family}",
+            "proof_family_id":family,
+            "proof_lane":lane,
+            "compiler_queue_index":index,
+            "ingredient_ids":[f"TEST12:{ident}"],
+        }
+
+    promoted = make_recipe("CTRL-A","family-a","promotion",0)
+    unknown = make_recipe("CTRL-B","family-b","unknown_resolution",1)
+
+    class Campaign:
+        recipes = [promoted, unknown]
+        handoff = {
+            "winner_policy":{
+                "policy_id":"ROUTER",
+                "mode":"router",
+                "route_map":{"PLAN":"CTRL-A","VERIFY":"CTRL-B"},
+            },
+            "test2_proof_manifest":{
+                "queues":{
+                    "promotion":[{
+                        "cell_key":"MECH|family-a",
+                        "family_id":"family-a",
+                        "intervention_id":"CTRL-A",
+                        "policy_reachable":True,
+                        "test1_2_effect_state":"conditional",
+                    }],
+                    "unknown_resolution":[{
+                        "cell_key":"MECH|family-b",
+                        "family_id":"family-b",
+                        "intervention_id":"CTRL-B",
+                        "policy_reachable":True,
+                        "test1_2_effect_state":"unknown",
+                    }],
+                    "harm":[],
+                    "censoring":[],
+                    "skip_verified_null":[],
+                },
+                "policy_referenced_controls_without_observed_validation_route":[],
+            },
+        }
+        proof_scheduler_audit = {
+            "candidates":{
+                test2_module._recipe_key(promoted):{
+                    "settled":True,
+                    "scientific_resolution":"POSITIVE",
+                },
+                test2_module._recipe_key(unknown):{
+                    "settled":True,
+                    "scientific_resolution":"UNKNOWN",
+                },
+            },
+        }
+        harm_evidence = {
+            "a":{"recipe":promoted,"harm_evidence_sufficient":True,"harm_safe":True},
+            "b":{"recipe":unknown,"harm_evidence_sufficient":True,"harm_safe":True},
+        }
+
+    result = test2_module._resolve_test2_cell_shipping_policy(
+        Campaign(), {}, {"findings":{}}
+    )
+    states = {row["cell_key"]:row["shipping_state"] for row in result["cells"]}
+    assert states["MECH|family-a"] == "ACTIVE_VERIFIED"
+    assert states["MECH|family-b"] == "DISABLED_UNRESOLVED"
+    assert result["aggregate"]["unresolved_unit_count"] == 1
+    assert result["aggregate"]["unresolved_fireable_count"] == 0
+    assert result["aggregate"]["aggregate_shipping_valid"] is True
+    assert result["narrowed_policy"]["disabled_cells"][0]["cell_key"] == "MECH|family-b"
+
+
+def test_standalone_provenance_is_explicit_and_cannot_ship():
+    provenance = test2_module._handoff_provenance(synthetic_test1_handoff(_cases()))
+    assert provenance["standalone_non_test12"] is True
+    assert provenance["test12_shipping_claim_eligible"] is False
+    with pytest.raises(ValueError, match="explicit non-Test1.2 provenance"):
+        test2_module._handoff_provenance({})
+
+
 def test_stopping_rule_2_uses_fresh_blind_cost_exchange():
     class Runner:
         model = "gpt-oss:20b"
