@@ -2510,15 +2510,20 @@ def test_control_redundancy_map_clusters_shared_rescue_mechanisms():
             })
 
     class Campaign:
-        interventions = [
-            {"id": "CTRL-A", "category": "PROMPT_CONTROL"},
-            {"id": "CTRL-B", "category": "PROMPT_CONTROL"},
-        ]
-        rows = rows
-        cfg = dict(test12_module.DEFAULT_TEST12_CONFIG)
-        intervention_by_id = {row["id"]: row for row in interventions}
+        pass
 
-    result = test12_module._control_redundancy_map(Campaign())
+    campaign = Campaign()
+    campaign.interventions = [
+        {"id": "CTRL-A", "category": "PROMPT_CONTROL"},
+        {"id": "CTRL-B", "category": "PROMPT_CONTROL"},
+    ]
+    campaign.rows = rows
+    campaign.cfg = dict(test12_module.DEFAULT_TEST12_CONFIG)
+    campaign.intervention_by_id = {
+        row["id"]: row for row in campaign.interventions
+    }
+
+    result = test12_module._control_redundancy_map(campaign)
     assert result["cluster_count"] == 1
     cluster = result["clusters"][0]
     assert set(cluster["member_intervention_ids"]) == {"CTRL-A", "CTRL-B"}
