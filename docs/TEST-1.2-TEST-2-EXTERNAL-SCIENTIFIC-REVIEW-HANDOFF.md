@@ -2,7 +2,7 @@
 
 **Branch:** `build/gpt20b-test1.2-full-improvement`  
 **Scientific contract:** Round-1 and Round-2 stop-ship findings closed  
-**Latest Stage-0 deepening:** screen/escalate/confirm budget search + deep auditor evidence + post-budget output-contract optimization  
+**Latest Stage-0 deepening:** screen/escalate/confirm budget search + deep auditor evidence + post-budget output-contract optimization + shadow early-truncation calibration  
 **CI:** Python 3.11 PASS + Python 3.12 PASS
 
 This file preserves historical findings for forensic value. Where an older section conflicts with a later `CURRENT` or `ROUND 2` section, the later section is authoritative.
@@ -2247,15 +2247,56 @@ Stage 0 fails closed when target-family contract coverage is incomplete.
 
 A contract may legitimately fail; **unmeasured** and **measured failure** are distinct states.
 
+### Early truncation prediction — shadow mode implemented
+
+The Ollama adapter now records:
+
+- first thinking-event index;
+- first answer-event index;
+- thinking chunks before the first answer;
+- thinking characters before the first answer.
+
+Stage 0 calibrates a conservative per-family no-answer thinking-prefix threshold above the maximum prefix observed on valid completions.
+
+Every later Test 1.2 capability observation evaluates the predictor retrospectively at zero extra model-call cost.
+
+Required artifact:
+
+```
+early-truncation-shadow-policy.json
+```
+
+It reports:
+
+- true positives;
+- false positives;
+- false negatives;
+- true negatives;
+- precision;
+- recall;
+- false-positive rate;
+- per-family thresholds.
+
+The current transport buffers the HTTP stream before generation returns, so:
+
+```
+status = SHADOW_ONLY
+activation_allowed = false
+live_abort_supported_by_current_transport = false
+```
+
+No generation may be aborted from this predictor yet.
+
+Promotion requires both independent shadow evidence and a future live-stream transport with explicit safe cancellation semantics.
+
 ### Highest-value remaining optimization targets
 
-1. early truncation prediction / safe early abort;
-2. context-window quality/cost knee;
-3. sustained-load capability drift;
-4. energy / hardware economics;
-5. manifest-finalization performance;
-6. richer deterministic diagnostic subscore vectors where binary acceptance hides useful structure;
-7. additional adversarial auditor trust-boundary work:
+1. context-window quality/cost knee;
+2. sustained-load capability drift;
+3. energy / hardware economics;
+4. manifest-finalization performance;
+5. richer deterministic diagnostic subscore vectors where binary acceptance hides useful structure;
+6. additional adversarial auditor trust-boundary work:
    - candidate prompt injection;
    - rationale/verdict divergence;
    - malicious tool-output influence.
