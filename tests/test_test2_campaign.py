@@ -550,3 +550,55 @@ def test_holdout_partition_is_consumed_once_across_runs(tmp_path):
     second = Campaign(tmp_path, "cycle-2")
     with pytest.raises(ValueError, match="already been consumed"):
         test2_module._claim_holdout_partition(second, "TEST2_BLIND", fixtures)
+
+
+
+def test_mixed_invalid_failure_evidence_cannot_enter_finetuning():
+    cases = [
+        {
+            "id": f"mix-{i}",
+            "category": "reasoning",
+            "family_id": "reasoning",
+            "difficulty_level": 5,
+            "prompt": f"q{i}",
+            "scorer": "exact",
+            "expected": "x",
+        }
+        for i in range(4)
+    ]
+
+    class Campaign:
+        case_by_id = {case["id"]: case for case in cases}
+        handoff = {"failures": {"failures": []}, "run_id": "source"}
+        cfg = {"fine_tuning_min_independent_failures": 3}
+
+        @staticmethod
+        def _partition(case):
+            return "VALIDATION"
+
+    Campaign.rows = [
+        {
+            "fixture_id": case["id"],
+            "family_id": "reasoning",
+            "partition": "VALIDATION",
+            "experiment_id": f"exp-{i}",
+            "classification": {
+                "result_class": "ANSWER_WRONG",
+                "valid_for_capability": i < 3,
+            },
+            "valid_for_capability": i < 3,
+        }
+        for i, case in enumerate(cases)
+    ]
+
+    limits, queue, dataset = test2_module._build_model_limit_and_finetuning(
+        Campaign(),
+        {"matrix": {}},
+        {"harm": {"boundary_class": "NEUTRAL"}},
+    )
+    phenotype = next(iter(limits["phenotypes"].values()))
+    assert phenotype["valid_independent_fixture_count"] == 3
+    assert phenotype["invalid_fixture_count"] == 1
+    assert phenotype["owner"] == "SYSTEM_DISAMBIGUATION_REQUIRED"
+    assert queue == []
+    assert dataset == []
