@@ -2,7 +2,10 @@ from __future__ import annotations
 
 import json
 
+import pytest
+
 import compute_cost.test12_campaign as test12_module
+import compute_cost.test12_foundation_labs as foundation_module
 from compute_cost.cli import build_parser
 from compute_cost.config import load_config
 from compute_cost.test12_campaign import (
@@ -1994,3 +1997,147 @@ def test_sanitizer_requires_matched_budget_except_generation_budget_intervention
     assert budget["budget_comparison_valid"] is True
     assert budget["delta_valid"] is True
     assert budget["delta"] == 1.0
+
+
+
+def test_stage0_budget_calibration_requires_replicated_validity_not_first_lucky_completion(monkeypatch):
+    family = "arithmetic_numerical_reasoning"
+
+    class FakeCampaign:
+        cfg = {
+            "base_generation_budget": 256,
+            "generation_budgets": [256, 512, 1024],
+            "seeds": [42, 43, 44],
+        }
+        partitions = {
+            "DISCOVERY": [{
+                "id": "budget-case",
+                "category": family,
+                "difficulty_level": 8,
+                "prompt": "Return 4",
+                "scorer": "exact",
+                "expected": "4",
+            }]
+        }
+
+        @staticmethod
+        def can_start(_deadline):
+            return True
+
+    def fake_probe(
+        campaign,
+        deadline,
+        *,
+        probe_id,
+        question_ids,
+        family_id,
+        messages,
+        options,
+        request_fields=None,
+        case=None,
+    ):
+        budget = int(options["num_predict"])
+        seed = int(options["seed"])
+        # One lucky 256-token completion must not establish the family budget.
+        valid = budget >= 512 or seed == 42
+        return {
+            "probe_id": probe_id,
+            "question_ids": question_ids,
+            "family_id": family_id,
+            "ok": True,
+            "content_empty": not valid,
+            "done_reason": "stop" if valid else "length",
+            "score": 1.0 if valid else None,
+            "request": {"options": {"seed": seed}},
+            "eval_count": budget if not valid else budget - 8,
+        }
+
+    monkeypatch.setattr(foundation_module, "_invoke_probe", fake_probe)
+    result = foundation_module.run_runtime_budget_characterization(
+        FakeCampaign(),
+        999.0,
+        replicates=3,
+        safety_factor=1.5,
+    )
+
+    info = result["families"][family]
+    assert info["minimum_reproducibly_valid_budget"] == 512
+    assert info["resolved_safe_baseline_budget"] == 1024
+    assert result["resolved_generation_budget_by_family"][family] == 1024
+    assert result["config_mutated_during_characterization"] is False
+
+
+def test_collection_censoring_dominated_control_cannot_be_called_no_rescue_signal():
+    cfg = dict(test12_module.DEFAULT_TEST12_CONFIG)
+    cfg["max_classification_censoring_rate"] = 0.20
+    rows = [
+        {
+            "intervention_id": "CTRL-X",
+            "control_score": 0.0,
+            "score": 0.0,
+            "valid_for_capability": False,
+            "delta_valid": False,
+            "censored_for_capability": True,
+            "classification": {
+                "result_class": "THINK_TRUNCATED",
+                "valid_for_capability": False,
+            },
+        },
+        {
+            "intervention_id": "CTRL-X",
+            "control_score": 0.0,
+            "score": 0.0,
+            "valid_for_capability": False,
+            "delta_valid": False,
+            "censored_for_capability": True,
+            "classification": {
+                "result_class": "ANSWER_TRUNCATED",
+                "valid_for_capability": False,
+            },
+        },
+        {
+            "intervention_id": "CTRL-X",
+            "control_score": 0.0,
+            "score": 0.0,
+            "valid_for_capability": True,
+            "delta_valid": True,
+            "classification": {
+                "result_class": "ANSWER_WRONG",
+                "valid_for_capability": True,
+            },
+            "model_calls_per_application": 1,
+            "cost": {},
+        },
+        {
+            "intervention_id": "CTRL-X",
+            "control_score": 1.0,
+            "score": 1.0,
+            "valid_for_capability": True,
+            "delta_valid": True,
+            "classification": {
+                "result_class": "ANSWER_CORRECT",
+                "valid_for_capability": True,
+            },
+            "model_calls_per_application": 1,
+            "cost": {},
+        },
+    ]
+    summary = test12_module.mechanism_summary(rows, cfg)
+    assert summary["censoring_rate"] == 0.5
+    assert summary["classification"] == "CENSORING_DOMINATED"
+    assert summary["verification_debt"]["requires_own_budget_cost_probe"] is True
+
+
+def test_capability_record_requires_stage0_profile_hash():
+    campaign = Test12Campaign.__new__(Test12Campaign)
+    campaign.runtime_profile_sha256 = None
+    with pytest.raises(ValueError, match="Stage 0 runtime characterization profile"):
+        campaign._record(
+            {"id": "case", "category": "arithmetic_numerical_reasoning"},
+            {},
+            phase="unit",
+            intervention={"id": "CONTROL", "category": "CONTROL"},
+            control={},
+            seed=42,
+            aux=[],
+        )
