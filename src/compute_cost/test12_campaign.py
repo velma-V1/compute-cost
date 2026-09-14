@@ -289,6 +289,8 @@ REQUIRED_OUTPUTS = (
     "runtime-characterization-profile.json",
     "gpt-oss-output-contract-map.json",
     "early-truncation-shadow-policy.json",
+    "context-efficiency-knee.json",
+    "sustained-load-drift.json",
     "gpt-oss-role-specialization-map.json",
     "gpt-oss-foundation-question-ledger.json",
     "test1.2-foundation-observations.jsonl",
@@ -4636,6 +4638,218 @@ def _early_truncation_shadow_report(
     }
 
 
+
+def _context_efficiency_knee(campaign: Test12Campaign) -> dict[str, Any]:
+    """Zero-call context-window efficiency map from matched Test 1.2 evidence."""
+    rows = [
+        row for row in campaign.rows
+        if row.get("intervention_category") == "CONTEXT_WINDOW"
+        and isinstance(row.get("context_request"), int)
+    ]
+    grouped: dict[int, list[dict[str, Any]]] = defaultdict(list)
+    for row in rows:
+        grouped[int(row["context_request"])].append(row)
+
+    levels: dict[str, Any] = {}
+    pareto_points: list[dict[str, Any]] = []
+    for context_size in sorted(grouped):
+        values = grouped[context_size]
+        valid = [
+            row for row in values
+            if row.get("delta_valid") is True and row.get("delta") is not None
+        ]
+        valid_scores = [float(row.get("score") or 0.0) for row in valid]
+        deltas = [float(row["delta"]) for row in valid]
+        latencies = [
+            float((row.get("cost") or {}).get("wall_seconds") or 0.0)
+            for row in valid
+            if float((row.get("cost") or {}).get("wall_seconds") or 0.0) > 0
+        ]
+        prompt_tokens = [
+            float((row.get("cost") or {}).get("prompt_tokens_observed") or 0.0)
+            for row in valid
+            if float((row.get("cost") or {}).get("prompt_tokens_observed") or 0.0) > 0
+        ]
+        censored = [
+            row for row in values if row.get("censored_for_capability") is True
+        ]
+        mean_score = sum(valid_scores) / len(valid_scores) if valid_scores else None
+        mean_delta = sum(deltas) / len(deltas) if deltas else None
+        mean_latency = sum(latencies) / len(latencies) if latencies else None
+        mean_prompt_tokens = (
+            sum(prompt_tokens) / len(prompt_tokens)
+            if prompt_tokens else None
+        )
+        valid_rate = len(valid) / len(values) if values else None
+        censoring_rate = len(censored) / len(values) if values else None
+        levels[str(context_size)] = {
+            "context_request":context_size,
+            "raw_observations":len(values),
+            "valid_comparable_observations":len(valid),
+            "valid_comparison_rate":valid_rate,
+            "censored_observations":len(censored),
+            "censoring_rate":censoring_rate,
+            "mean_score":mean_score,
+            "mean_delta":mean_delta,
+            "mean_wall_seconds":mean_latency,
+            "mean_prompt_tokens":mean_prompt_tokens,
+            "families":sorted({str(row.get("family_id") or "") for row in values}),
+        }
+        if mean_score is not None and mean_latency is not None:
+            pareto_points.append({
+                "context_request":context_size,
+                "mean_score":mean_score,
+                "mean_delta":mean_delta,
+                "mean_wall_seconds":mean_latency,
+                "mean_prompt_tokens":mean_prompt_tokens,
+            })
+
+    pareto: list[dict[str, Any]] = []
+    for point in pareto_points:
+        dominated = False
+        for other in pareto_points:
+            if other is point:
+                continue
+            score_not_worse = float(other["mean_score"]) >= float(point["mean_score"])
+            latency_not_worse = float(other["mean_wall_seconds"]) <= float(point["mean_wall_seconds"])
+            strictly_better = (
+                float(other["mean_score"]) > float(point["mean_score"])
+                or float(other["mean_wall_seconds"]) < float(point["mean_wall_seconds"])
+            )
+            if score_not_worse and latency_not_worse and strictly_better:
+                dominated = True
+                break
+        if not dominated:
+            pareto.append(point)
+
+    pareto.sort(key=lambda row: int(row["context_request"]))
+    recommended = None
+    if pareto:
+        # Prefer the smallest context on the observed score/latency Pareto front.
+        recommended = int(pareto[0]["context_request"])
+
+    return {
+        "schema_version":1,
+        "analysis_type":"ZERO_CALL_DERIVED_DIAGNOSTIC",
+        "source":"TEST1.2_CONTEXT_WINDOW_OBSERVATIONS",
+        "capability_claim":False,
+        "levels":levels,
+        "pareto_front":pareto,
+        "recommended_smallest_observed_pareto_context":recommended,
+        "knee_rule":"SMALLEST_NONDOMINATED_CONTEXT_BY_MEAN_SCORE_AND_WALL_SECONDS",
+        "limitations":[
+            "This is an observational context-control frontier, not a dedicated long-context sweep.",
+            "Use the core runner context sweep for an exact advertised-window boundary when required.",
+        ],
+    }
+
+
+def _sustained_load_drift(campaign: Test12Campaign) -> dict[str, Any]:
+    """Zero-call early/middle/late drift analysis over the full Test 1.2 campaign."""
+    rows = [
+        row for row in campaign.rows
+        if row.get("timestamp_utc")
+        and row.get("intervention_id") not in {None, "CONTROL"}
+    ]
+    if not rows:
+        return {
+            "schema_version":1,
+            "analysis_type":"ZERO_CALL_DERIVED_DIAGNOSTIC",
+            "status":"NO_OBSERVATIONS",
+            "windows":{},
+        }
+
+    ordered = sorted(rows, key=lambda row: str(row.get("timestamp_utc")))
+    n = len(ordered)
+    cut1 = max(1, n // 3)
+    cut2 = max(cut1 + 1, (2 * n) // 3)
+    windows = {
+        "EARLY": ordered[:cut1],
+        "MIDDLE": ordered[cut1:cut2],
+        "LATE": ordered[cut2:],
+    }
+
+    def summarize(values: list[dict[str, Any]]) -> dict[str, Any]:
+        valid = [
+            row for row in values
+            if row.get("valid_for_capability") is True
+        ]
+        comparable = [
+            row for row in values
+            if row.get("delta_valid") is True and row.get("delta") is not None
+        ]
+        latencies = [
+            float((row.get("cost") or {}).get("wall_seconds") or 0.0)
+            for row in values
+            if float((row.get("cost") or {}).get("wall_seconds") or 0.0) > 0
+        ]
+        scores = [float(row.get("score") or 0.0) for row in valid]
+        deltas = [float(row["delta"]) for row in comparable]
+        censored = [
+            row for row in values if row.get("censored_for_capability") is True
+        ]
+        return {
+            "n":len(values),
+            "valid_capability_observations":len(valid),
+            "valid_capability_rate":len(valid)/len(values) if values else None,
+            "comparable_observations":len(comparable),
+            "mean_score":sum(scores)/len(scores) if scores else None,
+            "mean_delta":sum(deltas)/len(deltas) if deltas else None,
+            "mean_wall_seconds":sum(latencies)/len(latencies) if latencies else None,
+            "censoring_rate":len(censored)/len(values) if values else None,
+            "families":len({str(row.get("family_id") or "") for row in values}),
+        }
+
+    summaries = {name:summarize(values) for name, values in windows.items()}
+    early = summaries["EARLY"]
+    late = summaries["LATE"]
+
+    def change(late_value: Any, early_value: Any) -> float | None:
+        if not isinstance(late_value, (int, float)) or not isinstance(early_value, (int, float)):
+            return None
+        return float(late_value) - float(early_value)
+
+    latency_change = change(late.get("mean_wall_seconds"), early.get("mean_wall_seconds"))
+    score_change = change(late.get("mean_score"), early.get("mean_score"))
+    validity_change = change(late.get("valid_capability_rate"), early.get("valid_capability_rate"))
+    censoring_change = change(late.get("censoring_rate"), early.get("censoring_rate"))
+
+    drift_flags: list[str] = []
+    if (
+        isinstance(latency_change, float)
+        and isinstance(early.get("mean_wall_seconds"), (int, float))
+        and float(early["mean_wall_seconds"]) > 0
+        and latency_change / float(early["mean_wall_seconds"]) > 0.20
+    ):
+        drift_flags.append("LATENCY_INCREASE_GT_20_PERCENT")
+    if isinstance(score_change, float) and score_change < -0.05:
+        drift_flags.append("MEAN_SCORE_DROP_GT_0.05")
+    if isinstance(validity_change, float) and validity_change < -0.05:
+        drift_flags.append("VALIDITY_RATE_DROP_GT_0.05")
+    if isinstance(censoring_change, float) and censoring_change > 0.05:
+        drift_flags.append("CENSORING_RATE_INCREASE_GT_0.05")
+
+    return {
+        "schema_version":1,
+        "analysis_type":"ZERO_CALL_DERIVED_DIAGNOSTIC",
+        "source":"FULL_TEST1.2_CAMPAIGN_SEQUENCE",
+        "capability_claim":False,
+        "windows":summaries,
+        "early_to_late":{
+            "mean_wall_seconds_change":latency_change,
+            "mean_score_change":score_change,
+            "valid_capability_rate_change":validity_change,
+            "censoring_rate_change":censoring_change,
+        },
+        "drift_flags":drift_flags,
+        "drift_detected":bool(drift_flags),
+        "limitations":[
+            "Campaign mix changes over time, so this is a drift sentinel rather than a causal sustained-load experiment.",
+            "Use the core runner sustained-load mode to isolate thermal/runtime drift if this sentinel fires.",
+        ],
+    }
+
+
 def _efficiency_audit(campaign: Test12Campaign) -> dict[str, Any]:
     controls = [
         row for row in campaign.rows if row.get("intervention_id") == "CONTROL"
@@ -5540,6 +5754,20 @@ def write_outputs(campaign: Test12Campaign, results: dict[str, Any]) -> None:
         producer="test1.2",
         stage="report",
     )
+    context_efficiency = _context_efficiency_knee(campaign)
+    sustained_drift = _sustained_load_drift(campaign)
+    store.write_json(
+        "context-efficiency-knee.json",
+        context_efficiency,
+        producer="test1.2",
+        stage="report",
+    )
+    store.write_json(
+        "sustained-load-drift.json",
+        sustained_drift,
+        producer="test1.2",
+        stage="report",
+    )
     store.write_json("gpt-oss-role-specialization-map.json", role_specialization, producer="test1.2", stage="report")
     store.write_json("gpt-oss-foundation-question-ledger.json", foundation_ledger, producer="test1.2", stage="report")
     if not (store.run_dir / "test1.2-foundation-observations.jsonl").is_file():
@@ -5583,6 +5811,8 @@ def write_outputs(campaign: Test12Campaign, results: dict[str, Any]) -> None:
         "runtime_characterization_profile":"runtime-characterization-profile.json",
         "output_contract_map":"gpt-oss-output-contract-map.json",
         "early_truncation_shadow_policy":"early-truncation-shadow-policy.json",
+        "context_efficiency_knee":"context-efficiency-knee.json",
+        "sustained_load_drift":"sustained-load-drift.json",
         "runtime_characterization_profile_sha256":runtime_characterization.get("profile_sha256"),
         "resolved_generation_budget_by_family":copy.deepcopy(
             runtime_characterization.get("resolved_generation_budget_by_family") or {}
