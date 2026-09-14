@@ -112,6 +112,9 @@ DEFAULT_TEST2_CONFIG: dict[str, Any] = {
     "harm_sentinel_min_per_control": 16,
     "harm_min_distinct_families": 4,
     "harm_max_break_rate": 0.05,
+    "holdout_max_cross_run_acceptance_uses": 1,
+    "policy_cost_ratio_ceiling": 1.25,
+    "minimum_accuracy_advantage_when_over_cost_ceiling": 0.02,
 }
 
 
@@ -137,6 +140,261 @@ def _read_jsonl(path: Path) -> list[dict[str, Any]]:
             if isinstance(value, dict):
                 result.append(value)
     return result
+
+
+
+def _wilson90(successes: int, total: int, z: float = 1.6448536269514722) -> list[float]:
+    if total <= 0:
+        return [0.0, 1.0]
+    p = successes / total
+    z2 = z * z
+    denom = 1.0 + z2 / total
+    center = (p + z2 / (2.0 * total)) / denom
+    margin = z * math.sqrt((p * (1.0 - p) + z2 / (4.0 * total)) / total) / denom
+    return [max(0.0, center - margin), min(1.0, center + margin)]
+
+
+def _fixture_set_fingerprint(cases: Iterable[dict[str, Any]]) -> str:
+    fixture_ids = sorted({_fixture_id(case) for case in cases})
+    payload = json.dumps(fixture_ids, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def _prior_holdout_claims(
+    results_root: Path,
+    *,
+    partition: str,
+    fingerprint: str,
+    current_run_id: str,
+) -> list[dict[str, Any]]:
+    claims: list[dict[str, Any]] = []
+    if not results_root.is_dir():
+        return claims
+    for run_dir in results_root.iterdir():
+        if not run_dir.is_dir() or run_dir.name == current_run_id:
+            continue
+        path = run_dir / "holdout-consumption-ledger.json"
+        if not path.is_file():
+            continue
+        try:
+            payload = _read_json(path)
+        except Exception:
+            continue
+        for claim in payload.get("claims") or []:
+            if (
+                claim.get("partition") == partition
+                and claim.get("partition_fingerprint") == fingerprint
+            ):
+                claims.append(copy.deepcopy(claim))
+    return claims
+
+
+def _claim_holdout_partition(
+    campaign: "Test2Campaign",
+    partition: str,
+    fixtures: list[dict[str, Any]],
+) -> dict[str, Any]:
+    store = campaign.runner.store
+    run_id = str(getattr(store, "run_id", "") or store.run_dir.name)
+    fingerprint = _fixture_set_fingerprint(fixtures)
+    fixture_ids = sorted({_fixture_id(case) for case in fixtures})
+    ledger_path = store.run_dir / "holdout-consumption-ledger.json"
+
+    if ledger_path.is_file():
+        payload = _read_json(ledger_path)
+        for claim in payload.get("claims") or []:
+            if (
+                claim.get("partition") == partition
+                and claim.get("partition_fingerprint") == fingerprint
+                and claim.get("cycle_run_id") == run_id
+            ):
+                return copy.deepcopy(claim)
+    else:
+        payload = {"schema_version":1, "claims":[]}
+
+    prior = _prior_holdout_claims(
+        Path(campaign.runner.results_root),
+        partition=partition,
+        fingerprint=fingerprint,
+        current_run_id=run_id,
+    )
+    max_uses = int(campaign.cfg["holdout_max_cross_run_acceptance_uses"])
+    if len(prior) >= max_uses:
+        raise ValueError(
+            f"{partition} holdout has already been consumed by a prior acceptance cycle; "
+            "generate a fresh partition before continuing"
+        )
+
+    # A new cycle must not recycle exact fixtures from prior claimed holdouts,
+    # even if the full partition fingerprint changed.
+    prior_fixture_ids: set[str] = set()
+    root = Path(campaign.runner.results_root)
+    if root.is_dir():
+        for run_dir in root.iterdir():
+            if not run_dir.is_dir() or run_dir.name == run_id:
+                continue
+            path = run_dir / "holdout-consumption-ledger.json"
+            if not path.is_file():
+                continue
+            try:
+                prior_payload = _read_json(path)
+            except Exception:
+                continue
+            for old in prior_payload.get("claims") or []:
+                if old.get("partition") == partition:
+                    prior_fixture_ids.update(str(v) for v in old.get("fixture_ids") or [])
+    overlap = sorted(set(fixture_ids) & prior_fixture_ids)
+    if overlap:
+        raise ValueError(
+            f"{partition} contains {len(overlap)} fixtures already consumed by prior cycles; "
+            "cycle N acceptance must use fixtures absent from earlier acceptance partitions"
+        )
+
+    claim = {
+        "partition":partition,
+        "partition_fingerprint":fingerprint,
+        "fixture_ids":fixture_ids,
+        "fixture_count":len(fixture_ids),
+        "cycle_run_id":run_id,
+        "cross_run_acceptance_use_number":len(prior) + 1,
+        "max_cross_run_acceptance_uses":max_uses,
+        "status":"CONSUMED_ON_EXPOSURE",
+        "retire_permanently_after_cycle":True,
+        "same_run_resume_allowed":True,
+        "next_cycle_requirement":"GENERATE_NEW_FIXTURES_FROM_NEW_FIELD_FAILURE_PHENOTYPES_WITH_ZERO_FIXTURE_OVERLAP",
+    }
+    payload.setdefault("claims", []).append(copy.deepcopy(claim))
+    writer = getattr(store, "write_json_atomic", None) or store.write_json
+    writer(
+        "holdout-consumption-ledger.json",
+        payload,
+        producer="test2",
+        stage="holdout-governance",
+    )
+    return claim
+
+
+def _capability_floor_signature(limits: dict[str, Any]) -> dict[str, Any]:
+    phenotypes = limits.get("phenotypes") or {}
+    floor = sorted(
+        key
+        for key, row in phenotypes.items()
+        if row.get("owner") in {
+            "MODEL_CAPABILITY_LIMIT",
+            "FINE_TUNING_CANDIDATE",
+        }
+    )
+    payload = json.dumps(floor, sort_keys=True, separators=(",", ":"))
+    return {
+        "phenotype_ids":floor,
+        "count":len(floor),
+        "sha256":hashlib.sha256(payload.encode("utf-8")).hexdigest(),
+    }
+
+
+def _previous_cycle_floor(campaign: "Test2Campaign") -> dict[str, Any] | None:
+    root = Path(campaign.runner.results_root)
+    current = str(getattr(campaign.runner.store, "run_id", "") or "")
+    model = str(campaign.runner.model)
+    candidates: list[tuple[float, dict[str, Any]]] = []
+    if not root.is_dir():
+        return None
+    for run_dir in root.iterdir():
+        if not run_dir.is_dir() or run_dir.name == current:
+            continue
+        contract_path = run_dir / "inverted-finalization-contract.json"
+        limits_path = run_dir / "model-limit-registry.json"
+        if not contract_path.is_file() or not limits_path.is_file():
+            continue
+        try:
+            contract = _read_json(contract_path)
+            if str(contract.get("base_model")) != model:
+                continue
+            limits = _read_json(limits_path)
+            candidates.append((limits_path.stat().st_mtime, _capability_floor_signature(limits)))
+        except Exception:
+            continue
+    if not candidates:
+        return None
+    candidates.sort(key=lambda item: item[0], reverse=True)
+    return candidates[0][1]
+
+
+def _build_harness_stopping_rules(
+    campaign: "Test2Campaign",
+    blind: dict[str, Any],
+    limits: dict[str, Any],
+) -> dict[str, Any]:
+    blind_effects = list((blind.get("effects") or {}).values())
+    positive_values = [
+        float(row.get("normalized_effect"))
+        for row in blind_effects
+        if isinstance(row.get("normalized_effect"), (int, float))
+    ]
+    best_fresh_holdout_value = max(positive_values) if positive_values else None
+    rule1_triggered = (
+        best_fresh_holdout_value is not None
+        and best_fresh_holdout_value <= 0.0
+    )
+
+    harm_ceiling = float(campaign.cfg["harm_max_break_rate"])
+    harmful_ci = [
+        key for key, row in campaign.harm_evidence.items()
+        if isinstance((row.get("break_rate_wilson90") or [None, None])[1], (int, float))
+        and float(row["break_rate_wilson90"][1]) > harm_ceiling
+    ]
+    rule3_triggered = bool(harmful_ci)
+
+    current_floor = _capability_floor_signature(limits)
+    previous_floor = _previous_cycle_floor(campaign)
+    rule4_triggered = bool(
+        previous_floor
+        and current_floor["sha256"] == previous_floor.get("sha256")
+    )
+
+    return {
+        "schema_version":1,
+        "rules":[
+            {
+                "id":"STOP-1",
+                "rule":"MARGINAL_NET_VALUE_NEXT_CONTROL_LE_ZERO_ON_FRESH_HOLDOUT",
+                "best_fresh_holdout_normalized_effect":best_fresh_holdout_value,
+                "triggered":rule1_triggered,
+            },
+            {
+                "id":"STOP-2",
+                "rule":"POLICY_COST_EXCEEDS_KX_DIRECT_AND_ACCURACY_ADVANTAGE_BELOW_PREREGISTERED_EXCHANGE_RATE",
+                "cost_ratio_ceiling":float(campaign.cfg["policy_cost_ratio_ceiling"]),
+                "minimum_accuracy_advantage":float(
+                    campaign.cfg["minimum_accuracy_advantage_when_over_cost_ceiling"]
+                ),
+                "triggered":None,
+                "evaluation_owner":"FINAL_RELEASE_ACCEPTANCE_WITH_FROZEN_DIRECT_BASELINE",
+            },
+            {
+                "id":"STOP-3",
+                "rule":"HARM_CI_UPPER_EXCEEDS_PREREGISTERED_BREAK_RATE_CEILING",
+                "harm_ci":"WILSON_90",
+                "break_rate_ceiling":harm_ceiling,
+                "controls_over_ceiling":harmful_ci,
+                "triggered":rule3_triggered,
+            },
+            {
+                "id":"STOP-4",
+                "rule":"CAPABILITY_FLOOR_UNCHANGED_ACROSS_TWO_CYCLES",
+                "current_floor":current_floor,
+                "previous_cycle_floor":previous_floor,
+                "triggered":rule4_triggered,
+            },
+        ],
+        "harness_ceiling_reached":rule4_triggered,
+        "next_strategy":(
+            "MOVE_TO_WEIGHTS"
+            if rule4_triggered
+            else "CONTINUE_HARNESS_ONLY_WHILE_FRESH_HOLDOUT_NET_VALUE_REMAINS_POSITIVE"
+        ),
+        "stop_shipping_new_controls":bool(rule1_triggered or rule3_triggered),
+    }
 
 
 def build_test2_plan(cases: list[dict[str, Any]], *, test1_run: str | None = None) -> dict[str, Any]:
