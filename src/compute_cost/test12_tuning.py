@@ -1661,7 +1661,7 @@ class TuningRun:
                     (
                         copy.deepcopy(item)
                         for item in (policy.get("disabled_cells") or [])
-                        if str(item.get("family_id") or "") == family_id
+                        if str(item.get("family_id") or "") in {family_id, "*"}
                         and str(item.get("intervention_id") or "") == selected_id
                     ),
                     None,
