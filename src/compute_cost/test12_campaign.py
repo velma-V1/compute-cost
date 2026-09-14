@@ -1239,6 +1239,11 @@ class Test12Campaign:
                 "resolved_generation_budget_by_family"
             ) or {}
         )
+        self.runtime_profile_sha256: str | None = (
+            (self.phase_results.get("runtime_characterization") or {}).get(
+                "profile_sha256"
+            )
+        )
         self.current_phase: str | None = None
         self.current_phase_started: float | None = None
         self.current_phase_elapsed_base = 0.0
@@ -1823,6 +1828,10 @@ class Test12Campaign:
         seed: int,
         aux: list[dict[str, Any]],
     ) -> dict[str, Any]:
+        if not self.runtime_profile_sha256:
+            raise ValueError(
+                "capability observation blocked: Stage 0 runtime characterization profile is missing"
+            )
         score = row.get("score")
         valid = (row.get("classification") or {}).get("valid_for_capability") is True
         numeric = float(score) if valid and isinstance(score, (int, float)) and not isinstance(score, bool) else 0.0
@@ -1861,6 +1870,8 @@ class Test12Campaign:
         result = {
             "schema_version": 1,
             "timestamp_utc": self.runner._utc(),
+            "runtime_characterization_profile_sha256": self.runtime_profile_sha256,
+            "scoring_source_channel": "content",
             "phase": phase,
             "fixture_id": _fixture_id(case),
             "family_id": _family(case),
@@ -5311,6 +5322,7 @@ def run_test12_campaign(
             campaign.baseline_generation_budget_by_family = copy.deepcopy(
                 profile.get("resolved_generation_budget_by_family") or {}
             )
+            campaign.runtime_profile_sha256 = profile.get("profile_sha256")
             runner.store.write_json(
                 "runtime-characterization-profile.json",
                 profile,
