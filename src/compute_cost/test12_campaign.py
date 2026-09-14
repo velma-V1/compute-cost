@@ -1125,11 +1125,19 @@ def load_test12_recovery(run_dir: Path) -> dict[str, Any]:
 
     assertions = _read_jsonl(run_dir / "positive-work-assertions-1.2.jsonl")
     phase_events = _read_jsonl(run_dir / "test1.2-phase-events.jsonl")
+    foundation_rows = _read_jsonl(
+        run_dir / "test1.2-foundation-observations.jsonl"
+    )
+    role_rows = _read_jsonl(
+        run_dir / "test1.2-role-specialization-observations.jsonl"
+    )
     return {
         "checkpoint": checkpoint,
         "rows": rows,
         "phase_assertions": assertions,
         "phase_events": phase_events,
+        "foundation_rows": foundation_rows,
+        "role_rows": role_rows,
         "issues": issues,
     }
 
@@ -1942,6 +1950,19 @@ class Test12Campaign:
         self.controls: dict[tuple[str, int], dict[str, Any]] = {}
         self.invalid_controls: dict[tuple[str, int], dict[str, Any]] = {}
         self.rows: list[dict[str, Any]] = copy.deepcopy(self.resume_state.get("rows") or [])
+        self.foundation_probe_cache: dict[str, dict[str, Any]] = {}
+        for row in [
+            *(self.resume_state.get("foundation_rows") or []),
+            *(self.resume_state.get("role_rows") or []),
+        ]:
+            if not isinstance(row, dict):
+                continue
+            probe_id = str(row.get("probe_id") or "")
+            if not probe_id:
+                continue
+            # Last complete atomic record wins.  Reuse preserves the original
+            # measurement; it is never counted as a fresh replicate.
+            self.foundation_probe_cache[probe_id] = copy.deepcopy(row)
         self.sequence = 1_000_000 + len(self.rows) if self.resume_state else 0
         self.phase_assertions: list[dict[str, Any]] = copy.deepcopy(
             self.resume_state.get("phase_assertions") or []
@@ -1957,6 +1978,12 @@ class Test12Campaign:
         self.phase_results: dict[str, Any] = copy.deepcopy(
             checkpoint.get("phase_results") or {}
         )
+        prior_budget = self.phase_results.get("budget_characterization") or {}
+        if prior_budget and prior_budget.get("all_families_reproducibly_valid") is not True:
+            self.completed_phases.discard("runtime_budget_characterization")
+            # Output-contract measurements are family-budget dependent; cached
+            # valid probes will be reused, while newly calibrated families are added.
+            self.completed_phases.discard("output_contract_gate")
         self.baseline_generation_budget_by_family: dict[str, int] = copy.deepcopy(
             (self.phase_results.get("runtime_characterization") or {}).get(
                 "resolved_generation_budget_by_family"
@@ -9277,15 +9304,16 @@ def run_test12_campaign(
                     + ", ".join(profile.get("gate_failures") or [])
                 )
             if thesis.get("status") != "SUPPORTED":
-                campaign.phase_results = copy.deepcopy(results)
-                campaign._write_recovery_checkpoint(
-                    state="AUDITOR_EXECUTOR_THESIS_NOT_SUPPORTED"
-                )
-                raise ValueError(
-                    "Stage 0 instrument characterization passed, but the matched "
-                    "auditor/executor thesis is not supported; the full inverted "
-                    "campaign is blocked without relabeling the runtime as invalid."
-                )
+                # This is a mechanism result, not an instrument-validity failure.
+                # Preserve it as negative/null architecture evidence and continue
+                # testing the rest of the interaction surface.
+                results["auditor_executor_mechanism_gate"] = {
+                    "status":"DISABLED_NOT_SUPPORTED",
+                    "source_status":thesis.get("status"),
+                    "runtime_instrument_remains_valid":True,
+                    "test2_action":"PRESERVE_NEGATIVE_BOUNDARY",
+                    "reason":"MATCHED_AUDITOR_DID_NOT_OUTPERFORM_EXECUTOR",
+                }
             if campaign.capability_call_origin is None:
                 campaign.capability_call_origin = campaign._physical_model_calls()
                 campaign.capability_start_active_seconds = campaign._active_elapsed()
