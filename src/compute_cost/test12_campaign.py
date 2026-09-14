@@ -5308,8 +5308,6 @@ def run_test12_campaign(
             results["budget_characterization"] = run_runtime_budget_characterization(
                 campaign, deadline
             )
-            if campaign.can_start(deadline):
-                results["reasoning"] = phase_reasoning_compute(campaign, deadline)
         elif phase_name == "role_specialization_gate":
             results["role_specialization"] = run_role_specialization_lab(campaign, deadline)
             profile = build_runtime_characterization_profile(
