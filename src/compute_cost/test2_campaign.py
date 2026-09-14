@@ -1642,8 +1642,12 @@ class Test2Campaign:
         record = {
             "schema_version": 1,
             "timestamp_utc": self.runner._utc(),
-            "provenance_mode":self.provenance_mode,
-            "test12_shipping_claim_eligible":self.test12_shipping_claim_eligible,
+            "provenance_mode":getattr(
+                self, "provenance_mode", "UNLABELED_UNIT_TEST_FIXTURE"
+            ),
+            "test12_shipping_claim_eligible":bool(
+                getattr(self, "test12_shipping_claim_eligible", False)
+            ),
             "phase": phase,
             "kind": kind,
             "fixture_id": _fixture_id(case),
