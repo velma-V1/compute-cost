@@ -7210,10 +7210,12 @@ def _mechanism_family_knowledge_table(
                 effect_basis = (
                     "ZERO_NON_NULL_EVENTS_WITH_WILSON_UPPER_BOUND_BELOW_POLICY_LIMIT"
                 )
-            elif censored and not valid:
+            elif censored and not positive and not breaks:
                 effect = "null_censored"
                 signal_rows = []
-                effect_basis = "NO_CAPABILITY_VALID_EFFECT_OBSERVATION"
+                effect_basis = (
+                    "CENSORING_PREVENTED_DECISION_COMPLETE_NULL_CONCLUSION"
+                )
             else:
                 effect = "unknown"
                 signal_rows = valid
