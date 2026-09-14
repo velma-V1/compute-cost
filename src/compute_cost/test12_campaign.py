@@ -1282,6 +1282,34 @@ class Test12Campaign:
         self.completed_treatment_signatures: set[tuple[str, int, str]] = set()
         self.completed_treatment_ids: set[tuple[str, int, str]] = set()
         self.call_latency_seconds: list[float] = []
+        self.capability_call_origin: int | None = (
+            int(checkpoint["capability_call_origin"])
+            if checkpoint.get("capability_call_origin") is not None
+            else None
+        )
+        self.block_index = int(checkpoint.get("campaign_block_index") or 0)
+        self.block_row_start = int(checkpoint.get("campaign_block_row_start") or 0)
+        self.runtime_canary_baseline_tps: float | None = (
+            float(checkpoint["runtime_canary_baseline_tps"])
+            if checkpoint.get("runtime_canary_baseline_tps") is not None
+            else None
+        )
+        self.runtime_canary_last_active_seconds: float | None = (
+            float(checkpoint["runtime_canary_last_active_seconds"])
+            if checkpoint.get("runtime_canary_last_active_seconds") is not None
+            else None
+        )
+        self.runtime_canary_recent_ratios: list[float] = [
+            float(value)
+            for value in (checkpoint.get("runtime_canary_recent_ratios") or [])
+            if isinstance(value, (int, float)) and not isinstance(value, bool)
+        ]
+        self.runtime_canary_failed = bool(
+            checkpoint.get("runtime_canary_failed", False)
+        )
+        self.runtime_canary_count = int(
+            checkpoint.get("runtime_canary_count") or 0
+        )
         self.efficiency_counters: dict[str, int] = {
             "exact_duplicate_treatments_skipped": 0,
             "insufficient_runway_treatments_skipped": 0,
@@ -1387,6 +1415,14 @@ class Test12Campaign:
             "current_phase": self.current_phase,
             "current_phase_elapsed_seconds": self._phase_elapsed_seconds(),
             "efficiency_counters": copy.deepcopy(self.efficiency_counters),
+            "capability_call_origin": self.capability_call_origin,
+            "campaign_block_index": self.block_index,
+            "campaign_block_row_start": self.block_row_start,
+            "runtime_canary_baseline_tps": self.runtime_canary_baseline_tps,
+            "runtime_canary_last_active_seconds": self.runtime_canary_last_active_seconds,
+            "runtime_canary_recent_ratios": list(self.runtime_canary_recent_ratios),
+            "runtime_canary_failed": self.runtime_canary_failed,
+            "runtime_canary_count": self.runtime_canary_count,
             "last_experiment_id": (
                 self.rows[-1].get("experiment_id") if self.rows else None
             ),
