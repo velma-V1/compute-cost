@@ -1653,6 +1653,22 @@ class TuningRun:
                 ident=policy.get("fallback_intervention_id") if route!="DIRECT" else None
                 selected=self.campaign.intervention_by_id.get(str(ident)) if ident else None
 
+            disabled_cell = None
+            if selected is not None:
+                selected_id = str(selected.get("id") or "")
+                family_id = _family(case)
+                disabled_cell = next(
+                    (
+                        copy.deepcopy(item)
+                        for item in (policy.get("disabled_cells") or [])
+                        if str(item.get("family_id") or "") == family_id
+                        and str(item.get("intervention_id") or "") == selected_id
+                    ),
+                    None,
+                )
+                if disabled_cell is not None:
+                    selected = None
+
             if selected is None:
                 score=control_score
                 calls=1 if router_aux else 0
@@ -1667,6 +1683,8 @@ class TuningRun:
                     "treatment_generation_budget":baseline_budget,
                     "budget_comparison_valid":True,
                     "delta_valid":control_valid,
+                    "route_disabled_by_test2_cell_gate":bool(disabled_cell),
+                    "disabled_cell":copy.deepcopy(disabled_cell),
                 }
             else:
                 trial=self._treatment_trial(selected,case,deadline,seed=seed)
@@ -1883,6 +1901,7 @@ def _build_test2_proof_manifest(
     ]
     traffic_by_family: dict[str, int] = defaultdict(int)
     observed_routes: set[tuple[str, str]] = set()
+    route_call_samples: dict[tuple[str, str], list[float]] = defaultdict(list)
     referenced_ids: set[str] = set()
 
     for value in (
@@ -1905,6 +1924,13 @@ def _build_test2_proof_manifest(
         if family and ident and ident != "DIRECT":
             observed_routes.add((ident, family))
             referenced_ids.add(ident)
+            model_calls = row.get("model_calls")
+            if (
+                isinstance(model_calls, (int, float))
+                and not isinstance(model_calls, bool)
+                and float(model_calls) >= 0.0
+            ):
+                route_call_samples[(ident, family)].append(float(model_calls))
 
     if str(winner.get("mode") or "") == "static":
         ident = str(winner.get("intervention_id") or "")
@@ -1913,10 +1939,15 @@ def _build_test2_proof_manifest(
                 if count > 0:
                     observed_routes.add((ident, family))
 
-    policy_call_budget = max(
-        1.0,
+    policy_expected_mean_calls = max(
+        0.0,
         float(winner_summary.get("mean_calls") or 0.0),
     )
+    route_call_budget = {
+        key:max(values)
+        for key, values in route_call_samples.items()
+        if values
+    }
     status_rank = {
         "COMPILABLE_PENDING_TEST2_PROOF":0,
         "POLICY_RELEVANT_VETO_PENDING_TEST2_HARM_PROOF":0,
@@ -1958,8 +1989,21 @@ def _build_test2_proof_manifest(
         calls_payload = (cell.get("cost") or {}).get("calls") or {}
         mean_calls = calls_payload.get("mean")
         cost_measured = isinstance(mean_calls, (int, float)) and not isinstance(mean_calls, bool)
+        conditional_route_call_budget = (
+            max(
+                (
+                    float(route_call_budget[(ident, family)])
+                    for ident in route_ids
+                    if (ident, family) in route_call_budget
+                ),
+                default=None,
+            )
+            if route_ids else None
+        )
         cost_fits = bool(
-            cost_measured and float(mean_calls) <= policy_call_budget
+            cost_measured
+            and conditional_route_call_budget is not None
+            and float(mean_calls) <= float(conditional_route_call_budget)
         )
 
         if applicability == "structural_no":
@@ -2013,7 +2057,9 @@ def _build_test2_proof_manifest(
             "condition":copy.deepcopy(cell.get("conditions") or {}),
             "cost":copy.deepcopy(cell.get("cost") or {}),
             "mean_measured_calls":float(mean_calls) if cost_measured else None,
-            "policy_call_budget":policy_call_budget,
+            "policy_expected_mean_calls":policy_expected_mean_calls,
+            "conditional_route_call_budget":conditional_route_call_budget,
+            "cost_admissibility_basis":"OBSERVED_COMPILED_ROUTE_BUDGET_NOT_GLOBAL_POLICY_MEAN",
             "cost_fits_policy_budget":cost_fits,
             "compilable_status":compilable_status,
             "compiler_priority_rank":int(status_rank.get(compilable_status, 99)),
@@ -2094,7 +2140,8 @@ def _build_test2_proof_manifest(
         "source_collection_run":collection.get("run_id"),
         "winner_policy_id":winner.get("policy_id"),
         "winner_mode":winner.get("mode"),
-        "policy_call_budget":policy_call_budget,
+        "policy_expected_mean_calls":policy_expected_mean_calls,
+        "cost_admissibility_contract":"RARE_EXPENSIVE_ROUTES_ARE_JUDGED_AGAINST_THEIR_OBSERVED_CONDITIONAL_ROUTE_BUDGET_NOT_GLOBAL_MEAN",
         "queue_order_contract":"COMPILABILITY_THEN_EXPECTED_TRAFFIC_THEN_COST_NEVER_EFFECT_SIZE",
         "effect_size_used_for_ordering":False,
         "expected_traffic_basis":"VALIDATION_FAMILY_FREQUENCY_PROXY_NOT_FIELD_TRAFFIC",
