@@ -294,6 +294,7 @@ REQUIRED_OUTPUTS = (
     "sustained-load-drift.json",
     "energy-hardware-economics.json",
     "gpt-oss-role-specialization-map.json",
+    "test1.2-auditor-executor-thesis.json",
     "gpt-oss-foundation-question-ledger.json",
     "test1.2-foundation-observations.jsonl",
     "test1.2-role-specialization-observations.jsonl",
@@ -6137,6 +6138,18 @@ def write_outputs(campaign: Test12Campaign, results: dict[str, Any]) -> None:
         stage="report",
     )
     store.write_json("gpt-oss-role-specialization-map.json", role_specialization, producer="test1.2", stage="report")
+    store.write_json(
+        "test1.2-auditor-executor-thesis.json",
+        copy.deepcopy(
+            role_specialization.get("auditor_executor_thesis") or {
+                "schema_version":1,
+                "status":"UNMEASURED",
+                "full_campaign_allowed":False,
+            }
+        ),
+        producer="test1.2-stage0",
+        stage="report",
+    )
     store.write_json("gpt-oss-foundation-question-ledger.json", foundation_ledger, producer="test1.2", stage="report")
     if not (store.run_dir / "test1.2-foundation-observations.jsonl").is_file():
         store.append_jsonl("test1.2-foundation-observations.jsonl", {"schema_version":1,"record_type":"EMPTY_FOUNDATION_OBSERVATIONS"})
@@ -6194,6 +6207,8 @@ def write_outputs(campaign: Test12Campaign, results: dict[str, Any]) -> None:
             runtime_characterization.get("resolved_generation_budget_by_family") or {}
         ),
         "role_specialization_map":"gpt-oss-role-specialization-map.json",
+        "auditor_executor_thesis":"test1.2-auditor-executor-thesis.json",
+        "auditor_executor_thesis_status":role_specialization.get("auditor_executor_thesis_status"),
         "foundation_question_ledger":"gpt-oss-foundation-question-ledger.json",
         "foundation_missing_critical_ids":foundation_ledger["missing_critical_foundation_ids"],
         "fine_tuning_candidates":list((fine.get("candidates") or {}).keys()),
