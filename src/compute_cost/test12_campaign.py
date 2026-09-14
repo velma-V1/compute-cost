@@ -2420,6 +2420,169 @@ class Test12Campaign:
         self.runtime_canary_last_pass_active_seconds = self._active_elapsed()
 
 
+    def _remaining_matrix_phase_seconds(self) -> float:
+        remaining = 0.0
+        completed = set(getattr(self, "completed_phases", set()) or set())
+        current = getattr(self, "current_phase", None)
+        for phase_name, seconds in PHASES:
+            if phase_name not in CELL_MATRIX_PHASES:
+                continue
+            if phase_name in completed:
+                continue
+            phase_remaining = float(seconds)
+            if phase_name == current:
+                phase_remaining = max(
+                    0.0,
+                    float(seconds) - float(self._phase_elapsed_seconds()),
+                )
+            remaining += phase_remaining
+        return remaining
+
+
+    def _priority_cell_spend(self) -> dict[str, int]:
+        spend: Counter[str] = Counter()
+        for row in self.rows:
+            intervention_id = str(row.get("intervention_id") or "")
+            if not intervention_id or intervention_id == "CONTROL":
+                continue
+            intervention = self.intervention_by_id.get(intervention_id)
+            if intervention is None:
+                continue
+            family = str(row.get("family_id") or "")
+            if not family:
+                continue
+            key = (
+                f"{_semantic_mechanism_descriptor(intervention)['mechanism_key']}"
+                f"|{family}"
+            )
+            spend[key] += max(
+                1,
+                int(row.get("model_calls_per_application") or 1),
+            )
+        return dict(spend)
+
+
+    def _reselect_priority_cells_from_observed_throughput(
+        self,
+        capability_calls: int,
+    ) -> dict[str, Any]:
+        """Shrink the target set to what observed call throughput can finish.
+
+        This never expands beyond the preregistered ranked set.  If observed
+        throughput falls below preflight assumptions, tail cells are dropped
+        before the clock reaches them rather than being truncated mid-campaign.
+        """
+        order = list(getattr(self, "priority_cell_order", []) or [])
+        if not order:
+            return {
+                "status":"NO_PRESELECTED_CELL_PLAN",
+                "changed":False,
+                "preflight_target_count":0,
+                "retained_target_count":0,
+                "active_priority_count":0,
+            }
+
+        capability_started = getattr(
+            self,
+            "capability_start_active_seconds",
+            None,
+        )
+        if capability_started is None:
+            return {
+                "status":"AWAITING_CAPABILITY_CLOCK_ORIGIN",
+                "changed":False,
+                "preflight_target_count":len(order),
+                "retained_target_count":len(order),
+                "active_priority_count":len(
+                    getattr(self, "priority_cell_keys", set()) or set()
+                ),
+            }
+
+        elapsed = max(
+            0.001,
+            float(self._active_elapsed()) - float(capability_started),
+        )
+        calls_per_second = max(0.0, float(capability_calls) / elapsed)
+        remaining_matrix_seconds = self._remaining_matrix_phase_seconds()
+        projected_remaining_calls = int(
+            math.floor(calls_per_second * remaining_matrix_seconds)
+        )
+
+        run_id = getattr(getattr(self.runner, "store", None), "run_id", None)
+        physical_now = int(
+            getattr(self.runner, "_model_call_counts", {}).get(run_id, 0)
+        ) if run_id else 0
+        safety_remaining = max(
+            0,
+            int(self.cfg.get("safety_call_cap", 14000)) - physical_now,
+        )
+        projected_remaining_calls = min(
+            projected_remaining_calls,
+            safety_remaining,
+        )
+
+        spend = self._priority_cell_spend()
+        completed: list[str] = []
+        incomplete: list[tuple[str, int]] = []
+        for key in order:
+            required = max(
+                1,
+                int(
+                    getattr(self, "priority_cell_cost_calls", {}).get(
+                        key,
+                        1,
+                    )
+                ),
+            )
+            used = max(0, int(spend.get(key, 0)))
+            remaining = max(0, required - used)
+            if remaining == 0:
+                completed.append(key)
+            else:
+                incomplete.append((key, remaining))
+
+        selected_incomplete: list[str] = []
+        budget_used = 0
+        for key, remaining_cost in incomplete:
+            if budget_used + remaining_cost > projected_remaining_calls:
+                break
+            selected_incomplete.append(key)
+            budget_used += remaining_cost
+
+        old_active = set(getattr(self, "priority_cell_keys", set()) or set())
+        new_active = set(selected_incomplete)
+        changed = new_active != old_active
+        if changed:
+            self.priority_cell_keys = new_active
+            self.priority_reselection_count = int(
+                getattr(self, "priority_reselection_count", 0)
+            ) + 1
+
+        return {
+            "status":"RESELECTED" if changed else "UNCHANGED",
+            "changed":changed,
+            "preflight_target_count":len(order),
+            "completed_target_count":len(completed),
+            "retained_target_count":len(completed) + len(selected_incomplete),
+            "active_priority_count":len(selected_incomplete),
+            "dropped_unreached_target_count":max(
+                0,
+                len(order) - len(completed) - len(selected_incomplete),
+            ),
+            "observed_capability_calls":int(capability_calls),
+            "observed_capability_elapsed_seconds":elapsed,
+            "observed_capability_calls_per_second":calls_per_second,
+            "remaining_matrix_phase_seconds":remaining_matrix_seconds,
+            "projected_remaining_matrix_calls":projected_remaining_calls,
+            "projected_priority_calls_allocated":budget_used,
+            "safety_call_cap_remaining":safety_remaining,
+            "priority_reselection_count":int(
+                getattr(self, "priority_reselection_count", 0)
+            ),
+            "policy":"SHRINK_ONLY_PRESERVE_PRECOMPUTED_HIGH_VALUE_ORDER",
+        }
+
+
     def maybe_block_reassessment(self) -> None:
         """Emit an evidence-preserving reassessment every configured call block."""
         if self.capability_call_origin is None:
@@ -2472,6 +2635,12 @@ class Test12Campaign:
             positive_rate = (
                 len(positive) / len(valid) if valid else None
             )
+            priority_reselection = (
+                self._reselect_priority_cells_from_observed_throughput(
+                    capability_calls
+                )
+            )
+
             if self.runtime_canary_failed:
                 recommendation = "STOP_RUNTIME_DRIFT"
             elif not valid and capability_rows:
@@ -2526,6 +2695,16 @@ class Test12Campaign:
                     ).get("overthink_corruption_family_count") or 0
                 ),
                 "throughput_metric_role":"SIZING_AND_DIAGNOSTIC_NOT_GO_NO_GO",
+                "priority_cell_reselection":copy.deepcopy(priority_reselection),
+                "priority_cell_target_count_after_reselection":int(
+                    priority_reselection.get("retained_target_count") or 0
+                ),
+                "priority_cell_active_count_after_reselection":int(
+                    priority_reselection.get("active_priority_count") or 0
+                ),
+                "priority_cell_reselection_changed":bool(
+                    priority_reselection.get("changed", False)
+                ),
                 "recommendation":recommendation,
                 "automatic_stop":recommendation == "STOP_RUNTIME_DRIFT",
             }
