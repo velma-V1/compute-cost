@@ -169,6 +169,14 @@ def _invoke_probe(
     request_fields: dict[str, Any] | None = None,
     case: dict[str, Any] | None = None,
 ) -> dict[str, Any] | None:
+    cached = copy.deepcopy(
+        (getattr(campaign, "foundation_probe_cache", {}) or {}).get(probe_id)
+    )
+    if cached:
+        cached["reused_from_prior_evidence"] = True
+        cached["fresh_model_call"] = False
+        cached["reuse_key"] = probe_id
+        return cached
     if not campaign.can_start(deadline) or not campaign._has_runway(deadline, 1):
         return None
     label = f"test1.2 foundation {probe_id}"
@@ -205,10 +213,15 @@ def _invoke_probe(
         scorer=scorer,
         score=score,
     )
+    row["reused_from_prior_evidence"] = False
+    row["fresh_model_call"] = True
     campaign.runner.store.append_jsonl(
         "test1.2-foundation-observations.jsonl",
         row,
     )
+    cache = getattr(campaign, "foundation_probe_cache", None)
+    if isinstance(cache, dict):
+        cache[str(probe_id)] = copy.deepcopy(row)
     return row
 
 
