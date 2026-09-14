@@ -2852,12 +2852,17 @@ def test_stage0_budget_search_screens_before_confirmation(monkeypatch):
         (1024, 42),
         (1024, 43),
         (1024, 44),
+        (2048, 42),
+        (2048, 43),
     ]
     assert result["screen_calls"] == 3
     assert result["confirmation_calls"] == 2
-    assert result["calls_used"] == 5
+    assert result["headroom_calls"] == 2
+    assert result["calls_used"] == 7
     assert result["families"][family]["search_strategy"] == "SCREEN_ESCALATE_CONFIRM"
     assert result["resolved_generation_budget_by_family"][family] == 2048
+    assert result["families"][family]["budget_elasticity"]["headroom_budget_tested"] == 2048
+    assert result["families"][family]["budget_elasticity"]["elasticity_class"] == "BUDGET_FILLING"
 
 
 
