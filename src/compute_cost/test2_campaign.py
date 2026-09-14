@@ -1442,6 +1442,38 @@ class Test2Campaign:
         return record
 
 
+def _positive_sign_test_p(deltas: list[float]) -> float:
+    """Exact one-sided sign test after fixture clustering; ties carry no vote."""
+    nonzero = [value for value in deltas if value != 0.0]
+    n = len(nonzero)
+    if n == 0:
+        return 1.0
+    wins = sum(1 for value in nonzero if value > 0.0)
+    return min(
+        1.0,
+        sum(math.comb(n, k) for k in range(wins, n + 1)) / (2.0 ** n),
+    )
+
+
+def _bh_qvalues(p_values: dict[str, float]) -> dict[str, float]:
+    """Benjamini-Hochberg FDR q-values, monotone over ranked p-values."""
+    if not p_values:
+        return {}
+    ordered = sorted(p_values.items(), key=lambda item: (item[1], item[0]))
+    m = len(ordered)
+    adjusted = [0.0] * m
+    running = 1.0
+    for index in range(m - 1, -1, -1):
+        rank = index + 1
+        value = min(1.0, ordered[index][1] * m / rank)
+        running = min(running, value)
+        adjusted[index] = running
+    return {
+        key: adjusted[index]
+        for index, (key, _p) in enumerate(ordered)
+    }
+
+
 def _effect_map(
     rows: Iterable[dict[str, Any]],
     *,
@@ -1449,6 +1481,7 @@ def _effect_map(
     bootstrap_samples: int,
     key_fn: Callable[[dict[str, Any]], str],
     max_censoring_rate: float = 0.20,
+    fdr_level: float = 0.10,
 ) -> dict[str, dict[str, Any]]:
     grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
     samples: dict[str, dict[str, Any]] = {}
@@ -1460,6 +1493,7 @@ def _effect_map(
         samples.setdefault(key, copy.deepcopy(row.get("recipe") or {}))
 
     result: dict[str, dict[str, Any]] = {}
+    p_values: dict[str, float] = {}
     for key, values in grouped.items():
         valid = [
             row for row in values
@@ -1469,13 +1503,26 @@ def _effect_map(
             row for row in values
             if row.get("censored_for_capability") is True
         ]
-        deltas = [float(row["delta"]) for row in valid]
-        if deltas:
+
+        by_fixture: dict[str, list[float]] = defaultdict(list)
+        for index, row in enumerate(valid):
+            fixture_id = str(
+                row.get("fixture_id")
+                or row.get("experiment_id")
+                or f"__row_{index}"
+            )
+            by_fixture[fixture_id].append(float(row["delta"]))
+        fixture_deltas = [
+            float(median(values_for_fixture))
+            for _, values_for_fixture in sorted(by_fixture.items())
+        ]
+
+        if fixture_deltas:
             summary = effect_summary(
-                deltas,
+                fixture_deltas,
                 noise_sigma,
                 bootstrap_samples=bootstrap_samples,
-                seed_key=f"test2:{key}",
+                seed_key=f"test2:fixture-cluster:{key}",
             )
         else:
             summary = {
@@ -1484,17 +1531,37 @@ def _effect_map(
                 "normalized_effect":0.0,
                 "classification":"NO_VALID_EFFECT",
             }
+
         censoring_rate = len(censored) / len(values) if values else 0.0
+        p_value = _positive_sign_test_p(fixture_deltas)
+        p_values[key] = p_value
         summary["raw_n"] = len(values)
-        summary["valid_n"] = len(valid)
+        summary["raw_valid_n"] = len(valid)
+        summary["independent_fixture_n"] = len(fixture_deltas)
+        summary["unit_of_independence"] = "fixture"
+        summary["fixture_ids"] = sorted(by_fixture)
         summary["censored_n"] = len(censored)
         summary["censoring_rate"] = censoring_rate
         summary["requires_own_budget_cost_probe"] = bool(censored)
+        summary["positive_sign_test_p_value"] = p_value
         if censoring_rate > float(max_censoring_rate):
             summary["classification_before_censoring"] = summary.get("classification")
             summary["classification"] = "CENSORING_DOMINATED"
         summary["recipe"] = samples[key]
         result[key] = summary
+
+    q_values = _bh_qvalues(p_values)
+    for key, summary in result.items():
+        q_value = q_values.get(key, 1.0)
+        summary["bh_fdr_q_value"] = q_value
+        summary["bh_fdr_level"] = float(fdr_level)
+        summary["multiple_comparisons_method"] = "BENJAMINI_HOCHBERG"
+        if (
+            summary.get("classification") in {"STRONG", "PROMISING"}
+            and q_value > float(fdr_level)
+        ):
+            summary["classification_before_multiplicity"] = summary["classification"]
+            summary["classification"] = "UNCERTAIN_MULTIPLICITY"
     return result
 
 
