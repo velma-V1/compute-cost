@@ -1745,6 +1745,7 @@ class Test12Campaign:
 
     def control(self, case: dict[str, Any], deadline: float, *, seed: int, force: bool = False) -> dict[str, Any] | None:
         self.assert_allowed(case)
+        self.maybe_runtime_canary(deadline)
         key = (_fixture_id(case), int(seed))
         if not force and key in self.controls:
             return self.controls[key]
