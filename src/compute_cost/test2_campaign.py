@@ -98,6 +98,8 @@ REQUIRED_OUTPUTS = (
     "holdout-replenishment-plan.json",
     "harness-stopping-rules.json",
     "training-asset-yield.json",
+    "test2-cell-resolution-map.json",
+    "test2-provenance.json",
 )
 
 DEFAULT_TEST2_CONFIG: dict[str, Any] = {
@@ -115,8 +117,10 @@ DEFAULT_TEST2_CONFIG: dict[str, Any] = {
     "unknown_resolution_seconds": 25 * 60,
     "top_recipes": 12,
     "max_recovery_recipes": 8,
+    "recovery_exploration_reserve": 1,
     "negative_transfer_recipes": 8,
     "blind_recipes": 4,
+    "unicorn_open_reserve_max_calls": 24,
     "control_interval": 12,
     "fine_tuning_min_independent_failures": 3,
     "general_recovery_threshold": 0.80,
@@ -520,6 +524,8 @@ def synthetic_test1_handoff(cases: list[dict[str, Any]]) -> dict[str, Any]:
     return {
         "run_id": "SYNTHETIC-TEST1-HANDOFF",
         "synthetic": True,
+        "provenance_mode":"STANDALONE_SYNTHETIC_NON_TEST1.2",
+        "test12_shipping_claim_eligible":False,
         "plan": build_test2_plan(cases, test1_run="SYNTHETIC-TEST1-HANDOFF"),
         "partitions": {
             name: [_fixture_id(case) for case in rows]
@@ -805,6 +811,8 @@ def load_test1_handoff(
             "collection_dir":str(collection_dir),
             "synthetic":False,
             "handoff_mode":"TEST12_EXACT",
+            "provenance_mode":"TEST1.2_COMPILER_MANIFEST",
+            "test12_shipping_claim_eligible":True,
             "test12_exact_controls":exact_controls,
             "test2_proof_manifest":copy.deepcopy(proof_manifest),
             "test2_proof_queue_counts":copy.deepcopy(
@@ -883,6 +891,8 @@ def load_test1_handoff(
         "run_id": run_id,
         "run_dir": str(run_dir),
         "synthetic": False,
+        "provenance_mode":"LEGACY_TEST1_NON_TEST1.2",
+        "test12_shipping_claim_eligible":False,
         "test1_plan": _read_json(run_dir / "test1-plan.json"),
         "partitions": source_partitions,
         "noise_model": _read_json(run_dir / "noise-model.json"),
@@ -914,6 +924,31 @@ def _treatment_from_summary(value: dict[str, Any]) -> dict[str, Any] | None:
         "dose": float(treatment.get("dose", 1.0)),
         "representation": str(treatment.get("representation", "prose")),
         "placement": str(treatment.get("placement", "prefix")),
+    }
+
+
+def _handoff_provenance(handoff: dict[str, Any]) -> dict[str, Any]:
+    mode = str(handoff.get("provenance_mode") or "")
+    eligible = bool(handoff.get("test12_shipping_claim_eligible") is True)
+    if handoff.get("handoff_mode") == "TEST12_EXACT":
+        if mode != "TEST1.2_COMPILER_MANIFEST" or not eligible:
+            raise ValueError("exact Test 1.2 proof requires compiler-manifest provenance")
+    elif not mode:
+        raise ValueError(
+            "standalone Test 2 requires an explicit non-Test1.2 provenance label"
+        )
+    return {
+        "provenance_mode":mode,
+        "test12_shipping_claim_eligible":eligible,
+        "standalone_non_test12":not eligible,
+    }
+
+
+def _report_payload(campaign: "Test2Campaign", payload: dict[str, Any]) -> dict[str, Any]:
+    return {
+        **copy.deepcopy(payload),
+        "provenance_mode":campaign.provenance_mode,
+        "test12_shipping_claim_eligible":campaign.test12_shipping_claim_eligible,
     }
 
 
@@ -1114,6 +1149,11 @@ class Test2Campaign:
         self.runner = runner
         self.cases = cases
         self.handoff = handoff
+        provenance = _handoff_provenance(handoff)
+        self.provenance_mode = str(provenance["provenance_mode"])
+        self.test12_shipping_claim_eligible = bool(
+            provenance["test12_shipping_claim_eligible"]
+        )
         self.cfg = _cfg(runner.config)
         self.clock = clock
         self.start = clock() if started_monotonic is None else float(started_monotonic)
@@ -1143,6 +1183,8 @@ class Test2Campaign:
         self.treatment_calls = 0
         self.harm_evidence: dict[str, Any] = {}
         self.proof_scheduler_audit: dict[str, Any] = {}
+        self.cell_resolution_map: dict[str, Any] = {}
+        self.unicorn_search_audit: dict[str, Any] = {}
         self.recipes = source_recipes(handoff, limit=int(self.cfg["top_recipes"]))
         self.exact_test12: Test12Campaign | None = None
         if handoff.get("handoff_mode") == "TEST12_EXACT":
@@ -1281,6 +1323,8 @@ class Test2Campaign:
                 out = {
                     "schema_version":1,
                     "timestamp_utc":self.runner._utc(),
+                    "provenance_mode":self.provenance_mode,
+                    "test12_shipping_claim_eligible":self.test12_shipping_claim_eligible,
                     "phase":phase,
                     "kind":"control",
                     "fixture_id":fixture_id,
@@ -1598,6 +1642,8 @@ class Test2Campaign:
         record = {
             "schema_version": 1,
             "timestamp_utc": self.runner._utc(),
+            "provenance_mode":self.provenance_mode,
+            "test12_shipping_claim_eligible":self.test12_shipping_claim_eligible,
             "phase": phase,
             "kind": kind,
             "fixture_id": _fixture_id(case),
