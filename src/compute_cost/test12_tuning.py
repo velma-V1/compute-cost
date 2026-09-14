@@ -260,6 +260,17 @@ def load_tuning_recovery(run_dir: Path) -> dict[str, Any]:
         row for row in sanitized_policy_rows
         if row.get("partition") in {"TEST2_BLIND", "TEST3_PROTECTED"}
     ]
+    legacy_holdout_exposure = {
+        "TEST2_BLIND": any(
+            row.get("partition") == "TEST2_BLIND"
+            for row in reserved_holdout_rows
+        ),
+        "TEST3_PROTECTED": any(
+            row.get("partition") == "TEST3_PROTECTED"
+            for row in reserved_holdout_rows
+        ),
+    }
+    checkpoint["legacy_holdout_exposure"] = copy.deepcopy(legacy_holdout_exposure)
     if reserved_holdout_rows:
         for row in reserved_holdout_rows:
             row["recovery_quarantined_holdout_exposure"] = True
@@ -306,6 +317,7 @@ def load_tuning_recovery(run_dir: Path) -> dict[str, Any]:
         "campaign_sanitization": campaign_sanitization,
         "quarantined_policy_rows": quarantined_policy_rows,
         "quarantined_policy_observation_count": len(quarantined_policy_rows),
+        "legacy_holdout_exposure": legacy_holdout_exposure,
     }
 
 
@@ -1860,6 +1872,17 @@ def run_test12_tuning(
     runner.store.write_json("candidate-harness-registry.json",{"schema_version":1,"policies":policies},producer="test1.2-tuning",stage="preflight")
 
     checkpoint=(resume_state or {}).get("checkpoint") or {}
+    legacy_holdout_exposure = copy.deepcopy(
+        (resume_state or {}).get("legacy_holdout_exposure")
+        or checkpoint.get("legacy_holdout_exposure")
+        or {"TEST2_BLIND":False,"TEST3_PROTECTED":False}
+    )
+    test2_blind_previously_exposed = bool(
+        legacy_holdout_exposure.get("TEST2_BLIND")
+    )
+    test3_protected_previously_exposed = bool(
+        legacy_holdout_exposure.get("TEST3_PROTECTED")
+    )
     policy_by_id={str(row["policy_id"]):row for row in policies}
     current=[
         policy_by_id[value]
@@ -2087,8 +2110,8 @@ def run_test12_tuning(
         "oracle_routing_prohibited":True,
         "hard_ceiling_total_seconds":TUNING_HARD_SECONDS+COLLECTION_HARD_SECONDS,
         "winner_locked_before_test2":True,
-        "test2_blind_exposed":False,
-        "test3_protected_exposed":False,
+        "test2_blind_exposed":test2_blind_previously_exposed,
+        "test3_protected_exposed":test3_protected_previously_exposed,
         "winner_lock_sha256":winner_lock_hash,
         "blind_acceptance_is_tuning_input":False,
         "protected_acceptance_is_tuning_input":False,
@@ -2145,8 +2168,8 @@ def run_test12_tuning(
         "winner_lock_sha256":winner_lock_hash,
         "winner_locked_before_test2":True,
         "holdouts_used_for_tuning_or_selection":False,
-        "test2_blind_exposed":False,
-        "test3_protected_exposed":False,
+        "test2_blind_exposed":test2_blind_previously_exposed,
+        "test3_protected_exposed":test3_protected_previously_exposed,
         "validation_family_safe":family_safe,
         "all_40_families_validation_competent":all_40_families_competent,
         "minimum_validation_pass_rate":minimum_pass_rate,
@@ -2249,8 +2272,8 @@ def run_test12_tuning(
         "collection_value_gap_families":collection_value_gap_families,
         "resolved_collection_value_gap_families":resolved_collection_value_gap_families,
         "unresolved_collection_value_gap_families":unresolved_collection_value_gap_families,
-        "test2_blind_exposed":False,
-        "test3_protected_exposed":False,
+        "test2_blind_exposed":test2_blind_previously_exposed,
+        "test3_protected_exposed":test3_protected_previously_exposed,
         "next_action":(
             "RUN_TEST2_PROOF_STAGE"
             if terminal_decision!="REJECT_BEFORE_TEST2"
@@ -2278,11 +2301,14 @@ def run_test12_tuning(
         "winner_lock_sha256":winner_lock_hash,
         "test2_proof_stage_required":True,
         "test2_role":"RECURRENCE_ROBUSTNESS_NEGATIVE_TRANSFER_DISTILLATION_PROOF",
-        "test2_blind_reserved_and_unexposed":True,
-        "test3_protected_reserved_and_unexposed":True,
+        "test2_blind_reserved_and_unexposed":not test2_blind_previously_exposed,
+        "test3_protected_reserved_and_unexposed":not test3_protected_previously_exposed,
+        "legacy_holdout_exposure":copy.deepcopy(legacy_holdout_exposure),
         "fresh_protected_final_acceptance_required":True,
         "next_action":(
-            "RUN_TEST2_PROOF_STAGE"
+            "GENERATE_FRESH_TEST2_BLIND_BEFORE_TEST2"
+            if test2_blind_previously_exposed
+            else "RUN_TEST2_PROOF_STAGE"
             if terminal_decision!="REJECT_BEFORE_TEST2"
             else "STOP_CANDIDATE"
         ),
@@ -2328,7 +2354,11 @@ def run_test12_tuning(
                 "calibration-verify-supervision-corpus.jsonl",
             ],
         },
-        "blind_partitions_touched":False,
+        "blind_partitions_touched":bool(
+            test2_blind_previously_exposed
+            or test3_protected_previously_exposed
+        ),
+        "legacy_holdout_exposure":copy.deepcopy(legacy_holdout_exposure),
         "holdouts_used_for_tuning_or_selection":False,
         "onboarding_complete":False,
         "test2_proof_stage_required":True,
