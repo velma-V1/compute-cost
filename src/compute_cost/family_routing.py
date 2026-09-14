@@ -247,6 +247,8 @@ def evaluate_family_classifier(
                 "family_a": pair[0],
                 "family_b": pair[1],
                 "error_count": int(count),
+                "evidence_status": "HYPOTHESIS_ONLY",
+                "runtime_harm_adjacency_eligible": False,
             }
             for pair, count in pair_counts.most_common()
         ],
