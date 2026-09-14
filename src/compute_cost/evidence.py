@@ -198,6 +198,10 @@ class EvidenceStore:
         key = path.relative_to(self.run_dir).as_posix()
 
         hasher = self._jsonl_hashers.get(key)
+        if hasher is not None and self._cached_digest(path) is None:
+            hasher = None
+            self._jsonl_hashers.pop(key, None)
+
         if hasher is None:
             hasher = hashlib.sha256()
             if path.exists():
