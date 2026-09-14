@@ -577,6 +577,7 @@ REQUIRED_OUTPUTS = (
     "capability-family-coverage.json",
     "capability-floor-registry.json",
     "harness-applicability-registry.json",
+    "mechanism-family-knowledge-table.json",
     "capability-building-block-manufacturing-map.json",
     "capability-improvement-dossiers.json",
     "family-value-completeness.json",
@@ -6693,6 +6694,348 @@ def _harness_applicability_registry(
     }
 
 
+
+def _mechanism_family_knowledge_table(
+    campaign: Test12Campaign,
+) -> dict[str, Any]:
+    """Compile Test 1.2 discovery into mechanism x capability-family cells.
+
+    Effect and cost are derived from the exact same capability-valid observation
+    set. Test 1.2 may discover conditional/null/harm signals, but it never marks
+    a positive mechanism VERIFIED; Test 2 owns scientific promotion.
+    """
+    intervention_to_mechanism = {
+        str(intervention.get("id") or ""): str(
+            _semantic_mechanism_descriptor(intervention)["mechanism_key"]
+        )
+        for intervention in campaign.interventions
+        if intervention.get("id")
+    }
+    mechanism_members: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for intervention in campaign.interventions:
+        ident = str(intervention.get("id") or "")
+        if ident:
+            mechanism_members[intervention_to_mechanism[ident]].append(intervention)
+
+    min_null = max(3, int(campaign.cfg.get("decision_complete_valid_observations", 3)))
+    max_censor = float(campaign.cfg.get("max_classification_censoring_rate", 0.20))
+
+    def obs_id(row: dict[str, Any]) -> str:
+        return str(
+            row.get("observation_sha256")
+            or row.get("experiment_id")
+            or row.get("fixture_id")
+            or ""
+        )
+
+    def condition_predicate(rows: list[dict[str, Any]]) -> dict[str, Any]:
+        difficulties = sorted({
+            int(row.get("difficulty_level") or 0) for row in rows
+        })
+        budgets = sorted({
+            int(row.get("generation_budget") or 0) for row in rows
+            if row.get("generation_budget") is not None
+        })
+        efforts = sorted({
+            str(row.get("reasoning_effort"))
+            for row in rows if row.get("reasoning_effort") is not None
+        })
+        contexts = sorted({
+            int(row.get("context_request"))
+            for row in rows if row.get("context_request") is not None
+        })
+        temperatures = sorted({
+            float(row.get("temperature"))
+            for row in rows if row.get("temperature") is not None
+        })
+        phases = sorted({str(row.get("phase") or "") for row in rows if row.get("phase")})
+        return {
+            "predicate_language":"STRUCTURED_EXACT_OBSERVED_SCOPE_V1",
+            "family_id":str(rows[0].get("family_id") or "") if rows else None,
+            "difficulty_level":{
+                "observed":difficulties,
+                "min":min(difficulties) if difficulties else None,
+                "max":max(difficulties) if difficulties else None,
+            },
+            "generation_budget":{"observed":budgets},
+            "reasoning_effort":{"observed":efforts},
+            "context_request":{"observed":contexts},
+            "temperature":{"observed":temperatures},
+            "phase":{"observed":phases},
+            "prior_state":{
+                "status":"NOT_OBSERVED_AS_INDEPENDENT_FACTOR",
+                "value":None,
+            },
+        }
+
+    def bound_cost(rows: list[dict[str, Any]]) -> dict[str, Any]:
+        if not rows:
+            return {
+                "status":"UNMEASURED",
+                "effect_observation_binding":[],
+                "operating_points":[],
+                "calls":None,
+                "tokens":None,
+                "latency_seconds":None,
+            }
+        calls = [float(row.get("model_calls_per_application") or 0.0) for row in rows]
+        tokens = [
+            float((row.get("cost") or {}).get("prompt_tokens_observed") or 0.0)
+            + float((row.get("cost") or {}).get("output_tokens_observed") or 0.0)
+            for row in rows
+        ]
+        latency = [
+            float((row.get("cost") or {}).get("wall_seconds") or 0.0)
+            for row in rows
+        ]
+        operating_points = []
+        seen = set()
+        for row in rows:
+            point = (
+                row.get("generation_budget"),
+                row.get("reasoning_effort"),
+                row.get("context_request"),
+                row.get("temperature"),
+            )
+            if point in seen:
+                continue
+            seen.add(point)
+            operating_points.append({
+                "generation_budget":point[0],
+                "reasoning_effort":point[1],
+                "context_request":point[2],
+                "temperature":point[3],
+            })
+        return {
+            "status":"MEASURED_SAME_OBSERVATION_SET_AS_EFFECT",
+            "effect_observation_binding":[obs_id(row) for row in rows],
+            "operating_points":operating_points,
+            "calls":{
+                "mean":mean(calls),
+                "min":min(calls),
+                "max":max(calls),
+            },
+            "tokens":{
+                "mean":mean(tokens),
+                "min":min(tokens),
+                "max":max(tokens),
+            },
+            "latency_seconds":{
+                "mean":mean(latency),
+                "min":min(latency),
+                "max":max(latency),
+            },
+        }
+
+    cells: dict[str, Any] = {}
+    effect_counts: Counter[str] = Counter()
+    applicability_counts: Counter[str] = Counter()
+    for mechanism_key, members in sorted(mechanism_members.items()):
+        representative = sorted(
+            members,
+            key=lambda row: (
+                _estimated_physical_calls(row),
+                str(row.get("id") or ""),
+            ),
+        )[0]
+        member_ids = {
+            str(row.get("id") or "") for row in members if row.get("id")
+        }
+        implementation_status = str(
+            representative.get("implementation_status") or "BUILT"
+        )
+        for family in TEST2_CAPABILITY_FAMILIES:
+            if implementation_status == "UNBUILT":
+                applicability = "unbuilt"
+                applicability_basis = "DECLARED_MECHANISM_LACKS_DELIVERY_PLUMBING"
+            else:
+                decision = mechanism_applicability(representative, family)
+                raw = str(decision.get("status") or "UNKNOWN")
+                applicability = (
+                    "yes" if raw == "APPLICABLE"
+                    else "structural_no" if raw == "NOT_APPLICABLE"
+                    else "untested"
+                )
+                applicability_basis = str(decision.get("basis") or "")
+            applicability_counts[applicability] += 1
+
+            raw_rows = [
+                row for row in campaign.rows
+                if str(row.get("intervention_id") or "") in member_ids
+                and str(row.get("family_id") or "") == family
+            ]
+            valid = [
+                row for row in raw_rows
+                if row.get("delta_valid") is True
+                and row.get("valid_for_capability") is True
+                and row.get("control_valid_for_capability") is True
+                and row.get("delta") is not None
+            ]
+            censored = [
+                row for row in raw_rows
+                if row.get("censored_for_capability") is True
+                or (
+                    row.get("delta_valid") is not True
+                    and row.get("intervention_id") not in {None, "CONTROL"}
+                )
+            ]
+            positive = [row for row in valid if float(row["delta"]) > 0.0]
+            zero = [row for row in valid if float(row["delta"]) == 0.0]
+            negative = [row for row in valid if float(row["delta"]) < 0.0]
+            pass_population = [
+                row for row in valid
+                if float(row.get("control_score") or 0.0) >= 1.0
+            ]
+            breaks = [
+                row for row in pass_population
+                if float(row.get("score") or 0.0)
+                < float(row.get("control_score") or 0.0)
+            ]
+            censoring_rate = (
+                len(censored) / len(raw_rows) if raw_rows else 0.0
+            )
+
+            if breaks:
+                effect = "harmful"
+                signal_rows = breaks
+                effect_basis = "VALID_BASELINE_PASS_REGRESSION"
+            elif positive:
+                effect = "conditional"
+                signal_rows = positive
+                effect_basis = (
+                    "VALID_POSITIVE_DISCOVERY_REQUIRES_TEST2_PROMOTION"
+                )
+            elif (
+                len(zero) >= min_null
+                and not negative
+                and censoring_rate <= max_censor
+            ):
+                effect = "null_verified"
+                signal_rows = valid
+                effect_basis = (
+                    "DECISION_COMPLETE_VALID_ZERO_DELTA_WITH_BOUNDED_CENSORING"
+                )
+            elif censored and not valid:
+                effect = "null_censored"
+                signal_rows = []
+                effect_basis = "NO_CAPABILITY_VALID_EFFECT_OBSERVATION"
+            elif censored and not positive and not breaks and len(valid) < min_null:
+                effect = "null_censored"
+                signal_rows = valid
+                effect_basis = "INSUFFICIENT_VALID_ROWS_WITH_CENSORING"
+            else:
+                effect = "unknown"
+                signal_rows = valid
+                effect_basis = "INSUFFICIENT_DECISION_COMPLETE_EVIDENCE"
+            effect_counts[effect] += 1
+
+            condition = {
+                "status":(
+                    "POPULATED"
+                    if effect in {"conditional","harmful","null_verified"}
+                    and signal_rows
+                    else "UNMEASURED"
+                ),
+                "predicate":(
+                    condition_predicate(signal_rows)
+                    if effect in {"conditional","harmful","null_verified"}
+                    and signal_rows
+                    else None
+                ),
+            }
+            if effect == "conditional" and condition["predicate"] is None:
+                raise ValueError(
+                    "conditional mechanism-family cell requires condition predicate"
+                )
+
+            if pass_population:
+                low, high = _wilson(len(breaks), len(pass_population))
+                harm = {
+                    "status":"MEASURED",
+                    "population":"WITHIN_FAMILY_BASELINE_PASS_SENTINELS",
+                    "population_family":family,
+                    "n":len(pass_population),
+                    "break_count":len(breaks),
+                    "break_rate":len(breaks) / len(pass_population),
+                    "confidence_interval":{
+                        "method":"WILSON_95",
+                        "low":low,
+                        "high":high,
+                    },
+                    "observation_binding":[obs_id(row) for row in pass_population],
+                }
+            else:
+                harm = {
+                    "status":"UNMEASURED",
+                    "population":"WITHIN_FAMILY_BASELINE_PASS_SENTINELS",
+                    "population_family":family,
+                    "n":0,
+                    "break_count":0,
+                    "break_rate":None,
+                    "confidence_interval":None,
+                    "observation_binding":[],
+                }
+
+            cells[f"{mechanism_key}|{family}"] = {
+                "mechanism_key":mechanism_key,
+                "family_id":family,
+                "member_intervention_ids":sorted(member_ids),
+                "applicability":applicability,
+                "applicability_basis":applicability_basis,
+                "effect":effect,
+                "effect_basis":effect_basis,
+                "scientific_status":(
+                    "DISCOVERY_ONLY_PENDING_TEST2"
+                    if effect in {"conditional","harmful","null_verified"}
+                    else "UNRESOLVED"
+                ),
+                "conditions":condition,
+                "cost":bound_cost(signal_rows),
+                "harm":harm,
+                "composition":{
+                    "status":"unknown",
+                    "default_policy":"DO_NOT_ASSUME_ADDITIVE",
+                    "relations":{},
+                },
+                "compilable_status":"PENDING_TEST2_AND_COMPILER_CHECK",
+                "raw_observation_count":len(raw_rows),
+                "valid_effect_observation_count":len(valid),
+                "censored_observation_count":len(censored),
+                "censoring_rate":censoring_rate,
+                "positive_observation_count":len(positive),
+                "zero_observation_count":len(zero),
+                "negative_observation_count":len(negative),
+                "effect_observation_binding":[obs_id(row) for row in signal_rows],
+                "scheduled_priority":(
+                    f"{mechanism_key}|{family}" in campaign.priority_cell_keys
+                ),
+            }
+
+    return {
+        "schema_version":1,
+        "analysis_type":"MECHANISM_X_CAPABILITY_FAMILY_KNOWLEDGE_TABLE",
+        "model":getattr(campaign.runner, "model", None),
+        "family_count":len(TEST2_CAPABILITY_FAMILIES),
+        "semantic_mechanism_count":len(mechanism_members),
+        "cell_count":len(cells),
+        "applicability_states":[
+            "structural_no","unbuilt","yes","untested"
+        ],
+        "effect_states":[
+            "verified","conditional","null_verified",
+            "null_censored","harmful","unknown",
+        ],
+        "test1_2_may_assign_verified_positive":False,
+        "test2_owns_verified_promotion":True,
+        "conditional_requires_predicate":True,
+        "cost_effect_same_observation_set_required":True,
+        "composition_defaults_unknown":True,
+        "applicability_counts":dict(applicability_counts),
+        "effect_counts":dict(effect_counts),
+        "cells":cells,
+    }
+
+
 def _capability_floor_registry(campaign: Test12Campaign) -> dict[str, Any]:
     """Zero-call construct-validity and current-harness floor registry.
 
@@ -8135,6 +8478,13 @@ def write_outputs(campaign: Test12Campaign, results: dict[str, Any]) -> None:
         producer="test1.2",
         stage="report",
     )
+    knowledge_table = _mechanism_family_knowledge_table(campaign)
+    store.write_json(
+        "mechanism-family-knowledge-table.json",
+        knowledge_table,
+        producer="test1.2",
+        stage="mechanism-family-knowledge",
+    )
     store.write_json("residual-failure-ownership-1.2.json", residual, producer="test1.2", stage="report")
     store.write_json("fine-tuning-readiness-map-1.2.json", fine, producer="test1.2", stage="report")
     store.write_json("test1.2-priority-queue.json", {"schema_version":1,"queue":queue}, producer="test1.2", stage="report")
@@ -8152,6 +8502,7 @@ def write_outputs(campaign: Test12Campaign, results: dict[str, Any]) -> None:
         "field_learning_contract":"docs/FIELD-TRAFFIC-TO-VERIFIED-FIXTURE-PIPELINE.md",
         "field_policy_update_from_unverified_outcomes":False,
         "field_fixture_generation_only":True,
+        "mechanism_family_knowledge_table":"mechanism-family-knowledge-table.json",
         "runtime_semantics_map":"gpt-oss-runtime-semantics-map.json",
         "runtime_characterization_profile":"runtime-characterization-profile.json",
         "output_contract_map":"gpt-oss-output-contract-map.json",
