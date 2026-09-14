@@ -43,9 +43,10 @@ CALL_START_CUTOFF_SECONDS = ACTIVE_SECONDS
 
 PHASES = (
     ("recurrence_higher_order", 85 * 60),
-    ("failure_recovery", 120 * 60),
+    ("failure_recovery", 105 * 60),
     ("negative_transfer", 55 * 60),
-    ("purple_unicorn", 60 * 60),
+    ("censoring_cost_tradeoff", 30 * 60),
+    ("purple_unicorn", 45 * 60),
     ("knockout_distillation", 55 * 60),
     ("blind_confirmation", 35 * 60),
 )
@@ -71,6 +72,7 @@ REQUIRED_OUTPUTS = (
     "failure-recovery-matrix.json",
     "negative-transfer-boundaries.json",
     "harm-sentinel-evidence.json",
+    "censoring-cost-tradeoff.json",
     "purple-unicorn-registry.json",
     "knockout-registry.json",
     "minimal-recipe-registry.json",
@@ -105,6 +107,8 @@ DEFAULT_TEST2_CONFIG: dict[str, Any] = {
     "partial_recovery_threshold": 0.60,
     "acceptance_latency_ratio": 1.25,
     "max_effect_censoring_rate": 0.20,
+    "censoring_cost_probe_multipliers": [2, 4],
+    "censoring_cost_probe_max_budget": 4096,
     "harm_sentinel_min_per_control": 16,
     "harm_min_distinct_families": 4,
     "harm_max_break_rate": 0.05,
@@ -653,6 +657,7 @@ class Test2Campaign:
         label: str,
         source_key: str | None = None,
         blind: bool = False,
+        generation_budget_override: int | None = None,
     ) -> dict[str, Any] | None:
         self._assert_partition_allowed(case, blind=blind)
         if not self.can_start(deadline):
@@ -686,13 +691,18 @@ class Test2Campaign:
                 ),
             )
         )
+        treatment_budget = int(
+            generation_budget_override
+            if generation_budget_override is not None
+            else baseline_budget
+        )
         spec = _spec(
             sequence=self.sequence,
             case=case,
             label=label,
             cfg=self.cfg,
             baseline=False,
-            generation_budget=baseline_budget,
+            generation_budget=treatment_budget,
         )
         messages = build_treatment_messages(
             case,
@@ -1232,6 +1242,161 @@ def phase_negative_transfer(
             label = "CONTEXT_DEPENDENT"
         boundaries[key] = {**copy.deepcopy(summary), "boundary_class": label}
     return boundaries
+
+
+
+def phase_censoring_cost_tradeoff(
+    campaign: Test2Campaign,
+    deadline: float,
+    recurrence: dict[str, dict[str, Any]],
+) -> dict[str, Any]:
+    """Measure censored controls at their own compute cost without calling it a matched-budget rescue."""
+    censored_keys = {
+        key
+        for key, summary in recurrence.items()
+        if summary.get("classification") == "CENSORING_DOMINATED"
+        or float(summary.get("censoring_rate") or 0.0) > 0.0
+    }
+    if not censored_keys:
+        return {
+            "schema_version":1,
+            "tested_controls":0,
+            "findings":{},
+            "policy":"OWN_BUDGET_RESULTS_ARE_CAPABILITY_PLUS_COST_NOT_MATCHED_BUDGET_DELTAS",
+        }
+
+    recipe_by_key = {
+        _recipe_key(summary["recipe"]): copy.deepcopy(summary["recipe"])
+        for summary in recurrence.values()
+        if summary.get("recipe")
+    }
+    multipliers = [
+        int(value)
+        for value in campaign.cfg.get("censoring_cost_probe_multipliers", [2, 4])
+    ]
+    max_budget = int(campaign.cfg.get("censoring_cost_probe_max_budget", 4096))
+    findings: dict[str, Any] = {}
+
+    for key in sorted(censored_keys):
+        if not campaign.can_start(deadline):
+            break
+        recipe = recipe_by_key.get(key)
+        if recipe is None:
+            # Recurrence keys may contain composition syntax; use summary recipe directly.
+            summary = recurrence.get(key) or {}
+            recipe = copy.deepcopy(summary.get("recipe") or {})
+        if not recipe:
+            continue
+
+        source_rows = [
+            row for row in campaign.rows
+            if row.get("recipe")
+            and _recipe_key(row["recipe"]) == _recipe_key(recipe)
+            and row.get("censored_for_capability") is True
+        ]
+        by_fixture = {}
+        for row in source_rows:
+            by_fixture.setdefault(str(row.get("fixture_id")), row)
+
+        control_results = []
+        for fixture_id, censored in list(by_fixture.items())[:8]:
+            if not campaign.can_start(deadline):
+                break
+            case = campaign.case_by_id.get(fixture_id)
+            if case is None:
+                continue
+            baseline_budget = int(
+                censored.get("baseline_generation_budget")
+                or campaign.current_baseline_budgets.get(fixture_id)
+                or (campaign.cfg.get("generation_budget_by_family") or {}).get(
+                    _family(case),
+                    campaign.cfg["generation_budget"],
+                )
+            )
+            baseline_score = float(censored.get("baseline_score") or 0.0)
+            attempts = []
+            for multiplier in multipliers:
+                if not campaign.can_start(deadline):
+                    break
+                budget = min(max_budget, max(baseline_budget + 1, baseline_budget * multiplier))
+                row = campaign.treatment(
+                    case,
+                    deadline,
+                    phase="censoring_cost_tradeoff",
+                    kind="own_budget_cost_probe",
+                    recipe=recipe,
+                    label=f"own-budget-{_recipe_key(recipe)}-b{budget}",
+                    source_key="censoring-debt",
+                    generation_budget_override=budget,
+                )
+                if row is None:
+                    continue
+                valid = row.get("valid_for_capability") is True
+                attempts.append({
+                    "generation_budget":budget,
+                    "valid_for_capability":valid,
+                    "score":row.get("score") if valid else None,
+                    "baseline_score":baseline_score,
+                    "matched_budget_delta":None,
+                    "cost_ratio_vs_baseline":(
+                        float(budget) / float(baseline_budget)
+                        if baseline_budget > 0 else None
+                    ),
+                    "experiment_id":row.get("experiment_id"),
+                })
+                if valid:
+                    break
+            control_results.append({
+                "fixture_id":fixture_id,
+                "family_id":_family(case),
+                "baseline_budget":baseline_budget,
+                "baseline_score":baseline_score,
+                "attempts":attempts,
+                "minimum_valid_own_budget":next(
+                    (
+                        int(row["generation_budget"])
+                        for row in attempts
+                        if row.get("valid_for_capability") is True
+                    ),
+                    None,
+                ),
+            })
+
+        valid_own = [
+            attempt
+            for result in control_results
+            for attempt in result["attempts"]
+            if attempt.get("valid_for_capability") is True
+        ]
+        capability_gains = [
+            attempt
+            for result in control_results
+            for attempt in result["attempts"]
+            if attempt.get("valid_for_capability") is True
+            and float(attempt.get("score") or 0.0) > float(result["baseline_score"])
+        ]
+        findings[_recipe_key(recipe)] = {
+            "recipe":copy.deepcopy(recipe),
+            "censored_source_observations":len(source_rows),
+            "fixture_results":control_results,
+            "valid_own_budget_results":len(valid_own),
+            "capability_gains_with_extra_compute":len(capability_gains),
+            "finding_class":(
+                "CAPABILITY_PLUS_COST_OPPORTUNITY"
+                if capability_gains
+                else "OWN_BUDGET_VALID_NO_CAPABILITY_GAIN"
+                if valid_own
+                else "UNRESOLVED_CENSORING"
+            ),
+            "matched_budget_rescue_claim_allowed":False,
+        }
+
+    return {
+        "schema_version":1,
+        "tested_controls":len(findings),
+        "findings":findings,
+        "policy":"OWN_BUDGET_RESULTS_ARE_CAPABILITY_PLUS_COST_NOT_MATCHED_BUDGET_DELTAS",
+    }
 
 
 def phase_purple_unicorn(
@@ -2069,6 +2234,7 @@ def run_test2_campaign(
     recurrence: dict[str, dict[str, Any]] = {}
     recovery: dict[str, Any] = {"phenotypes": {}, "matrix": {}}
     negative_transfer: dict[str, Any] = {}
+    censoring_tradeoff: dict[str, Any] = {"findings": {}}
     unicorns: dict[str, Any] = {}
     knockouts: dict[str, Any] = {}
     blind: dict[str, Any] = {"effects": {}, "observations": 0}
@@ -2082,6 +2248,8 @@ def run_test2_campaign(
             recovery = phase_failure_recovery(campaign, deadline)
         elif phase_name == "negative_transfer":
             negative_transfer = phase_negative_transfer(campaign, deadline, recurrence)
+        elif phase_name == "censoring_cost_tradeoff":
+            censoring_tradeoff = phase_censoring_cost_tradeoff(campaign, deadline, recurrence)
         elif phase_name == "purple_unicorn":
             unicorns = phase_purple_unicorn(campaign, deadline, recurrence)
         elif phase_name == "knockout_distillation":
@@ -2104,6 +2272,12 @@ def run_test2_campaign(
         if phase_end >= campaign.call_start_cutoff:
             break
 
+    campaign.runner.store.write_json(
+        "censoring-cost-tradeoff.json",
+        censoring_tradeoff,
+        producer="test2",
+        stage="report",
+    )
     write_test2_outputs(
         campaign,
         recurrence,
