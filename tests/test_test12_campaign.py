@@ -3118,6 +3118,7 @@ def test_runtime_canary_is_time_based_excluded_and_confirms_drift(monkeypatch):
     campaign.sequence = 0
     campaign.call_latency_seconds = []
     campaign.runtime_profile_sha256 = "profile"
+    campaign.capability_call_origin = 0
     campaign.runtime_canary_baseline_tps = None
     campaign.runtime_canary_last_active_seconds = None
     campaign.runtime_canary_recent_ratios = []
