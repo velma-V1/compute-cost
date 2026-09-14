@@ -742,11 +742,12 @@ def test_exact_unicorn_search_targets_policy_families_before_open_reserve():
                 "classification":{"result_class":"THINK_TRUNCATED"},
             }
 
-    test2_module.phase_purple_unicorn(Campaign(),100.0,{}, {})
+    campaign = Campaign()
+    test2_module.phase_purple_unicorn(campaign,100.0,{}, {})
     assert Campaign.calls
     assert set(Campaign.calls) == {"family-a"}
-    assert Campaign.unicorn_search_audit["target_families"] == ["family-a"]
-    assert Campaign.unicorn_search_audit["open_reserve_calls"] == 0
+    assert campaign.unicorn_search_audit["target_families"] == ["family-a"]
+    assert campaign.unicorn_search_audit["open_reserve_calls"] == 0
 
 
 def test_exact_knockout_uses_compiler_order_not_effect_size():
