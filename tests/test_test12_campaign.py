@@ -289,6 +289,18 @@ def test_mechanism_applicability_distinguishes_not_applicable_from_failure():
     )
     assert tool_family["status"] == "APPLICABLE"
 
+    primitive_outside_declared_scope = test12_module.mechanism_applicability(
+        {"category":"PROMPT_CONTROL", "primitive_id":"QNT"},
+        "spatial_reasoning",
+    )
+    assert primitive_outside_declared_scope["status"] == "NOT_APPLICABLE"
+
+    adaptive_search = test12_module.mechanism_applicability(
+        {"category":"ADAPTIVE_SEARCH"},
+        "spatial_reasoning",
+    )
+    assert adaptive_search["status"] == "APPLICABLE"
+
     unknown = test12_module.mechanism_applicability(
         {"category":"FUTURE_UNCLASSIFIED_MECHANISM"},
         "arithmetic_numerical_reasoning",
@@ -324,6 +336,8 @@ def test_harness_applicability_registry_reports_family_gap_without_outcomes():
     assert arithmetic["inapplicable_mechanism_count"] == 1
     assert tools["applicable_mechanism_count"] == 2
     assert result["structural_not_applicable_is_not_failure"] is True
+    assert result["built_semantic_mechanism_count"] == 2
+    assert result["unbuilt_semantic_mechanism_count"] == 0
     assert result["model_limit_claim_requires_applicable_mechanism_search"] is True
 
 
