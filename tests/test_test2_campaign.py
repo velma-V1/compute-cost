@@ -434,7 +434,7 @@ def test_test12_exact_source_recipes_preserve_semantic_hash():
         source_recipes(mutated)
 
 
-def test_exact_policy_finalization_requires_blind_and_harm_proof():
+def test_exact_policy_finalization_requires_blind_harm_and_local_cell_proof():
     intervention = {
         "id": "CTRL-EXACT",
         "category": "PROMPT_CONTROL",
@@ -447,26 +447,52 @@ def test_exact_policy_finalization_requires_blind_and_harm_proof():
         "exact_test12_intervention": intervention,
         "discovery_semantic_hash": semantic_hash,
         "proof_semantic_hash": semantic_hash,
+        "proof_cell_key":"MECH|family-a",
+        "proof_family_id":"family-a",
         "ingredient_ids": ["TEST12:CTRL-EXACT"],
     }
-
-    class Campaign:
-        recipes = [recipe]
-
     policy = {
         "policy_id": "STATIC-CTRL-EXACT",
         "mode": "static",
         "intervention_id": "CTRL-EXACT",
         "intervention": intervention,
+        "test2_cell_gate_applied":True,
     }
     policy_lock = test2_module.hashlib.sha256(
         json.dumps(policy, sort_keys=True, separators=(",", ":")).encode("utf-8")
     ).hexdigest()
     blind_key = "POLICY-" + policy_lock[:16]
+    cell_resolution = {
+        "cells":[{
+            "cell_key":"MECH|family-a",
+            "family_id":"family-a",
+            "intervention_id":"CTRL-EXACT",
+            "evidence_resolved":True,
+            "route_fireable":True,
+            "shipping_state":"ACTIVE_VERIFIED",
+        }],
+        "active_cells":[{
+            "cell_key":"MECH|family-a",
+            "family_id":"family-a",
+            "intervention_id":"CTRL-EXACT",
+            "evidence_resolved":True,
+            "route_fireable":True,
+        }],
+        "disabled_cells":[],
+        "aggregate":{
+            "unit_count":1,
+            "resolved_unit_count":1,
+            "unresolved_unit_count":0,
+            "fireable_unit_count":1,
+            "unresolved_fireable_count":0,
+            "aggregate_shipping_valid":True,
+        },
+    }
     blind = {
         "locked_policy_proved_exactly": True,
         "locked_policy": policy,
         "policy_lock_sha256": policy_lock,
+        "cell_resolution":cell_resolution,
         "effects": {
             blind_key: {
                 "classification": "PROMISING",
@@ -474,24 +500,41 @@ def test_exact_policy_finalization_requires_blind_and_harm_proof():
             }
         },
     }
-    harm = {
-        test2_module._recipe_key(recipe): {
-            "harm_evidence_sufficient": True,
-            "harm_safe": True,
-            "break_rate_wilson90": [0.0, 0.04],
-        }
+    harm_summary = {
+        "recipe":recipe,
+        "harm_evidence_sufficient": True,
+        "harm_safe": True,
+        "break_rate_wilson90": [0.0, 0.04],
     }
 
-    rows = _final_recipe_registry({}, blind, harm, campaign=Campaign())
+    class Campaign:
+        recipes = [recipe]
+        provenance_mode = "TEST1.2_COMPILER_MANIFEST"
+        test12_shipping_claim_eligible = True
+        cell_resolution_map = cell_resolution
+        harm_evidence = {"harm":harm_summary}
+
+    campaign = Campaign()
+    rows = _final_recipe_registry(
+        {},
+        blind,
+        campaign.harm_evidence,
+        campaign=campaign,
+    )
     assert len(rows) == 1
     assert rows[0]["verified_for_shipping"] is True
+    assert rows[0]["unresolved_cell_count"] == 0
     assert rows[0]["recipe"]["exact_locked_policy"] == policy
     assert rows[0]["semantic_translation_used"] is False
 
-    harm[test2_module._recipe_key(recipe)]["harm_safe"] = False
-    blocked = _final_recipe_registry({}, blind, harm, campaign=Campaign())
+    campaign.harm_evidence["harm"]["harm_safe"] = False
+    blocked = _final_recipe_registry(
+        {},
+        blind,
+        campaign.harm_evidence,
+        campaign=campaign,
+    )
     assert blocked[0]["verified_for_shipping"] is False
-
 
 def test_stopping_rule_2_uses_fresh_blind_cost_exchange():
     class Runner:
