@@ -2621,7 +2621,7 @@ def _build_model_limit_and_finetuning(
         failures[_phenotype_id(source_copy)].append(source_copy)
 
     for row in campaign.rows:
-        if row.get("partition") == "TEST3_PROTECTED":
+        if row.get("partition") not in {"DISCOVERY", "VALIDATION"}:
             continue
         classification = row.get("classification") or {}
         if classification.get("result_class") == "ANSWER_CORRECT":
@@ -2742,7 +2742,7 @@ def _build_model_limit_and_finetuning(
             finetune.append(package)
             for fixture_id in valid_fixture_ids:
                 case = campaign.case_by_id.get(fixture_id)
-                if case is None or campaign._partition(case) == "TEST3_PROTECTED":
+                if case is None or campaign._partition(case) not in {"DISCOVERY", "VALIDATION"}:
                     continue
                 dataset.append({
                     "phenotype_id": phenotype,
@@ -2753,10 +2753,7 @@ def _build_model_limit_and_finetuning(
                     "expected": copy.deepcopy(case.get("expected")),
                     "scorer": case.get("scorer"),
                     "partition": campaign._partition(case),
-                    "train_eligible": bool(
-                        campaign._partition(case) in {"DISCOVERY", "VALIDATION"}
-                        and fixture_id in valid_fixture_ids
-                    ),
+                    "train_eligible": True,
                     "source_experiment_ids": [
                         str(row.get("experiment_id"))
                         for row in valid_rows
@@ -3257,7 +3254,11 @@ def write_test2_outputs(
         "test3-dataset-manifest.json",
         {
             "schema_version": 1,
-            "train_eligible_examples": dataset,
+            "train_eligible_examples": [
+                row for row in dataset
+                if row.get("train_eligible") is True
+                and row.get("partition") in {"DISCOVERY", "VALIDATION"}
+            ],
             "protected_fixture_ids": protected_ids,
             "candidate_phenotypes": [row["phenotype_id"] for row in finetune],
             "leakage_rule": "TEST3_PROTECTED fixtures and siblings derived from them are forbidden from training",
