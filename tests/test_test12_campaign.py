@@ -2426,6 +2426,73 @@ def test_stage0_profile_rejects_nominal_role_questions_without_valid_coverage(tm
     assert "ROLE_SPECIALIZATION_VALID_SCORE_MISSING" in profile["gate_failures"]
 
 
+def test_stage0_profile_blocks_campaign_when_auditor_executor_thesis_fails(tmp_path):
+    (tmp_path / "runtime.json").write_text(
+        json.dumps({
+            "model": "gpt-oss:20b",
+            "version": "test-runtime",
+            "model_size_bytes": 1,
+            "model_info": {},
+        }),
+        encoding="utf-8",
+    )
+
+    class Store:
+        run_dir = tmp_path
+
+    class Runner:
+        store = Store()
+        model = "gpt-oss:20b"
+
+    class Campaign:
+        runner = Runner()
+
+    runtime = {
+        "questions_answered": [1, 2, 3, 4, 5, 6, 9, 10, 46],
+        "thinking_markup_leak_count": 0,
+        "cross_call_statelessness_verified": True,
+    }
+    budgets = {
+        "questions_answered": list(range(11, 21)),
+        "all_families_reproducibly_valid": True,
+        "families": {f"family-{i}": {} for i in range(40)},
+        "resolved_generation_budget_by_family": {
+            f"family-{i}": 512 for i in range(40)
+        },
+    }
+    output_contracts = {
+        "questions_answered": [2, 21, 22, 23, 24],
+        "all_target_families_measured": True,
+        "families": {},
+    }
+    role = {
+        "questions_answered": [32, 33, 34, 35, 36, 37, 38, 43, 44],
+        "auditor_executor_thesis_status": "NOT_SUPPORTED",
+        "matched_family_count": 10,
+        "executor_accuracy": 0.80,
+        "auditor_low_accuracy": 0.78,
+        "auditor_high_accuracy": 0.79,
+        "second_pass_valid_pairs": 4,
+        "reasoning_exposure_valid_pairs": 4,
+        "candidate_quality_valid_observations": 8,
+        "candidate_injection_valid_observations": 2,
+        "malicious_tool_valid_observations": 2,
+        "verdict_reason_valid_observations": 2,
+        "candidate_injection_false_accept_rate": 0.0,
+        "malicious_tool_false_accept_rate": 0.0,
+        "verdict_reason_internal_consistency_rate": 1.0,
+    }
+
+    profile = foundation_module.build_runtime_characterization_profile(
+        Campaign(), runtime, budgets, output_contracts, role
+    )
+    assert profile["gate_passed"] is False
+    assert profile["auditor_role_allowed"] is True
+    assert profile["gate_failures"] == [
+        "AUDITOR_EXECUTOR_THESIS_NOT_SUPPORTED"
+    ]
+
+
 def test_stage0_profile_rejects_thinking_channel_leak(tmp_path):
     (tmp_path / "runtime.json").write_text(
         json.dumps({
