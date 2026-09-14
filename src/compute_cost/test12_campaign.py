@@ -305,6 +305,133 @@ UNCERTAINTY_CAPABILITY_FAMILIES = frozenset({
     "composite_agent_tasks",
 })
 
+PROMPT_PRIMITIVE_FAMILY_APPLICABILITY: dict[str, frozenset[str]] = {
+    "REQ": frozenset({
+        "instruction_following_constraint_stacking",
+        "strict_structured_output",
+        "planning_optimization",
+        "coding_generation",
+        "refactoring_under_constraints",
+        "prompt_instruction_conflict_handling",
+        "format_robustness",
+        "composite_agent_tasks",
+    }),
+    "DEC": frozenset({
+        "arithmetic_numerical_reasoning",
+        "algebra_quantitative_reasoning",
+        "formal_logic_deduction",
+        "planning_optimization",
+        "coding_generation",
+        "debugging_root_cause_diagnosis",
+        "decomposition",
+        "meta_reasoning",
+        "composite_agent_tasks",
+    }),
+    "EVD": frozenset({
+        "extraction_transformation",
+        "missing_information_handling",
+        "uncertainty_calibration",
+        "hallucination_resistance",
+        "context_retrieval",
+        "context_reasoning",
+        "distractor_noise_resistance",
+        "contradictory_information_handling",
+        "composite_agent_tasks",
+    }),
+    "STA": STATE_CAPABILITY_FAMILIES,
+    "SCH": frozenset({
+        "strict_structured_output",
+        "tool_argument_correctness",
+        "format_robustness",
+        "instruction_following_constraint_stacking",
+        "composite_agent_tasks",
+    }),
+    "VER": frozenset({
+        "arithmetic_numerical_reasoning",
+        "algebra_quantitative_reasoning",
+        "formal_logic_deduction",
+        "coding_generation",
+        "debugging_root_cause_diagnosis",
+        "test_generation_verification",
+        "self_correction",
+        "verification_critique",
+        "meta_reasoning",
+        "composite_agent_tasks",
+    }),
+    "ASM": frozenset({
+        "causal_counterfactual_reasoning",
+        "ambiguity_detection",
+        "missing_information_handling",
+        "uncertainty_calibration",
+        "hallucination_resistance",
+        "meta_reasoning",
+        "composite_agent_tasks",
+    }),
+    "CTR": frozenset({
+        "formal_logic_deduction",
+        "causal_counterfactual_reasoning",
+        "self_correction",
+        "verification_critique",
+        "meta_reasoning",
+        "adversarial_wording_robustness",
+        "composite_agent_tasks",
+    }),
+    "TMP": frozenset({
+        "temporal_reasoning",
+        "multi_turn_state_tracking",
+        "updated_obsolete_state_rejection",
+        "context_reasoning",
+        "composite_agent_tasks",
+    }),
+    "QNT": frozenset({
+        "arithmetic_numerical_reasoning",
+        "algebra_quantitative_reasoning",
+        "planning_optimization",
+        "composite_agent_tasks",
+    }),
+    "LOG": frozenset({
+        "formal_logic_deduction",
+        "causal_counterfactual_reasoning",
+        "prompt_instruction_conflict_handling",
+        "meta_reasoning",
+        "composite_agent_tasks",
+    }),
+    "AMB": UNCERTAINTY_CAPABILITY_FAMILIES | frozenset({
+        "contradictory_information_handling",
+        "prompt_instruction_conflict_handling",
+    }),
+    "CON": frozenset({
+        "instruction_following_constraint_stacking",
+        "contradictory_information_handling",
+        "prompt_instruction_conflict_handling",
+        "composite_agent_tasks",
+    }),
+    "MIN": frozenset({
+        "instruction_following_constraint_stacking",
+        "strict_structured_output",
+        "format_robustness",
+        "decomposition",
+        "composite_agent_tasks",
+    }),
+    "ALT": frozenset({
+        "planning_optimization",
+        "debugging_root_cause_diagnosis",
+        "self_correction",
+        "meta_reasoning",
+        "sibling_transfer_generalization",
+        "composite_agent_tasks",
+    }),
+    "PST": frozenset({
+        "planning_optimization",
+        "coding_generation",
+        "test_generation_verification",
+        "multi_tool_sequencing",
+        "tool_error_recovery",
+        "verification_critique",
+        "composite_agent_tasks",
+    }),
+}
+
 UNIVERSAL_MECHANISM_CATEGORIES = frozenset({
     "PROMPT_CONTROL",
     "REASONING_MODE",
@@ -337,6 +464,18 @@ def mechanism_applicability(
     """
     category = str(intervention.get("category") or "UNKNOWN")
     family = str(family or "UNKNOWN")
+    primitive_id = str(intervention.get("primitive_id") or "")
+
+    if primitive_id in PROMPT_PRIMITIVE_FAMILY_APPLICABILITY:
+        if family in PROMPT_PRIMITIVE_FAMILY_APPLICABILITY[primitive_id]:
+            return {
+                "status":"APPLICABLE",
+                "basis":"PROMPT_PRIMITIVE_HAS_DECLARED_FAMILY_RELEVANCE",
+            }
+        return {
+            "status":"UNKNOWN",
+            "basis":"PROMPT_PRIMITIVE_FAMILY_RELEVANCE_NOT_ESTABLISHED",
+        }
 
     if category in UNIVERSAL_MECHANISM_CATEGORIES:
         return {
