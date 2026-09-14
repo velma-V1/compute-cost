@@ -1725,7 +1725,9 @@ class Test12Campaign:
         )
         capability_calls = max(
             0,
-            self._physical_model_calls() - int(self.capability_call_origin),
+            self._physical_model_calls()
+            - int(self.capability_call_origin)
+            - int(self.runtime_canary_count),
         )
         while capability_calls >= (self.block_index + 1) * block_size:
             block_number = self.block_index + 1
@@ -1788,6 +1790,9 @@ class Test12Campaign:
                 ),
                 "configured_block_physical_calls":block_size,
                 "capability_physical_calls_observed":capability_calls,
+                "runtime_canary_calls_excluded_from_block_count":int(
+                    self.runtime_canary_count
+                ),
                 "block_call_floor":(block_number - 1) * block_size,
                 "block_call_ceiling":block_number * block_size,
                 "campaign_rows_in_block":len(block_rows),
@@ -5596,14 +5601,33 @@ def _semantic_mechanism_descriptor(intervention: dict[str, Any]) -> dict[str, An
             "semantic_axis": "named_prompt_mechanism",
             "label": label,
         }
+    elif category in {"REASONING_MODE", "GENERATION_BUDGET", "CONTEXT_WINDOW"}:
+        # These are explicit parameter sweeps of one mechanism. Effort, budget,
+        # and context size are variants inside the mechanism rather than
+        # distinct mechanisms.
+        mechanism_key = category
+        mechanism_basis = {
+            "category": category,
+            "semantic_axis": "parameterized_compute_mechanism",
+        }
+    elif category == "COMPUTE_COST_ROUTING" and intervention.get("temperature") is not None:
+        mechanism_key = "COMPUTE_COST_ROUTING:TEMPERATURE"
+        mechanism_basis = {
+            "category": category,
+            "semantic_axis": "temperature_parameter_sweep",
+        }
     else:
-        # For non-prompt controls the category + execution topology is the
-        # mechanism; budget/context/effort/etc. remain variant dimensions.
-        mechanism_key = f"{category}:{mode}"
+        # Execution topology alone is not semantic identity. Two retry controls
+        # can share the same execution mode while implementing materially
+        # different mechanisms. Preserve the named mechanism unless an explicit
+        # parameter-sweep rule above says variants belong together.
+        label = str(intervention.get("label") or ident)
+        mechanism_key = f"{category}:{mode}:{label}"
         mechanism_basis = {
             "category": category,
             "mode": mode,
-            "semantic_axis": "category_execution_topology",
+            "semantic_axis": "named_intervention_mechanism",
+            "label": label,
         }
 
     return {
