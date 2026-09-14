@@ -393,3 +393,160 @@ def test_test2_control_does_not_mutate_resolved_family_budget(monkeypatch):
     assert campaign.current_baseline_budgets[case["id"]] == 1024
     assert campaign.generation_budget_by_family == before
     assert (campaign.cfg.get("generation_budget_by_family") or {}) == {}
+
+
+def test_test12_exact_source_recipes_preserve_semantic_hash():
+    intervention = {
+        "id": "CTRL-EXACT",
+        "category": "PROMPT_CONTROL",
+        "mode": "single",
+        "instruction": "Preserve this exact instruction.",
+    }
+    semantic_hash = test2_module._intervention_fingerprint(intervention)
+    handoff = {
+        "handoff_mode": "TEST12_EXACT",
+        "test12_exact_controls": [{
+            "intervention_id": "CTRL-EXACT",
+            "exact_test12_intervention": intervention,
+            "discovery_semantic_hash": semantic_hash,
+            "proof_semantic_hash": semantic_hash,
+            "ingredient_ids": ["TEST12:CTRL-EXACT"],
+        }],
+    }
+
+    recipes = source_recipes(handoff)
+    assert len(recipes) == 1
+    assert recipes[0]["exact_test12_intervention"] == intervention
+    assert recipes[0]["proof_semantic_hash"] == semantic_hash
+
+    mutated = json.loads(json.dumps(handoff))
+    mutated["test12_exact_controls"][0]["exact_test12_intervention"]["instruction"] = "Changed"
+    with pytest.raises(ValueError, match="semantic drift"):
+        source_recipes(mutated)
+
+
+def test_exact_policy_finalization_requires_blind_and_harm_proof():
+    intervention = {
+        "id": "CTRL-EXACT",
+        "category": "PROMPT_CONTROL",
+        "mode": "single",
+        "instruction": "Exact",
+    }
+    semantic_hash = test2_module._intervention_fingerprint(intervention)
+    recipe = {
+        "intervention_id": "CTRL-EXACT",
+        "exact_test12_intervention": intervention,
+        "discovery_semantic_hash": semantic_hash,
+        "proof_semantic_hash": semantic_hash,
+        "ingredient_ids": ["TEST12:CTRL-EXACT"],
+    }
+
+    class Campaign:
+        recipes = [recipe]
+
+    policy = {
+        "policy_id": "STATIC-CTRL-EXACT",
+        "mode": "static",
+        "intervention_id": "CTRL-EXACT",
+        "intervention": intervention,
+    }
+    policy_lock = test2_module.hashlib.sha256(
+        json.dumps(policy, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+    blind_key = "POLICY-" + policy_lock[:16]
+    blind = {
+        "locked_policy_proved_exactly": True,
+        "locked_policy": policy,
+        "policy_lock_sha256": policy_lock,
+        "effects": {
+            blind_key: {
+                "classification": "PROMISING",
+                "normalized_effect": 0.2,
+            }
+        },
+    }
+    harm = {
+        test2_module._recipe_key(recipe): {
+            "harm_evidence_sufficient": True,
+            "harm_safe": True,
+            "break_rate_wilson90": [0.0, 0.04],
+        }
+    }
+
+    rows = _final_recipe_registry({}, blind, harm, campaign=Campaign())
+    assert len(rows) == 1
+    assert rows[0]["verified_for_shipping"] is True
+    assert rows[0]["recipe"]["exact_locked_policy"] == policy
+    assert rows[0]["semantic_translation_used"] is False
+
+    harm[test2_module._recipe_key(recipe)]["harm_safe"] = False
+    blocked = _final_recipe_registry({}, blind, harm, campaign=Campaign())
+    assert blocked[0]["verified_for_shipping"] is False
+
+
+def test_stopping_rule_2_uses_fresh_blind_cost_exchange():
+    class Runner:
+        model = "gpt-oss:20b"
+        results_root = Path("__missing__")
+
+    class Campaign:
+        runner = Runner()
+        cfg = {
+            "harm_max_break_rate": 0.05,
+            "policy_cost_ratio_ceiling": 1.25,
+            "minimum_accuracy_advantage_when_over_cost_ceiling": 0.02,
+        }
+        harm_evidence = {}
+
+    blind = {
+        "effects": {
+            "POLICY-x": {
+                "normalized_effect": 0.1,
+            }
+        },
+        "policy_cost_exchange": {
+            "mean_policy_cost_ratio": 2.0,
+            "accuracy_advantage": 0.0,
+        },
+    }
+    limits = {"phenotypes": {}}
+
+    result = test2_module._build_harness_stopping_rules(Campaign(), blind, limits)
+    by_id = {row["id"]: row for row in result["rules"]}
+    assert by_id["STOP-2"]["triggered"] is True
+    assert result["stop_shipping_new_controls"] is True
+
+
+def test_holdout_partition_is_consumed_once_across_runs(tmp_path):
+    fixtures = [
+        {"id": "blind-1"},
+        {"id": "blind-2"},
+    ]
+
+    class Store:
+        def __init__(self, root, run_id):
+            self.run_id = run_id
+            self.run_dir = root / run_id
+            self.run_dir.mkdir()
+
+        def write_json(self, name, payload, **kwargs):
+            (self.run_dir / name).write_text(json.dumps(payload), encoding="utf-8")
+
+    class Runner:
+        def __init__(self, root, run_id):
+            self.results_root = root
+            self.store = Store(root, run_id)
+
+    class Campaign:
+        def __init__(self, root, run_id):
+            self.runner = Runner(root, run_id)
+            self.cfg = {"holdout_max_cross_run_acceptance_uses": 1}
+
+    first = Campaign(tmp_path, "cycle-1")
+    claim = test2_module._claim_holdout_partition(first, "TEST2_BLIND", fixtures)
+    assert claim["status"] == "CONSUMED_ON_EXPOSURE"
+    assert claim["retire_permanently_after_cycle"] is True
+
+    second = Campaign(tmp_path, "cycle-2")
+    with pytest.raises(ValueError, match="already been consumed"):
+        test2_module._claim_holdout_partition(second, "TEST2_BLIND", fixtures)
