@@ -233,6 +233,94 @@ def test_collection_plan_is_full_campaign_under_14_hour_two_run_contract():
         assert required in plan["required_outputs"]
 
 
+def test_model_call_measurement_must_fork_actions():
+    bad = [
+        {
+            "measurement":"wasteful",
+            "phase":name,
+            "model_calls_added_by_measurement":True,
+            "outcomes":[
+                {"outcome":"LOW","action":"CONTINUE"},
+                {"outcome":"HIGH","action":"CONTINUE"},
+            ],
+        }
+        for name, _seconds in test12_module.PHASES
+    ]
+    with pytest.raises(ValueError, match="two outcomes lead to the same action"):
+        test12_module.validate_measurement_decision_contracts(bad)
+
+
+def test_zero_call_sizing_measurement_may_be_nondecision_only():
+    contracts = test12_module.measurement_decision_contracts()
+    sizing = next(
+        row for row in contracts
+        if row["measurement"] == "throughput_yield_and_power_buyback"
+    )
+    assert sizing["model_calls_added_by_measurement"] is False
+    assert sizing["decision_role"] == "SIZING_DIAGNOSTIC_ONLY"
+    assert len({
+        row["action"] for row in sizing["outcomes"]
+    }) == 1
+    test12_module.validate_measurement_decision_contracts(contracts)
+
+
+def test_mechanism_applicability_distinguishes_not_applicable_from_failure():
+    prompt = test12_module.mechanism_applicability(
+        {"category":"PROMPT_CONTROL"},
+        "arithmetic_numerical_reasoning",
+    )
+    assert prompt["status"] == "APPLICABLE"
+
+    tool = test12_module.mechanism_applicability(
+        {"category":"TOOL_POLICY"},
+        "arithmetic_numerical_reasoning",
+    )
+    assert tool["status"] == "NOT_APPLICABLE"
+
+    tool_family = test12_module.mechanism_applicability(
+        {"category":"TOOL_POLICY"},
+        "tool_argument_correctness",
+    )
+    assert tool_family["status"] == "APPLICABLE"
+
+    unknown = test12_module.mechanism_applicability(
+        {"category":"FUTURE_UNCLASSIFIED_MECHANISM"},
+        "arithmetic_numerical_reasoning",
+    )
+    assert unknown["status"] == "UNKNOWN"
+
+
+def test_harness_applicability_registry_reports_family_gap_without_outcomes():
+    class Campaign:
+        interventions = [
+            {
+                "id":"PROMPT",
+                "category":"PROMPT_CONTROL",
+                "mode":"single",
+                "label":"general",
+            },
+            {
+                "id":"TOOL",
+                "category":"TOOL_POLICY",
+                "mode":"single",
+                "label":"tool-only",
+            },
+        ]
+        intervention_by_id = {
+            row["id"]: row for row in interventions
+        }
+
+    result = test12_module._harness_applicability_registry(Campaign())
+    arithmetic = result["families"]["arithmetic_numerical_reasoning"]
+    tools = result["families"]["tool_argument_correctness"]
+
+    assert arithmetic["applicable_mechanism_count"] == 1
+    assert arithmetic["inapplicable_mechanism_count"] == 1
+    assert tools["applicable_mechanism_count"] == 2
+    assert result["structural_not_applicable_is_not_failure"] is True
+    assert result["model_limit_claim_requires_applicable_mechanism_search"] is True
+
+
 def test_prompt_injection_grammar_covers_every_declared_level_for_every_primitive():
     rows = generate_prompt_control_candidates()
     assert len(rows) >= 200
