@@ -19,6 +19,7 @@ from .test12_campaign import (
     _semantic_mechanism_descriptor,
     build_intervention_bank,
     mechanism_applicability,
+    mechanism_implementation_status,
 )
 
 MATRIX_PHASES = frozenset({
