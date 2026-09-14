@@ -8,7 +8,9 @@ Run 2/Test 2 owns recurrence and proof.
 from __future__ import annotations
 
 import copy
+import hashlib
 import json
+import math
 from collections import defaultdict
 from typing import Any
 
@@ -403,6 +405,208 @@ def run_runtime_semantics_gate(campaign: Any, deadline: float) -> dict[str, Any]
         "observation_count":len(rows),
     }
 
+
+
+def _round_up_budget(value: float, ladder: list[int]) -> int:
+    for budget in sorted(int(v) for v in ladder):
+        if budget >= value:
+            return budget
+    return max(int(v) for v in ladder)
+
+
+def run_runtime_budget_characterization(
+    campaign: Any,
+    deadline: float,
+    *,
+    replicates: int = 3,
+    safety_factor: float = 1.5,
+) -> dict[str, Any]:
+    """Replicated Stage-0 family budget calibration.
+
+    The operating point is not the first lucky valid completion. A family must
+    produce k/k capability-valid final answers at a budget, then the deployed
+    baseline is moved up by a safety factor and rounded to the tested ladder.
+    No campaign config is mutated here.
+    """
+    ladder = sorted(
+        {
+            int(campaign.cfg.get("base_generation_budget") or 256),
+            *[int(v) for v in campaign.cfg.get("generation_budgets", [256, 512, 1024, 2048])],
+        }
+    )
+    seeds = list(campaign.cfg.get("seeds") or [42, 43, 44])[:replicates]
+    if len(seeds) < replicates:
+        base = seeds[-1] if seeds else 42
+        seeds.extend(base + i + 1 for i in range(replicates - len(seeds)))
+
+    families: dict[str, Any] = {}
+    unresolved: list[str] = []
+    cases = _representative_cases(campaign)
+
+    for case in cases:
+        if not campaign.can_start(deadline):
+            break
+        family = _family(case)
+        levels: dict[str, Any] = {}
+        reproducible_boundary: int | None = None
+        reproducible_pass_boundary: int | None = None
+
+        for budget in ladder:
+            if not campaign.can_start(deadline):
+                break
+            obs: list[dict[str, Any]] = []
+            for seed in seeds:
+                if not campaign.can_start(deadline):
+                    break
+                row = _invoke_probe(
+                    campaign,
+                    deadline,
+                    probe_id=f"stage0-budget-{family}-{budget}-s{seed}",
+                    question_ids=[11,12,13,14,15,16,17,18,19,20],
+                    family_id=family,
+                    messages=[{"role":"user","content":str(case.get("prompt") or "")}],
+                    options={
+                        "num_predict":int(budget),
+                        "temperature":1.0,
+                        "top_p":1.0,
+                        "seed":int(seed),
+                    },
+                    request_fields={"think":"medium"},
+                    case=case,
+                )
+                if row is not None:
+                    row["capability_valid_final_answer"] = bool(
+                        row.get("ok")
+                        and not row.get("content_empty")
+                        and row.get("done_reason") != "length"
+                    )
+                    obs.append(row)
+            valid = [row for row in obs if row.get("capability_valid_final_answer") is True]
+            passed = [row for row in valid if float(row.get("score") or 0.0) >= 1.0]
+            levels[str(budget)] = {
+                "attempts":len(obs),
+                "valid_final_answers":len(valid),
+                "valid_rate":(len(valid)/len(obs)) if obs else None,
+                "passes":len(passed),
+                "pass_rate_among_valid":(len(passed)/len(valid)) if valid else None,
+                "seeds":[int(row.get("request",{}).get("options",{}).get("seed") or 0) for row in obs],
+                "done_reasons":sorted({str(row.get("done_reason")) for row in obs}),
+                "mean_eval_count":(
+                    sum(int(row["eval_count"]) for row in obs if isinstance(row.get("eval_count"), int))
+                    / max(1, sum(1 for row in obs if isinstance(row.get("eval_count"), int)))
+                ),
+            }
+            if len(obs) == replicates and len(valid) == replicates and reproducible_boundary is None:
+                reproducible_boundary = int(budget)
+            if len(obs) == replicates and len(passed) == replicates and reproducible_pass_boundary is None:
+                reproducible_pass_boundary = int(budget)
+            if reproducible_boundary is not None:
+                # No need to spend discovery clock proving larger raw boundaries.
+                break
+
+        if reproducible_boundary is None:
+            unresolved.append(family)
+            safe_budget = max(ladder)
+            basis = "NO_REPRODUCIBLE_VALID_BOUNDARY"
+        else:
+            safe_budget = _round_up_budget(
+                float(reproducible_boundary) * float(safety_factor),
+                ladder,
+            )
+            basis = "K_OF_K_VALID_BOUNDARY_WITH_SAFETY_FACTOR"
+
+        families[family] = {
+            "fixture_id":_fixture_id(case),
+            "difficulty_level":int(case.get("difficulty_level") or 0),
+            "replicates_required":int(replicates),
+            "reasoning_effort":"medium",
+            "temperature":1.0,
+            "top_p":1.0,
+            "tested_budget_ladder":list(ladder),
+            "levels":levels,
+            "minimum_reproducibly_valid_budget":reproducible_boundary,
+            "minimum_reproducibly_passing_budget":reproducible_pass_boundary,
+            "resolved_safe_baseline_budget":int(safe_budget),
+            "safety_factor":float(safety_factor),
+            "resolution_basis":basis,
+        }
+
+    expected_families = sorted({_family(case) for case in cases})
+    missing = sorted(set(expected_families) - set(families))
+    unresolved = sorted(set(unresolved) | set(missing))
+    resolved = {
+        family:int(payload["resolved_safe_baseline_budget"])
+        for family, payload in families.items()
+        if family not in unresolved
+    }
+    return {
+        "schema_version":1,
+        "stage":"STAGE0_RUNTIME_CHARACTERIZATION",
+        "questions_answered":[11,12,13,14,15,16,17,18,19,20],
+        "replicates_required":int(replicates),
+        "safety_factor":float(safety_factor),
+        "budget_ladder":list(ladder),
+        "families":families,
+        "resolved_generation_budget_by_family":resolved,
+        "unresolved_families":unresolved,
+        "all_families_reproducibly_valid":not bool(unresolved),
+        "config_mutated_during_characterization":False,
+    }
+
+
+def build_runtime_characterization_profile(
+    campaign: Any,
+    runtime_semantics: dict[str, Any],
+    budget_characterization: dict[str, Any],
+    role_specialization: dict[str, Any],
+) -> dict[str, Any]:
+    runtime_snapshot = {}
+    runtime_path = getattr(getattr(campaign.runner, "store", None), "run_dir", None)
+    if runtime_path is not None:
+        path = runtime_path / "runtime.json"
+        if path.is_file():
+            try:
+                runtime_snapshot = json.loads(path.read_text(encoding="utf-8"))
+            except Exception:
+                runtime_snapshot = {}
+
+    critical_runtime = {1,2,3,4,5,6,9,10}
+    runtime_answered = set(runtime_semantics.get("questions_answered") or [])
+    role_answered = set(role_specialization.get("questions_answered") or [])
+    budget_answered = set(budget_characterization.get("questions_answered") or [])
+
+    gate_reasons = []
+    if not critical_runtime.issubset(runtime_answered):
+        gate_reasons.append("RUNTIME_SEMANTICS_INCOMPLETE")
+    if not budget_characterization.get("all_families_reproducibly_valid"):
+        gate_reasons.append("FAMILY_BUDGET_CALIBRATION_INCOMPLETE")
+    if not {32,33,34,38}.issubset(role_answered):
+        gate_reasons.append("ROLE_SPECIALIZATION_INCOMPLETE")
+
+    identity = {
+        "model":getattr(campaign.runner, "model", None),
+        "runtime_version":runtime_snapshot.get("version"),
+        "model_size_bytes":runtime_snapshot.get("model_size_bytes"),
+        "model_info":runtime_snapshot.get("model_info"),
+    }
+    payload = {
+        "schema_version":1,
+        "stage":"STAGE0_RUNTIME_CHARACTERIZATION",
+        "identity":identity,
+        "runtime_semantics":copy.deepcopy(runtime_semantics),
+        "budget_characterization":copy.deepcopy(budget_characterization),
+        "role_specialization":copy.deepcopy(role_specialization),
+        "resolved_generation_budget_by_family":copy.deepcopy(
+            budget_characterization.get("resolved_generation_budget_by_family") or {}
+        ),
+        "gate_passed":not bool(gate_reasons),
+        "gate_failures":gate_reasons,
+        "capability_claims_allowed":not bool(gate_reasons),
+        "profile_scope":"EXACT_MODEL_RUNTIME_QUANT_CONFIGURATION",
+    }
+    stable = json.dumps(payload, sort_keys=True, separators=(",",":"), default=str)
+    payload["profile_sha256"] = hashlib.sha256(stable.encode("utf-8")).hexdigest()
+    return payload
 
 def _audit_case(case: dict[str, Any], candidate: str) -> dict[str, Any]:
     return {
