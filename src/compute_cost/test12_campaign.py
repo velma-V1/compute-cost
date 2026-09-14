@@ -1741,6 +1741,29 @@ class Test12Campaign:
         }
         self.interventions = list(merged_interventions.values())
         self.intervention_by_id = {str(row["id"]): row for row in self.interventions}
+        cell_budget_path = runner.store.run_dir / "test1.2-cell-budget-plan.json"
+        self.priority_cell_keys: set[str] = set()
+        self.priority_cell_scenario = None
+        if cell_budget_path.is_file():
+            try:
+                cell_budget = json.loads(cell_budget_path.read_text(encoding="utf-8"))
+                scenario_name = str(
+                    cell_budget.get("preferred_selection_scenario")
+                    or "decision_complete_estimate"
+                )
+                scenario = (
+                    (cell_budget.get("capacity_scenarios") or {}).get(scenario_name)
+                    or {}
+                )
+                self.priority_cell_keys = {
+                    str(value)
+                    for value in (scenario.get("selected_cell_keys") or [])
+                    if value
+                }
+                self.priority_cell_scenario = scenario_name
+            except (OSError, ValueError, TypeError):
+                self.priority_cell_keys = set()
+                self.priority_cell_scenario = None
         self.allowed_partitions = {"DISCOVERY"}
         self.controls: dict[tuple[str, int], dict[str, Any]] = {}
         self.invalid_controls: dict[tuple[str, int], dict[str, Any]] = {}
@@ -3394,6 +3417,12 @@ def _opportunity_search(
                 continue
             available.sort(
                 key=lambda intervention: (
+                    0
+                    if (
+                        f"{_semantic_mechanism_descriptor(intervention)['mechanism_key']}|{_family(case)}"
+                        in campaign.priority_cell_keys
+                    )
+                    else 1,
                     1 if str(intervention.get("category") or "") in category_by_phenotype[phenotype] else 0,
                     intervention_trials[str(intervention["id"])],
                     str(intervention.get("category") or ""),
