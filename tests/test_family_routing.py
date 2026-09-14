@@ -3,6 +3,7 @@ from compute_cost.family_routing import (
     classify_family,
     evaluate_family_classifier,
 )
+from compute_cost.operating_policy import route_unlabeled_task
 
 
 def _case(case_id, family, level, prompt):
@@ -51,3 +52,41 @@ def test_runtime_classification_returns_margin_not_fake_probability():
     assert result["family_id"] == "spatial_reasoning"
     assert result["classification_margin"] >= 0.0
     assert result["confidence_semantics"] == "COSINE_MARGIN_NOT_CALIBRATED_PROBABILITY"
+
+
+def test_runtime_route_uses_the_same_zero_call_classifier():
+    cases = [
+        _case("time0", "temporal_reasoning", 0, "weekday time hours after Monday"),
+        _case("space0", "spatial_reasoning", 0, "coordinate grid move east north"),
+    ]
+    classifier = build_family_classifier(cases)
+    policy = {
+        "families": {
+            "spatial_reasoning": {
+                "coverage_state": "PROVEN",
+                "reliable_floor": 10,
+                "cheapest_proven_raw_config": {"reasoning_effort": "low"},
+                "high_effort_extension_to": None,
+                "minimum_proven_recovery": None,
+                "robustness": {},
+            },
+            "temporal_reasoning": {
+                "coverage_state": "PROVEN",
+                "reliable_floor": 10,
+                "cheapest_proven_raw_config": {"reasoning_effort": "low"},
+                "high_effort_extension_to": None,
+                "minimum_proven_recovery": None,
+                "robustness": {},
+            },
+        },
+        "compounds": {},
+    }
+    result = route_unlabeled_task(
+        policy,
+        classifier,
+        "move east on a coordinate grid",
+        2,
+    )
+    assert result["action"] == "RAW"
+    assert result["family_classification"]["family_id"] == "spatial_reasoning"
+    assert result["family_classifier_model_calls"] == 0
