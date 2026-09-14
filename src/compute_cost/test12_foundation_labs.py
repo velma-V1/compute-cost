@@ -1278,6 +1278,8 @@ def build_runtime_characterization_profile(
         gate_reasons.append("OUTPUT_CONTRACT_TARGET_COVERAGE_INCOMPLETE")
     if not {32,33,34,35,36,37,38}.issubset(role_answered):
         gate_reasons.append("ROLE_SPECIALIZATION_INCOMPLETE")
+    if role_specialization.get("auditor_executor_thesis_status") != "SUPPORTED":
+        gate_reasons.append("AUDITOR_EXECUTOR_THESIS_NOT_SUPPORTED")
     family_count = len(
         (budget_characterization.get("families") or {})
     )
