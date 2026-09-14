@@ -6546,19 +6546,22 @@ def _harness_applicability_registry(
 
 
 def _capability_floor_registry(campaign: Test12Campaign) -> dict[str, Any]:
-    """Zero-call construct-validity and harness-floor registry.
+    """Zero-call construct-validity and current-harness floor registry.
 
-    A floor claim requires an explicitly capability-valid baseline failure and
-    no valid rescue. Coverage is reported rather than assumed: unresolved
-    fixtures are distinguished from fixtures exhaustively tested against every
-    declared intervention.
+    The search obligation is semantic mechanisms that are APPLICABLE or whose
+    applicability remains UNKNOWN for the fixture family. Structurally
+    NOT_APPLICABLE mechanisms are not failures and do not need to be executed.
+    Variants inside one semantic mechanism do not inflate independent coverage.
     """
-    declared_ids = sorted({
-        str(row.get("id"))
-        for row in campaign.interventions
-        if row.get("id")
-    })
-    declared_set = set(declared_ids)
+    applicability = _harness_applicability_registry(campaign)
+    intervention_to_mechanism = {
+        str(intervention.get("id") or ""): str(
+            _semantic_mechanism_descriptor(intervention)["mechanism_key"]
+        )
+        for intervention in campaign.interventions
+        if intervention.get("id")
+    }
+    declared_mechanisms = sorted(set(intervention_to_mechanism.values()))
 
     rows_by_fixture: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for row in campaign.rows:
@@ -6589,6 +6592,20 @@ def _capability_floor_registry(campaign: Test12Campaign) -> dict[str, Any]:
         baseline_score = float(latest_baseline.get("score") or 0.0)
         baseline_failed = baseline_score < 1.0
 
+        family_app = (
+            (applicability.get("families") or {}).get(family) or {}
+        )
+        applicable_set = set(
+            family_app.get("applicable_mechanism_keys") or []
+        )
+        unknown_set = set(
+            family_app.get("unknown_mechanism_keys") or []
+        )
+        inapplicable_set = set(
+            family_app.get("inapplicable_mechanism_keys") or []
+        )
+        search_obligation = applicable_set | unknown_set
+
         valid_treatments = [
             row for row in rows
             if str(row.get("intervention_id") or "") not in {"", "CONTROL"}
@@ -6601,6 +6618,11 @@ def _capability_floor_registry(campaign: Test12Campaign) -> dict[str, Any]:
             for row in valid_treatments
             if row.get("intervention_id")
         }
+        tested_mechanisms = {
+            intervention_to_mechanism[ident]
+            for ident in tested_ids
+            if ident in intervention_to_mechanism
+        }
         rescued_ids = sorted({
             str(row.get("intervention_id"))
             for row in valid_treatments
@@ -6608,55 +6630,84 @@ def _capability_floor_registry(campaign: Test12Campaign) -> dict[str, Any]:
             and float(row.get("score") or 0.0) >= 1.0
             and float(row.get("delta") or 0.0) > 0.0
         })
-        unresolved = bool(baseline_failed and not rescued_ids)
+        rescued_mechanisms = sorted({
+            intervention_to_mechanism[ident]
+            for ident in rescued_ids
+            if ident in intervention_to_mechanism
+        })
+
+        unresolved = bool(baseline_failed and not rescued_mechanisms)
         exhaustive = bool(
             unresolved
-            and declared_set
-            and declared_set.issubset(tested_ids)
+            and search_obligation
+            and search_obligation.issubset(tested_mechanisms)
         )
         coverage_fraction = (
-            len(tested_ids & declared_set) / len(declared_set)
-            if declared_set else 0.0
+            len(tested_mechanisms & search_obligation)
+            / len(search_obligation)
+            if search_obligation else None
         )
+
         if not baseline_failed:
             status = "BASELINE_CAPABLE"
-        elif rescued_ids:
+        elif rescued_mechanisms:
             status = "HARNESS_RECOVERABLE"
+        elif not applicable_set and not unknown_set:
+            status = "HARNESS_GAP_NO_APPLICABLE_MECHANISM"
         elif exhaustive:
-            status = "CONFIRMED_DECLARED_HARNESS_FLOOR"
+            status = "CONFIRMED_APPLICABLE_MECHANISM_FLOOR"
+        elif applicable_set.issubset(tested_mechanisms) and unknown_set:
+            status = "UNRESOLVED_APPLICABILITY_DEBT"
         else:
-            status = "UNRESOLVED_PARTIAL_CONTROL_SEARCH"
+            status = "UNRESOLVED_PARTIAL_APPLICABLE_MECHANISM_SEARCH"
 
         result_classes = sorted({
             str((row.get("classification") or {}).get("result_class") or "UNKNOWN")
             for row in valid_treatments
         })
         record = {
-            "fixture_id": fixture_id,
-            "family_id": family,
-            "difficulty_level": int(
+            "fixture_id":fixture_id,
+            "family_id":family,
+            "difficulty_level":int(
                 case.get("difficulty_level")
                 or latest_baseline.get("difficulty_level")
                 or 0
             ),
-            "baseline_score": baseline_score,
-            "baseline_result_class": str(
+            "baseline_score":baseline_score,
+            "baseline_result_class":str(
                 (latest_baseline.get("classification") or {}).get(
                     "result_class"
                 )
                 or "UNKNOWN"
             ),
-            "baseline_valid_for_capability": True,
-            "declared_intervention_count": len(declared_ids),
-            "valid_tested_intervention_count": len(tested_ids & declared_set),
-            "valid_tested_intervention_ids": sorted(tested_ids & declared_set),
-            "control_coverage_fraction": coverage_fraction,
-            "valid_rescue_intervention_ids": rescued_ids,
-            "valid_rescue_count": len(rescued_ids),
-            "observed_valid_treatment_result_classes": result_classes,
-            "unresolved_after_valid_search": unresolved,
-            "tested_against_all_declared_interventions": exhaustive,
-            "floor_status": status,
+            "baseline_valid_for_capability":True,
+            "declared_intervention_count":len(campaign.interventions),
+            "declared_semantic_mechanism_count":len(declared_mechanisms),
+            "applicable_mechanism_count":len(applicable_set),
+            "unknown_applicability_mechanism_count":len(unknown_set),
+            "structurally_inapplicable_mechanism_count":len(inapplicable_set),
+            "search_obligation_mechanism_count":len(search_obligation),
+            "search_obligation_mechanism_keys":sorted(search_obligation),
+            "valid_tested_intervention_count":len(tested_ids),
+            "valid_tested_intervention_ids":sorted(tested_ids),
+            "valid_tested_mechanism_count":len(
+                tested_mechanisms & search_obligation
+            ),
+            "valid_tested_mechanism_keys":sorted(
+                tested_mechanisms & search_obligation
+            ),
+            "mechanism_coverage_fraction":coverage_fraction,
+            "valid_rescue_intervention_ids":rescued_ids,
+            "valid_rescue_mechanism_keys":rescued_mechanisms,
+            "valid_rescue_count":len(rescued_mechanisms),
+            "observed_valid_treatment_result_classes":result_classes,
+            "unresolved_after_valid_search":unresolved,
+            "tested_against_all_applicable_or_unknown_mechanisms":exhaustive,
+            "structurally_inapplicable_is_not_failure":True,
+            "harness_gap_status":family_app.get("harness_gap_status"),
+            "floor_status":status,
+            "current_harness_floor_claim_eligible":bool(exhaustive),
+            "fundamental_model_limit_claimed":False,
         }
         records[fixture_id] = record
         family_records[family].append(record)
@@ -6676,7 +6727,11 @@ def _capability_floor_registry(campaign: Test12Campaign) -> dict[str, Any]:
         ]
         confirmed = [
             row for row in measured
-            if row["floor_status"] == "CONFIRMED_DECLARED_HARNESS_FLOOR"
+            if row["floor_status"] == "CONFIRMED_APPLICABLE_MECHANISM_FLOOR"
+        ]
+        harness_gaps = [
+            row for row in measured
+            if row["floor_status"] == "HARNESS_GAP_NO_APPLICABLE_MECHANISM"
         ]
         levels = sorted({
             int(row.get("difficulty_level") or 0)
@@ -6691,20 +6746,39 @@ def _capability_floor_registry(campaign: Test12Campaign) -> dict[str, Any]:
         else:
             construct_status = "PASS_ONLY_MEASURED"
 
+        family_app = (
+            (applicability.get("families") or {}).get(family) or {}
+        )
         family_construct[family] = {
-            "declared_fixture_count": len(cases),
-            "valid_baseline_fixture_count": len(measured),
-            "valid_baseline_pass_count": len(passes),
-            "valid_baseline_failure_count": len(failures),
-            "difficulty_levels_measured": levels,
-            "unresolved_fixture_count": len(unresolved),
-            "confirmed_declared_floor_count": len(confirmed),
-            "construct_status": construct_status,
+            "declared_fixture_count":len(cases),
+            "valid_baseline_fixture_count":len(measured),
+            "valid_baseline_pass_count":len(passes),
+            "valid_baseline_failure_count":len(failures),
+            "difficulty_levels_measured":levels,
+            "unresolved_fixture_count":len(unresolved),
+            "confirmed_applicable_mechanism_floor_count":len(confirmed),
+            "confirmed_declared_floor_count":len(confirmed),
+            "harness_gap_fixture_count":len(harness_gaps),
+            "applicable_mechanism_count":int(
+                family_app.get("applicable_mechanism_count") or 0
+            ),
+            "unknown_applicability_count":int(
+                family_app.get("unknown_applicability_count") or 0
+            ),
+            "inapplicable_mechanism_count":int(
+                family_app.get("inapplicable_mechanism_count") or 0
+            ),
+            "harness_gap_status":family_app.get("harness_gap_status"),
+            "construct_status":construct_status,
         }
 
     confirmed_ids = sorted(
         fixture_id for fixture_id, row in records.items()
-        if row["floor_status"] == "CONFIRMED_DECLARED_HARNESS_FLOOR"
+        if row["floor_status"] == "CONFIRMED_APPLICABLE_MECHANISM_FLOOR"
+    )
+    harness_gap_ids = sorted(
+        fixture_id for fixture_id, row in records.items()
+        if row["floor_status"] == "HARNESS_GAP_NO_APPLICABLE_MECHANISM"
     )
     unresolved_ids = sorted(
         fixture_id for fixture_id, row in records.items()
@@ -6720,26 +6794,35 @@ def _capability_floor_registry(campaign: Test12Campaign) -> dict[str, Any]:
     )
 
     return {
-        "schema_version": 1,
-        "analysis_type": "ZERO_CALL_CONSTRUCT_VALIDITY_AND_HARNESS_FLOOR",
-        "capability_claim": False,
-        "outcome_filter": (
+        "schema_version":2,
+        "analysis_type":"ZERO_CALL_CONSTRUCT_VALIDITY_AND_APPLICABLE_MECHANISM_FLOOR",
+        "capability_claim":False,
+        "fundamental_model_limit_claimed":False,
+        "floor_scope":"CURRENT_DECLARED_HARNESS_TAXONOMY",
+        "outcome_filter":(
             "EXPLICIT_CAPABILITY_VALID_BASELINES_AND_EXPLICIT_VALID_PAIRED_"
             "TREATMENTS_ONLY"
         ),
-        "declared_intervention_count": len(declared_ids),
-        "declared_intervention_ids": declared_ids,
-        "measured_fixture_count": len(records),
-        "unresolved_fixture_count": len(unresolved_ids),
-        "unresolved_fixture_ids": unresolved_ids,
-        "confirmed_declared_harness_floor_count": len(confirmed_ids),
-        "confirmed_declared_harness_floor_fixture_ids": confirmed_ids,
-        "boundary_family_count": len(boundary_families),
-        "boundary_families": boundary_families,
-        "unmeasured_family_count": len(unmeasured_families),
-        "unmeasured_families": unmeasured_families,
-        "families": family_construct,
-        "fixtures": records,
+        "declared_intervention_count":len(campaign.interventions),
+        "declared_semantic_mechanism_count":len(declared_mechanisms),
+        "coverage_unit":"SEMANTIC_MECHANISM_NOT_VARIANT",
+        "structurally_inapplicable_is_not_failure":True,
+        "unknown_applicability_is_search_debt":True,
+        "measured_fixture_count":len(records),
+        "unresolved_fixture_count":len(unresolved_ids),
+        "unresolved_fixture_ids":unresolved_ids,
+        "confirmed_applicable_mechanism_floor_count":len(confirmed_ids),
+        "confirmed_applicable_mechanism_floor_fixture_ids":confirmed_ids,
+        "confirmed_declared_harness_floor_count":len(confirmed_ids),
+        "confirmed_declared_harness_floor_fixture_ids":confirmed_ids,
+        "harness_gap_no_applicable_mechanism_count":len(harness_gap_ids),
+        "harness_gap_no_applicable_mechanism_fixture_ids":harness_gap_ids,
+        "boundary_family_count":len(boundary_families),
+        "boundary_families":boundary_families,
+        "unmeasured_family_count":len(unmeasured_families),
+        "unmeasured_families":unmeasured_families,
+        "families":family_construct,
+        "fixtures":records,
     }
 
 
