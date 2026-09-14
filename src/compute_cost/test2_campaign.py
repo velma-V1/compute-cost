@@ -304,7 +304,8 @@ def _capability_floor_signature(limits: dict[str, Any]) -> dict[str, Any]:
 
 def _previous_cycle_floor(campaign: "Test2Campaign") -> dict[str, Any] | None:
     root = Path(campaign.runner.results_root)
-    current = str(getattr(campaign.runner.store, "run_id", "") or "")
+    store = getattr(campaign.runner, "store", None)
+    current = str(getattr(store, "run_id", "") or "")
     model = str(campaign.runner.model)
     candidates: list[tuple[float, dict[str, Any]]] = []
     if not root.is_dir():
