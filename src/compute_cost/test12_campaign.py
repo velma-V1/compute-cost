@@ -5308,6 +5308,11 @@ def run_test12_campaign(
             results["budget_characterization"] = run_runtime_budget_characterization(
                 campaign, deadline
             )
+            campaign.baseline_generation_budget_by_family = copy.deepcopy(
+                (results["budget_characterization"] or {}).get(
+                    "resolved_generation_budget_by_family"
+                ) or {}
+            )
         elif phase_name == "role_specialization_gate":
             results["role_specialization"] = run_role_specialization_lab(campaign, deadline)
             profile = build_runtime_characterization_profile(
