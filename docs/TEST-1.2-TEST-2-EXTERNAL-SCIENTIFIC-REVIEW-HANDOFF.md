@@ -1341,20 +1341,21 @@ The current fail-closed behavior should remain: any hash mismatch, runtime-profi
 
 # 29. HIGHEST-VALUE ITEMS STILL MISSING
 
-The following items remain genuine improvement opportunities after Round 2. Items already implemented are deliberately omitted.
+The following items remain genuine improvement opportunities after Round 2 and the zero-call proof-efficiency pass.
 
 ## 1. Budget search efficiency
 
-Stage 0 now requires 3/3 reproducible validity plus safety headroom, but the ladder is still discrete.
+Stage 0 requires 3/3 reproducible validity plus safety headroom, but the search still walks a discrete budget ladder.
 
-Improve it with bracket/bisect search while preserving:
+Improve it with a bracket/bisect or information-gain search while preserving:
 - independent replicates;
 - family-level safety factor;
+- no capability scoring during runtime calibration;
 - fail-closed behavior when the tested maximum has no headroom.
 
 ## 2. Richer role-specialization sweep
 
-Stage 0 now measures executor versus low/high-effort auditor at the calibrated family budget and excludes invalid role observations.
+Stage 0 measures executor versus low/high-effort auditor at the calibrated family budget and excludes invalid role observations.
 
 Still add:
 - controlled candidate-quality sweep;
@@ -1363,23 +1364,7 @@ Still add:
 - adversarial candidate-text steering;
 - false-accept/false-reject curves by candidate quality.
 
-## 3. Control redundancy clustering
-
-Cluster discovered controls by rescued-fixture / failure-phenotype signature so multiple labels for one underlying mechanism do not consume Test 2 proof budget.
-
-## 4. Proof-value scheduler
-
-Allocate Test 2 recurrence calls by expected decision value:
-- near promotion/rejection boundary;
-- high-value but uncertain controls;
-- under-sampled families;
-- high censoring;
-- unresolved harm confidence;
-- unresolved generalization.
-
-Do not spend equal proof clock on already-settled candidates.
-
-## 5. Runtime-invalidity predictive model
+## 3. Runtime-invalidity predictive model
 
 Track truncation/runtime failure by:
 - family;
@@ -1392,7 +1377,7 @@ Track truncation/runtime failure by:
 
 Use it to predict doomed calls early and reallocate clock.
 
-## 6. Output-contract optimizer
+## 4. Output-contract optimizer
 
 Determine the cheapest reliable contract per family:
 - free text + extraction;
@@ -1400,19 +1385,19 @@ Determine the cheapest reliable contract per family:
 - native JSON;
 - schema/grammar.
 
-## 7. Context knee and context/reasoning competition
+## 5. Context knee and context/reasoning competition
 
 Measure real usable context, lost-in-middle, position sensitivity, and latency/VRAM knee under each reasoning effort.
 
-## 8. Sustained-load capability validity
+## 6. Sustained-load capability validity
 
 Separate warm-load latency degradation from actual capability degradation over a multi-hour run.
 
-## 9. Energy / hardware economics
+## 7. Energy / hardware economics
 
 Add Wh and thermal state to quality-per-cost decisions for local deployment.
 
-## 10. Manifest finalization efficiency
+## 8. Manifest finalization efficiency
 
 Current manifest finalization recursively hashes retained files and can create a long invisible post-processing tail. Replace full-file re-reading with streaming/incremental content hashes without weakening integrity.
 
@@ -1422,6 +1407,12 @@ The following are **no longer missing**:
 
 - shared exact Test 1.2 control execution inside Test 2;
 - semantic intervention hashing;
+- zero-call control redundancy clustering by valid rescue/harm signature;
+- representative-first proof ordering with alternates preserved;
+- adaptive recurrence proof-value scheduling;
+- independent fixture debt and seed debt as proof priorities;
+- early proof settlement for consistently positive or nonpositive candidates;
+- mixed-effect candidates receiving additional proof until their configured maximum;
 - fixture-clustered Test 2 effect statistics;
 - Benjamini-Hochberg FDR on positive Test 2 effects;
 - dedicated baseline-pass harm seeking with confidence-bound gating;
@@ -2148,7 +2139,57 @@ undefined comparison = null delta
 
 Do not revert to pooled raw observation counts.
 
-## 37.5 Remaining reviewer work
+## 37.5 Zero-call proof-efficiency additions
+
+### Control redundancy clustering
+
+Collection emits:
+
+```
+control-redundancy-map.json
+```
+
+Controls are grouped only when they have strong overlap in **valid rescued-fixture signatures**, at least two shared rescues, and no observed conflicting harm signal.
+
+This is not a semantic-equivalence claim.
+
+Test 2 proof order is:
+
+```
+frozen-winner-required controls
+→ redundancy-cluster representatives
+→ nonredundant candidates
+→ preserved alternates
+```
+
+Alternates are never deleted and remain fallback proof candidates if the representative fails, censors, or harms.
+
+### Adaptive recurrence proof-value scheduler
+
+Test 2 emits:
+
+```
+proof-value-scheduler.json
+```
+
+For exact Test 1.2 controls, recurrence allocation now prioritizes:
+
+- controls required by the frozen winner;
+- independent fixture debt;
+- independent seed debt;
+- valid-observation debt;
+- censoring uncertainty;
+- mixed effects that remain undecided.
+
+A candidate cannot settle recurrence proof merely because it has many repeated observations on one fixture.
+
+Minimum proof coverage explicitly requires independent fixtures and independent seeds.
+
+Consistently positive or consistently nonpositive candidates yield their remaining recurrence clock after the minimum proof contract is satisfied.
+
+Mixed candidates continue receiving evidence until resolved or the configured maximum proof count is reached.
+
+## 37.6 Remaining reviewer work
 
 The next reviewer should focus on **new unknowns**, not re-prove the fixed bugs.
 
@@ -2156,13 +2197,11 @@ Highest-value targets:
 
 1. budget bracket/bisection efficiency;
 2. candidate-quality auditor sweep;
-3. control-mechanism redundancy clustering;
-4. proof-value scheduling;
-5. early truncation prediction;
-6. output-contract optimization;
-7. context knee;
-8. sustained-load capability drift;
-9. energy economics;
-10. manifest-finalization performance.
+3. early truncation prediction;
+4. output-contract optimization;
+5. context knee;
+6. sustained-load capability drift;
+7. energy economics;
+8. manifest-finalization performance.
 
 Any new stop-ship finding should still be patched and covered by a regression test before another long campaign.
