@@ -170,7 +170,11 @@ class OllamaAdapter:
     def _phase_metrics(stream_events: list[dict[str, Any]], started_ns: int) -> dict[str, Any]:
         thinking_events: list[tuple[int, str]] = []
         answer_events: list[tuple[int, str]] = []
-        for event in stream_events:
+        first_thinking_event_index: int | None = None
+        first_answer_event_index: int | None = None
+        thinking_chunks_before_first_answer = 0
+        thinking_chars_before_first_answer = 0
+        for sequence, event in enumerate(stream_events):
             received = event.get("received_monotonic_ns")
             parsed = event.get("parsed")
             if not isinstance(received, int) or not isinstance(parsed, dict):
@@ -182,8 +186,15 @@ class OllamaAdapter:
             content = message.get("content")
             if isinstance(thinking, str) and thinking:
                 thinking_events.append((received, thinking))
+                if first_thinking_event_index is None:
+                    first_thinking_event_index = sequence
+                if first_answer_event_index is None:
+                    thinking_chunks_before_first_answer += 1
+                    thinking_chars_before_first_answer += len(thinking)
             if isinstance(content, str) and content:
                 answer_events.append((received, content))
+                if first_answer_event_index is None:
+                    first_answer_event_index = sequence
 
         def latency(items: list[tuple[int, str]]) -> int | None:
             return None if not items else items[0][0] - started_ns
@@ -201,6 +212,12 @@ class OllamaAdapter:
             "time_to_first_answer_ns": latency(answer_events),
             "thinking_span_ns": span(thinking_events),
             "answer_span_ns": span(answer_events),
+            "stream_event_count": len(stream_events),
+            "first_thinking_event_index": first_thinking_event_index,
+            "first_answer_event_index": first_answer_event_index,
+            "thinking_chunks_before_first_answer": thinking_chunks_before_first_answer,
+            "thinking_chars_before_first_answer": thinking_chars_before_first_answer,
+            "live_abort_supported_by_current_transport": False,
         }
 
     def health(self) -> dict[str, Any]:
