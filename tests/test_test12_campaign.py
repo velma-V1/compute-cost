@@ -2784,6 +2784,96 @@ def test_capability_floor_registry_separates_exhaustive_from_partial_search():
     assert family in result["boundary_families"]
 
 
+def test_auditor_executor_thesis_uses_matched_discordant_pairs():
+    pairs = []
+    for index in range(40):
+        pairs.append({
+            "fixture_id": f"auditor-win-{index}",
+            "family_id": f"family-{index % 8}",
+            "executor_correct": False,
+            "auditor_correct": True,
+        })
+    for index in range(10):
+        pairs.append({
+            "fixture_id": f"executor-win-{index}",
+            "family_id": f"family-{index % 8}",
+            "executor_correct": True,
+            "auditor_correct": False,
+        })
+    for index in range(20):
+        pairs.append({
+            "fixture_id": f"both-right-{index}",
+            "family_id": f"family-{index % 8}",
+            "executor_correct": True,
+            "auditor_correct": True,
+        })
+
+    result = foundation_module._auditor_executor_thesis_summary(
+        pairs,
+        target_valid_pairs=100,
+        minimum_valid_pairs=60,
+        alpha=0.05,
+    )
+
+    assert result["status"] == "SUPPORTED"
+    assert result["valid_pair_count"] == 70
+    assert result["auditor_only_wins"] == 40
+    assert result["executor_only_wins"] == 10
+    assert result["discordant_pair_count"] == 50
+    assert result["auditor_accuracy"] > result["executor_accuracy"]
+    assert result["one_sided_exact_p_value"] <= 0.05
+    assert result["full_campaign_allowed"] is True
+
+
+def test_auditor_executor_thesis_does_not_pass_on_equal_or_worse_auditor():
+    pairs = [
+        {
+            "fixture_id": f"pair-{index}",
+            "family_id": f"family-{index % 6}",
+            "executor_correct": index % 3 != 0,
+            "auditor_correct": index % 2 == 0,
+        }
+        for index in range(60)
+    ]
+    result = foundation_module._auditor_executor_thesis_summary(
+        pairs,
+        target_valid_pairs=100,
+        minimum_valid_pairs=60,
+        alpha=0.05,
+    )
+    assert result["status"] == "NOT_SUPPORTED"
+    assert result["auditor_minus_executor_accuracy"] <= 0.0
+    assert result["full_campaign_allowed"] is False
+
+
+def test_auditor_executor_case_selector_round_robins_families():
+    class Campaign:
+        partitions = {
+            "DISCOVERY": [
+                {
+                    "id": f"{family}-l{level}",
+                    "category": family,
+                    "difficulty_level": level,
+                }
+                for family in ("family-a", "family-b", "family-c")
+                for level in (2, 5, 8)
+            ]
+        }
+
+    selected = foundation_module._auditor_executor_thesis_cases(
+        Campaign(),
+        excluded_fixture_ids={"family-a-l8"},
+        limit=5,
+    )
+    ids = [row["id"] for row in selected]
+    assert ids[:3] == [
+        "family-a-l5",
+        "family-b-l8",
+        "family-c-l8",
+    ]
+    assert len({row["category"] for row in selected[:3]}) == 3
+
+
 def test_stage0_budget_search_screens_before_confirmation(monkeypatch):
     family = "arithmetic_numerical_reasoning"
     calls = []
