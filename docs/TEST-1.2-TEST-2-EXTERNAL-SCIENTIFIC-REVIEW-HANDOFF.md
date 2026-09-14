@@ -1,3 +1,199 @@
+# REVIEW ROUND 5 — DECISION VALUE, APPLICABILITY, AND REAL-WORLD COVERAGE
+
+**Validated scientific code head:** `e20b2078b4eb720c55a6855e43f4c0c9eb0132d9`
+
+**GitHub Actions:** Python 3.11 PASS + Python 3.12 PASS, workflow run 606.
+
+This round applies one governing test before model calls are provisioned:
+
+> Every model-call measurement must name its possible outcomes in advance, and
+> each outcome must lead to a different action. If two outcomes lead to the
+> same action, the measurement is not buying a decision.
+
+Zero-call telemetry is exempt only when it is explicitly sizing/diagnostic.
+Throughput, yield, power/energy, and POWER_BUYBACK-style metrics therefore
+remain recorded but cannot become GO/NO-GO gates merely because they exist.
+
+## Discovery ownership is now mechanism-first
+
+The prior flat-catalog contract is removed.
+
+Old:
+
+```
+every declared control candidate gets minimum coverage
+```
+
+Current:
+
+```
+semantic mechanism
+    ↓
+representative screen
+    ↓
+valid rescue ───────────────→ bounded variant search
+invalid/censored ───────────→ bounded validity-resolution variant search
+valid null / no rescue ─────→ close variants for this mechanism in Collection
+valid harm ─────────────────→ negative-transfer veto
+```
+
+Variants do not receive discovery calls merely because they are declared.
+Proof-grade replication remains owned by Run 2 / Test 2.
+
+Baseline-passing fixtures are no longer a general sampling frame. They are a
+bounded harm/stability sentinel reserve. Failing fixtures carry rescue
+information and therefore receive discovery priority.
+
+## Mechanism applicability is explicit
+
+Every mechanism/family pair now resolves to one of:
+
+```
+APPLICABLE
+NOT_APPLICABLE
+UNKNOWN
+```
+
+`NOT_APPLICABLE` is reserved for structural impossibility and is pruned before
+a model call. `UNKNOWN` is not silently pruned and is not counted as failure.
+
+New required artifact:
+
+- `harness-applicability-registry.json`
+
+For every capability family it records applicable, structurally inapplicable,
+and unresolved-applicability semantic mechanisms. This separates:
+
+```
+model failed after applicable harness search
+    !=
+harness had no relevant mechanism to offer
+```
+
+## Capability floors are now semantic and applicability-aware
+
+The floor registry no longer requires all intervention variants.
+
+Coverage unit:
+
+```
+SEMANTIC_MECHANISM_NOT_VARIANT
+```
+
+Current statuses include:
+
+```
+BASELINE_CAPABLE
+HARNESS_RECOVERABLE
+HARNESS_GAP_NO_APPLICABLE_MECHANISM
+CONFIRMED_APPLICABLE_MECHANISM_FLOOR
+UNRESOLVED_APPLICABILITY_DEBT
+UNRESOLVED_PARTIAL_APPLICABLE_MECHANISM_SEARCH
+```
+
+A current-harness floor means all applicable or still-unknown semantic
+mechanisms in the current taxonomy were validly searched without a rescue.
+It explicitly does **not** claim a fundamental model limit.
+
+Structurally inapplicable mechanisms are excluded from the search obligation.
+Unknown applicability remains debt.
+
+## Weight-update ownership is stricter
+
+A recurrent unresolved failure becomes a fine-tuning candidate only after all
+applicable or unresolved-applicability cheaper owner categories for that
+family have valid paired evidence.
+
+Invalid/censored treatments do not count as owner coverage.
+
+This keeps the boundary explicit:
+
+```
+harness search redistributes existing capability
+weight updates are allowed only after applicable cheaper owners are exhausted
+```
+
+## Coverage artifacts no longer reimpose flat-variant completeness
+
+`mechanism-coverage-ledger.json` now makes semantic mechanisms authoritative
+and preserves per-variant observations only as forensic detail.
+
+`control-grammar-coverage.json` keeps the complete declared variant inventory,
+but explicitly states that all declared variants being tested is **not**
+required for discovery completeness.
+
+Family manufacturing readiness excludes structurally inapplicable surfaces and
+requires valid observations only for applicable or unresolved-applicability
+surface obligations.
+
+## Field traffic is fixture input, not online truth
+
+New repository contract:
+
+- `docs/FIELD-TRAFFIC-TO-VERIFIED-FIXTURE-PIPELINE.md`
+
+The allowed loop is:
+
+```
+field traffic
+    ↓
+privacy-safe unverified event log
+    ↓
+clustering / missing-family / hard-case discovery
+    ↓
+fixture proposal
+    ↓
+human or trusted curator establishes ground truth + deterministic scorer
+    ↓
+future campaign cycle
+    ↓
+Test 1.2 discovery → Test 2 proof → knockout/compiler
+    ↓
+human acceptance
+    ↓
+new frozen policy
+```
+
+Unverified field outcomes cannot directly update policy, routing thresholds,
+acceptance, or model weights. Continuous routing may use only the current
+frozen verified policy.
+
+The durable product is therefore the growing corpus of validated hard fixtures
+with known answers and scorers, not merely the compiled policy.
+
+## Decision-value artifact
+
+New required run artifact:
+
+- `measurement-decision-ledger.json`
+
+The Test 1.2 plan validator rejects a model-call measurement if two
+preregistered outcomes map to the same action.
+
+A zero-call sizing metric may intentionally map all outcomes to the same action,
+but it must identify itself as non-decision-making.
+
+## Execution decision
+
+The next fresh campaign should use this code head or a descendant that preserves
+these contracts.
+
+Do not restore:
+
+- flat 299-control breadth;
+- proof replication inside Collection;
+- baseline-pass fixtures as the main discovery sampling frame;
+- structurally inapplicable mechanisms as failures;
+- unverified field outcomes as capability evidence;
+- throughput/yield/power metrics as acceptance gates without a real
+  outcome-to-action fork.
+
+At this point the remaining uncertainty is empirical: whether the corrected
+campaign discovers enough genuinely valid rescues and hard cases to produce a
+useful proof set and a materially larger training corpus.
+
+---
+
 # REVIEW ROUND 4 — STOP REVIEWING, START MEASURING
 
 This round changes execution order, not the scientific firewall.
@@ -44,6 +240,7 @@ observation stream, leaves those raw files unchanged, and regenerates:
 
 - `control-redundancy-map.json`
 - `capability-floor-registry.json`
+- `harness-applicability-registry.json`
 - `test1.2-zero-call-reanalysis.json`
 
 It then refreshes the derived handoff fields and re-finalizes the manifest.
@@ -69,20 +266,26 @@ membership is frozen. They cannot change cluster membership.
 
 ## Capability-floor registry
 
-The zero-call floor registry separates:
+The zero-call floor registry now separates:
 
 ```
 BASELINE_CAPABLE
 HARNESS_RECOVERABLE
-UNRESOLVED_PARTIAL_CONTROL_SEARCH
-CONFIRMED_DECLARED_HARNESS_FLOOR
+HARNESS_GAP_NO_APPLICABLE_MECHANISM
+CONFIRMED_APPLICABLE_MECHANISM_FLOOR
+UNRESOLVED_APPLICABILITY_DEBT
+UNRESOLVED_PARTIAL_APPLICABLE_MECHANISM_SEARCH
 ```
 
-A fixture is a confirmed declared harness floor only when:
+A fixture is a confirmed current-harness floor only when:
 
 1. its baseline failure is explicitly capability-valid;
-2. no explicitly valid paired intervention rescues it; and
-3. every declared intervention was validly tested on that fixture.
+2. no explicitly valid paired mechanism rescues it; and
+3. every applicable or unresolved-applicability semantic mechanism in the
+   current taxonomy was validly searched.
+
+Structurally inapplicable mechanisms are not failures and variants inside one
+semantic mechanism do not inflate independent coverage.
 
 Therefore a historical claim such as "54 fixtures resisted all controls" is
 not inherited automatically. The current validity firewall must independently
