@@ -2,7 +2,7 @@
 
 **Branch:** `build/gpt20b-test1.2-full-improvement`  
 **Scientific contract:** Round-1 and Round-2 stop-ship findings closed  
-**Latest Stage-0 deepening:** screen/escalate/confirm budget search + deep auditor evidence  
+**Latest Stage-0 deepening:** screen/escalate/confirm budget search + deep auditor evidence + post-budget output-contract optimization  
 **CI:** Python 3.11 PASS + Python 3.12 PASS
 
 This file preserves historical findings for forensic value. Where an older section conflicts with a later `CURRENT` or `ROUND 2` section, the later section is authoritative.
@@ -2205,16 +2205,57 @@ Stage 0 now uses its fixed role window more efficiently:
 
 Questions 35, 36, and 37 are now owned by the Stage-0 role gate.
 
+### Output-contract optimization — now implemented in Stage 0
+
+Family-level structured-output characterization now runs **after** replicated budget calibration, so JSON failures cannot be confused with an undersized generation budget.
+
+The operating-contract lab compares:
+
+```
+instruction-only JSON
+native format=json
+JSON-schema format
+```
+
+on the capability families where structured output is decision-critical.
+
+It uses:
+
+```
+SCREEN → CONFIRM
+```
+
+rather than replicating every contract indiscriminately.
+
+For each target family it records:
+
+- calibrated operating budget;
+- valid-final-answer rate;
+- JSON parse rate;
+- empty-content-with-thinking rate;
+- mean output token count;
+- independent confirmation status;
+- recommended reproducible contract.
+
+Required artifact:
+
+```
+gpt-oss-output-contract-map.json
+```
+
+Stage 0 fails closed when target-family contract coverage is incomplete.
+
+A contract may legitimately fail; **unmeasured** and **measured failure** are distinct states.
+
 ### Highest-value remaining optimization targets
 
 1. early truncation prediction / safe early abort;
-2. output-contract optimization by task family;
-3. context-window quality/cost knee;
-4. sustained-load capability drift;
-5. energy / hardware economics;
-6. manifest-finalization performance;
-7. richer deterministic diagnostic subscore vectors where binary acceptance hides useful structure;
-8. additional adversarial auditor trust-boundary work:
+2. context-window quality/cost knee;
+3. sustained-load capability drift;
+4. energy / hardware economics;
+5. manifest-finalization performance;
+6. richer deterministic diagnostic subscore vectors where binary acceptance hides useful structure;
+7. additional adversarial auditor trust-boundary work:
    - candidate prompt injection;
    - rationale/verdict divergence;
    - malicious tool-output influence.
