@@ -254,7 +254,7 @@ def load_tuning_recovery(run_dir: Path) -> dict[str, Any]:
             )
             sanitized_policy_rows.append(row)
         else:
-            row["delta"] = 0.0
+            row["delta"] = None
             row["recovery_quarantined_invalid"] = True
             quarantined_policy_rows.append(row)
 
@@ -352,7 +352,7 @@ def _sanitize_collection_observations(
                 row.get("control_score") or 0.0
             )
         else:
-            row["delta"] = 0.0
+            row["delta"] = None
             invalid_pairs += 1
             if not own_valid:
                 invalid_treatments += 1
@@ -1609,7 +1609,7 @@ class TuningRun:
                     "delta":(
                         float(trial.get("score") or 0.0)-control_score
                         if trial_delta_valid
-                        else 0.0
+                        else None
                     ),
                     "model_calls":calls,"route":route,
                     "valid_for_capability":bool(trial.get("valid_for_capability")),
