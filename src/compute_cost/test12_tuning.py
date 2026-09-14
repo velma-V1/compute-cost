@@ -2157,6 +2157,15 @@ def _build_test2_proof_manifest(
         "source_artifacts":{
             "knowledge_table":"mechanism-family-knowledge-table.json",
             "unaided_baseline":"unaided-model-capability-profile.json",
+            "runtime_characterization":"runtime-characterization-profile.json",
+        },
+        "stage0_reusable_evidence":{
+            "architecture_thesis":copy.deepcopy(
+                (collection.get("runtime_profile") or {}).get("architecture_thesis") or {}
+            ),
+            "auditor_trust_boundary":copy.deepcopy(
+                (collection.get("runtime_profile") or {}).get("auditor_trust_boundary") or {}
+            ),
         },
         "policy_referenced_intervention_ids":sorted(referenced_ids),
         "policy_referenced_controls_without_observed_validation_route":referenced_with_no_observed_route,
