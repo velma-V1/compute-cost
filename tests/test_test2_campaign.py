@@ -678,3 +678,114 @@ def test_effect_map_applies_bh_fdr_to_positive_promotions():
     assert summary["bh_fdr_q_value"] == pytest.approx(0.125)
     assert summary["classification"] == "UNCERTAIN_MULTIPLICITY"
     assert summary["classification_before_multiplicity"] in {"STRONG", "PROMISING"}
+
+
+
+def test_exact_test12_handoff_preserves_failure_provenance(tmp_path: Path):
+    cases = _cases()
+    partitions = partition_cases(cases)
+    source_case = partitions["DISCOVERY"][0]
+    fixture_id = source_case["id"]
+    family = source_case["category"]
+
+    collection_id = "collection-source"
+    collection = EvidenceStore(tmp_path, collection_id)
+    intervention = {
+        "id": "CTRL-EXACT",
+        "category": "PROMPT_CONTROL",
+        "mode": "single",
+        "instruction": "Exact control",
+    }
+    collection.write_json(
+        "full-control-candidate-registry.json",
+        {"candidates": [intervention]},
+        producer="test",
+        stage="test",
+    )
+    collection.write_json(
+        "runtime-characterization-profile.json",
+        {
+            "gate_passed": True,
+            "profile_sha256": "profile-sha",
+            "resolved_generation_budget_by_family": {family: 512},
+        },
+        producer="test",
+        stage="test",
+    )
+    collection.write_json(
+        "test1.2-handoff.json",
+        {"schema_version": 1},
+        producer="test",
+        stage="test",
+    )
+    collection.write_json(
+        "test1.2-opportunity-discovery-map.json",
+        {"unresolved_failed_fixtures": [fixture_id]},
+        producer="test",
+        stage="test",
+    )
+    collection.append_jsonl(
+        "test1.2-observations.jsonl",
+        {
+            "fixture_id": fixture_id,
+            "family_id": family,
+            "difficulty_level": source_case["difficulty_level"],
+            "partition": "DISCOVERY",
+            "experiment_id": "baseline-exp",
+            "intervention_id": "CONTROL",
+            "score": 0.0,
+            "valid_for_capability": True,
+            "classification": {
+                "result_class": "ANSWER_WRONG",
+                "valid_for_capability": True,
+            },
+        },
+    )
+    collection.finalize_manifest(metadata={"mode": "test"})
+
+    tuning_id = "tuning-source"
+    tuning = EvidenceStore(tmp_path, tuning_id)
+    tuning.write_json(
+        "test1.2-terminal-handoff.json",
+        {
+            "state": "TEST1.2_PROVISIONAL_COMPILER_COMPLETE",
+            "test2_blind_reserved_and_unexposed": True,
+            "winner_lock_sha256": "winner-lock",
+        },
+        producer="test",
+        stage="test",
+    )
+    tuning.write_json(
+        "inverted-model-integration-package.json",
+        {
+            "release_authorized": False,
+            "collection_run": collection_id,
+        },
+        producer="test",
+        stage="test",
+    )
+    tuning.write_json(
+        "compiled-harness-policy.json",
+        {
+            "winner_policy": {
+                "policy_id": "STATIC-CTRL-EXACT",
+                "mode": "static",
+                "intervention_id": "CTRL-EXACT",
+            }
+        },
+        producer="test",
+        stage="test",
+    )
+    tuning.finalize_manifest(metadata={"mode": "test"})
+
+    handoff = load_test1_handoff(tmp_path, tuning_id, cases)
+    failures = handoff["failures"]["failures"]
+    assert len(failures) == 1
+    failure = failures[0]
+    assert failure["fixture_id"] == fixture_id
+    assert failure["family_id"] == family
+    assert failure["difficulty_level"] == source_case["difficulty_level"]
+    assert failure["classification"]["result_class"] == "ANSWER_WRONG"
+    assert failure["valid_for_capability"] is True
+    assert failure["source_experiment_id"] == "baseline-exp"
+    assert failure["source_evidence_kind"] == "CAPABILITY_VALID_UNRESOLVED_BASELINE_FAILURE"
