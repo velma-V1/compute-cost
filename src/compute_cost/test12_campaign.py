@@ -33,6 +33,8 @@ from .evidence import EvidenceStore
 from .experiments import ExperimentSpec, make_experiment_id
 from .test1_campaign import _balanced_cases, _family, _fixture_id, partition_cases
 from .test11_campaign import TRUNCATION_CLASSES, CAPABILITY_FAILURE_CLASSES
+
+CENSORING_CLASSES = frozenset(set(TRUNCATION_CLASSES) | {"NO_FINAL_ANSWER"})
 TEST2_CAPABILITY_FAMILIES: tuple[str, ...] = (
     "instruction_following_constraint_stacking",
     "strict_structured_output",
@@ -373,6 +375,7 @@ DEFAULT_TEST12_CONFIG: dict[str, Any] = {
     "promotion_min_pass_sentinels": 8,
     "promotion_rescue_rate": 0.25,
     "promotion_max_capability_regression_rate": 0.10,
+    "max_classification_censoring_rate": 0.20,
     "max_promoted_mechanisms": 16,
     "max_source_recipes": 8,
     "max_composition_arms": 24,
@@ -1838,6 +1841,13 @@ class Test12Campaign:
             str(intervention.get("category") or "") == "GENERATION_BUDGET"
             or treatment_budget == control_budget
         )
+        result_class = str((row.get("classification") or {}).get("result_class") or "")
+        censored_for_capability = bool(
+            control_valid
+            and budget_comparison_valid
+            and not valid
+            and result_class in CENSORING_CLASSES
+        )
         delta_valid = bool(valid and control_valid and budget_comparison_valid)
         aux_prompt = sum(float((item.get("metrics") or {}).get("prompt_eval_count") or 0) for item in aux)
         aux_output = sum(float((item.get("metrics") or {}).get("eval_count") or 0) for item in aux)
@@ -1878,6 +1888,12 @@ class Test12Campaign:
             "valid_for_capability": bool(valid),
             "control_valid_for_capability": bool(control_valid),
             "delta_valid": bool(delta_valid),
+            "censored_for_capability": bool(censored_for_capability),
+            "censoring_class": (
+                "CONTROL_EXCEEDS_BASELINE_BUDGET"
+                if censored_for_capability
+                else None
+            ),
             "budget_comparison_valid": bool(budget_comparison_valid),
             "control_generation_budget": int(control_budget),
             "score": numeric,
@@ -1962,6 +1978,10 @@ def _wilson(successes: int, total: int, z: float = 1.6448536269514722) -> list[f
 def mechanism_summary(rows: Iterable[dict[str, Any]], cfg: dict[str, Any]) -> dict[str, Any]:
     all_data = [row for row in rows if row.get("intervention_id") not in {None, "CONTROL"}]
     invalid_data = [row for row in all_data if not _capability_valid(row)]
+    censored_data = [
+        row for row in all_data
+        if row.get("censored_for_capability") is True
+    ]
     data = [row for row in all_data if _capability_valid(row)]
     fails = [row for row in data if float(row.get("control_score", 0.0)) < 1.0]
     passes = [row for row in data if float(row.get("control_score", 0.0)) >= 1.0]
@@ -1978,6 +1998,7 @@ def mechanism_summary(rows: Iterable[dict[str, Any]], cfg: dict[str, Any]) -> di
     ]
     rescue_rate = len(rescues) / len(fails) if fails else 0.0
     cap_reg_rate = len(cap_reg) / len(passes) if passes else 0.0
+    censoring_rate = len(censored_data) / len(all_data) if all_data else 0.0
     mean_calls = mean([float(row.get("model_calls_per_application") or 0) for row in data]) if data else 0.0
     mean_tokens = mean([
         float((row.get("cost") or {}).get("prompt_tokens_observed") or 0)
@@ -1986,7 +2007,11 @@ def mechanism_summary(rows: Iterable[dict[str, Any]], cfg: dict[str, Any]) -> di
     ]) if data else 0.0
     mean_latency = mean([float((row.get("cost") or {}).get("wall_seconds") or 0) for row in data]) if data else 0.0
 
-    if (
+    if cap_reg and cap_reg_rate > float(cfg["promotion_max_capability_regression_rate"]):
+        classification = "CAPABILITY_HARM"
+    elif censoring_rate > float(cfg["max_classification_censoring_rate"]):
+        classification = "CENSORING_DOMINATED"
+    elif (
         len(fails) >= int(cfg["promotion_min_rescue_trials"])
         and rescue_rate >= float(cfg["promotion_rescue_rate"])
         and len(passes) >= int(cfg["promotion_min_pass_sentinels"])
@@ -1995,8 +2020,6 @@ def mechanism_summary(rows: Iterable[dict[str, Any]], cfg: dict[str, Any]) -> di
         classification = "PROMISING_CONDITIONAL_RESCUE"
         if _wilson(len(rescues), len(fails))[0] > 0.0 and cap_reg_rate == 0.0:
             classification = "STRONG_CONDITIONAL_RESCUE"
-    elif cap_reg and cap_reg_rate > float(cfg["promotion_max_capability_regression_rate"]):
-        classification = "CAPABILITY_HARM"
     elif fails and not rescues:
         classification = "NO_RESCUE_SIGNAL"
     elif regressions and not cap_reg:
@@ -2007,6 +2030,8 @@ def mechanism_summary(rows: Iterable[dict[str, Any]], cfg: dict[str, Any]) -> di
     discovery_status = (
         "NEW_RESCUE_OPPORTUNITY"
         if full_rescues
+        else "COST_CAPABILITY_TRADEOFF_OPPORTUNITY"
+        if censored_data
         else "NEGATIVE_BOUNDARY_OPPORTUNITY"
         if regressions
         else "NO_OBSERVED_OPPORTUNITY"
@@ -2015,6 +2040,7 @@ def mechanism_summary(rows: Iterable[dict[str, Any]], cfg: dict[str, Any]) -> di
         "requires_run2_recurrence": bool(rescues),
         "requires_run2_non_regression": bool(rescues or regressions),
         "requires_run2_cross_fixture_validation": bool(rescues),
+        "requires_own_budget_cost_probe": bool(censored_data),
         "collection_is_proof": False,
     }
 
@@ -2026,7 +2052,10 @@ def mechanism_summary(rows: Iterable[dict[str, Any]], cfg: dict[str, Any]) -> di
     )
     return {
         "n": len(data),
+        "raw_n": len(all_data),
         "invalid_observations_excluded": len(invalid_data),
+        "censored_observations": len(censored_data),
+        "censoring_rate": censoring_rate,
         "baseline_fail_trials": len(fails),
         "baseline_pass_trials": len(passes),
         "rescues": len(rescues),
@@ -2496,6 +2525,7 @@ def _rank_mechanisms(summary: dict[str, Any], campaign: Test12Campaign, limit: i
         cls = str(value.get("classification"))
         discovery_rank = {
             "NEW_RESCUE_OPPORTUNITY": 20,
+            "COST_CAPABILITY_TRADEOFF_OPPORTUNITY": 12,
             "NEGATIVE_BOUNDARY_OPPORTUNITY": 8,
             "NO_OBSERVED_OPPORTUNITY": 0,
         }.get(discovery, 0)
@@ -2503,6 +2533,7 @@ def _rank_mechanisms(summary: dict[str, Any], campaign: Test12Campaign, limit: i
             "STRONG_CONDITIONAL_RESCUE": 5,
             "PROMISING_CONDITIONAL_RESCUE": 4,
             "UNCERTAIN": 2,
+            "CENSORING_DOMINATED": 3,
             "TRUNCATION_SENSITIVE": 1,
             "NO_RESCUE_SIGNAL": 0,
             "CAPABILITY_HARM": -10,
