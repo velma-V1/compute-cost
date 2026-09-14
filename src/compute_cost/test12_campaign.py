@@ -3448,6 +3448,11 @@ def phase_family_control_floor(
 
         used_target_counts: dict[str, int] = defaultdict(int)
         used_phenotypes: dict[str, int] = defaultdict(int)
+        pass_sentinel_calls = 0
+        pass_sentinel_limit = max(
+            0,
+            int(campaign.cfg.get("baseline_pass_sentinel_surfaces_per_family", 2)),
+        )
         for category in FAMILY_CONTROL_SURFACES:
             if not campaign.can_start(deadline):
                 break
@@ -3455,16 +3460,29 @@ def phase_family_control_floor(
             if intervention is None:
                 continue
 
-            # Prefer a distinct unresolved phenotype. If this family is strong
-            # or currently has no unresolved failure, challenge its hardest pass.
-            candidates = list(unresolved) if unresolved else list(passed)
-            if not candidates:
+            # Failing fixtures carry rescue information. Passing fixtures are
+            # only a bounded harm/stability reserve, never the family sampling frame.
+            using_pass_sentinel = False
+            if unresolved:
+                candidates = list(unresolved)
+            elif pass_sentinel_calls < pass_sentinel_limit:
+                candidates = list(passed)
+                using_pass_sentinel = True
+            else:
+                candidates = []
+
+            if not candidates and unresolved:
                 unseen = [
                     case for case in _unmeasured_frontier_cases(campaign)
                     if _family(case) == family
                 ]
                 if unseen:
-                    campaign.control(unseen[0], deadline, seed=int(campaign.cfg["seeds"][0]), force=True)
+                    campaign.control(
+                        unseen[0],
+                        deadline,
+                        seed=int(campaign.cfg["seeds"][0]),
+                        force=True,
+                    )
                     candidates = [unseen[0]]
             if not candidates:
                 continue
@@ -3488,6 +3506,8 @@ def phase_family_control_floor(
             if row is not None:
                 used_target_counts[_fixture_id(case)] += 1
                 used_phenotypes[_failure_phenotype(campaign, case)] += 1
+                if using_pass_sentinel:
+                    pass_sentinel_calls += 1
                 if float(row.get("control_score", 0.0)) < 1.0 and float(row.get("score", 0.0)) >= 1.0:
                     unresolved = [
                         value for value in unresolved
@@ -3508,7 +3528,7 @@ def phase_family_control_floor(
     campaign.positive_work(
         "family_control_floor",
         start,
-        "all 40 families x mandatory surfaces distributed across distinct phenotypes/hard frontiers; remainder searches new opportunities",
+        "all 40 families search failing fixtures across applicable surfaces; baseline-pass use is bounded harm/stability sentinel reserve; remainder searches new opportunities",
     )
     return _group_summary(
         campaign.rows[start:],
