@@ -4255,7 +4255,7 @@ def test_knowledge_table_distinguishes_verified_null_from_censored_null():
 
     family = "formal_logic_deduction"
     valid_zero = []
-    for index in range(3):
+    for index in range(35):
         valid_zero.append({
             "fixture_id":f"zero-{index}",
             "family_id":family,
@@ -4313,3 +4313,139 @@ def test_knowledge_table_distinguishes_verified_null_from_censored_null():
     table = _mechanism_family_knowledge_table(campaign)
     assert table["cells"][key]["effect"] == "null_censored"
     assert table["cells"][key]["cost"]["status"] == "UNMEASURED"
+
+
+
+def test_knowledge_table_refuses_underpowered_null_and_harm_rate():
+    class Runner:
+        model = "fake-model"
+
+    class Campaign:
+        runner = Runner()
+        cfg = dict(test12_module.DEFAULT_TEST12_CONFIG)
+        interventions = [{
+            "id":"CTRL-A",
+            "category":"PROMPT_CONTROL",
+            "mode":"single",
+            "label":"control-a",
+        }]
+        priority_cell_keys = set()
+
+    family = "formal_logic_deduction"
+    campaign = Campaign()
+    campaign.intervention_by_id = {"CTRL-A": campaign.interventions[0]}
+    campaign.rows = [
+        {
+            "fixture_id":f"null-{index}",
+            "family_id":family,
+            "difficulty_level":4,
+            "intervention_id":"CTRL-A",
+            "intervention_category":"PROMPT_CONTROL",
+            "delta_valid":True,
+            "valid_for_capability":True,
+            "control_valid_for_capability":True,
+            "censored_for_capability":False,
+            "control_score":0.0,
+            "score":0.0,
+            "delta":0.0,
+            "generation_budget":1024,
+            "reasoning_effort":"medium",
+            "model_calls_per_application":1,
+            "cost":{
+                "prompt_tokens_observed":100,
+                "output_tokens_observed":10,
+                "wall_seconds":1.0,
+            },
+            "observation_sha256":f"under-null-{index}",
+        }
+        for index in range(3)
+    ]
+    key = "PROMPT_CONTROL:single:control-a|" + family
+    table = _mechanism_family_knowledge_table(campaign)
+    cell = table["cells"][key]
+    assert cell["effect"] == "unknown"
+    assert cell["null_evidence"]["precision_met"] is False
+
+    campaign.rows = [{
+        "fixture_id":"harm-one",
+        "family_id":family,
+        "difficulty_level":4,
+        "intervention_id":"CTRL-A",
+        "intervention_category":"PROMPT_CONTROL",
+        "delta_valid":True,
+        "valid_for_capability":True,
+        "control_valid_for_capability":True,
+        "censored_for_capability":False,
+        "control_score":1.0,
+        "score":0.0,
+        "delta":-1.0,
+        "generation_budget":1024,
+        "reasoning_effort":"medium",
+        "model_calls_per_application":1,
+        "cost":{
+            "prompt_tokens_observed":100,
+            "output_tokens_observed":10,
+            "wall_seconds":1.0,
+        },
+        "observation_sha256":"under-harm-1",
+    }]
+    table = _mechanism_family_knowledge_table(campaign)
+    cell = table["cells"][key]
+    assert cell["effect"] == "unknown"
+    assert cell["harm"]["status"] == "UNKNOWN_INSUFFICIENT_PRECISION"
+    assert cell["harm"]["break_count"] == 1
+    assert cell["harm"]["break_rate"] is None
+    assert cell["harm"]["confidence_interval"] is None
+
+
+def test_unaided_baseline_profile_makes_control_performance_first_class():
+    class Runner:
+        model = "fake-model"
+
+    class Campaign:
+        runner = Runner()
+        rows = [
+            {
+                "fixture_id":"base-a",
+                "family_id":"formal_logic_deduction",
+                "difficulty_level":3,
+                "intervention_id":"CONTROL",
+                "delta_valid":True,
+                "valid_for_capability":True,
+                "score":1.0,
+                "generation_budget":1024,
+                "cost":{
+                    "prompt_tokens_observed":80,
+                    "output_tokens_observed":12,
+                    "wall_seconds":0.5,
+                },
+                "observation_sha256":"base-obs-a",
+            },
+            {
+                "fixture_id":"base-b",
+                "family_id":"formal_logic_deduction",
+                "difficulty_level":4,
+                "intervention_id":"CONTROL",
+                "delta_valid":True,
+                "valid_for_capability":True,
+                "score":0.0,
+                "generation_budget":1024,
+                "cost":{
+                    "prompt_tokens_observed":90,
+                    "output_tokens_observed":12,
+                    "wall_seconds":0.6,
+                },
+                "observation_sha256":"base-obs-b",
+            },
+        ]
+
+    profile = test12_module._unaided_baseline_profile(Campaign())
+    family = profile["families"]["formal_logic_deduction"]
+    assert profile["raw_runtime_defaults_claimed"] is False
+    assert profile["test1_2_intervention_present"] is False
+    assert family["valid_observations"] == 2
+    assert family["pass_rate"] == 0.5
+    assert family["generation_budgets_observed"] == [1024]
+    assert family["by_difficulty"]["3"]["pass_rate"] == 1.0
+    assert family["by_difficulty"]["4"]["pass_rate"] == 0.0
+    assert family["observation_binding"] == ["base-obs-a", "base-obs-b"]
