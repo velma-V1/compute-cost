@@ -1,10 +1,10 @@
-"""Test 1.2 tuning/compile run.
+"""Test 1.2 validation-only tuning/compile run.
 
-Consumes a completed Test 1.2 collection run and compiles a model-specific
-adaptive harness in <= 6h15m. VALIDATION is used for tuning and policy lock;
-TEST2_BLIND and TEST3_PROTECTED are then used exactly once for immutable final
-acceptance. The two Test 1.2 runs are the complete model-onboarding decision
-for Inverted; no later characterization test is required.
+Consumes a completed Test 1.2 collection run and compiles a frozen provisional
+model-specific harness in <= 6h15m. Only VALIDATION may be exposed here.
+TEST2_BLIND is owned by Test 2 proof and TEST3_PROTECTED is owned by final
+release acceptance. This stage may rank and lock a candidate, but may not ship,
+certify, or consume future holdouts.
 """
 
 from __future__ import annotations
@@ -54,14 +54,12 @@ TUNING_HARD_SECONDS = (6 * 60 * 60) + (15 * 60)
 TUNING_ACTIVE_SECONDS = 6 * 60 * 60
 
 TUNING_PHASES = (
-    ("validation_baseline", 25 * 60),
-    ("candidate_harness_screen", 65 * 60),
-    ("successive_halving", 75 * 60),
-    ("routing_and_boundary_tuning", 60 * 60),
-    ("residual_failure_replay", 45 * 60),
-    ("final_validation_lock", 30 * 60),
-    ("test2_blind_acceptance", 30 * 60),
-    ("test3_protected_acceptance", 30 * 60),
+    ("validation_baseline", 30 * 60),
+    ("candidate_harness_screen", 75 * 60),
+    ("successive_halving", 90 * 60),
+    ("routing_and_boundary_tuning", 70 * 60),
+    ("residual_failure_replay", 55 * 60),
+    ("final_validation_lock", 40 * 60),
 )
 
 REQUIRED_COLLECTION_FILES = (
@@ -800,8 +798,8 @@ def build_tuning_plan(cases: list[dict[str, Any]], *, collection_run: str) -> di
         "wall_clock_seconds": TUNING_HARD_SECONDS,
         "active_model_seconds": TUNING_ACTIVE_SECONDS,
         "phases": [{"name": n, "seconds": s} for n, s in TUNING_PHASES],
-        "allowed_partitions": ["VALIDATION", "TEST2_BLIND", "TEST3_PROTECTED"],
-        "prohibited_partitions": ["DISCOVERY"],
+        "allowed_partitions": ["VALIDATION"],
+        "prohibited_partitions": ["DISCOVERY", "TEST2_BLIND", "TEST3_PROTECTED"],
         "phase_partition_policy": {
             "validation_baseline": "VALIDATION",
             "candidate_harness_screen": "VALIDATION",
@@ -809,11 +807,9 @@ def build_tuning_plan(cases: list[dict[str, Any]], *, collection_run: str) -> di
             "routing_and_boundary_tuning": "VALIDATION",
             "residual_failure_replay": "VALIDATION",
             "final_validation_lock": "VALIDATION",
-            "test2_blind_acceptance": "TEST2_BLIND",
-            "test3_protected_acceptance": "TEST3_PROTECTED",
         },
         "partition_counts": {name: len(rows) for name, rows in parts.items()},
-        "objective": "finish model onboarding inside the two-run ceiling: optimize on VALIDATION, freeze the winner, perform immutable blind/protected acceptance, and emit the final Inverted integration package",
+        "objective": "optimize on VALIDATION only, freeze an exact provisional winner, preserve all blind/protected holdouts, and hand the locked candidate to Test 2 for proof",
         "required_capability_families": list(TEST2_CAPABILITY_FAMILIES),
         "required_capability_family_count": len(TEST2_CAPABILITY_FAMILIES),
         "observed_validation_families": sorted({_family(case) for case in parts["VALIDATION"]}),
@@ -823,16 +819,18 @@ def build_tuning_plan(cases: list[dict[str, Any]], *, collection_run: str) -> di
         "per_family_non_regression_required": True,
         "blind_acceptance_is_tuning_input": False,
         "protected_acceptance_is_tuning_input": False,
-        "winner_locked_before_holdouts": True,
-        "no_additional_characterization_test_required": True,
+        "test2_blind_exposed": False,
+        "test3_protected_exposed": False,
+        "winner_locked_before_test2": True,
+        "test2_proof_required": True,
         "full_rerun_recovery_prohibited": True,
         "same_run_id_resume_required": True,
         "atomic_evidence_salvage_required": True,
         "winner_lock_must_survive_resume": True,
         "terminal_decisions": [
-            "FULL_INVERTED_INTEGRATION",
-            "CONSTRAINED_CAPABILITY_SCOPED_INTEGRATION",
-            "REJECT_MODEL_ADDITION",
+            "PROVISIONAL_READY_FOR_TEST2",
+            "PROVISIONAL_CONSTRAINED_FOR_TEST2",
+            "REJECT_BEFORE_TEST2",
         ],
         "required_outputs": list(REQUIRED_TUNING_OUTPUTS),
         "total_two_run_hard_ceiling_seconds": TUNING_HARD_SECONDS + COLLECTION_HARD_SECONDS,
@@ -844,10 +842,10 @@ def validate_tuning_plan(plan: dict[str, Any]) -> None:
         raise ValueError("tuning hard ceiling must be 6h15m")
     if sum(int(row["seconds"]) for row in plan["phases"]) != TUNING_ACTIVE_SECONDS:
         raise ValueError("tuning active phases must total six hours")
-    if plan["allowed_partitions"] != ["VALIDATION", "TEST2_BLIND", "TEST3_PROTECTED"]:
-        raise ValueError("tuning/acceptance must use VALIDATION then TEST2_BLIND then TEST3_PROTECTED")
-    if set(plan["prohibited_partitions"]) != {"DISCOVERY"}:
-        raise ValueError("tuning/acceptance may never reopen DISCOVERY")
+    if plan["allowed_partitions"] != ["VALIDATION"]:
+        raise ValueError("Test 1.2 tuning may expose VALIDATION only")
+    if set(plan["prohibited_partitions"]) != {"DISCOVERY","TEST2_BLIND","TEST3_PROTECTED"}:
+        raise ValueError("Test 1.2 tuning must preserve discovery and all holdouts")
     expected_phase_partitions = {
         "validation_baseline": "VALIDATION",
         "candidate_harness_screen": "VALIDATION",
@@ -855,13 +853,11 @@ def validate_tuning_plan(plan: dict[str, Any]) -> None:
         "routing_and_boundary_tuning": "VALIDATION",
         "residual_failure_replay": "VALIDATION",
         "final_validation_lock": "VALIDATION",
-        "test2_blind_acceptance": "TEST2_BLIND",
-        "test3_protected_acceptance": "TEST3_PROTECTED",
     }
     if plan.get("phase_partition_policy") != expected_phase_partitions:
-        raise ValueError("tuning/acceptance phase partition policy drifted")
+        raise ValueError("validation-only tuning phase partition policy drifted")
     if int(plan["total_two_run_hard_ceiling_seconds"]) >= 14 * 60 * 60:
-        raise ValueError("two-run model-to-harness compiler exceeds 14-hour target")
+        raise ValueError("two-run discovery+compiler exceeds 14-hour target")
     if int(plan.get("required_capability_family_count", 0)) != 40:
         raise ValueError("tuning must validate all 40 capability families")
     if plan.get("missing_validation_families"):
@@ -871,17 +867,14 @@ def validate_tuning_plan(plan: dict[str, Any]) -> None:
         )
     if plan.get("per_family_non_regression_required") is not True:
         raise ValueError("tuning must enforce per-family non-regression")
-    if plan.get("winner_locked_before_holdouts") is not True:
-        raise ValueError("winner must be frozen before blind/protected acceptance")
-    if plan.get("blind_acceptance_is_tuning_input") is not False or plan.get("protected_acceptance_is_tuning_input") is not False:
-        raise ValueError("blind/protected acceptance may never tune or select the policy")
-    if plan.get("no_additional_characterization_test_required") is not True:
-        raise ValueError("Test 1.2 must be terminal for model onboarding")
+    if plan.get("test2_blind_exposed") is not False or plan.get("test3_protected_exposed") is not False:
+        raise ValueError("Test 1.2 tuning may not consume blind/protected holdouts")
+    if plan.get("test2_proof_required") is not True:
+        raise ValueError("Test 2 proof must remain mandatory")
     if plan.get("full_rerun_recovery_prohibited") is not True:
         raise ValueError("Test 1.2 recovery may not require a full rerun")
     if plan.get("winner_lock_must_survive_resume") is not True:
-        raise ValueError("winner lock must survive tuning/acceptance recovery")
-
+        raise ValueError("winner lock must survive tuning recovery")
 
 def _candidate_registry(collection: dict[str, Any], limit: int) -> list[dict[str, Any]]:
     by_id = {
