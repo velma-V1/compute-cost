@@ -1735,3 +1735,238 @@ run discovery
 ```
 
 Everything else exists to make those four steps scientifically trustworthy and maximally valuable.
+
+
+---
+
+# 23. FINAL CONTINUOUS-IMPROVEMENT GOVERNANCE
+
+This section supersedes any earlier wording that implies Test 1.2 may consume
+blind/protected holdouts or directly authorize deployment.
+
+## 23.1 Holdouts are consumable resources
+
+A holdout partition is not permanently "clean" merely because it is excluded
+from candidate generation. Every acceptance result leaks information back into
+the development process.
+
+Therefore:
+
+1. each acceptance partition has a fixed cross-run use budget;
+2. the default use budget is **one acceptance cycle**;
+3. exposure consumes the partition even if the run later crashes;
+4. same-run atomic resume may continue the already-consumed partition;
+5. a different run/cycle may not reuse that partition;
+6. fixture IDs from retired acceptance partitions may not reappear in later
+   acceptance partitions;
+7. the next cycle must generate new fixtures from **new field failure
+   phenotypes**, not merely variants of already-fixed failures;
+8. cycle N acceptance fixtures must not have existed during cycle N-1
+   discovery/tuning.
+
+Required machine-readable evidence:
+
+- `holdout-consumption-ledger.json`
+- `holdout-replenishment-plan.json`
+- partition fingerprint;
+- exact fixture IDs;
+- cycle/run ID;
+- use count;
+- retirement state;
+- next-cycle zero-overlap requirement.
+
+## 23.2 Partition ownership
+
+The pipeline is:
+
+```
+Stage 0 runtime characterization
+    ↓
+Test 1.2 Collection / discovery
+    ↓
+Test 1.2 validation-only compiler
+    ↓
+Test 2 exact-control / exact-policy proof on TEST2_BLIND
+    ↓
+fresh protected final acceptance on TEST3_PROTECTED
+    ↓
+release
+```
+
+Test 1.2 tuning may expose **VALIDATION only**.
+
+It must not expose:
+
+- `TEST2_BLIND`;
+- `TEST3_PROTECTED`.
+
+Its output is a **frozen provisional policy**, not a shipping decision.
+
+Required status:
+
+```
+PROVISIONAL_READY_FOR_TEST2
+PROVISIONAL_CONSTRAINED_FOR_TEST2
+REJECT_BEFORE_TEST2
+```
+
+It must explicitly report:
+
+```
+release_authorized = false
+onboarding_complete = false
+test2_blind_exposed = false
+test3_protected_exposed = false
+test2_proof_required = true
+```
+
+## 23.3 Exact-control semantic identity
+
+Test 2 may not translate Test 1.2 controls into legacy prompt ingredients.
+
+For every Test 1.2 control promoted to Test 2:
+
+```
+discovery_semantic_hash == proof_semantic_hash
+```
+
+must hold.
+
+Test 2 must execute the original intervention through the same
+`Test12Campaign.treatment()` implementation used by Test 1.2.
+
+Proof may vary:
+
+- independent seed;
+- independent fixture;
+- family;
+- difficulty;
+- proof phase.
+
+Proof may not mutate the discovered control.
+
+The frozen compiled policy must also be blind-tested through the same
+`TuningRun.run_policy()` implementation used during compilation. Router and
+risk-gate semantics are therefore proof objects, not reconstructed prose.
+
+## 23.4 Runtime-conformance invariant
+
+Stage 0 is a hard prerequisite.
+
+Capability evidence is valid only under the characterized runtime identity and
+resolved family budgets.
+
+At minimum:
+
+```
+model identity
+runtime version
+runtime semantics profile hash
+resolved generation budget by family
+```
+
+must remain compatible through Test 2.
+
+A material runtime change is a **new onboarding event**, not a continuation.
+
+## 23.5 Censoring is first-class
+
+Token-budget censoring must never be counted as model incapability.
+
+When the same case/control flips from invalid/censored to valid solely because
+generation budget increased, classify the primary cause as:
+
+```
+INSUFFICIENT_TOKEN_BUDGET
+```
+
+The higher-budget result is capability-plus-cost evidence, not a matched-budget
+rescue.
+
+## 23.6 Harm uses confidence bounds
+
+Shipping safety is not judged by point break rate alone.
+
+For every reachable control in the frozen policy:
+
+```
+harm CI upper bound <= preregistered break-rate ceiling
+```
+
+is required.
+
+The current implementation uses a Wilson 90% interval.
+
+Controls reachable from the frozen router/risk gate create mandatory harm
+evidence debt. They are tested before exploratory controls.
+
+## 23.7 Concrete stopping rules
+
+The harness-improvement era stops or blocks shipping when any applicable rule
+fires:
+
+1. **Marginal net value <= 0** on a fresh holdout partition.
+2. **Policy cost > k × direct execution** while accuracy advantage is below the
+   preregistered exchange rate.
+3. **Harm CI upper bound > break-rate ceiling**, regardless of rescue rate.
+4. **Capability floor unchanged across two cycles.**
+
+Rule 4 is the strategy-transition rule:
+
+```
+HARNESS_CEILING_REACHED
+    ↓
+MOVE_TO_WEIGHTS
+```
+
+Required machine-readable artifact:
+
+- `harness-stopping-rules.json`
+
+## 23.8 Training yield is measured after scientific qualification
+
+Raw rescue count is not a training metric.
+
+The primary training-yield metrics are:
+
+```
+qualified_fine_tuning_phenotypes
+valid_train_eligible_examples
+training_pipeline_has_input
+```
+
+A cycle producing a small number of uncontaminated training examples is better
+than a large contaminated corpus.
+
+Required artifact:
+
+- `training-asset-yield.json`
+
+If the valid training set is empty, the correct status is:
+
+```
+NO_VALID_WEIGHT_TRAINING_INPUT_YET
+```
+
+not a fabricated fine-tuning recommendation.
+
+## 23.9 Operational law
+
+Do not rerun valid expensive evidence merely because architecture code changes.
+
+Use:
+
+```
+NO_FULL_RERUN_ATOMIC_RESUME
+```
+
+Preserve:
+
+- valid atomic observations;
+- completed phases;
+- elapsed active-time budget;
+- physical call budget;
+- frozen winner hash.
+
+Only replay the missing or damaged atomic slice.
+
