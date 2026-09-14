@@ -2,7 +2,7 @@
 
 **Branch:** `build/gpt20b-test1.2-full-improvement`  
 **Scientific contract:** Round-1 and Round-2 stop-ship findings closed  
-**Latest Stage-0 deepening:** screen/escalate/confirm budget search + deep auditor evidence + post-budget output-contract optimization + shadow early-truncation calibration  
+**Latest Stage-0 deepening:** screen/escalate/confirm budget search + deep auditor evidence + post-budget output-contract optimization + shadow early-truncation calibration + zero-call context/load/energy diagnostics  
 **CI:** Python 3.11 PASS + Python 3.12 PASS
 
 This file preserves historical findings for forensic value. Where an older section conflicts with a later `CURRENT` or `ROUND 2` section, the later section is authoritative.
@@ -2289,17 +2289,91 @@ No generation may be aborted from this predictor yet.
 
 Promotion requires both independent shadow evidence and a future live-stream transport with explicit safe cancellation semantics.
 
+### Zero-call context / load / energy diagnostics — now implemented
+
+The current branch derives three additional artifacts from evidence already collected during Test 1.2:
+
+```
+context-efficiency-knee.json
+sustained-load-drift.json
+energy-hardware-economics.json
+```
+
+#### Context efficiency
+
+The context report analyzes the explicit 4K / 8K / 16K / 32K Test 1.2 context-window controls and builds an observed score/latency Pareto frontier.
+
+It reports the smallest observed non-dominated context size.
+
+It is explicitly labeled:
+
+```
+ZERO_CALL_DERIVED_DIAGNOSTIC
+capability_claim = false
+```
+
+This is not allowed to replace the dedicated core-runner context sweep when an exact long-context boundary is required.
+
+#### Sustained-load drift
+
+The full seven-hour campaign is partitioned into early / middle / late evidence windows.
+
+The zero-call sentinel checks for:
+
+- >20% latency increase;
+- >0.05 mean-score drop;
+- >0.05 validity-rate drop;
+- >0.05 censoring-rate increase.
+
+This is a drift sentinel, not a causal thermal experiment.
+
+If it fires, use the existing core-runner sustained-load mode to isolate the cause.
+
+#### Energy / hardware economics
+
+Existing telemetry already records:
+
+- NVIDIA power draw;
+- GPU temperature;
+- utilization;
+- VRAM use;
+- clocks and p-state.
+
+The energy artifact integrates the existing GPU power trace and reports:
+
+- Wh / kWh;
+- mean / peak GPU watts;
+- mean / peak GPU temperature;
+- mean utilization;
+- peak VRAM;
+- Wh per physical model call;
+- Wh per valid capability observation;
+- Wh per valid rescue.
+
+Electricity price is deliberately not assumed.
+
+#### Manifest finalization
+
+The original real run exposed a long invisible manifest-finalization delay.
+
+Current `EvidenceStore` now uses:
+
+- incremental JSONL hashing;
+- in-process digest caching for files written through the store;
+- size + mtime invalidation;
+- streaming SHA-256 only when the cache is missing or stale.
+
+Therefore the old full reread bottleneck is no longer the normal path.
+
 ### Highest-value remaining optimization targets
 
-1. context-window quality/cost knee;
-2. sustained-load capability drift;
-3. energy / hardware economics;
-4. manifest-finalization performance;
-5. richer deterministic diagnostic subscore vectors where binary acceptance hides useful structure;
-6. additional adversarial auditor trust-boundary work:
+1. richer deterministic diagnostic subscore vectors where binary acceptance hides useful structure;
+2. additional adversarial auditor trust-boundary work:
    - candidate prompt injection;
    - rationale/verdict divergence;
-   - malicious tool-output influence.
+   - malicious tool-output influence;
+3. live-stream Ollama cancellation support, but only after the shadow early-truncation predictor demonstrates independently acceptable false-positive behavior;
+4. dedicated context/sustained-load confirmation only when their zero-call sentinels show a decision-relevant problem.
 
 These are not currently known stop-ship defects.
 
