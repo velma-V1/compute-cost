@@ -22,6 +22,10 @@ from typing import Any, Callable, Iterable
 from .characterization import execute_experiment
 from .experiments import ExperimentSpec, make_experiment_id
 from .evidence import EvidenceStore
+from .test11_campaign import TRUNCATION_CLASSES
+
+CENSORING_CLASSES = frozenset(set(TRUNCATION_CLASSES) | {"NO_FINAL_ANSWER"})
+
 from .test1_campaign import (
     ACTIVE_SECONDS,
     HARD_SECONDS,
@@ -99,6 +103,7 @@ DEFAULT_TEST2_CONFIG: dict[str, Any] = {
     "general_recovery_threshold": 0.80,
     "partial_recovery_threshold": 0.60,
     "acceptance_latency_ratio": 1.25,
+    "max_effect_censoring_rate": 0.20,
 }
 
 
@@ -741,6 +746,13 @@ class Test2Campaign:
             or self.cfg["generation_budget"]
         )
         budget_valid = treatment_budget == int(baseline_budget)
+        result_class = str((row.get("classification") or {}).get("result_class") or "")
+        censored_for_capability = bool(
+            baseline_valid
+            and budget_valid
+            and not valid
+            and result_class in CENSORING_CLASSES
+        )
         delta_valid = bool(valid and baseline_valid and budget_valid)
         record = {
             "schema_version": 1,
@@ -759,6 +771,12 @@ class Test2Campaign:
             "treatment_generation_budget": treatment_budget,
             "budget_comparison_valid": bool(budget_valid),
             "delta_valid": bool(delta_valid),
+            "censored_for_capability": bool(censored_for_capability),
+            "censoring_class": (
+                "CONTROL_EXCEEDS_BASELINE_BUDGET"
+                if censored_for_capability
+                else None
+            ),
             "score": numeric,
             "baseline_score": baseline_score,
             "delta": (numeric - baseline_score) if delta_valid else None,
@@ -778,25 +796,51 @@ def _effect_map(
     noise_sigma: float,
     bootstrap_samples: int,
     key_fn: Callable[[dict[str, Any]], str],
+    max_censoring_rate: float = 0.20,
 ) -> dict[str, dict[str, Any]]:
-    grouped: dict[str, list[float]] = defaultdict(list)
+    grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
     samples: dict[str, dict[str, Any]] = {}
     for row in rows:
         if row.get("kind") == "control":
             continue
-        if row.get("delta_valid") is not True:
-            continue
         key = key_fn(row)
-        grouped[key].append(float(row.get("delta", 0.0)))
+        grouped[key].append(row)
         samples.setdefault(key, copy.deepcopy(row.get("recipe") or {}))
+
     result: dict[str, dict[str, Any]] = {}
-    for key, deltas in grouped.items():
-        summary = effect_summary(
-            deltas,
-            noise_sigma,
-            bootstrap_samples=bootstrap_samples,
-            seed_key=f"test2:{key}",
-        )
+    for key, values in grouped.items():
+        valid = [
+            row for row in values
+            if row.get("delta_valid") is True and row.get("delta") is not None
+        ]
+        censored = [
+            row for row in values
+            if row.get("censored_for_capability") is True
+        ]
+        deltas = [float(row["delta"]) for row in valid]
+        if deltas:
+            summary = effect_summary(
+                deltas,
+                noise_sigma,
+                bootstrap_samples=bootstrap_samples,
+                seed_key=f"test2:{key}",
+            )
+        else:
+            summary = {
+                "n":0,
+                "median_delta":None,
+                "normalized_effect":0.0,
+                "classification":"NO_VALID_EFFECT",
+            }
+        censoring_rate = len(censored) / len(values) if values else 0.0
+        summary["raw_n"] = len(values)
+        summary["valid_n"] = len(valid)
+        summary["censored_n"] = len(censored)
+        summary["censoring_rate"] = censoring_rate
+        summary["requires_own_budget_cost_probe"] = bool(censored)
+        if censoring_rate > float(max_censoring_rate):
+            summary["classification_before_censoring"] = summary.get("classification")
+            summary["classification"] = "CENSORING_DOMINATED"
         summary["recipe"] = samples[key]
         result[key] = summary
     return result
@@ -878,6 +922,7 @@ def phase_recurrence(campaign: Test2Campaign, deadline: float) -> dict[str, dict
         [row for row in campaign.rows if row["phase"] == "recurrence_higher_order"],
         noise_sigma=campaign.noise_sigma,
         bootstrap_samples=int(campaign.cfg["bootstrap_samples"]),
+        max_censoring_rate=float(campaign.cfg["max_effect_censoring_rate"]),
         key_fn=lambda row: _recipe_key(row["recipe"]),
     )
 
@@ -1085,6 +1130,7 @@ def phase_negative_transfer(
         [row for row in campaign.rows if row["phase"] == "negative_transfer"],
         noise_sigma=campaign.noise_sigma,
         bootstrap_samples=int(campaign.cfg["bootstrap_samples"]),
+        max_censoring_rate=float(campaign.cfg["max_effect_censoring_rate"]),
         key_fn=lambda row: f"{_recipe_key(row['recipe'])}|family={row['family_id']}",
     )
     boundaries: dict[str, Any] = {}
@@ -1314,6 +1360,7 @@ def phase_blind(
         blind_rows,
         noise_sigma=campaign.noise_sigma,
         bootstrap_samples=int(campaign.cfg["bootstrap_samples"]),
+        max_censoring_rate=float(campaign.cfg["max_effect_censoring_rate"]),
         key_fn=lambda row: _recipe_key(row["recipe"]),
     )
     return {
