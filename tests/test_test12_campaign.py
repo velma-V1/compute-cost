@@ -2874,6 +2874,48 @@ def test_auditor_executor_case_selector_round_robins_families():
     assert len({row["category"] for row in selected[:3]}) == 3
 
 
+def test_stage0_runtime_semantics_verifies_cross_call_statelessness(monkeypatch):
+    class Campaign:
+        @staticmethod
+        def can_start(_deadline):
+            return True
+
+    def fake_probe(campaign, deadline, **kwargs):
+        probe_id = kwargs["probe_id"]
+        content = {
+            "runtime-stateless-a1": "STATE_ALPHA",
+            "runtime-stateless-b": "STATE_BETA",
+            "runtime-stateless-a2": "STATE_ALPHA",
+        }.get(probe_id, "OK")
+        budget = int(kwargs["options"]["num_predict"])
+        return {
+            "probe_id": probe_id,
+            "question_ids": kwargs["question_ids"],
+            "family_id": kwargs["family_id"],
+            "ok": True,
+            "content": content,
+            "content_empty": False,
+            "thinking": "",
+            "thinking_present": False,
+            "thinking_markup_in_content": False,
+            "done_reason": "stop",
+            "eval_count": min(4, budget),
+            "requested_num_predict": budget,
+            "eval_hit_budget": False,
+            "json_parse_ok": True,
+            "tool_calls": [],
+        }
+
+    monkeypatch.setattr(foundation_module, "_invoke_probe", fake_probe)
+    result = foundation_module.run_runtime_semantics_gate(Campaign(), 999.0)
+
+    assert result["cross_call_statelessness_verified"] is True
+    assert 46 in result["questions_answered"]
+    assert [
+        row["content"] for row in result["statelessness_probe_sequence"]
+    ] == ["STATE_ALPHA", "STATE_BETA", "STATE_ALPHA"]
+
+
 def test_stage0_budget_search_screens_before_confirmation(monkeypatch):
     family = "arithmetic_numerical_reasoning"
     calls = []
