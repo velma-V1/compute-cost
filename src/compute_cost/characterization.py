@@ -158,6 +158,8 @@ def execute_experiment(
         "score": scoring.get("score"),
         "status": scoring.get("status"),
         "response_text": response if generation.get("ok", False) else "",
+        "scoring_source_channel": "content",
+        "thinking_channel_excluded_from_scoring": True,
         "metrics": copy.deepcopy(generation.get("metrics") or {}),
         "timing": copy.deepcopy(generation.get("timing") or {}),
         "phase_metrics": copy.deepcopy(generation.get("phase_metrics") or {}),
