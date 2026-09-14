@@ -2941,6 +2941,76 @@ def test_auditor_executor_case_selector_round_robins_families():
     assert len({row["category"] for row in selected[:3]}) == 3
 
 
+def test_auditor_executor_thesis_executes_matched_fresh_pairs(monkeypatch):
+    family = "arithmetic_numerical_reasoning"
+
+    class Store:
+        rows = []
+
+        @classmethod
+        def append_jsonl(cls, path, row):
+            cls.rows.append((path, row))
+
+    class Runner:
+        store = Store()
+
+    class Campaign:
+        runner = Runner()
+        cfg = {
+            "base_generation_budget": 256,
+            "seeds": [42, 43, 44],
+            "auditor_executor_target_pairs": 3,
+            "auditor_executor_min_valid_pairs": 3,
+            "auditor_executor_alpha": 0.20,
+        }
+        baseline_generation_budget_by_family = {family: 1024}
+        partitions = {
+            "DISCOVERY": [
+                {
+                    "id": f"thesis-{index}",
+                    "category": family,
+                    "difficulty_level": 5 + index,
+                    "prompt": f"case {index}",
+                    "scorer": "exact",
+                    "expected": "right",
+                }
+                for index in range(3)
+            ]
+        }
+
+        @staticmethod
+        def can_start(_deadline):
+            return True
+
+    def fake_probe(campaign, deadline, **kwargs):
+        auditor = str(kwargs["probe_id"]).startswith("thesis-auditor-")
+        return {
+            "probe_id": kwargs["probe_id"],
+            "question_ids": kwargs["question_ids"],
+            "family_id": kwargs["family_id"],
+            "ok": True,
+            "content_empty": False,
+            "done_reason": "stop",
+            "content": "REJECT" if auditor else "wrong",
+            "score": 1.0 if auditor else 0.0,
+            "eval_count": 20,
+        }
+
+    monkeypatch.setattr(foundation_module, "_invoke_probe", fake_probe)
+    result = foundation_module.run_auditor_executor_thesis(
+        Campaign(),
+        999.0,
+    )
+
+    assert result["status"] == "SUPPORTED"
+    assert result["valid_pair_count"] == 3
+    assert result["auditor_accuracy"] == 1.0
+    assert result["executor_accuracy"] == 0.0
+    assert result["auditor_only_wins"] == 3
+    assert result["full_campaign_allowed"] is True
+    assert all(row["operating_budget"] == 1024 for row in result["pairs"])
+
+
 def test_stage0_runtime_semantics_verifies_cross_call_statelessness(monkeypatch):
     class Campaign:
         @staticmethod
