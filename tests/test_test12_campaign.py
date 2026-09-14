@@ -2293,6 +2293,10 @@ def test_stage0_profile_rejects_nominal_role_questions_without_valid_coverage(tm
             f"family-{i}": 512 for i in range(40)
         },
     }
+    output_contracts = {
+        "questions_answered": [2, 21, 22, 23, 24],
+        "families": {},
+    }
     role = {
         "questions_answered": [32, 33, 34, 38],
         "matched_family_count": 0,
@@ -2301,7 +2305,7 @@ def test_stage0_profile_rejects_nominal_role_questions_without_valid_coverage(tm
         "auditor_high_accuracy": None,
     }
     profile = foundation_module.build_runtime_characterization_profile(
-        Campaign(), runtime, budgets, role
+        Campaign(), runtime, budgets, output_contracts, role
     )
     assert profile["gate_passed"] is False
     assert "ROLE_SPECIALIZATION_VALID_MATCHED_COVERAGE_INSUFFICIENT" in profile["gate_failures"]
@@ -2341,6 +2345,10 @@ def test_stage0_profile_rejects_thinking_channel_leak(tmp_path):
             f"family-{i}": 512 for i in range(40)
         },
     }
+    output_contracts = {
+        "questions_answered": [2, 21, 22, 23, 24],
+        "families": {},
+    }
     role = {
         "questions_answered": [32, 33, 34, 38],
         "matched_family_count": 8,
@@ -2349,7 +2357,7 @@ def test_stage0_profile_rejects_thinking_channel_leak(tmp_path):
         "auditor_high_accuracy": 0.9,
     }
     profile = foundation_module.build_runtime_characterization_profile(
-        Campaign(), runtime, budgets, role
+        Campaign(), runtime, budgets, output_contracts, role
     )
     assert profile["gate_passed"] is False
     assert "THINKING_CHANNEL_LEAK_OBSERVED" in profile["gate_failures"]
@@ -2609,3 +2617,79 @@ def test_stage0_budget_search_screens_before_confirmation(monkeypatch):
     assert result["calls_used"] == 5
     assert result["families"][family]["search_strategy"] == "SCREEN_ESCALATE_CONFIRM"
     assert result["resolved_generation_budget_by_family"][family] == 2048
+
+
+
+def test_output_contract_gate_uses_calibrated_family_budget(monkeypatch):
+    family = "strict_structured_output"
+    calls = []
+
+    class FakeCampaign:
+        cfg = {
+            "base_generation_budget": 256,
+            "seeds": [42, 43, 44],
+        }
+        baseline_generation_budget_by_family = {family: 1024}
+        partitions = {
+            "DISCOVERY": [{
+                "id": "json-case",
+                "category": family,
+                "difficulty_level": 7,
+                "prompt": "Return the requested structured answer.",
+                "scorer": "exact",
+                "expected": "ok",
+            }]
+        }
+
+        @staticmethod
+        def can_start(_deadline):
+            return True
+
+    def fake_probe(
+        campaign,
+        deadline,
+        *,
+        probe_id,
+        question_ids,
+        family_id,
+        messages,
+        options,
+        request_fields=None,
+        case=None,
+    ):
+        calls.append({
+            "probe_id": probe_id,
+            "budget": int(options["num_predict"]),
+            "seed": int(options["seed"]),
+            "format": (request_fields or {}).get("format"),
+        })
+        native = (request_fields or {}).get("format")
+        parse_ok = native is not None
+        return {
+            "probe_id": probe_id,
+            "question_ids": question_ids,
+            "family_id": family_id,
+            "ok": True,
+            "content_empty": False,
+            "thinking_present": True,
+            "thinking_markup_in_content": False,
+            "done_reason": "stop",
+            "json_parse_ok": parse_ok,
+            "eval_count": 100,
+        }
+
+    monkeypatch.setattr(foundation_module, "_invoke_probe", fake_probe)
+    result = foundation_module.run_output_contract_gate(
+        FakeCampaign(),
+        999.0,
+        replicates=2,
+    )
+
+    assert calls
+    assert {row["budget"] for row in calls} == {1024}
+    assert result["families"][family]["recommended_contract"] in {
+        "NATIVE_JSON",
+        "JSON_SCHEMA",
+    }
+    assert result["budget_source"] == "STAGE0_REPLICATED_SAFE_FAMILY_BUDGET"
+    assert result["questions_answered"] == [2, 21, 22, 23, 24]
