@@ -2883,6 +2883,110 @@ def test_capability_floor_registry_separates_exhaustive_from_partial_search():
     assert family in result["boundary_families"]
 
 
+
+def test_zero_call_reanalysis_preserves_raw_evidence_and_refreshes_manifest(tmp_path):
+    run_id = "collection-old"
+    store = test12_module.EvidenceStore(tmp_path, run_id)
+    interventions = [
+        {
+            "id": "GRAM-REQ-01",
+            "category": "PROMPT_CONTROL",
+            "mode": "grammar_control",
+            "primitive_id": "REQ",
+            "placement": "prefix",
+            "representation": "prose",
+            "dose": 1.0,
+            "recurrence": 1,
+            "instruction": "Track requirements.",
+        },
+        {
+            "id": "GRAM-REQ-02",
+            "category": "PROMPT_CONTROL",
+            "mode": "grammar_control",
+            "primitive_id": "REQ",
+            "placement": "suffix",
+            "representation": "bullets",
+            "dose": 2.0,
+            "recurrence": 2,
+            "instruction": "Track requirements carefully.",
+        },
+    ]
+    store.write_json(
+        "full-control-candidate-registry.json",
+        {"schema_version": 1, "candidates": interventions},
+    )
+    store.append_jsonl(
+        "test1.2-observations.jsonl",
+        {
+            "fixture_id": "hard-1",
+            "family_id": "arithmetic_numerical_reasoning",
+            "difficulty_level": 8,
+            "intervention_id": "CONTROL",
+            "score": 0.0,
+            "valid_for_capability": True,
+            "classification": {
+                "result_class": "ANSWER_INCORRECT",
+                "valid_for_capability": True,
+            },
+        },
+    )
+    for intervention in interventions:
+        store.append_jsonl(
+            "test1.2-observations.jsonl",
+            {
+                "fixture_id": "hard-1",
+                "family_id": "arithmetic_numerical_reasoning",
+                "difficulty_level": 8,
+                "intervention_id": intervention["id"],
+                "intervention_category": "PROMPT_CONTROL",
+                "control_score": 0.0,
+                "score": 0.0,
+                "delta": 0.0,
+                "delta_valid": True,
+                "valid_for_capability": True,
+                "control_valid_for_capability": True,
+                "model_calls_per_application": 1,
+                "cost": {},
+                "classification": {
+                    "result_class": "ANSWER_INCORRECT",
+                    "valid_for_capability": True,
+                },
+            },
+        )
+    store.write_json("test1.2-handoff.json", {"schema_version": 1})
+    store.finalize_manifest(metadata={"original": True})
+
+    raw_path = store.run_dir / "test1.2-observations.jsonl"
+    raw_before = raw_path.read_bytes()
+
+    result = test12_module.reanalyze_test12_collection(tmp_path, run_id)
+
+    assert result["model_calls_added"] == 0
+    assert result["runtime_calls_added"] == 0
+    assert result["raw_observations_unchanged"] is True
+    assert result["semantic_cluster_count"] == 1
+    assert result["confirmed_declared_harness_floor_count"] == 1
+    assert raw_path.read_bytes() == raw_before
+
+    redundancy = json.loads(
+        (store.run_dir / "control-redundancy-map.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert redundancy["clustering_basis"] == "INTERVENTION_SEMANTICS_ONLY"
+    assert redundancy["membership_uses_outcomes"] is False
+
+    handoff = json.loads(
+        (store.run_dir / "test1.2-handoff.json").read_text(encoding="utf-8")
+    )
+    assert handoff["capability_floor_registry"] == "capability-floor-registry.json"
+    assert handoff["zero_call_reanalysis"] == "test1.2-zero-call-reanalysis.json"
+
+    refreshed = test12_module.EvidenceStore(tmp_path, run_id)
+    assert refreshed.verify_manifest() == []
+
+
+
 def test_auditor_executor_thesis_uses_matched_discordant_pairs():
     pairs = []
     for index in range(40):
