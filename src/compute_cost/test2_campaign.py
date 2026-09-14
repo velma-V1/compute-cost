@@ -1872,18 +1872,45 @@ def _recurrence_candidate_status(
         and len(valid) >= target_valid
     )
     all_positive = bool(deltas) and all(value > 0.0 for value in deltas)
+    all_negative = bool(deltas) and all(value < 0.0 for value in deltas)
+    all_zero = bool(deltas) and all(value == 0.0 for value in deltas)
     all_nonpositive = bool(deltas) and all(value <= 0.0 for value in deltas)
     mixed = bool(deltas) and not all_positive and not all_nonpositive
+    source_state = str(recipe.get("test1_2_effect_state") or "")
 
-    if coverage_ready and all_positive:
+    scientific_resolution = None
+    if source_state == "unknown":
+        if coverage_ready and all_positive:
+            settled = True
+            reason = "UNKNOWN_RESOLVED_POSITIVE_MINIMUM_PROOF_MET"
+            scientific_resolution = "POSITIVE"
+        elif coverage_ready and all_negative:
+            settled = True
+            reason = "UNKNOWN_RESOLVED_NEGATIVE_MINIMUM_PROOF_MET"
+            scientific_resolution = "NEGATIVE"
+        elif len(valid) >= max_valid and all_zero:
+            settled = True
+            reason = "UNKNOWN_REMAINS_UNRESOLVED_NULL_PRECISION_NOT_MET"
+            scientific_resolution = "UNKNOWN"
+        elif len(valid) >= max_valid:
+            settled = True
+            reason = "UNKNOWN_REMAINS_UNRESOLVED_AFTER_MAX_PROOF"
+            scientific_resolution = "UNKNOWN"
+        else:
+            settled = False
+            reason = "UNKNOWN_RESOLUTION_MORE_PROOF_VALUE_AVAILABLE"
+    elif coverage_ready and all_positive:
         settled = True
         reason = "CONSISTENT_POSITIVE_MINIMUM_PROOF_MET"
+        scientific_resolution = "POSITIVE"
     elif coverage_ready and all_nonpositive:
         settled = True
         reason = "CONSISTENT_NONPOSITIVE_MINIMUM_PROOF_MET"
+        scientific_resolution = "NONPOSITIVE"
     elif len(valid) >= max_valid:
         settled = True
         reason = "MAX_PROOF_REACHED_WITH_MIXED_EFFECT"
+        scientific_resolution = "MIXED"
     else:
         settled = False
         reason = "MORE_PROOF_VALUE_AVAILABLE"
@@ -1928,6 +1955,12 @@ def _recurrence_candidate_status(
         "coverage_ready":coverage_ready,
         "settled":settled,
         "settled_reason":reason,
+        "scientific_resolution":scientific_resolution,
+        "test1_2_effect_state":source_state or None,
+        "proof_lane":recipe.get("proof_lane"),
+        "proof_cell_key":recipe.get("proof_cell_key"),
+        "proof_family_id":recipe.get("proof_family_id"),
+        "compiler_queue_index":recipe.get("compiler_queue_index"),
         "proof_priority":priority,
     }
 
@@ -2027,58 +2060,160 @@ def phase_recurrence(campaign: Test2Campaign, deadline: float) -> dict[str, dict
             if cursor >= len(variants) * len(fixtures):
                 break
     else:
-        recipes = [
+        all_exact_recipes = [
             copy.deepcopy(recipe)
             for recipe in campaign.recipes
             if recipe.get("exact_test12_intervention") is not None
         ]
+        unknown_recipes = [
+            recipe for recipe in all_exact_recipes
+            if recipe.get("proof_lane") == "unknown_resolution"
+        ]
+        promotion_recipes = [
+            recipe for recipe in all_exact_recipes
+            if recipe.get("proof_lane") == "promotion"
+        ]
+        legacy_recipes = [
+            recipe for recipe in all_exact_recipes
+            if recipe.get("proof_lane") not in {
+                "unknown_resolution", "promotion", "harm", "censoring"
+            }
+        ]
+        promotion_recipes.extend(legacy_recipes)
+        recurrence_recipes = [*unknown_recipes, *promotion_recipes]
         exhausted: set[str] = set()
-        while recipes and fixtures and campaign.can_start(deadline):
-            phase_rows = [
+        lane_audits: dict[str, Any] = {}
+
+        def run_lane(
+            lane_name: str,
+            lane_recipes: list[dict[str, Any]],
+            lane_deadline: float,
+        ) -> None:
+            lane_started = campaign.clock()
+            ordered_recipes = sorted(
+                lane_recipes,
+                key=lambda recipe: (
+                    int(recipe.get("compiler_queue_index") or 0),
+                    _recipe_key(recipe),
+                ),
+            )
+            while ordered_recipes and fixtures and campaign.can_start(lane_deadline):
+                phase_rows = [
+                    row for row in campaign.rows
+                    if row.get("phase") == "recurrence_higher_order"
+                ]
+                statuses = {
+                    _recipe_key(recipe): _recurrence_candidate_status(
+                        campaign, recipe, phase_rows
+                    )
+                    for recipe in ordered_recipes
+                }
+                available = [
+                    recipe for recipe in ordered_recipes
+                    if not statuses[_recipe_key(recipe)]["settled"]
+                    and _recipe_key(recipe) not in exhausted
+                ]
+                if not available:
+                    break
+                available.sort(
+                    key=lambda recipe: (
+                        int(recipe.get("compiler_queue_index") or 0),
+                        -float(statuses[_recipe_key(recipe)]["proof_priority"]),
+                        int(statuses[_recipe_key(recipe)]["attempts"]),
+                        _recipe_key(recipe),
+                    ),
+                )
+                recipe = copy.deepcopy(available[0])
+                family = str(recipe.get("proof_family_id") or "")
+                family_fixtures = (
+                    [case for case in fixtures if _family(case) == family]
+                    if family else fixtures
+                )
+                if not family_fixtures:
+                    exhausted.add(_recipe_key(recipe))
+                    continue
+                task = _next_recurrence_task(
+                    campaign, recipe, family_fixtures, phase_rows
+                )
+                if task is None:
+                    exhausted.add(_recipe_key(recipe))
+                    continue
+                case, seed = task
+                recipe["_proof_seed"] = int(seed)
+                observation = campaign.treatment(
+                    case,
+                    lane_deadline,
+                    phase="recurrence_higher_order",
+                    kind="recurrence",
+                    recipe=recipe,
+                    label="recurrence-" + _recipe_key(recipe),
+                    source_key="compiler-cell-proof-scheduler",
+                )
+                if observation is None:
+                    exhausted.add(_recipe_key(recipe))
+
+            lane_rows = [
                 row for row in campaign.rows
                 if row.get("phase") == "recurrence_higher_order"
             ]
-            statuses = {
+            lane_statuses = {
                 _recipe_key(recipe): _recurrence_candidate_status(
-                    campaign, recipe, phase_rows
+                    campaign, recipe, lane_rows
                 )
-                for recipe in recipes
+                for recipe in ordered_recipes
             }
-            available = [
-                recipe for recipe in recipes
-                if not statuses[_recipe_key(recipe)]["settled"]
-                and _recipe_key(recipe) not in exhausted
-            ]
-            if not available:
-                break
-            available.sort(
-                key=lambda recipe: (
-                    float(statuses[_recipe_key(recipe)]["proof_priority"]),
-                    -int(statuses[_recipe_key(recipe)]["attempts"]),
-                    _recipe_key(recipe),
+            lane_audits[lane_name] = {
+                "candidate_count":len(ordered_recipes),
+                "settled_candidate_count":sum(
+                    1 for row in lane_statuses.values()
+                    if row.get("settled") is True
                 ),
-                reverse=True,
+                "started_monotonic":lane_started,
+                "ended_monotonic":campaign.clock(),
+                "budget_deadline_monotonic":lane_deadline,
+                "candidates":lane_statuses,
+            }
+
+        phase_started = campaign.clock()
+        unknown_budget_seconds = max(
+            0.0,
+            float(campaign.cfg.get("unknown_resolution_seconds", 0.0)),
+        )
+        unknown_deadline = min(
+            deadline,
+            phase_started + unknown_budget_seconds,
+        )
+        if unknown_recipes and unknown_budget_seconds > 0.0:
+            run_lane(
+                "unknown_resolution",
+                unknown_recipes,
+                unknown_deadline,
             )
-            recipe = copy.deepcopy(available[0])
-            task = _next_recurrence_task(
-                campaign, recipe, fixtures, phase_rows
-            )
-            if task is None:
-                exhausted.add(_recipe_key(recipe))
-                continue
-            case, seed = task
-            recipe["_proof_seed"] = int(seed)
-            observation = campaign.treatment(
-                case,
+        else:
+            lane_audits["unknown_resolution"] = {
+                "candidate_count":len(unknown_recipes),
+                "settled_candidate_count":0,
+                "started_monotonic":phase_started,
+                "ended_monotonic":phase_started,
+                "budget_deadline_monotonic":unknown_deadline,
+                "candidates":{},
+            }
+
+        if promotion_recipes and campaign.can_start(deadline):
+            run_lane(
+                "conditional_promotion",
+                promotion_recipes,
                 deadline,
-                phase="recurrence_higher_order",
-                kind="recurrence",
-                recipe=recipe,
-                label="recurrence-" + _recipe_key(recipe),
-                source_key="proof-value-scheduler",
             )
-            if observation is None:
-                exhausted.add(_recipe_key(recipe))
+        else:
+            lane_audits["conditional_promotion"] = {
+                "candidate_count":len(promotion_recipes),
+                "settled_candidate_count":0,
+                "started_monotonic":campaign.clock(),
+                "ended_monotonic":campaign.clock(),
+                "budget_deadline_monotonic":deadline,
+                "candidates":{},
+            }
 
         final_rows = [
             row for row in campaign.rows
@@ -2088,14 +2223,21 @@ def phase_recurrence(campaign: Test2Campaign, deadline: float) -> dict[str, dict
             _recipe_key(recipe): _recurrence_candidate_status(
                 campaign, recipe, final_rows
             )
-            for recipe in recipes
+            for recipe in recurrence_recipes
         }
         campaign.proof_scheduler_audit = {
             "schema_version":1,
             "phase":"recurrence_higher_order",
-            "mode":"ADAPTIVE_PROOF_VALUE",
-            "objective":"spend fixed proof clock on independent fixture/seed debt and unresolved decisions",
-            "candidate_count":len(recipes),
+            "mode":"COMPILER_RATIONED_CELL_PROOF",
+            "objective":"prove only compiler-reachable cells in compiler order while reserving explicit clock for unknown resolution",
+            "queue_order_contract":campaign.handoff.get(
+                "proof_queue_order_contract"
+            ),
+            "effect_size_used_for_ordering":False,
+            "unknown_resolution_reserved_seconds":unknown_budget_seconds,
+            "unknown_resolution_runs_first_to_protect_budget":True,
+            "unused_unknown_budget_may_flow_to_promotion":True,
+            "candidate_count":len(recurrence_recipes),
             "settled_candidate_count":sum(
                 1 for row in final_statuses.values()
                 if row.get("settled") is True
@@ -2113,7 +2255,14 @@ def phase_recurrence(campaign: Test2Campaign, deadline: float) -> dict[str, dict
             "maximum_valid_observations":int(
                 campaign.cfg["recurrence_max_valid_observations"]
             ),
+            "null_verified_minimum_is_not_lowered_by_test2":True,
+            "lanes":lane_audits,
             "candidates":final_statuses,
+            "skipped_verified_null_cells":len(
+                ((campaign.handoff.get("test2_proof_manifest") or {}).get("queues") or {}).get(
+                    "skip_verified_null", []
+                )
+            ),
         }
 
     effects = _effect_map(
@@ -2319,22 +2468,30 @@ def phase_negative_transfer(
     ][: int(campaign.cfg["negative_transfer_recipes"])]
 
     if campaign.handoff.get("handoff_mode") == "TEST12_EXACT":
-        required_ids = [
+        required_ids = {
             str(value)
             for value in campaign.handoff.get("required_policy_control_ids") or []
-        ]
-        required = [
-            copy.deepcopy(recipe)
-            for ident in required_ids
-            for recipe in campaign.recipes
-            if str(recipe.get("intervention_id") or "") == ident
-        ]
-        seen = {_recipe_key(recipe) for recipe in required}
-        exploratory = [
-            recipe for recipe in recipes
-            if _recipe_key(recipe) not in seen
-        ]
-        recipes = [*required, *exploratory]
+        }
+        ordered = sorted(
+            [
+                copy.deepcopy(recipe)
+                for recipe in campaign.recipes
+                if str(recipe.get("intervention_id") or "") in required_ids
+                or recipe.get("proof_lane") == "harm"
+            ],
+            key=lambda recipe: (
+                int(recipe.get("compiler_queue_index") or 0),
+                str(recipe.get("intervention_id") or ""),
+            ),
+        )
+        recipes = []
+        seen_interventions: set[str] = set()
+        for recipe in ordered:
+            ident = str(recipe.get("intervention_id") or "")
+            if not ident or ident in seen_interventions:
+                continue
+            seen_interventions.add(ident)
+            recipes.append(recipe)
     if not recipes:
         recipes = [copy.deepcopy(row) for row in campaign.recipes[:4]]
 
@@ -2477,6 +2634,27 @@ def phase_censoring_cost_tradeoff(
         if summary.get("classification") == "CENSORING_DOMINATED"
         or float(summary.get("censoring_rate") or 0.0) > 0.0
     }
+    recipe_by_key = {
+        _recipe_key(summary["recipe"]): copy.deepcopy(summary["recipe"])
+        for summary in recurrence.values()
+        if summary.get("recipe")
+    }
+    if campaign.handoff.get("handoff_mode") == "TEST12_EXACT":
+        for recipe in sorted(
+            [
+                copy.deepcopy(row)
+                for row in campaign.recipes
+                if row.get("proof_lane") == "censoring"
+            ],
+            key=lambda row: (
+                int(row.get("compiler_queue_index") or 0),
+                _recipe_key(row),
+            ),
+        ):
+            key = _recipe_key(recipe)
+            censored_keys.add(key)
+            recipe_by_key[key] = recipe
+
     if not censored_keys:
         return {
             "schema_version":1,
@@ -2484,12 +2662,6 @@ def phase_censoring_cost_tradeoff(
             "findings":{},
             "policy":"OWN_BUDGET_RESULTS_ARE_CAPABILITY_PLUS_COST_NOT_MATCHED_BUDGET_DELTAS",
         }
-
-    recipe_by_key = {
-        _recipe_key(summary["recipe"]): copy.deepcopy(summary["recipe"])
-        for summary in recurrence.values()
-        if summary.get("recipe")
-    }
     multipliers = [
         int(value)
         for value in campaign.cfg.get("censoring_cost_probe_multipliers", [2, 4])
@@ -2517,6 +2689,40 @@ def phase_censoring_cost_tradeoff(
         by_fixture = {}
         for row in source_rows:
             by_fixture.setdefault(str(row.get("fixture_id")), row)
+
+        if (
+            not by_fixture
+            and campaign.handoff.get("handoff_mode") == "TEST12_EXACT"
+            and recipe.get("proof_lane") == "censoring"
+        ):
+            family = str(recipe.get("proof_family_id") or "")
+            candidates = [
+                case for case in _balanced_cases(
+                    campaign.partitions["VALIDATION"],
+                    len(campaign.partitions["VALIDATION"]),
+                )
+                if not family or _family(case) == family
+            ][:8]
+            for case in candidates:
+                if not campaign.can_start(deadline):
+                    break
+                baseline = campaign.control(
+                    case,
+                    deadline,
+                    phase="censoring_cost_tradeoff_source",
+                )
+                if baseline is None:
+                    continue
+                fixture_id = _fixture_id(case)
+                by_fixture[fixture_id] = {
+                    "fixture_id":fixture_id,
+                    "baseline_generation_budget":campaign.current_baseline_budgets.get(
+                        fixture_id
+                    ),
+                    "baseline_score":baseline,
+                    "censored_for_capability":True,
+                    "source":"TEST1.2_COMPILER_DECLARED_NULL_CENSORED_CELL",
+                }
 
         control_results = []
         for fixture_id, censored in list(by_fixture.items())[:8]:
@@ -3628,6 +3834,8 @@ def write_test2_outputs(
         "qualified_fine_tuning_phenotypes":len(finetune),
         "valid_train_eligible_examples":len(dataset),
         "training_pipeline_has_input":bool(dataset),
+        "training_stage_status":"STUB_PENDING_RESIDUAL_YIELD_DECISION",
+        "training_implementation_authorized":False,
         "success_metric":"VALID_SCIENTIFICALLY_ELIGIBLE_EXAMPLES_NOT_RAW_OBSERVATION_VOLUME",
         "status":(
             "TRAINING_INPUT_AVAILABLE"
@@ -3635,8 +3843,9 @@ def write_test2_outputs(
             else "NO_VALID_WEIGHT_TRAINING_INPUT_YET"
         ),
         "interpretation":(
-            "A small number of valid examples is preferable to a large contaminated corpus."
+            "Yield is measured here; no weight-training implementation is authorized by Test 2 itself."
         ),
+        "next_action":"DECIDE_WHETHER_RESIDUAL_YIELD_JUSTIFIES_BUILDING_THE_TRAINING_STAGE",
     }
     store.write_json(
         "training-asset-yield.json",
