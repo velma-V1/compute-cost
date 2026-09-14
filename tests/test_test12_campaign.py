@@ -2896,3 +2896,65 @@ def test_zero_call_sustained_load_drift_is_sentinel_not_causal_claim():
         "drift sentinel" in item
         for item in report["limitations"]
     )
+
+
+
+def test_zero_call_energy_economics_integrates_gpu_power_correctly():
+    samples = [
+        {
+            "monotonic_ns":0,
+            "total_gpu_power_w":100.0,
+            "gpu":{
+                "availability":"available",
+                "devices":[{
+                    "temperature_c":60.0,
+                    "utilization_gpu_percent":80.0,
+                    "memory_used_mib":8000.0,
+                }],
+            },
+        },
+        {
+            "monotonic_ns":3_600_000_000_000,
+            "total_gpu_power_w":100.0,
+            "gpu":{
+                "availability":"available",
+                "devices":[{
+                    "temperature_c":70.0,
+                    "utilization_gpu_percent":90.0,
+                    "memory_used_mib":9000.0,
+                }],
+            },
+        },
+    ]
+
+    class Store:
+        run_id = "run-1"
+
+    class Runner:
+        store = Store()
+        _model_call_counts = {"run-1": 2}
+
+    class Campaign:
+        runner = Runner()
+        rows = [{
+            "valid_for_capability":True,
+            "delta_valid":True,
+            "delta":1.0,
+            "control_score":0.0,
+            "score":1.0,
+        }]
+
+    report = test12_module._energy_hardware_economics(
+        Campaign(),
+        samples=samples,
+    )
+    assert report["analysis_type"] == "ZERO_CALL_DERIVED_DIAGNOSTIC"
+    assert report["capability_claim"] is False
+    assert report["gpu_energy_wh"] == pytest.approx(100.0)
+    assert report["gpu_energy_kwh"] == pytest.approx(0.1)
+    assert report["wh_per_physical_model_call"] == pytest.approx(50.0)
+    assert report["wh_per_valid_capability_observation"] == pytest.approx(100.0)
+    assert report["wh_per_valid_rescue"] == pytest.approx(100.0)
+    assert report["peak_total_gpu_power_w"] == pytest.approx(100.0)
+    assert report["peak_gpu_temperature_c"] == pytest.approx(70.0)
+    assert report["electricity_cost_not_assumed"] is True
