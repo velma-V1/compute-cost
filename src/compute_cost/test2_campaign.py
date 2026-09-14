@@ -378,8 +378,16 @@ def _build_harness_stopping_rules(
                 "minimum_accuracy_advantage":float(
                     campaign.cfg["minimum_accuracy_advantage_when_over_cost_ceiling"]
                 ),
-                "triggered":None,
-                "evaluation_owner":"FINAL_RELEASE_ACCEPTANCE_WITH_FROZEN_DIRECT_BASELINE",
+                "observed":copy.deepcopy(blind.get("policy_cost_exchange") or {}),
+                "triggered":bool(
+                    isinstance((blind.get("policy_cost_exchange") or {}).get("mean_policy_cost_ratio"), (int, float))
+                    and float((blind.get("policy_cost_exchange") or {})["mean_policy_cost_ratio"])
+                    > float(campaign.cfg["policy_cost_ratio_ceiling"])
+                    and isinstance((blind.get("policy_cost_exchange") or {}).get("accuracy_advantage"), (int, float))
+                    and float((blind.get("policy_cost_exchange") or {})["accuracy_advantage"])
+                    < float(campaign.cfg["minimum_accuracy_advantage_when_over_cost_ceiling"])
+                ),
+                "evaluation_owner":"FRESH_TEST2_BLIND_WITH_FROZEN_DIRECT_BASELINE",
             },
             {
                 "id":"STOP-3",
@@ -403,7 +411,18 @@ def _build_harness_stopping_rules(
             if rule4_triggered
             else "CONTINUE_HARNESS_ONLY_WHILE_FRESH_HOLDOUT_NET_VALUE_REMAINS_POSITIVE"
         ),
-        "stop_shipping_new_controls":bool(rule1_triggered or rule3_triggered),
+        "stop_shipping_new_controls":bool(
+            rule1_triggered
+            or rule3_triggered
+            or bool(
+                isinstance((blind.get("policy_cost_exchange") or {}).get("mean_policy_cost_ratio"), (int, float))
+                and float((blind.get("policy_cost_exchange") or {})["mean_policy_cost_ratio"])
+                > float(campaign.cfg["policy_cost_ratio_ceiling"])
+                and isinstance((blind.get("policy_cost_exchange") or {}).get("accuracy_advantage"), (int, float))
+                and float((blind.get("policy_cost_exchange") or {})["accuracy_advantage"])
+                < float(campaign.cfg["minimum_accuracy_advantage_when_over_cost_ceiling"])
+            )
+        ),
     }
 
 
@@ -577,15 +596,23 @@ def load_test1_handoff(
         )
         winner = copy.deepcopy(compiled.get("winner_policy") or {})
         selected_ids: list[str] = []
+        required_policy_control_ids: list[str] = []
+
+        def add_required_id(value: Any) -> None:
+            ident = str(value or "")
+            if ident and ident != "None" and ident in candidate_by_id and ident not in required_policy_control_ids:
+                required_policy_control_ids.append(ident)
 
         def add_id(value: Any) -> None:
             ident = str(value or "")
             if ident and ident != "None" and ident in candidate_by_id and ident not in selected_ids:
                 selected_ids.append(ident)
 
-        add_id(winner.get("intervention_id"))
-        add_id(winner.get("fallback_intervention_id"))
+        add_required_id(winner.get("intervention_id"))
+        add_required_id(winner.get("fallback_intervention_id"))
         for ident in (winner.get("route_map") or {}).values():
+            add_required_id(ident)
+        for ident in required_policy_control_ids:
             add_id(ident)
         for policy in policies:
             add_id(policy.get("intervention_id"))
@@ -637,6 +664,7 @@ def load_test1_handoff(
             "test12_exact_controls":exact_controls,
             "winner_policy":winner,
             "winner_lock_sha256":terminal.get("winner_lock_sha256"),
+            "required_policy_control_ids":required_policy_control_ids,
             "runtime_profile":runtime_profile,
             "runtime_profile_sha256":runtime_profile.get("profile_sha256"),
             "generation_budget_by_family":copy.deepcopy(
@@ -1762,6 +1790,24 @@ def phase_negative_transfer(
         for _, summary in ranked
         if summary.get("classification") in {"STRONG", "PROMISING", "UNCERTAIN"}
     ][: int(campaign.cfg["negative_transfer_recipes"])]
+
+    if campaign.handoff.get("handoff_mode") == "TEST12_EXACT":
+        required_ids = [
+            str(value)
+            for value in campaign.handoff.get("required_policy_control_ids") or []
+        ]
+        required = [
+            copy.deepcopy(recipe)
+            for ident in required_ids
+            for recipe in campaign.recipes
+            if str(recipe.get("intervention_id") or "") == ident
+        ]
+        seen = {_recipe_key(recipe) for recipe in required}
+        exploratory = [
+            recipe for recipe in recipes
+            if _recipe_key(recipe) not in seen
+        ]
+        recipes = [*required, *exploratory]
     if not recipes:
         recipes = [copy.deepcopy(row) for row in campaign.recipes[:4]]
 
@@ -2022,12 +2068,19 @@ def phase_censoring_cost_tradeoff(
             if attempt.get("valid_for_capability") is True
             and float(attempt.get("score") or 0.0) > float(result["baseline_score"])
         ]
+        budget_resolved = bool(valid_own)
         findings[_recipe_key(recipe)] = {
             "recipe":copy.deepcopy(recipe),
             "censored_source_observations":len(source_rows),
             "fixture_results":control_results,
             "valid_own_budget_results":len(valid_own),
             "capability_gains_with_extra_compute":len(capability_gains),
+            "primary_cause":(
+                "INSUFFICIENT_TOKEN_BUDGET"
+                if budget_resolved
+                else "UNRESOLVED_CENSORING"
+            ),
+            "budget_only_causal_probe":True,
             "finding_class":(
                 "CAPABILITY_PLUS_COST_OPPORTUNITY"
                 if capability_gains
@@ -2350,6 +2403,26 @@ def phase_blind(
             max_censoring_rate=float(campaign.cfg["max_effect_censoring_rate"]),
             key_fn=lambda row: _recipe_key(row["recipe"]),
         )
+        valid_exact = [row for row in exact_rows if row.get("delta_valid") is True]
+        direct_pass_rate = (
+            sum(1 for row in valid_exact if float(row.get("baseline_score") or 0.0) >= 1.0)
+            / len(valid_exact)
+            if valid_exact else None
+        )
+        policy_pass_rate = (
+            sum(1 for row in valid_exact if float(row.get("score") or 0.0) >= 1.0)
+            / len(valid_exact)
+            if valid_exact else None
+        )
+        mean_policy_cost_ratio = (
+            mean([1.0 + float(row.get("model_calls") or 0.0) for row in valid_exact])
+            if valid_exact else None
+        )
+        accuracy_advantage = (
+            policy_pass_rate - direct_pass_rate
+            if policy_pass_rate is not None and direct_pass_rate is not None
+            else None
+        )
         return {
             "recipes_frozen_before_phase":True,
             "locked_policy_proved_exactly":True,
@@ -2360,6 +2433,13 @@ def phase_blind(
             "observations":len(exact_rows),
             "holdout_claim":holdout_claim,
             "partition_retired_after_this_cycle":True,
+            "policy_cost_exchange":{
+                "direct_execution_cost_ratio":1.0,
+                "mean_policy_cost_ratio":mean_policy_cost_ratio,
+                "direct_pass_rate":direct_pass_rate,
+                "policy_pass_rate":policy_pass_rate,
+                "accuracy_advantage":accuracy_advantage,
+            },
         }
 
     rows_before = len(campaign.rows)
