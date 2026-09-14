@@ -583,8 +583,8 @@ def mechanism_applicability(
                 "basis":"PROMPT_PRIMITIVE_HAS_DECLARED_FAMILY_RELEVANCE",
             }
         return {
-            "status":"UNKNOWN",
-            "basis":"STRUCTURE_SPECIFIC_PROMPT_PRIMITIVE_REQUIRES_FURTHER_DECLARATION",
+            "status":"NOT_APPLICABLE",
+            "basis":"STRUCTURE_SPECIFIC_PROMPT_PRIMITIVE_DECLARATION_EXCLUDES_FAMILY",
         }
 
     if category in UNIVERSAL_MECHANISM_CATEGORIES:
