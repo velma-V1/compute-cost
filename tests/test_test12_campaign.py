@@ -181,6 +181,11 @@ def test_collection_plan_is_full_campaign_under_14_hour_two_run_contract():
     assert plan["measurement_decision_rule"].startswith(
         "MODEL_CALL_MEASUREMENTS_REQUIRE_UNIQUE_OUTCOME_TO_ACTION_FORKS"
     )
+    field_contract = plan["field_learning_contract"]
+    assert field_contract["unverified_field_outcomes_can_update_policy"] is False
+    assert field_contract["unverified_field_outcomes_can_update_weights"] is False
+    assert field_contract["continuous_routing_uses_frozen_verified_policy_only"] is True
+    assert field_contract["field_derived_fixture_earliest_cycle"] == "NEXT_CYCLE"
     assert plan["adaptive_allocation"]["coverage_floor_first"] is True
     assert plan["adaptive_allocation"]["successive_halving"] is False
     assert plan["adaptive_allocation"]["exact_failure_replay"] is False
@@ -3272,10 +3277,19 @@ def test_zero_call_reanalysis_preserves_raw_evidence_and_refreshes_manifest(tmp_
     assert redundancy["clustering_basis"] == "INTERVENTION_SEMANTICS_ONLY"
     assert redundancy["membership_uses_outcomes"] is False
 
+    applicability = json.loads(
+        (store.run_dir / "harness-applicability-registry.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert applicability["analysis_type"] == "OUTCOME_BLIND_HARNESS_APPLICABILITY"
+    assert applicability["structural_not_applicable_is_not_failure"] is True
+
     handoff = json.loads(
         (store.run_dir / "test1.2-handoff.json").read_text(encoding="utf-8")
     )
     assert handoff["capability_floor_registry"] == "capability-floor-registry.json"
+    assert handoff["harness_applicability_registry"] == "harness-applicability-registry.json"
     assert handoff["zero_call_reanalysis"] == "test1.2-zero-call-reanalysis.json"
 
     refreshed = test12_module.EvidenceStore(tmp_path, run_id)
