@@ -5960,6 +5960,205 @@ def _capability_floor_registry(campaign: Test12Campaign) -> dict[str, Any]:
         "fixtures": records,
     }
 
+
+def reanalyze_test12_collection(
+    results_root: Path | str,
+    run_id: str,
+) -> dict[str, Any]:
+    """Recompute zero-call semantic/floor analyses from an existing Collection.
+
+    Raw observations and intervention definitions are treated as immutable
+    inputs. The command verifies their manifest entries before reading them,
+    replaces only derived analysis artifacts, updates derived handoff pointers,
+    and re-finalizes the manifest. It performs zero model/runtime calls.
+    """
+    store = EvidenceStore(Path(results_root), str(run_id))
+    run_dir = store.run_dir
+    required = (
+        "full-control-candidate-registry.json",
+        "test1.2-observations.jsonl",
+    )
+    missing = [name for name in required if not (run_dir / name).is_file()]
+    if missing:
+        raise ValueError(
+            "Test 1.2 zero-call reanalysis requires Collection artifacts: "
+            + ", ".join(missing)
+        )
+    problems = store.verify_manifest_paths(required)
+    if problems:
+        raise ValueError(
+            "Test 1.2 zero-call reanalysis refuses unverified source evidence: "
+            + json.dumps(problems, sort_keys=True)
+        )
+
+    source_manifest_sha256 = None
+    manifest_path = run_dir / EvidenceStore.MANIFEST_NAME
+    prior_manifest: dict[str, Any] = {}
+    if manifest_path.is_file():
+        source_manifest_sha256 = hashlib.sha256(
+            manifest_path.read_bytes()
+        ).hexdigest()
+        try:
+            value = json.loads(manifest_path.read_text(encoding="utf-8"))
+            if isinstance(value, dict):
+                prior_manifest = value
+        except Exception:
+            prior_manifest = {}
+
+    registry = _read_json(run_dir / "full-control-candidate-registry.json")
+    interventions = [
+        copy.deepcopy(row)
+        for row in (registry.get("candidates") or [])
+        if isinstance(row, dict) and row.get("id")
+    ]
+    if not interventions:
+        raise ValueError(
+            "Test 1.2 zero-call reanalysis found no intervention definitions"
+        )
+    rows = _read_jsonl(run_dir / "test1.2-observations.jsonl")
+    if not rows:
+        raise ValueError(
+            "Test 1.2 zero-call reanalysis found no Collection observations"
+        )
+
+    class _ReanalysisCampaign:
+        pass
+
+    campaign = _ReanalysisCampaign()
+    campaign.interventions = interventions
+    campaign.intervention_by_id = {
+        str(row["id"]): row for row in interventions
+    }
+    campaign.rows = rows
+    campaign.cfg = copy.deepcopy(DEFAULT_TEST12_CONFIG)
+    campaign.case_by_id = {}
+    for row in rows:
+        fixture_id = str(row.get("fixture_id") or "")
+        if not fixture_id or fixture_id in campaign.case_by_id:
+            continue
+        campaign.case_by_id[fixture_id] = {
+            "id": fixture_id,
+            "family_id": row.get("family_id"),
+            "category": row.get("family_id"),
+            "difficulty_level": int(row.get("difficulty_level") or 0),
+        }
+
+    redundancy = _control_redundancy_map(campaign)
+    capability_floor = _capability_floor_registry(campaign)
+
+    store.write_json(
+        "control-redundancy-map.json",
+        redundancy,
+        producer="test1.2-zero-call-reanalysis",
+        stage="semantic-control-clustering",
+    )
+    store.write_json(
+        "capability-floor-registry.json",
+        capability_floor,
+        producer="test1.2-zero-call-reanalysis",
+        stage="construct-validity-floor",
+    )
+
+    unknown_validity_rows = sum(
+        1
+        for row in rows
+        if (
+            "delta_valid" not in row
+            and "valid_for_capability" not in row
+            and not (
+                isinstance(row.get("classification"), dict)
+                and "valid_for_capability" in row["classification"]
+            )
+        )
+    )
+    summary = {
+        "schema_version":1,
+        "analysis_type":"ZERO_MODEL_CALL_EXISTING_COLLECTION_REANALYSIS",
+        "collection_run":str(run_id),
+        "source_manifest_sha256":source_manifest_sha256,
+        "raw_observation_count":len(rows),
+        "raw_observations_unchanged":True,
+        "model_calls_added":0,
+        "runtime_calls_added":0,
+        "intervention_count":len(interventions),
+        "semantic_mechanism_count":redundancy.get("mechanism_count", 0),
+        "semantic_cluster_count":redundancy.get("cluster_count", 0),
+        "semantic_clustered_control_count":redundancy.get(
+            "clustered_control_count", 0
+        ),
+        "confirmed_declared_harness_floor_count":capability_floor.get(
+            "confirmed_declared_harness_floor_count", 0
+        ),
+        "unresolved_valid_fixture_count":capability_floor.get(
+            "unresolved_fixture_count", 0
+        ),
+        "construct_boundary_family_count":capability_floor.get(
+            "boundary_family_count", 0
+        ),
+        "legacy_unknown_validity_row_count":unknown_validity_rows,
+        "legacy_unknown_validity_policy":"UNKNOWN_IS_NOT_CAPABILITY_EVIDENCE",
+        "outputs":[
+            "control-redundancy-map.json",
+            "capability-floor-registry.json",
+            "test1.2-zero-call-reanalysis.json",
+        ],
+    }
+    store.write_json(
+        "test1.2-zero-call-reanalysis.json",
+        summary,
+        producer="test1.2-zero-call-reanalysis",
+        stage="summary",
+    )
+
+    handoff_path = run_dir / "test1.2-handoff.json"
+    if handoff_path.is_file():
+        handoff_problems = store.verify_manifest_paths(
+            ["test1.2-handoff.json"]
+        )
+        if handoff_problems:
+            raise ValueError(
+                "Test 1.2 zero-call reanalysis refuses to mutate an "
+                "unverified derived handoff: "
+                + json.dumps(handoff_problems, sort_keys=True)
+            )
+        handoff = _read_json(handoff_path)
+        handoff.update({
+            "control_redundancy_map":"control-redundancy-map.json",
+            "capability_floor_registry":"capability-floor-registry.json",
+            "zero_call_reanalysis":"test1.2-zero-call-reanalysis.json",
+            "redundancy_cluster_count":redundancy.get("cluster_count", 0),
+            "redundancy_clustered_control_count":redundancy.get(
+                "clustered_control_count", 0
+            ),
+            "confirmed_declared_harness_floor_count":capability_floor.get(
+                "confirmed_declared_harness_floor_count", 0
+            ),
+            "unresolved_valid_fixture_count":capability_floor.get(
+                "unresolved_fixture_count", 0
+            ),
+            "construct_boundary_family_count":capability_floor.get(
+                "boundary_family_count", 0
+            ),
+        })
+        store.write_json(
+            "test1.2-handoff.json",
+            handoff,
+            producer="test1.2-zero-call-reanalysis",
+            stage="derived-handoff-refresh",
+        )
+
+    metadata = copy.deepcopy(prior_manifest.get("metadata") or {})
+    metadata["zero_call_reanalysis"] = {
+        "collection_run":str(run_id),
+        "raw_observations_unchanged":True,
+        "model_calls_added":0,
+        "source_manifest_sha256":source_manifest_sha256,
+    }
+    store.finalize_manifest(metadata=metadata)
+    return summary
+
+
+
 def _residual_ownership(campaign: Test12Campaign) -> tuple[dict[str, Any], dict[str, Any]]:
     by_fixture: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for row in campaign.rows:
