@@ -274,6 +274,15 @@ def build_test12_cell_budget_plan(
         "runtime_calls_added": 0,
         "family_count": len(TEST2_CAPABILITY_FAMILIES),
         "semantic_mechanism_count": len(mechanisms),
+        "built_semantic_mechanism_count": sum(
+            1 for payload in mechanisms.values()
+            if payload.get("implementation_status") == "BUILT"
+        ),
+        "unbuilt_semantic_mechanism_count": sum(
+            1 for payload in mechanisms.values()
+            if payload.get("implementation_status") == "UNBUILT"
+        ),
+        "implementation_status_is_static_zero_call_audit": True,
         "potential_cell_count": len(cells),
         "applicability_counts": counts,
         "eligible_cell_count": len(eligible),
