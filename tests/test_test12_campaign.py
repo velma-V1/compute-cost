@@ -2965,12 +2965,12 @@ def test_capability_floor_registry_separates_exhaustive_from_partial_search():
         "floor-exhaustive"
     ]
     assert result["fixtures"]["floor-exhaustive"]["floor_status"] == (
-        "CONFIRMED_DECLARED_HARNESS_FLOOR"
+        "CONFIRMED_APPLICABLE_MECHANISM_FLOOR"
     )
     assert result["fixtures"]["floor-partial"]["floor_status"] == (
-        "UNRESOLVED_PARTIAL_CONTROL_SEARCH"
+        "UNRESOLVED_PARTIAL_APPLICABLE_MECHANISM_SEARCH"
     )
-    assert result["fixtures"]["floor-partial"]["control_coverage_fraction"] == 0.5
+    assert result["fixtures"]["floor-partial"]["mechanism_coverage_fraction"] == 0.5
     assert result["families"][family]["construct_status"] == (
         "MIXED_CAPABILITY_BOUNDARY_OBSERVED"
     )
