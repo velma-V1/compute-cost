@@ -163,6 +163,12 @@ def _rows():
             "control_cost": dict(base_cost),
         },
     ]
+    for row in rows:
+        row["valid_for_capability"] = True
+        row.setdefault("classification", {})["valid_for_capability"] = True
+        if row.get("intervention_id") != "CONTROL":
+            row["delta_valid"] = True
+            row["control_valid_for_capability"] = True
     return rows
 
 
