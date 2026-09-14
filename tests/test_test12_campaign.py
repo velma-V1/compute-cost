@@ -2186,7 +2186,7 @@ def test_tuning_recovery_preserves_legacy_holdout_exposure(tmp_path):
         for row in rows:
             fh.write(json.dumps(row) + "\n")
 
-    recovered = test12_tuning_module.load_tuning_recovery(run_dir)
+    recovered = load_tuning_recovery(run_dir)
     assert recovered["legacy_holdout_exposure"] == {
         "TEST2_BLIND": True,
         "TEST3_PROTECTED": True,
