@@ -3518,49 +3518,193 @@ def phase_family_control_floor(
 
 
 def phase_controller_screen(campaign: Test12Campaign, deadline: float) -> dict[str, Any]:
+    """Screen semantic mechanisms first; variants only inside surviving mechanisms."""
     start = len(campaign.rows)
     excluded = {"REASONING_MODE","GENERATION_BUDGET","CONTEXT_WINDOW","COMPUTE_COST_ROUTING"}
-    interventions = [row for row in campaign.interventions if row["category"] not in excluded]
-    fail, passed = _source_headroom(campaign)
-    failures = _unresolved_failure_cases(campaign)[:96]
-    sentinels = _balanced_cases(passed, min(64, len(passed)))
-
-    # Non-negotiable breadth pass: every declared candidate receives coverage,
-    # distributed across capability families rather than on the same fixture.
-    rows = _breadth_cover(
-        campaign,
-        deadline,
-        phase="mechanism_coverage_floor",
-        interventions=interventions,
-        failure_cases=failures,
-        sentinel_cases=sentinels,
-        seed=int(campaign.cfg["seeds"][0]),
-    )
-
-    # After the breadth look, depth means new opportunities on unresolved
-    # phenotypes, not recurrence on already-rescued fixtures.
-    depth_ids = {
-        str(row["id"])
-        for row in CORE_INTERVENTIONS
+    interventions = [
+        row for row in campaign.interventions
         if row["category"] not in excluded
-    }
-    depth = [row for row in interventions if str(row["id"]) in depth_ids]
+    ]
+
+    grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for intervention in interventions:
+        key = str(_semantic_mechanism_descriptor(intervention)["mechanism_key"])
+        grouped[key].append(intervention)
+
+    representatives: list[dict[str, Any]] = []
+    alternates_by_key: dict[str, list[dict[str, Any]]] = {}
+    mechanism_key_by_intervention: dict[str, str] = {}
+    for key, members in sorted(grouped.items()):
+        ordered = sorted(
+            members,
+            key=lambda row: (
+                _estimated_physical_calls(row),
+                len(str(
+                    row.get("instruction")
+                    or row.get("final_instruction")
+                    or row.get("label")
+                    or ""
+                )),
+                str(row.get("id") or ""),
+            ),
+        )
+        representative = ordered[0]
+        representatives.append(representative)
+        alternates_by_key[key] = ordered[1:]
+        for member in ordered:
+            mechanism_key_by_intervention[str(member.get("id") or "")] = key
+
+    _, passed = _source_headroom(campaign)
+    failures = _unresolved_failure_cases(campaign)[:96]
+    sentinels = _balanced_cases(
+        passed,
+        min(
+            int(campaign.cfg.get("mechanism_screen_sentinel_reserve", 12)),
+            len(passed),
+        ),
+    )
+    seed = int(campaign.cfg["seeds"][0])
+
+    rows: list[dict[str, Any]] = []
+    # Mechanism breadth first: one static representative per semantic mechanism.
+    for index, intervention in enumerate(representatives):
+        if not campaign.can_start(deadline):
+            break
+        applicable_failures = [
+            case for case in failures
+            if mechanism_applicability(
+                intervention,
+                _family(case),
+            )["status"] != "NOT_APPLICABLE"
+        ]
+        if applicable_failures:
+            case = applicable_failures[index % len(applicable_failures)]
+            before = len(campaign.rows)
+            campaign.treatment(
+                case,
+                deadline,
+                phase="mechanism_coverage_floor",
+                intervention=intervention,
+                seed=seed,
+            )
+            rows.extend(campaign.rows[before:])
+
+        # Baseline-passing cases are a bounded harm/stability reserve only.
+        if index < len(sentinels) and campaign.can_start(deadline):
+            applicable_sentinels = [
+                case for case in sentinels
+                if mechanism_applicability(
+                    intervention,
+                    _family(case),
+                )["status"] != "NOT_APPLICABLE"
+            ]
+            if applicable_sentinels:
+                case = applicable_sentinels[index % len(applicable_sentinels)]
+                before = len(campaign.rows)
+                campaign.treatment(
+                    case,
+                    deadline,
+                    phase="mechanism_coverage_sentinel",
+                    intervention=intervention,
+                    seed=seed,
+                )
+                rows.extend(campaign.rows[before:])
+
+    # Give mechanisms a bounded second opportunity on a different unresolved
+    # phenotype before concluding that their representative found no signal.
+    if campaign.can_start(deadline):
+        rows.extend(
+            _opportunity_search(
+                campaign,
+                deadline,
+                phase="mechanism_representative_second_chance",
+                interventions=representatives,
+                max_trials=len(representatives),
+            )
+        )
+
+    screen_rows = campaign.rows[start:]
+    surviving_keys: set[str] = set()
+    unresolved_validity_keys: set[str] = set()
+    for row in screen_rows:
+        intervention_id = str(row.get("intervention_id") or "")
+        key = mechanism_key_by_intervention.get(intervention_id)
+        if not key:
+            continue
+        if (
+            row.get("delta_valid") is True
+            and float(row.get("control_score") or 0.0) < 1.0
+            and float(row.get("score") or 0.0) >= 1.0
+            and float(row.get("delta") or 0.0) > 0.0
+        ):
+            surviving_keys.add(key)
+        elif (
+            row.get("censored_for_capability") is True
+            or row.get("delta_valid") is not True
+        ):
+            unresolved_validity_keys.add(key)
+
+    variant_limit = max(
+        0,
+        int(campaign.cfg.get("max_variants_per_surviving_mechanism", 4)),
+    )
+    variant_candidates: list[dict[str, Any]] = []
+    for key in sorted(surviving_keys | unresolved_validity_keys):
+        variant_candidates.extend(
+            alternates_by_key.get(key, [])[:variant_limit]
+        )
+
+    if variant_candidates and campaign.can_start(deadline):
+        rows.extend(
+            _opportunity_search(
+                campaign,
+                deadline,
+                phase="surviving_mechanism_variant_search",
+                interventions=variant_candidates,
+                max_trials=max(
+                    len(variant_candidates),
+                    len(surviving_keys | unresolved_validity_keys),
+                ),
+            )
+        )
+
+    # Any remaining clock returns to mechanism-level opportunity discovery,
+    # never proof replication.
     if campaign.can_start(deadline):
         rows.extend(
             _opportunity_search(
                 campaign,
                 deadline,
                 phase="mechanism_coverage_opportunity_search",
-                interventions=depth,
+                interventions=representatives,
             )
         )
+
     campaign.positive_work(
         "mechanism_coverage_floor",
         start,
-        "EVERY declared candidate receives minimum rotating failure/sentinel coverage; remaining clock searches novel unresolved phenotypes instead of proof replication",
+        (
+            "semantic mechanisms screened before variants; baseline-pass fixtures "
+            "used only as bounded sentinels; variants limited to rescued or "
+            "measurement-unresolved mechanisms; recurrence deferred to Run 2"
+        ),
     )
-    return _group_summary(rows, campaign.cfg, lambda row: str(row["intervention_id"]))
-
+    summary = _group_summary(
+        rows,
+        campaign.cfg,
+        lambda row: str(row["intervention_id"]),
+    )
+    summary["_mechanism_screen"] = {
+        "declared_intervention_count":len(interventions),
+        "semantic_mechanism_count":len(grouped),
+        "representative_count":len(representatives),
+        "surviving_mechanism_count":len(surviving_keys),
+        "unresolved_validity_mechanism_count":len(unresolved_validity_keys),
+        "variant_candidate_count":len(variant_candidates),
+        "sentinel_reserve_count":len(sentinels),
+        "proof_replication_owner":"RUN2_TEST2",
+    }
+    return summary
 
 
 def phase_category_focus(campaign: Test12Campaign, deadline: float, *, phase: str, categories: set[str], target_cases: list[dict[str, Any]] | None = None) -> dict[str, Any]:
