@@ -256,7 +256,29 @@ def load_tuning_recovery(run_dir: Path) -> dict[str, Any]:
             row["recovery_quarantined_invalid"] = True
             quarantined_policy_rows.append(row)
 
-    rows = sanitized_policy_rows
+    reserved_holdout_rows = [
+        row for row in sanitized_policy_rows
+        if row.get("partition") in {"TEST2_BLIND", "TEST3_PROTECTED"}
+    ]
+    if reserved_holdout_rows:
+        for row in reserved_holdout_rows:
+            row["recovery_quarantined_holdout_exposure"] = True
+        quarantined_policy_rows.extend(reserved_holdout_rows)
+    rows = [
+        row for row in sanitized_policy_rows
+        if row.get("partition") in {None, "", "VALIDATION"}
+    ]
+    checkpoint["completed_phases"] = [
+        phase for phase in (checkpoint.get("completed_phases") or [])
+        if phase not in {"test2_blind_acceptance", "test3_protected_acceptance"}
+    ]
+    if checkpoint.get("current_phase") in {
+        "test2_blind_acceptance",
+        "test3_protected_acceptance",
+    }:
+        checkpoint["current_phase"] = None
+        checkpoint["current_phase_elapsed_seconds"] = 0.0
+
     if quarantined_policy_rows and not checkpoint.get("winner_lock_sha256"):
         # Evidence remains on disk, but phase completion derived from contaminated
         # policy rows is reopened. Elapsed budget and physical-call counters are
@@ -2110,7 +2132,7 @@ def run_test12_tuning(
         "recurrent_residual_families":{k:v for k,v in by_family.items() if v>=3},
         "weight_tuning_recommended":bool(any(v>=3 for v in by_family.values())),
         "onboarding_dependency":False,
-        "rule":"weight tuning is an optional future model-development path for recurrent residual failures; it is not required to complete this model's Inverted onboarding",
+        "rule":"these are provisional validation-derived weight candidates only; Test 2 must establish persistent model-owned failures before weight tuning is authorized",
     }
     runner.store.write_json("fine-tuning-qualification.json",qualification,producer="test1.2-tuning",stage="report")
 
