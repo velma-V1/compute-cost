@@ -15,6 +15,7 @@ from .capability_campaign import run_capability_campaign
 from .characterization import build_characterization_summary, render_characterization_report, run_characterization
 from .evidence import EvidenceStore
 from .frontier import build_capability_frontiers
+from .family_routing import build_family_classifier, evaluate_family_classifier
 from .hardware import collect_hardware_snapshot
 from .progress import ProgressDisplay
 from .report import build_summary, render_report
@@ -38,6 +39,7 @@ from .test12_campaign import (
     run_test12_campaign,
     validate_test12_plan,
 )
+from .test12_preflight import build_test12_cell_budget_plan
 from .test12_tuning import (
     build_tuning_plan,
     load_collection,
@@ -1027,6 +1029,45 @@ class BenchmarkRunner(_CoreBenchmarkRunner):
         plan = build_test12_plan(self.suite.get("cases", []) or [], seed_run=seed_run)
         validate_test12_plan(plan)
         store.write_json("test1.2-plan.json", plan, producer="test1.2", stage="preflight")
+
+        classifier = build_family_classifier(self.suite.get("cases", []) or [])
+        classifier_report = evaluate_family_classifier(
+            self.suite.get("cases", []) or [],
+            classifier,
+        )
+        store.write_json(
+            "runtime-family-classifier.json",
+            classifier,
+            producer="runtime-family-classifier",
+            stage="preflight-zero-call",
+        )
+        store.write_json(
+            "runtime-family-classifier-confusion.json",
+            classifier_report,
+            producer="runtime-family-classifier",
+            stage="preflight-zero-call",
+        )
+        preflight_source = (
+            load_test11_source(
+                self.results_root,
+                seed_run,
+                self.suite.get("cases", []) or [],
+            )
+            if seed_run
+            else fresh_model_source(self.suite.get("cases", []) or [])
+        )
+        cell_budget_plan = build_test12_cell_budget_plan(
+            preflight_source,
+            classifier_report,
+            test_cfg,
+        )
+        store.write_json(
+            "test1.2-cell-budget-plan.json",
+            cell_budget_plan,
+            producer="test1.2-cell-budget",
+            stage="preflight-zero-call",
+        )
+
         store.write_json(
             "fixture-partitions.json",
             {
