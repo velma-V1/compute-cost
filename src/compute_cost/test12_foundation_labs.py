@@ -1535,6 +1535,49 @@ def _auditor_executor_thesis_summary(
     }
 
 
+def _auditor_executor_thesis_cases(
+    campaign: Any,
+    *,
+    excluded_fixture_ids: set[str] | None = None,
+    limit: int,
+) -> list[dict[str, Any]]:
+    """Round-robin unmatched DISCOVERY fixtures across capability families."""
+    excluded = set(excluded_fixture_ids or set())
+    by_family: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for case in list((campaign.partitions or {}).get("DISCOVERY") or []):
+        fixture_id = _fixture_id(case)
+        if fixture_id in excluded:
+            continue
+        by_family[_family(case)].append(case)
+
+    for family in by_family:
+        by_family[family] = sorted(
+            by_family[family],
+            key=lambda case: (
+                -int(case.get("difficulty_level") or 0),
+                _fixture_id(case),
+            ),
+        )
+
+    selected: list[dict[str, Any]] = []
+    families = sorted(by_family)
+    depth = 0
+    while len(selected) < int(limit):
+        added = False
+        for family in families:
+            pool = by_family[family]
+            if depth >= len(pool):
+                continue
+            selected.append(pool[depth])
+            added = True
+            if len(selected) >= int(limit):
+                break
+        if not added:
+            break
+        depth += 1
+    return selected
+
+
 def _audit_case_with_reasoning(
     case: dict[str, Any],
     candidate: str,
