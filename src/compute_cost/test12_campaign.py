@@ -298,6 +298,8 @@ REQUIRED_OUTPUTS = (
     "gpt-oss-foundation-question-ledger.json",
     "test1.2-foundation-observations.jsonl",
     "test1.2-role-specialization-observations.jsonl",
+    "test1.2-runtime-canaries.jsonl",
+    "test1.2-block-reassessments.jsonl",
     "test1.2-plan.json",
     "mechanism-registry.json",
     "full-control-candidate-registry.json",
@@ -6564,6 +6566,26 @@ def write_outputs(campaign: Test12Campaign, results: dict[str, Any]) -> None:
         store.append_jsonl("test1.2-foundation-observations.jsonl", {"schema_version":1,"record_type":"EMPTY_FOUNDATION_OBSERVATIONS"})
     if not (store.run_dir / "test1.2-role-specialization-observations.jsonl").is_file():
         store.append_jsonl("test1.2-role-specialization-observations.jsonl", {"schema_version":1,"record_type":"EMPTY_ROLE_SPECIALIZATION_OBSERVATIONS"})
+    if not (store.run_dir / "test1.2-runtime-canaries.jsonl").is_file():
+        store.append_jsonl(
+            "test1.2-runtime-canaries.jsonl",
+            {
+                "schema_version":1,
+                "record_type":"EMPTY_RUNTIME_CANARIES",
+                "reason":"capability campaign did not execute long enough to emit a canary",
+            },
+        )
+    if not (store.run_dir / "test1.2-block-reassessments.jsonl").is_file():
+        store.append_jsonl(
+            "test1.2-block-reassessments.jsonl",
+            {
+                "schema_version":1,
+                "record_type":"NO_COMPLETE_500_CALL_BLOCK",
+                "configured_block_physical_calls":int(
+                    campaign.cfg.get("campaign_block_physical_calls", 500)
+                ),
+            },
+        )
     store.write_json("mechanism-registry.json", {"schema_version":1,"mechanisms":campaign.interventions,"surface":list(IMPROVEMENT_SURFACE)}, producer="test1.2", stage="report")
     store.write_json("mechanism-coverage-ledger.json", _coverage_ledger(campaign), producer="test1.2", stage="report")
     store.write_json("reasoning-compute-map.json", {"schema_version":1,"effects":results.get("reasoning",{})}, producer="test1.2", stage="report")
@@ -6618,6 +6640,11 @@ def write_outputs(campaign: Test12Campaign, results: dict[str, Any]) -> None:
         "role_specialization_map":"gpt-oss-role-specialization-map.json",
         "auditor_executor_thesis":"test1.2-auditor-executor-thesis.json",
         "auditor_executor_thesis_status":role_specialization.get("auditor_executor_thesis_status"),
+        "runtime_canaries":"test1.2-runtime-canaries.jsonl",
+        "campaign_block_reassessments":"test1.2-block-reassessments.jsonl",
+        "campaign_block_physical_calls":int(
+            campaign.cfg.get("campaign_block_physical_calls", 500)
+        ),
         "foundation_question_ledger":"gpt-oss-foundation-question-ledger.json",
         "foundation_missing_critical_ids":foundation_ledger["missing_critical_foundation_ids"],
         "fine_tuning_candidates":list((fine.get("candidates") or {}).keys()),
