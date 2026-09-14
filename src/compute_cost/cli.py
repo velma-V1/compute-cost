@@ -116,7 +116,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     test12_tune = sub.add_parser(
         "gpt20b-test1.2-tune",
-        help="Tune/compile a model-specific harness from a completed Test-1.2 collection run.",
+        help="Compile a provisional model-specific harness from a completed Test-1.2 collection run using VALIDATION only; preserves all holdouts for proof.",
     )
     test12_tune.add_argument("--model", default="gpt-oss:20b")
     test12_tune.add_argument("--suite", default=str(DEFAULT_CAPABILITY_SUITE_PATH))
@@ -127,7 +127,7 @@ def build_parser() -> argparse.ArgumentParser:
     test12_tune.add_argument(
         "--resume-run",
         default=None,
-        help="Resume the same interrupted Test 1.2 tuning/acceptance run ID without reopening completed work or resetting the winner lock.",
+        help="Resume the same interrupted Test 1.2 validation/compiler run ID without reopening completed work or resetting the winner lock.",
     )
 
     test2 = sub.add_parser(
@@ -137,7 +137,7 @@ def build_parser() -> argparse.ArgumentParser:
     test2.add_argument("--model", default="gpt-oss:20b")
     test2.add_argument("--suite", default=str(DEFAULT_CAPABILITY_SUITE_PATH))
     test2.add_argument("--taxonomy", default=str(DEFAULT_CAPABILITY_TAXONOMY_PATH))
-    test2.add_argument("--test1-run", default=None, help="Completed Test-1 run ID. Required for a real Test-2 run.")
+    test2.add_argument("--test1-run", default=None, help="Completed provisional Test-1.2 tuning run ID for exact proof, or a legacy Test-1 run ID. Required for a real Test-2 run.")
     test2.add_argument("--pull", action="store_true", help="Pull the model if it is not already local.")
     test2.add_argument("--dry-run", action="store_true", help="Validate Test 2 with zero model calls; uses a synthetic handoff when --test1-run is omitted.")
 
