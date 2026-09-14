@@ -8758,6 +8758,13 @@ def write_outputs(campaign: Test12Campaign, results: dict[str, Any]) -> None:
         producer="test1.2",
         stage="report",
     )
+    unaided_baseline = _unaided_baseline_profile(campaign)
+    store.write_json(
+        "unaided-model-capability-profile.json",
+        unaided_baseline,
+        producer="test1.2",
+        stage="unaided-baseline",
+    )
     knowledge_table = _mechanism_family_knowledge_table(campaign)
     store.write_json(
         "mechanism-family-knowledge-table.json",
