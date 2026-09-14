@@ -1612,6 +1612,141 @@ def _audit_case(case: dict[str, Any], candidate: str) -> dict[str, Any]:
     }
 
 
+def run_auditor_executor_thesis(
+    campaign: Any,
+    deadline: float,
+) -> dict[str, Any]:
+    """Decision test for whether auditing is a distinct model advantage."""
+    target = int(campaign.cfg.get("auditor_executor_target_pairs", 100))
+    minimum = int(campaign.cfg.get("auditor_executor_min_valid_pairs", 60))
+    alpha = float(campaign.cfg.get("auditor_executor_alpha", 0.05))
+    cases = _auditor_executor_thesis_cases(
+        campaign,
+        limit=max(target * 2, target + 20),
+    )
+    seeds = list(campaign.cfg.get("seeds") or [42, 43, 44]) or [42]
+    pairs: list[dict[str, Any]] = []
+    attempted = 0
+    invalid_executor = 0
+    invalid_auditor = 0
+
+    def valid_final(row: dict[str, Any] | None) -> bool:
+        return bool(
+            row
+            and row.get("ok") is True
+            and row.get("content_empty") is False
+            and row.get("done_reason") != "length"
+        )
+
+    for index, case in enumerate(cases):
+        if len(pairs) >= target or not campaign.can_start(deadline):
+            break
+        attempted += 1
+        family = _family(case)
+        fixture_id = _fixture_id(case)
+        budget = int(
+            (getattr(campaign, "baseline_generation_budget_by_family", {}) or {})
+            .get(family, campaign.cfg.get("base_generation_budget", 256))
+        )
+        seed = int(seeds[index % len(seeds)])
+        executor = _invoke_probe(
+            campaign,
+            deadline,
+            probe_id=f"thesis-executor-{fixture_id}",
+            question_ids=[32,33],
+            family_id=family,
+            messages=[{"role":"user","content":str(case.get("prompt") or "")}],
+            options={
+                "num_predict":budget,
+                "temperature":1.0,
+                "top_p":1.0,
+                "seed":seed,
+            },
+            request_fields={"think":"medium"},
+            case=case,
+        )
+        if executor is None:
+            break
+        executor["operating_budget"] = budget
+        executor["valid_for_role_economics"] = valid_final(executor)
+        campaign.runner.store.append_jsonl(
+            "test1.2-role-specialization-observations.jsonl",
+            executor,
+        )
+        if not executor["valid_for_role_economics"]:
+            invalid_executor += 1
+            continue
+
+        executor_correct = float(executor.get("score") or 0.0) >= 1.0
+        expected = "ACCEPT" if executor_correct else "REJECT"
+        audit_case = _audit_case(case, str(executor.get("content") or ""))
+        audit_case["expected"] = expected
+        audit_case["id"] = f"thesis-audit-{fixture_id}"
+        audit_case["category"] = family
+        if not campaign.can_start(deadline):
+            break
+        audit = _invoke_probe(
+            campaign,
+            deadline,
+            probe_id=f"thesis-auditor-{fixture_id}",
+            question_ids=[32,33,34],
+            family_id=family,
+            messages=[{"role":"user","content":audit_case["prompt"]}],
+            options={
+                "num_predict":budget,
+                "temperature":1.0,
+                "top_p":1.0,
+                "seed":seed,
+            },
+            request_fields={"think":"low"},
+            case=audit_case,
+        )
+        if audit is None:
+            break
+        audit["operating_budget"] = budget
+        audit["candidate_was_correct"] = executor_correct
+        audit["expected_verdict"] = expected
+        audit["valid_for_role_economics"] = valid_final(audit)
+        campaign.runner.store.append_jsonl(
+            "test1.2-role-specialization-observations.jsonl",
+            audit,
+        )
+        if not audit["valid_for_role_economics"]:
+            invalid_auditor += 1
+            continue
+
+        verdict = str(audit.get("content") or "").strip().upper()
+        pairs.append({
+            "fixture_id":fixture_id,
+            "family_id":family,
+            "difficulty_level":int(case.get("difficulty_level") or 0),
+            "seed":seed,
+            "operating_budget":budget,
+            "executor_correct":executor_correct,
+            "auditor_correct":verdict == expected,
+            "expected_verdict":expected,
+            "auditor_verdict":verdict,
+        })
+
+    summary = _auditor_executor_thesis_summary(
+        pairs,
+        target_valid_pairs=target,
+        minimum_valid_pairs=minimum,
+        alpha=alpha,
+    )
+    summary.update({
+        "attempted_fixture_count":attempted,
+        "invalid_executor_observations_excluded":invalid_executor,
+        "invalid_auditor_observations_excluded":invalid_auditor,
+        "temperature":1.0,
+        "executor_reasoning_effort":"medium",
+        "auditor_reasoning_effort":"low",
+        "budget_source":"STAGE0_REPLICATED_SAFE_FAMILY_BUDGET",
+        "pairs":pairs,
+    })
+    return summary
+
+
 def run_role_specialization_lab(campaign: Any, deadline: float) -> dict[str, Any]:
     """Matched executor/auditor economics plus adversarial auditor-depth probes."""
     rows: list[dict[str, Any]] = []
