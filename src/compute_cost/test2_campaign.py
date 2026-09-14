@@ -23,6 +23,12 @@ from .characterization import execute_experiment
 from .experiments import ExperimentSpec, make_experiment_id
 from .evidence import EvidenceStore
 from .test11_campaign import TRUNCATION_CLASSES
+from .test12_campaign import (
+    Test12Campaign,
+    _intervention_fingerprint,
+    fresh_model_source,
+    partition_test12_cases,
+)
 
 CENSORING_CLASSES = frozenset(set(TRUNCATION_CLASSES) | {"NO_FINAL_ANSWER"})
 
@@ -516,12 +522,147 @@ def load_test1_handoff(
     if not run_dir.is_dir():
         raise ValueError(f"Test-1 run does not exist: {run_id}")
 
+    if (run_dir / "test1.2-terminal-handoff.json").is_file():
+        manifest_problems = EvidenceStore(results_root, run_id).verify_manifest()
+        if manifest_problems:
+            raise ValueError(
+                f"Test 1.2 provisional evidence manifest verification failed: {manifest_problems}"
+            )
+        terminal = _read_json(run_dir / "test1.2-terminal-handoff.json")
+        package = _read_json(run_dir / "inverted-model-integration-package.json")
+        compiled = _read_json(run_dir / "compiled-harness-policy.json")
+        if terminal.get("state") != "TEST1.2_PROVISIONAL_COMPILER_COMPLETE":
+            raise ValueError("Test 2 requires a completed provisional Test 1.2 compiler handoff")
+        if package.get("release_authorized") is not False:
+            raise ValueError("Test 1.2 package must be provisional and non-deployable before Test 2")
+        if terminal.get("test2_blind_reserved_and_unexposed") is not True:
+            raise ValueError("Test 2 blind holdout was already exposed before Test 2")
+
+        collection_run = str(package.get("collection_run") or "")
+        collection_dir = results_root / collection_run
+        if not collection_run or not collection_dir.is_dir():
+            raise ValueError("Test 1.2 provisional package does not resolve to a Collection run")
+        collection_problems = EvidenceStore(results_root, collection_run).verify_manifest()
+        if collection_problems:
+            raise ValueError(
+                f"Test 1.2 Collection manifest verification failed: {collection_problems}"
+            )
+        required = [
+            "full-control-candidate-registry.json",
+            "runtime-characterization-profile.json",
+            "test1.2-handoff.json",
+            "test1.2-opportunity-discovery-map.json",
+        ]
+        missing = [name for name in required if not (collection_dir / name).is_file()]
+        if missing:
+            raise ValueError(f"Test 1.2 exact handoff incomplete; missing: {missing}")
+
+        runtime_profile = _read_json(collection_dir / "runtime-characterization-profile.json")
+        if runtime_profile.get("gate_passed") is not True:
+            raise ValueError("Test 2 refuses a Test 1.2 source whose Stage 0 runtime gate did not pass")
+
+        registry = _read_json(collection_dir / "full-control-candidate-registry.json")
+        candidates = [
+            copy.deepcopy(row)
+            for row in registry.get("candidates") or []
+            if isinstance(row, dict) and row.get("id")
+        ]
+        candidate_by_id = {str(row["id"]): row for row in candidates}
+
+        policy_registry_path = run_dir / "candidate-harness-registry.json"
+        policies = (
+            _read_json(policy_registry_path).get("policies") or []
+            if policy_registry_path.is_file()
+            else []
+        )
+        winner = copy.deepcopy(compiled.get("winner_policy") or {})
+        selected_ids: list[str] = []
+
+        def add_id(value: Any) -> None:
+            ident = str(value or "")
+            if ident and ident != "None" and ident in candidate_by_id and ident not in selected_ids:
+                selected_ids.append(ident)
+
+        add_id(winner.get("intervention_id"))
+        add_id(winner.get("fallback_intervention_id"))
+        for ident in (winner.get("route_map") or {}).values():
+            add_id(ident)
+        for policy in policies:
+            add_id(policy.get("intervention_id"))
+            if len(selected_ids) >= 12:
+                break
+        if not selected_ids:
+            for row in candidates[:12]:
+                add_id(row.get("id"))
+
+        exact_controls = []
+        for ident in selected_ids:
+            intervention = copy.deepcopy(candidate_by_id[ident])
+            semantic_hash = _intervention_fingerprint(intervention)
+            exact_controls.append({
+                "source":"TEST1.2_EXACT_CONTROL",
+                "source_key":ident,
+                "classification":"PROVISIONAL_TEST1.2",
+                "normalized_effect":0.0,
+                "exact_test12_intervention":intervention,
+                "intervention_id":ident,
+                "semantic_hash":semantic_hash,
+                "discovery_semantic_hash":semantic_hash,
+                "proof_semantic_hash":semantic_hash,
+                "ingredient_ids":[f"TEST12:{ident}"],
+                "dose":1.0,
+                "representation":"exact",
+                "placement":"semantic",
+            })
+
+        opportunity = _read_json(collection_dir / "test1.2-opportunity-discovery-map.json")
+        unresolved_ids = list(opportunity.get("unresolved_failed_fixture_ids") or [])
+        failures = {
+            "failures":[
+                {
+                    "fixture_id":fixture_id,
+                    "classification":{"result_class":"UNRESOLVED"},
+                    "partition":"VALIDATION",
+                }
+                for fixture_id in unresolved_ids
+            ]
+        }
+        return {
+            "run_id":run_id,
+            "run_dir":str(run_dir),
+            "collection_run":collection_run,
+            "collection_dir":str(collection_dir),
+            "synthetic":False,
+            "handoff_mode":"TEST12_EXACT",
+            "test12_exact_controls":exact_controls,
+            "winner_policy":winner,
+            "winner_lock_sha256":terminal.get("winner_lock_sha256"),
+            "runtime_profile":runtime_profile,
+            "runtime_profile_sha256":runtime_profile.get("profile_sha256"),
+            "generation_budget_by_family":copy.deepcopy(
+                runtime_profile.get("resolved_generation_budget_by_family") or {}
+            ),
+            "noise_model":{"global_noise_sigma":EPSILON_NOISE,"families":{}},
+            "failures":failures,
+            "negative_effects":{"effects":[]},
+            "uncertainty":{"unknowns":[]},
+            "priority_queue":{"queue":[]},
+            "higher_order":{"candidates":[]},
+            "ingredient_registry":{"ingredients":[]},
+            "pair_graph":{"edges":{}},
+            "direction_graph":{"edges":{}},
+            "source_observations":[],
+            "baselines":{},
+            "semantic_identity_contract":{
+                "translation_allowed":False,
+                "exact_executor":"Test12Campaign.treatment",
+                "every_proof_semantic_hash_must_equal_discovery_semantic_hash":True,
+            },
+        }
+
     if (run_dir / "test1.2-handoff.json").is_file():
         raise ValueError(
-            "Test 2 exact-control adapter is required for Test 1.2 handoffs; "
-            "legacy INGREDIENT recipe translation is prohibited because it would "
-            "change the discovered control semantics. Rebuild Test 2 to execute "
-            "the exact Test 1.2 intervention definitions before running this campaign."
+            "Pass the completed Test 1.2 provisional tuning run to Test 2, not the raw Collection run."
         )
     manifest_problems = EvidenceStore(results_root, run_id).verify_manifest()
     if manifest_problems:
@@ -596,6 +737,18 @@ def _treatment_from_summary(value: dict[str, Any]) -> dict[str, Any] | None:
 
 
 def source_recipes(handoff: dict[str, Any], *, limit: int = 12) -> list[dict[str, Any]]:
+    if handoff.get("handoff_mode") == "TEST12_EXACT":
+        recipes = [copy.deepcopy(row) for row in handoff.get("test12_exact_controls") or []]
+        for recipe in recipes:
+            intervention = recipe.get("exact_test12_intervention") or {}
+            current_hash = _intervention_fingerprint(intervention)
+            if current_hash != recipe.get("discovery_semantic_hash"):
+                raise ValueError(
+                    f"Test 1.2 control semantic drift before Test 2: {recipe.get('intervention_id')}"
+                )
+            recipe["proof_semantic_hash"] = current_hash
+        return recipes[:limit]
+
     candidates: list[dict[str, Any]] = []
     for row in (handoff.get("priority_queue") or {}).get("queue", []) or []:
         treatment = _treatment_from_summary(row)
@@ -1124,6 +1277,12 @@ def _effect_map(
 
 
 def _recipe_key(recipe: dict[str, Any]) -> str:
+    if recipe.get("exact_test12_intervention") is not None:
+        semantic_hash = str(
+            recipe.get("discovery_semantic_hash")
+            or _intervention_fingerprint(recipe["exact_test12_intervention"])
+        )
+        return "TEST12-" + semantic_hash[:16]
     ids = [str(value) for value in recipe.get("ingredient_ids") or []]
     return "->".join(ids)
 
