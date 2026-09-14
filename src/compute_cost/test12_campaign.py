@@ -530,6 +530,8 @@ DEFAULT_TEST12_CONFIG: dict[str, Any] = {
     "minimum_phase_observations": 16,
     "router_confidence_threshold": 0.65,
     "max_collection_sentinels_per_intervention": 2,
+    "max_variants_per_surviving_mechanism": 4,
+    "baseline_pass_sentinel_surfaces_per_family": 2,
     "novelty_failure_class_weight": 6.0,
     "novelty_family_weight": 3.0,
     "harder_frontier_weight": 2.0,
@@ -971,7 +973,7 @@ def build_test12_plan(cases: list[dict[str, Any]], *, seed_run: str | None = Non
         "core_mechanism_count": len(CORE_INTERVENTIONS),
         "generated_prompt_control_count": len(generate_prompt_control_candidates()),
         "finite_control_grammar": copy.deepcopy(CONTROL_GRAMMAR),
-        "control_search_contract": "EVERY_DECLARED_CONTROL_CANDIDATE_GETS_MINIMUM_COVERAGE_THEN_CLOCK_SHIFTS_TO_NOVEL_OPPORTUNITY_DISCOVERY",
+        "control_search_contract": "SEMANTIC_MECHANISMS_FIRST_VARIANTS_ONLY_AFTER_RESCUE_OR_UNRESOLVED_VALIDITY",
         "adaptive_allocation": {
             "coverage_floor_first": True,
             "screening_design": "BALANCED_COVERING_ARRAY_PLUS_FRACTIONAL_FACTORIAL",
@@ -1070,8 +1072,8 @@ def validate_test12_plan(plan: dict[str, Any]) -> None:
         raise ValueError("Test 1.2 must expose at least 30 core improvement mechanisms")
     if int(plan.get("generated_prompt_control_count", 0)) < 200:
         raise ValueError("Test 1.2 prompt/injection grammar is too small for full control-surface collection")
-    if plan.get("control_search_contract") != "EVERY_DECLARED_CONTROL_CANDIDATE_GETS_MINIMUM_COVERAGE_THEN_CLOCK_SHIFTS_TO_NOVEL_OPPORTUNITY_DISCOVERY":
-        raise ValueError("Test 1.2 may not prune declared controls before minimum coverage or spend post-floor clock on proof replication")
+    if plan.get("control_search_contract") != "SEMANTIC_MECHANISMS_FIRST_VARIANTS_ONLY_AFTER_RESCUE_OR_UNRESOLVED_VALIDITY":
+        raise ValueError("Test 1.2 must screen semantic mechanisms before variants and must not spend Collection clock on proof replication")
     missing_outputs = [name for name in REQUIRED_OUTPUTS if name not in plan["required_outputs"]]
     if missing_outputs:
         raise ValueError(f"Test 1.2 output contract incomplete: {missing_outputs}")
