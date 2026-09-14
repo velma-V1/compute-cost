@@ -683,7 +683,7 @@ def build_runtime_characterization_profile(
         gate_reasons.append("THINKING_CHANNEL_LEAK_OBSERVED")
     if not budget_characterization.get("all_families_reproducibly_valid"):
         gate_reasons.append("FAMILY_BUDGET_CALIBRATION_INCOMPLETE")
-    if not {32,33,34,38}.issubset(role_answered):
+    if not {32,33,34,35,36,37,38}.issubset(role_answered):
         gate_reasons.append("ROLE_SPECIALIZATION_INCOMPLETE")
     family_count = len(
         (budget_characterization.get("families") or {})
@@ -703,6 +703,14 @@ def build_runtime_characterization_profile(
             gate_reasons.append("ROLE_SPECIALIZATION_VALID_SCORE_MISSING")
             break
 
+    minimum_depth_pairs = min(4, max(2, minimum_role_families // 2))
+    if int(role_specialization.get("second_pass_valid_pairs") or 0) < minimum_depth_pairs:
+        gate_reasons.append("AUDITOR_SECOND_PASS_COVERAGE_INSUFFICIENT")
+    if int(role_specialization.get("reasoning_exposure_valid_pairs") or 0) < minimum_depth_pairs:
+        gate_reasons.append("AUDITOR_REASONING_EXPOSURE_COVERAGE_INSUFFICIENT")
+    if int(role_specialization.get("candidate_quality_valid_observations") or 0) < minimum_depth_pairs * 2:
+        gate_reasons.append("AUDITOR_CANDIDATE_QUALITY_COVERAGE_INSUFFICIENT")
+
     identity = {
         "model":getattr(campaign.runner, "model", None),
         "runtime_version":runtime_snapshot.get("version"),
@@ -717,6 +725,7 @@ def build_runtime_characterization_profile(
         "budget_characterization":copy.deepcopy(budget_characterization),
         "role_specialization":copy.deepcopy(role_specialization),
         "minimum_valid_matched_role_families":minimum_role_families,
+        "minimum_auditor_depth_pairs":minimum_depth_pairs,
         "resolved_generation_budget_by_family":copy.deepcopy(
             budget_characterization.get("resolved_generation_budget_by_family") or {}
         ),
@@ -1203,7 +1212,8 @@ def foundation_question_ledger(
         **{i:"output_contract_and_existing_format_families" for i in range(21,27)},
         **{i:"context/frontier labs" for i in range(27,32)},
         **{i:"role_specialization_gate" for i in (32,33,34,38)},
-        **{i:"role/trust follow-on discovery" for i in (35,36,37,43,44,45)},
+        **{i:"role_specialization_gate" for i in (35,36,37)},
+        **{i:"role/trust follow-on discovery" for i in (43,44,45)},
         **{i:"reliability/cost evidence" for i in range(39,43)},
         7:"fractional_compute_surface",
         8:"fractional_compute_surface",
