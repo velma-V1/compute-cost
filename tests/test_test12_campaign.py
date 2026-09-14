@@ -3560,6 +3560,75 @@ def test_campaign_block_one_is_calibration_and_real_evidence():
     assert event["automatic_stop"] is False
 
 
+def test_block_reassessment_shrinks_priority_cells_to_observed_call_capacity():
+    class Store:
+        run_id = "run"
+
+    class Runner:
+        store = Store()
+        _model_call_counts = {"run": 500}
+
+    campaign = object.__new__(test12_module.Test12Campaign)
+    campaign.runner = Runner()
+    campaign.cfg = {
+        "safety_call_cap": 14000,
+        "campaign_block_physical_calls": 500,
+    }
+    campaign.rows = []
+    campaign.intervention_by_id = {}
+    campaign.priority_cell_order = [
+        "m1|f", "m2|f", "m3|f", "m4|f", "m5|f",
+    ]
+    campaign.priority_cell_keys = set(campaign.priority_cell_order)
+    campaign.priority_cell_cost_calls = {
+        key: 4 for key in campaign.priority_cell_order
+    }
+    campaign.priority_reselection_count = 0
+    campaign.capability_start_active_seconds = 0.0
+    campaign._active_elapsed = lambda: 100.0
+    campaign._remaining_matrix_phase_seconds = lambda: 16.0
+
+    result = campaign._reselect_priority_cells_from_observed_throughput(50)
+
+    assert result["observed_capability_calls_per_second"] == 0.5
+    assert result["projected_remaining_matrix_calls"] == 8
+    assert result["retained_target_count"] == 2
+    assert result["active_priority_count"] == 2
+    assert result["dropped_unreached_target_count"] == 3
+    assert result["changed"] is True
+    assert campaign.priority_cell_keys == {"m1|f", "m2|f"}
+    assert campaign.priority_reselection_count == 1
+
+
+def test_priority_reselection_never_expands_beyond_preflight_ranked_set():
+    class Store:
+        run_id = "run"
+
+    class Runner:
+        store = Store()
+        _model_call_counts = {"run": 500}
+
+    campaign = object.__new__(test12_module.Test12Campaign)
+    campaign.runner = Runner()
+    campaign.cfg = {"safety_call_cap": 14000}
+    campaign.rows = []
+    campaign.intervention_by_id = {}
+    campaign.priority_cell_order = ["m1|f", "m2|f"]
+    campaign.priority_cell_keys = {"m1|f", "m2|f"}
+    campaign.priority_cell_cost_calls = {"m1|f": 4, "m2|f": 4}
+    campaign.priority_reselection_count = 0
+    campaign.capability_start_active_seconds = 0.0
+    campaign._active_elapsed = lambda: 10.0
+    campaign._remaining_matrix_phase_seconds = lambda: 10000.0
+
+    result = campaign._reselect_priority_cells_from_observed_throughput(500)
+
+    assert result["retained_target_count"] == 2
+    assert result["dropped_unreached_target_count"] == 0
+    assert result["changed"] is False
+    assert campaign.priority_cell_keys == {"m1|f", "m2|f"}
+
+
 def test_runtime_canary_is_time_based_excluded_and_confirms_drift(monkeypatch):
     now = [0.0]
 
