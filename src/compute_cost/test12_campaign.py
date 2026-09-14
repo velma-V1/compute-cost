@@ -6775,7 +6775,9 @@ def _harness_applicability_registry(
             len(applicable) / known
             if known else None
         )
-        if not applicable and not unknown:
+        if not applicable and unbuilt:
+            gap_status = "UNBUILT_MECHANISM_GAP"
+        elif not applicable and not unknown:
             gap_status = "NO_APPLICABLE_MECHANISM"
         elif not applicable and unknown:
             gap_status = "APPLICABILITY_INCOMPLETE"
@@ -6823,6 +6825,7 @@ def _harness_applicability_registry(
                 "NO_APPLICABLE_MECHANISM",
                 "THIN_APPLICABLE_MECHANISM_SET",
                 "APPLICABILITY_INCOMPLETE",
+                "UNBUILT_MECHANISM_GAP",
             }
         ),
     }
