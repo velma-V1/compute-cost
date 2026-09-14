@@ -5895,6 +5895,106 @@ def _control_redundancy_map(campaign: Test12Campaign) -> dict[str, Any]:
     }
 
 
+
+def _harness_applicability_registry(
+    campaign: Test12Campaign,
+) -> dict[str, Any]:
+    """Outcome-blind map of which semantic mechanisms can address each family."""
+    grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for intervention in campaign.interventions:
+        descriptor = _semantic_mechanism_descriptor(intervention)
+        grouped[str(descriptor["mechanism_key"])].append(intervention)
+
+    mechanisms: dict[str, Any] = {}
+    for mechanism_key, members in sorted(grouped.items()):
+        representative = sorted(
+            members,
+            key=lambda row: (
+                _estimated_physical_calls(row),
+                len(str(row.get("instruction") or row.get("label") or "")),
+                str(row.get("id") or ""),
+            ),
+        )[0]
+        mechanisms[mechanism_key] = {
+            "representative_intervention_id":str(representative.get("id") or ""),
+            "category":str(representative.get("category") or "UNKNOWN"),
+            "member_intervention_ids":sorted(
+                str(row.get("id") or "") for row in members if row.get("id")
+            ),
+            "variant_count":len(members),
+        }
+
+    families: dict[str, Any] = {}
+    for family in TEST2_CAPABILITY_FAMILIES:
+        applicable = []
+        inapplicable = []
+        unknown = []
+        details = {}
+        for mechanism_key, payload in mechanisms.items():
+            representative = campaign.intervention_by_id.get(
+                payload["representative_intervention_id"]
+            ) or {}
+            decision = mechanism_applicability(representative, family)
+            status = str(decision["status"])
+            details[mechanism_key] = {
+                **copy.deepcopy(payload),
+                "status":status,
+                "basis":decision.get("basis"),
+            }
+            if status == "APPLICABLE":
+                applicable.append(mechanism_key)
+            elif status == "NOT_APPLICABLE":
+                inapplicable.append(mechanism_key)
+            else:
+                unknown.append(mechanism_key)
+
+        known = len(applicable) + len(inapplicable)
+        known_ratio = (
+            len(applicable) / known
+            if known else None
+        )
+        if not applicable and not unknown:
+            gap_status = "NO_APPLICABLE_MECHANISM"
+        elif not applicable and unknown:
+            gap_status = "APPLICABILITY_INCOMPLETE"
+        elif len(applicable) < 5:
+            gap_status = "THIN_APPLICABLE_MECHANISM_SET"
+        else:
+            gap_status = "APPLICABLE_MECHANISM_SET_PRESENT"
+
+        families[family] = {
+            "declared_semantic_mechanism_count":len(mechanisms),
+            "applicable_mechanism_count":len(applicable),
+            "inapplicable_mechanism_count":len(inapplicable),
+            "unknown_applicability_count":len(unknown),
+            "known_applicability_fraction":known_ratio,
+            "applicable_mechanism_keys":applicable,
+            "inapplicable_mechanism_keys":inapplicable,
+            "unknown_mechanism_keys":unknown,
+            "harness_gap_status":gap_status,
+            "mechanisms":details,
+        }
+
+    return {
+        "schema_version":1,
+        "analysis_type":"OUTCOME_BLIND_HARNESS_APPLICABILITY",
+        "semantic_mechanism_count":len(mechanisms),
+        "family_count":len(families),
+        "structural_not_applicable_is_not_failure":True,
+        "unknown_applicability_is_not_failure":True,
+        "model_limit_claim_requires_applicable_mechanism_search":True,
+        "families":families,
+        "harness_gap_candidate_families":sorted(
+            family for family, payload in families.items()
+            if payload["harness_gap_status"] in {
+                "NO_APPLICABLE_MECHANISM",
+                "THIN_APPLICABLE_MECHANISM_SET",
+                "APPLICABILITY_INCOMPLETE",
+            }
+        ),
+    }
+
+
 def _capability_floor_registry(campaign: Test12Campaign) -> dict[str, Any]:
     """Zero-call construct-validity and harness-floor registry.
 
