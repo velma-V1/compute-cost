@@ -442,7 +442,6 @@ def run_runtime_budget_characterization(
                 or [
                     campaign.cfg.get("base_generation_budget") or 256,
                     *(campaign.cfg.get("generation_budgets") or [256, 512, 1024, 2048]),
-                    4096,
                 ]
             )
         }
