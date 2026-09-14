@@ -157,6 +157,7 @@ from .test12_model_manufacturing import (
     ZERO_CLOCK_MODEL_BUILDING_PRODUCTS,
     build_zero_clock_model_manufacturing,
 )
+from .telemetry import integrate_power_wh
 from .test12_foundation_labs import (
     FOUNDATION_QUESTIONS,
     build_runtime_characterization_profile,
@@ -291,6 +292,7 @@ REQUIRED_OUTPUTS = (
     "early-truncation-shadow-policy.json",
     "context-efficiency-knee.json",
     "sustained-load-drift.json",
+    "energy-hardware-economics.json",
     "gpt-oss-role-specialization-map.json",
     "gpt-oss-foundation-question-ledger.json",
     "test1.2-foundation-observations.jsonl",
@@ -4850,6 +4852,133 @@ def _sustained_load_drift(campaign: Test12Campaign) -> dict[str, Any]:
     }
 
 
+def _energy_hardware_economics(
+    campaign: Test12Campaign,
+    samples: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Zero-call GPU energy/economics summary from existing telemetry."""
+    if samples is None:
+        samples = []
+        telemetry_path = campaign.runner.store.run_dir / "telemetry.jsonl"
+        if telemetry_path.is_file():
+            for line in telemetry_path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                try:
+                    value = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if isinstance(value, dict):
+                    samples.append(value)
+
+    energy_wh = integrate_power_wh(samples)
+    powers = [
+        float(sample["total_gpu_power_w"])
+        for sample in samples
+        if isinstance(sample.get("total_gpu_power_w"), (int, float))
+    ]
+    temperatures: list[float] = []
+    utilizations: list[float] = []
+    vram_used: list[float] = []
+    for sample in samples:
+        gpu = sample.get("gpu") or {}
+        if not isinstance(gpu, dict) or gpu.get("availability") != "available":
+            continue
+        for device in gpu.get("devices", []) or []:
+            if not isinstance(device, dict):
+                continue
+            if isinstance(device.get("temperature_c"), (int, float)):
+                temperatures.append(float(device["temperature_c"]))
+            if isinstance(device.get("utilization_gpu_percent"), (int, float)):
+                utilizations.append(float(device["utilization_gpu_percent"]))
+            if isinstance(device.get("memory_used_mib"), (int, float)):
+                vram_used.append(float(device["memory_used_mib"]))
+
+    valid_rows = [
+        row for row in campaign.rows
+        if row.get("valid_for_capability") is True
+    ]
+    comparable_rows = [
+        row for row in campaign.rows
+        if row.get("delta_valid") is True and row.get("delta") is not None
+    ]
+    valid_rescues = [
+        row for row in comparable_rows
+        if float(row.get("control_score") or 0.0) < 1.0
+        and float(row.get("score") or 0.0) >= 1.0
+        and float(row["delta"]) > 0.0
+    ]
+
+    store = campaign.runner.store
+    run_id = getattr(store, "run_id", None)
+    physical_calls = (
+        int(getattr(campaign.runner, "_model_call_counts", {}).get(run_id, 0))
+        if run_id is not None else 0
+    )
+
+    monotonic = sorted(
+        int(sample["monotonic_ns"])
+        for sample in samples
+        if isinstance(sample.get("monotonic_ns"), int)
+    )
+    duration_s = (
+        (monotonic[-1] - monotonic[0]) / 1_000_000_000.0
+        if len(monotonic) >= 2 else None
+    )
+
+    return {
+        "schema_version":1,
+        "analysis_type":"ZERO_CALL_DERIVED_DIAGNOSTIC",
+        "source":"TELEMETRY_JSONL",
+        "capability_claim":False,
+        "telemetry_sample_count":len(samples),
+        "telemetry_duration_seconds":duration_s,
+        "gpu_energy_wh":energy_wh,
+        "gpu_energy_kwh":(
+            float(energy_wh) / 1000.0
+            if isinstance(energy_wh, (int, float)) else None
+        ),
+        "mean_total_gpu_power_w":(
+            sum(powers) / len(powers) if powers else None
+        ),
+        "peak_total_gpu_power_w":max(powers) if powers else None,
+        "mean_gpu_temperature_c":(
+            sum(temperatures) / len(temperatures) if temperatures else None
+        ),
+        "peak_gpu_temperature_c":max(temperatures) if temperatures else None,
+        "mean_gpu_utilization_percent":(
+            sum(utilizations) / len(utilizations) if utilizations else None
+        ),
+        "peak_vram_used_mib":max(vram_used) if vram_used else None,
+        "physical_model_calls":physical_calls,
+        "valid_capability_observations":len(valid_rows),
+        "valid_comparable_observations":len(comparable_rows),
+        "valid_rescues":len(valid_rescues),
+        "wh_per_physical_model_call":(
+            float(energy_wh) / physical_calls
+            if isinstance(energy_wh, (int, float)) and physical_calls > 0
+            else None
+        ),
+        "wh_per_valid_capability_observation":(
+            float(energy_wh) / len(valid_rows)
+            if isinstance(energy_wh, (int, float)) and valid_rows
+            else None
+        ),
+        "wh_per_valid_rescue":(
+            float(energy_wh) / len(valid_rescues)
+            if isinstance(energy_wh, (int, float)) and valid_rescues
+            else None
+        ),
+        "electricity_cost_not_assumed":True,
+        "cost_formula":"gpu_energy_kwh * user_electricity_rate_per_kwh",
+        "limitations":[
+            "GPU energy uses trapezoidal integration of telemetry power.draw samples.",
+            "Host/CPU/platform energy is not included unless separately metered.",
+            "Per-result energy is campaign-average attribution, not direct per-request metering.",
+        ],
+    }
+
+
 def _efficiency_audit(campaign: Test12Campaign) -> dict[str, Any]:
     controls = [
         row for row in campaign.rows if row.get("intervention_id") == "CONTROL"
@@ -5768,6 +5897,13 @@ def write_outputs(campaign: Test12Campaign, results: dict[str, Any]) -> None:
         producer="test1.2",
         stage="report",
     )
+    energy_economics = _energy_hardware_economics(campaign)
+    store.write_json(
+        "energy-hardware-economics.json",
+        energy_economics,
+        producer="test1.2",
+        stage="report",
+    )
     store.write_json("gpt-oss-role-specialization-map.json", role_specialization, producer="test1.2", stage="report")
     store.write_json("gpt-oss-foundation-question-ledger.json", foundation_ledger, producer="test1.2", stage="report")
     if not (store.run_dir / "test1.2-foundation-observations.jsonl").is_file():
@@ -5813,6 +5949,7 @@ def write_outputs(campaign: Test12Campaign, results: dict[str, Any]) -> None:
         "early_truncation_shadow_policy":"early-truncation-shadow-policy.json",
         "context_efficiency_knee":"context-efficiency-knee.json",
         "sustained_load_drift":"sustained-load-drift.json",
+        "energy_hardware_economics":"energy-hardware-economics.json",
         "runtime_characterization_profile_sha256":runtime_characterization.get("profile_sha256"),
         "resolved_generation_budget_by_family":copy.deepcopy(
             runtime_characterization.get("resolved_generation_budget_by_family") or {}
