@@ -6854,6 +6854,9 @@ def run_test12_campaign(
             results["frontier_gaps"] = phase_frontier_gap_labs(campaign, deadline)
         elif phase_name == "second_frontier_gap_labs":
             results["second_frontier_gaps"] = phase_second_frontier_gap_labs(campaign, deadline)
+        elif phase_name == "final_report_reserve":
+            campaign.maybe_runtime_canary(deadline, force=True)
+            campaign.maybe_block_reassessment()
 
         ended = campaign.clock()
         physical_after = int(getattr(runner, "_model_call_counts", {}).get(run_id, 0)) if run_id else 0
