@@ -2426,7 +2426,7 @@ def test_stage0_profile_rejects_nominal_role_questions_without_valid_coverage(tm
     assert "ROLE_SPECIALIZATION_VALID_SCORE_MISSING" in profile["gate_failures"]
 
 
-def test_stage0_profile_blocks_campaign_when_auditor_executor_thesis_fails(tmp_path):
+def test_stage0_profile_keeps_runtime_valid_when_architecture_thesis_fails(tmp_path):
     (tmp_path / "runtime.json").write_text(
         json.dumps({
             "model": "gpt-oss:20b",
@@ -2486,11 +2486,18 @@ def test_stage0_profile_blocks_campaign_when_auditor_executor_thesis_fails(tmp_p
     profile = foundation_module.build_runtime_characterization_profile(
         Campaign(), runtime, budgets, output_contracts, role
     )
-    assert profile["gate_passed"] is False
+    assert profile["gate_passed"] is True
     assert profile["auditor_role_allowed"] is True
-    assert profile["gate_failures"] == [
-        "AUDITOR_EXECUTOR_THESIS_NOT_SUPPORTED"
-    ]
+    assert profile["gate_failures"] == []
+    assert profile["architecture_thesis"]["status"] == "NOT_SUPPORTED"
+    assert profile["architecture_thesis"]["supported"] is False
+    assert profile["architecture_thesis"]["full_inverted_campaign_allowed"] is False
+    assert (
+        profile["architecture_thesis"][
+            "decision_separate_from_runtime_instrument_validity"
+        ]
+        is True
+    )
 
 
 def test_stage0_profile_rejects_thinking_channel_leak(tmp_path):
@@ -2761,6 +2768,31 @@ def test_control_redundancy_map_clusters_by_semantics_not_rescue_cooccurrence():
     assert cluster["representative_may_use_valid_outcomes"] is True
 
 
+def test_semantic_clustering_does_not_merge_distinct_retry_mechanisms():
+    diagnose = {
+        "id": "RETRY-DIAGNOSE",
+        "category": "RETRY_RECOVERY",
+        "mode": "retry",
+        "label": "diagnose_then_retry",
+        "aux_instruction": "Diagnose the failure.",
+        "final_instruction": "Retry by addressing the diagnosed failure.",
+    }
+    reset = {
+        "id": "RETRY-RESET",
+        "category": "RETRY_RECOVERY",
+        "mode": "retry",
+        "label": "strategy_reset",
+        "aux_instruction": "Discard the failed strategy.",
+        "final_instruction": "Retry with an independent strategy.",
+    }
+    left = test12_module._semantic_mechanism_descriptor(diagnose)
+    right = test12_module._semantic_mechanism_descriptor(reset)
+
+    assert left["mechanism_key"] != right["mechanism_key"]
+    assert left["mechanism_basis"]["semantic_axis"] == "named_intervention_mechanism"
+    assert right["mechanism_basis"]["semantic_axis"] == "named_intervention_mechanism"
+
+
 def test_capability_floor_registry_separates_exhaustive_from_partial_search():
     family = "arithmetic_numerical_reasoning"
 
@@ -3022,7 +3054,7 @@ def test_campaign_block_one_is_calibration_and_real_evidence():
 
     class Runner:
         store = Store()
-        _model_call_counts = {"run": 510}
+        _model_call_counts = {"run": 512}
 
     campaign = object.__new__(test12_module.Test12Campaign)
     campaign.runner = Runner()
@@ -3077,6 +3109,8 @@ def test_campaign_block_one_is_calibration_and_real_evidence():
     assert event["negative_rows_in_block"] == 1
     assert event["censored_rows_in_block"] == 1
     assert event["throughput_metric_role"] == "SIZING_AND_DIAGNOSTIC_NOT_GO_NO_GO"
+    assert event["capability_physical_calls_observed"] == 500
+    assert event["runtime_canary_calls_excluded_from_block_count"] == 2
     assert event["automatic_stop"] is False
 
 
