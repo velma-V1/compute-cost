@@ -452,7 +452,88 @@ UNIVERSAL_MECHANISM_CATEGORIES = frozenset({
     "COMPUTE_COST_ROUTING",
     "METAMORPHIC_ROBUSTNESS",
     "REFLECTION_TRANSFER",
+    "ADAPTIVE_SEARCH",
 })
+
+
+EXECUTABLE_INTERVENTION_MODES = frozenset({
+    "source_recipe",
+    "single",
+    "grammar_control",
+    "post_candidate_injection",
+    "precompute",
+    "repair",
+    "critique_repair",
+    "failure_synth",
+    "retry",
+    "delegation",
+    "ensemble",
+    "adaptive_search",
+    "metamorphic",
+    "reflection_transfer",
+    "three_stage",
+    "aba",
+    "router",
+    "confidence_gate",
+})
+
+REQUIRED_INTERVENTION_FIELDS: dict[str, tuple[tuple[str, ...], ...]] = {
+    "source_recipe": (("source_recipe",),),
+    "grammar_control": (("instruction",), ("placement",)),
+    "post_candidate_injection": (("instruction",),),
+    "precompute": (("aux_instruction",),),
+    "repair": (("instruction", "final_instruction"),),
+    "critique_repair": (("aux_instruction",), ("final_instruction",)),
+    "failure_synth": (("aux_instruction",), ("final_instruction",)),
+    "retry": (("aux_instruction",), ("final_instruction",)),
+    "delegation": (("aux_instruction",), ("final_instruction",)),
+    "ensemble": (("final_instruction",),),
+    "three_stage": (("aux_instruction",), ("middle_instruction",), ("final_instruction",)),
+    "aba": (("aux_instruction",), ("middle_instruction",), ("final_instruction",)),
+    "router": (("aux_instruction",),),
+    "confidence_gate": (("aux_instruction",),),
+}
+
+
+def mechanism_implementation_status(
+    intervention: dict[str, Any],
+) -> dict[str, Any]:
+    """Static zero-call audit of whether a declared intervention is executable."""
+    explicit = str(intervention.get("implementation_status") or "").upper()
+    if explicit == "UNBUILT":
+        return {
+            "status":"UNBUILT",
+            "basis":"EXPLICIT_IMPLEMENTATION_STATUS_UNBUILT",
+            "mode":str(intervention.get("mode") or "single"),
+            "missing_field_groups":[],
+        }
+
+    mode = str(intervention.get("mode") or "single")
+    if mode not in EXECUTABLE_INTERVENTION_MODES:
+        return {
+            "status":"UNBUILT",
+            "basis":"INTERVENTION_MODE_HAS_NO_EXECUTION_BRANCH",
+            "mode":mode,
+            "missing_field_groups":[],
+        }
+
+    missing: list[list[str]] = []
+    for alternatives in REQUIRED_INTERVENTION_FIELDS.get(mode, ()):
+        if not any(intervention.get(field) not in {None, ""} for field in alternatives):
+            missing.append(list(alternatives))
+    if missing:
+        return {
+            "status":"UNBUILT",
+            "basis":"INTERVENTION_REQUIRED_FIELDS_MISSING",
+            "mode":mode,
+            "missing_field_groups":missing,
+        }
+    return {
+        "status":"BUILT",
+        "basis":"STATIC_EXECUTION_BRANCH_AND_REQUIRED_FIELDS_PRESENT",
+        "mode":mode,
+        "missing_field_groups":[],
+    }
 
 
 def mechanism_applicability(
@@ -476,8 +557,8 @@ def mechanism_applicability(
                 "basis":"PROMPT_PRIMITIVE_HAS_DECLARED_FAMILY_RELEVANCE",
             }
         return {
-            "status":"UNKNOWN",
-            "basis":"PROMPT_PRIMITIVE_FAMILY_RELEVANCE_NOT_ESTABLISHED",
+            "status":"NOT_APPLICABLE",
+            "basis":"PROMPT_PRIMITIVE_DECLARATION_EXCLUDES_FAMILY",
         }
 
     if category in UNIVERSAL_MECHANISM_CATEGORIES:
