@@ -80,6 +80,10 @@ def test_cell_budget_plan_freezes_schema_and_forces_subset_arithmetic():
     )
     assert set(plan["applicability_counts"]) == set(APPLICABILITY_STATES)
     assert plan["applicability_counts"]["structural_no"] > 0
+    assert plan["applicability_counts"]["untested"] == 0
+    assert plan["applicability_counts"]["unbuilt"] == 0
+    assert plan["untested_applicability_cell_count"] == 0
+    assert plan["untested_applicability_excluded_from_campaign_calls"] is True
     assert plan["schema_contract"]["effect_states"] == list(EFFECT_STATES)
     assert plan["schema_contract"]["null_verified_distinct_from_null_censored"] is True
     assert plan["schema_contract"]["conditional_requires_populated_condition_predicate"] is True
@@ -107,3 +111,25 @@ def test_preflight_cells_start_unknown_and_cost_is_not_faked():
     assert measured["cost"]["effect_observation_binding"] is None
     assert measured["harm"]["population"] is None
     assert measured["composition"]["status"] == "unknown"
+
+
+
+def test_static_implementation_audit_turns_missing_delivery_into_unbuilt():
+    from compute_cost.test12_campaign import mechanism_implementation_status
+
+    unsupported = mechanism_implementation_status({
+        "id":"FUTURE",
+        "category":"FUTURE",
+        "mode":"not-implemented",
+    })
+    assert unsupported["status"] == "UNBUILT"
+    assert unsupported["basis"] == "INTERVENTION_MODE_HAS_NO_EXECUTION_BRANCH"
+
+    malformed = mechanism_implementation_status({
+        "id":"BROKEN-RETRY",
+        "category":"RETRY_RECOVERY",
+        "mode":"retry",
+        "aux_instruction":"diagnose",
+    })
+    assert malformed["status"] == "UNBUILT"
+    assert malformed["basis"] == "INTERVENTION_REQUIRED_FIELDS_MISSING"
