@@ -201,6 +201,7 @@ def load_tuning_recovery(run_dir: Path) -> dict[str, Any]:
                 })
                 continue
             rows.append(row)
+    raw_policy_rows = copy.deepcopy(rows)
     campaign_recovery = load_test12_recovery(run_dir)
 
     sanitized_campaign_rows, campaign_sanitization = _sanitize_collection_observations(
@@ -260,14 +261,21 @@ def load_tuning_recovery(run_dir: Path) -> dict[str, Any]:
         row for row in sanitized_policy_rows
         if row.get("partition") in {"TEST2_BLIND", "TEST3_PROTECTED"}
     ]
+    completed_phase_names = {
+        str(value) for value in (checkpoint.get("completed_phases") or [])
+    }
+    current_phase_name = str(checkpoint.get("current_phase") or "")
+    exposure_rows = [*raw_policy_rows, *sanitized_campaign_rows]
     legacy_holdout_exposure = {
-        "TEST2_BLIND": any(
-            row.get("partition") == "TEST2_BLIND"
-            for row in reserved_holdout_rows
+        "TEST2_BLIND": bool(
+            any(row.get("partition") == "TEST2_BLIND" for row in exposure_rows)
+            or "test2_blind_acceptance" in completed_phase_names
+            or current_phase_name == "test2_blind_acceptance"
         ),
-        "TEST3_PROTECTED": any(
-            row.get("partition") == "TEST3_PROTECTED"
-            for row in reserved_holdout_rows
+        "TEST3_PROTECTED": bool(
+            any(row.get("partition") == "TEST3_PROTECTED" for row in exposure_rows)
+            or "test3_protected_acceptance" in completed_phase_names
+            or current_phase_name == "test3_protected_acceptance"
         ),
     }
     checkpoint["legacy_holdout_exposure"] = copy.deepcopy(legacy_holdout_exposure)
