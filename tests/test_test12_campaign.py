@@ -22,6 +22,7 @@ from compute_cost.test12_campaign import (
     _estimated_physical_calls,
     _family_surface_gap_queue,
     _row_integrity_hash,
+    _capability_valid,
     _source_headroom,
     _unmeasured_frontier_cases,
     _unresolved_failure_cases,
@@ -1292,6 +1293,9 @@ def test_terminal_acceptance_requires_absolute_competence_not_only_zero_regressi
             "score": 0.0,
             "control_score": 0.0,
             "delta": 0.0,
+            "delta_valid": True,
+            "valid_for_capability": True,
+            "control_valid_for_capability": True,
             "model_calls": 0,
         }
         for _ in range(6)
@@ -1309,6 +1313,9 @@ def test_terminal_acceptance_requires_absolute_competence_not_only_zero_regressi
             "score": score,
             "control_score": score,
             "delta": 0.0,
+            "delta_valid": True,
+            "valid_for_capability": True,
+            "control_valid_for_capability": True,
             "model_calls": 1,
         }
         for score in [1.0, 1.0, 1.0, 1.0, 1.0, 0.0]
@@ -1739,6 +1746,14 @@ def test_run2_prioritizes_new_rescue_opportunity_over_replicated_null():
 
 
 
+def test_capability_validity_fails_closed_when_metadata_is_missing():
+    assert _capability_valid({}) is False
+    assert _capability_valid({"classification": {}}) is False
+    assert _capability_valid({
+        "classification": {"valid_for_capability": True}
+    }) is True
+
+
 def test_invalid_runtime_rows_never_create_capability_rescues_or_regressions():
     family = "arithmetic_numerical_reasoning"
     raw = [
@@ -1855,6 +1870,29 @@ def test_tuning_policy_score_excludes_invalid_runtime_outcomes():
     assert scored["invalid_observations_excluded"] == 1
     assert scored["mean_delta"] == 0.0
     assert scored["regression_rate"] == 0.0
+
+
+def test_tuning_policy_score_fails_closed_on_missing_validity_metadata():
+    rows = [{
+        "family_id": "family_a",
+        "score": 0.0,
+        "control_score": 1.0,
+        "delta": -1.0,
+        "delta_valid": True,
+        "model_calls": 1,
+    }] + [{
+        "family_id": "family_a",
+        "score": 1.0,
+        "control_score": 1.0,
+        "delta": 0.0,
+        "model_calls": 1,
+    } for _ in range(9)]
+
+    scored = _score_policy_rows(rows)
+    assert scored["raw_n"] == 10
+    assert scored["n"] == 1
+    assert scored["invalid_observations_excluded"] == 9
+    assert scored["regression_rate"] == 1.0
 
 
 def test_zero_clock_training_refinery_rejects_invalid_fake_rescue():
