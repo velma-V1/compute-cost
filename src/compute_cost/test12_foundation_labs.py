@@ -472,7 +472,9 @@ def run_runtime_semantics_gate(campaign: Any, deadline: float) -> dict[str, Any]
             }
             for row in length_rows
         ],
-        "cross_call_statelessness_verified":statelessness_verified,\n        "statelessness_probe_sequence":copy.deepcopy(state_sequence),\n        "eval_count_semantics":{
+        "cross_call_statelessness_verified":statelessness_verified,
+        "statelessness_probe_sequence":copy.deepcopy(state_sequence),
+        "eval_count_semantics":{
             "native_value":"aggregate generated token count",
             "native_thinking_answer_split_available":False,
             "observable_proxies":["thinking_chars","answer_chars","thinking_chunks","answer_chunks","phase timing"],
@@ -811,7 +813,13 @@ def run_runtime_budget_characterization(
             and not row.get("content_empty")
             and row.get("done_reason") != "length"
         )
-        if role == "SCREEN":\n            total_screen_calls += 1\n        elif role == "HEADROOM":\n            total_headroom_calls += 1\n        else:\n            total_confirmation_calls += 1\n        return row
+        if role == "SCREEN":
+            total_screen_calls += 1
+        elif role == "HEADROOM":
+            total_headroom_calls += 1
+        else:
+            total_confirmation_calls += 1
+        return row
 
     for case in cases:
         if not campaign.can_start(deadline):
@@ -1168,7 +1176,10 @@ def run_runtime_budget_characterization(
             "safety_factor":float(safety_factor),
             "safety_headroom_available":bool(safety_headroom_available),
             "resolution_basis":basis,
-            "budget_elasticity":budget_elasticity,\n            "budget_expansion_allowed":budget_expansion_allowed,\n            "overthink_corruption_observed":overthink_corruption_observed,\n            "early_truncation_shadow_policy":shadow_policy,
+            "budget_elasticity":budget_elasticity,
+            "budget_expansion_allowed":budget_expansion_allowed,
+            "overthink_corruption_observed":overthink_corruption_observed,
+            "early_truncation_shadow_policy":shadow_policy,
         }
 
     expected_families = sorted({_family(case) for case in cases})
@@ -1204,7 +1215,13 @@ def run_runtime_budget_characterization(
         "budget_ladder":list(ladder),
         "search_strategy":"SCREEN_ESCALATE_CONFIRM",
         "screen_calls":total_screen_calls,
-        "confirmation_calls":total_confirmation_calls,\n        "headroom_calls":total_headroom_calls,\n        "calls_used":total_screen_calls + total_confirmation_calls + total_headroom_calls,\n        "budget_elasticity_by_family":elasticity_classes,\n        "budget_filling_family_count":sum(1 for value in elasticity_classes.values() if value == "BUDGET_FILLING"),\n        "overthink_corruption_family_count":sum(1 for payload in families.values() if payload.get("overthink_corruption_observed") is True),\n        "families":families,
+        "confirmation_calls":total_confirmation_calls,
+        "headroom_calls":total_headroom_calls,
+        "calls_used":total_screen_calls + total_confirmation_calls + total_headroom_calls,
+        "budget_elasticity_by_family":elasticity_classes,
+        "budget_filling_family_count":sum(1 for value in elasticity_classes.values() if value == "BUDGET_FILLING"),
+        "overthink_corruption_family_count":sum(1 for payload in families.values() if payload.get("overthink_corruption_observed") is True),
+        "families":families,
         "resolved_generation_budget_by_family":resolved,
         "early_truncation_shadow_policy":{
             "schema_version":1,
@@ -1236,7 +1253,8 @@ def build_runtime_characterization_profile(
             except Exception:
                 runtime_snapshot = {}
 
-    critical_runtime = {1,2,3,4,5,6,9,10,46}\n    runtime_answered = set(runtime_semantics.get("questions_answered") or [])
+    critical_runtime = {1,2,3,4,5,6,9,10,46}
+    runtime_answered = set(runtime_semantics.get("questions_answered") or [])
     role_answered = set(role_specialization.get("questions_answered") or [])
     budget_answered = set(budget_characterization.get("questions_answered") or [])
     output_answered = set(output_contracts.get("questions_answered") or [])
@@ -1250,7 +1268,9 @@ def build_runtime_characterization_profile(
         gate_reasons.append("MODEL_IDENTITY_MISMATCH")
     if int(runtime_semantics.get("thinking_markup_leak_count") or 0) > 0:
         gate_reasons.append("THINKING_CHANNEL_LEAK_OBSERVED")
-    if runtime_semantics.get("cross_call_statelessness_verified") is not True:\n        gate_reasons.append("RUNTIME_CROSS_CALL_STATE_ISOLATION_FAILED")\n    if not budget_characterization.get("all_families_reproducibly_valid"):
+    if runtime_semantics.get("cross_call_statelessness_verified") is not True:
+        gate_reasons.append("RUNTIME_CROSS_CALL_STATE_ISOLATION_FAILED")
+    if not budget_characterization.get("all_families_reproducibly_valid"):
         gate_reasons.append("FAMILY_BUDGET_CALIBRATION_INCOMPLETE")
     if not {2,21,22,23,24}.issubset(output_answered):
         gate_reasons.append("OUTPUT_CONTRACT_CHARACTERIZATION_INCOMPLETE")
@@ -1952,7 +1972,8 @@ def foundation_question_ledger(
     # Existing Test 1.2 owners for later groups are explicitly declared rather
     # than incorrectly marked as answered by these foundation probes.
     owners = {
-        **{i:"runtime_semantics_gate" for i in (1,2,3,4,5,6,9,10,46)},\n        **{i:"fractional_compute_surface" for i in range(11,21)},
+        **{i:"runtime_semantics_gate" for i in (1,2,3,4,5,6,9,10,46)},
+        **{i:"fractional_compute_surface" for i in range(11,21)},
         **{i:"output_contract_gate" for i in range(21,25)},
         25:"output_contract_follow_on",
         26:"output_contract_and_existing_format_families",
