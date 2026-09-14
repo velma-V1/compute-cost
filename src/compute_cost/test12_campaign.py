@@ -1873,7 +1873,7 @@ class Test12Campaign:
             "delta": (
                 numeric - float(control.get("score") or 0.0)
                 if delta_valid
-                else 0.0
+                else None
             ),
             "control_response_text": str(control.get("response_text") or ""),
             "treatment_response_text": str(row.get("response_text") or ""),
@@ -4642,7 +4642,9 @@ def _tuning_corpus_rows(campaign: Test12Campaign) -> list[dict[str, Any]]:
     for row in campaign.rows:
         if row.get("intervention_id") in {None, "CONTROL"}:
             continue
-        delta = float(row.get("delta") or 0.0)
+        if not _capability_valid(row) or row.get("delta") is None:
+            continue
+        delta = float(row["delta"])
         if delta > 0:
             label = "POSITIVE_CONTROL"
         elif delta < 0:
