@@ -238,14 +238,19 @@ def load_tuning_recovery(run_dir: Path) -> dict[str, Any]:
     quarantined_policy_rows: list[dict[str, Any]] = []
     for raw in rows:
         row = copy.deepcopy(raw)
-        if (
-            not sanitized_campaign_rows
-            and "delta_valid" not in row
-            and "valid_for_capability" not in row
-            and "control_valid_for_capability" not in row
-        ):
-            # Unknown validity cannot be promoted into policy evidence. Preserve
-            # the atomic record for forensics, but quarantine it from scoring.
+        if not sanitized_campaign_rows:
+            explicit_pair_valid = bool(
+                row.get("delta_valid") is True
+                and row.get("valid_for_capability") is True
+                and row.get("control_valid_for_capability") is True
+            )
+            if explicit_pair_valid:
+                # The tuning row has an integrity hash plus complete explicit
+                # pair-validity metadata, so it is independently recoverable.
+                sanitized_policy_rows.append(row)
+                continue
+            # Without campaign evidence, anything short of an explicit valid
+            # pair remains UNKNOWN and cannot enter policy scoring.
             row["recovery_quarantined_unknown_validity"] = True
             quarantined_policy_rows.append(row)
             continue
