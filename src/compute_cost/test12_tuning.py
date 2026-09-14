@@ -64,6 +64,7 @@ TUNING_PHASES = (
 
 REQUIRED_COLLECTION_FILES = (
     "test1.2-observations.jsonl",
+    "runtime-characterization-profile.json",
     "full-control-candidate-registry.json",
     "control-grammar-coverage.json",
     "mechanism-coverage-ledger.json",
