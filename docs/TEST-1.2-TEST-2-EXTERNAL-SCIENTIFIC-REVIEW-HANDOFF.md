@@ -1,3 +1,14 @@
+# CURRENT REVIEW STATUS
+
+**Branch:** `build/gpt20b-test1.2-full-improvement`  
+**Scientific contract:** Round-1 and Round-2 stop-ship findings closed  
+**Latest Stage-0 deepening:** screen/escalate/confirm budget search + deep auditor evidence  
+**CI:** Python 3.11 PASS + Python 3.12 PASS
+
+This file preserves historical findings for forensic value. Where an older section conflicts with a later `CURRENT` or `ROUND 2` section, the later section is authoritative.
+
+---
+
 # REVIEW ROUND 1 — IMPLEMENTATION RESOLUTION
 
 **Round-1 external review basis:** commit `81ecec37d56cfed7c6617c28596d6a3b7b31ac90`  
@@ -154,56 +165,51 @@ routing / vetoes / limits
 release / constrain / reject
 ```
 
-## STILL STOP-CLOSED — DO NOT BYPASS
+## CURRENT FAIL-CLOSED CONTRACTS — DO NOT BYPASS
 
-### Exact Test 1.2 → Test 2 control execution
+The former exact-control handoff blocker is resolved.
 
-Test 2's legacy recipe language is not semantically equivalent to the full Test 1.2 intervention language.
+Test 2 now executes Test 1.2 controls through the exact Test 1.2 execution path and verifies semantic identity before proof.
 
-Until a shared exact-control executor is implemented, Test 2 intentionally rejects a Test 1.2 handoff rather than translating it approximately.
+Current fail-closed conditions include:
 
-The required architecture is:
-
-```
-single canonical intervention definition
-           ↓
-single shared renderer/executor
-       ↙           ↘
-Test 1.2          Test 2
-discovery         proof
-```
+- semantic hash mismatch;
+- missing exact source evidence;
+- runtime-characterization profile mismatch;
+- invalid or unresolved Stage-0 family operating budget;
+- consumed blind/protected holdout;
+- protected-partition leakage;
+- invalid capability comparison;
+- insufficient harm evidence for shipping verification.
 
 Required invariant:
 
 ```
-proof_semantic_hash == discovery_semantic_hash
+discovery_semantic_hash == proof_semantic_hash
 ```
 
-Do not remove the fail-closed guard merely to make a campaign run.
+Approximate translation into the legacy ingredient-recipe language remains prohibited.
 
-## ROUND-2 REVIEW PRIORITIES
+## ROUND-2 REVIEW STATUS
 
-The next reviewer must now focus on items not fully reviewed in Round 1:
+The original Round-2 priority list is now closed in code:
 
-1. shared exact-control executor and semantic hashing;
-2. cluster-aware inference and multiple-comparison control;
-3. training-asset firewall through `test12_model_manufacturing.py`;
-4. tuning/recovery correctness through `test12_tuning.py`;
-5. raw Ollama channel semantics through `runtimes/ollama.py`;
-6. classification validity rules;
-7. EvidenceStore / manifest / protected-partition isolation;
-8. zero-call reanalysis products:
-   - per-control censoring audit,
-   - rescue-signature redundancy clustering,
-   - unresolved capability-floor registry;
-9. whether Stage-0 budget calibration should use smarter bracket/bisect search while preserving replicated validity;
-10. whether auditor-versus-executor evidence is deep enough to make an architectural decision.
+1. exact-control execution + semantic hashing — implemented;
+2. cluster-aware inference + multiple-comparison control — implemented;
+3. training-asset firewall — implemented;
+4. tuning/recovery correctness — implemented and regression-tested;
+5. Ollama channel/scoring semantics — explicitly gated in Stage 0;
+6. classification validity rules — hardened;
+7. EvidenceStore / manifest / protected-partition isolation — audited and enforced;
+8. zero-call reanalysis products — implemented;
+9. smarter Stage-0 budget search — implemented as SCREEN → ESCALATE → CONFIRM;
+10. deeper auditor/executor evidence — implemented with second-pass, reasoning-exposure, and candidate-quality probes.
 
-**Do not recommend another long run until these are reviewed.**
+The next reviewer should search for new unknowns rather than re-proving repaired contracts.
 
 ---
 
-# TEST 1.2 + TEST 2 EXTERNAL SCIENTIFIC REVIEW HANDOFF
+# TEST 1.2 + TEST 2 EXTERNAL SCIENTIFIC REVIEW HANDOFF# TEST 1.2 + TEST 2 EXTERNAL SCIENTIFIC REVIEW HANDOFF
 
 **Repository:** `velma-V1/compute-cost`  
 **Branch:** `build/gpt20b-test1.2-full-improvement`  
@@ -710,98 +716,75 @@ Reviewer should try to break this invariant:
 
 ---
 
-# 12. TEST 2 STOP-SHIP BUGS THAT HAVE ALREADY BEEN FIXED
+# 12. TEST 2 SCIENTIFIC CONTRACT
 
-The old `test2_campaign.py` had the same invalid→0 failure.
+The old `test2_campaign.py` invalid→0 path is closed.
 
-That has been changed.
-
-## Test 2 now:
+Test 2 now:
 
 - records capability validity;
-- refuses to calculate a capability delta from an invalid baseline or invalid treatment;
-- filters invalid rows out of effect maps;
-- tracks baseline and treatment generation budgets;
-- requires a matched budget for capability comparison;
-- escalates baseline budget through a configurable ladder when the model truncates;
-- stores truncation attempts as runtime evidence;
-- uses the first valid operating point instead of calling truncation a failure.
+- persists undefined deltas as `null`;
+- refuses capability deltas from invalid baseline/treatment pairs;
+- filters invalid rows out of effect statistics;
+- uses Stage-0 family budgets as immutable proof inputs;
+- records baseline and treatment budgets on every comparison;
+- requires matched budgets for ordinary non-budget controls;
+- treats matched-budget truncation as explicit censoring;
+- can run a separate capability-plus-cost probe for censoring-dominated controls;
+- performs dedicated harm seeking on baseline-pass sentinels;
+- uses fixture-level independence rather than raw repeated observations;
+- applies exact sign-test evidence and FDR control to positive claims;
+- consumes blind holdouts once and preserves exposure across recovery.
 
-The default ladder is currently:
+Budget calibration is not learned inside Test 2.
+
+Stage 0 owns the operating-point search.
+
+Production Stage-0 budget search now uses:
 
 ```
-256
-512
-1024
-2048
+SCREEN
+  ↓
+ESCALATE ONLY IF SCREEN INVALID
+  ↓
+CONFIRM WITH INDEPENDENT SEEDS AT CANDIDATE BOUNDARY
+  ↓
+APPLY SAFETY FACTOR
+  ↓
+FREEZE FAMILY BUDGET
 ```
 
-Reviewer must determine whether this is the optimal search method or whether a faster bracket/bisect strategy is better.
+The production ladder includes 4096 tokens for safety headroom. Explicit custom ladders remain authoritative in controlled experiments.
 
 ---
 
 # 13. TEST 1.2 → TEST 2 SEMANTIC COMPATIBILITY
 
-This is now **fail-closed**.
+This is now implemented as exact semantic continuity.
 
-Old Test 2 knows the old `INGREDIENTS` prompt-recipe system.
+For a Test 1.2 source, Test 2:
 
-Test 1.2 can discover controls involving:
+1. loads the frozen provisional Test 1.2 policy;
+2. imports the exact Test 1.2 intervention definitions;
+3. recomputes intervention semantic hashes;
+4. executes controls through the same Test 1.2 intervention path;
+5. preserves the Stage-0 family budget map as immutable proof input;
+6. rejects any semantic drift;
+7. prohibits translation into the old generic `INGREDIENTS` recipe language.
 
-- reasoning effort;
-- generation budget;
-- context;
-- prompt structure;
-- verification;
-- retry;
-- routing;
-- tools;
-- state;
-- memory;
-- controller chains;
-- interaction/composition;
-- recovery.
-
-It is scientifically invalid to translate those controls into a generic old prompt recipe.
-
-Therefore current Test 2 intentionally refuses a Test 1.2 handoff until it has an **exact-control execution adapter**.
-
-Current fail-closed rule:
-
-> **No Test 1.2 control may enter Test 2 unless Test 2 can execute the exact intervention definition with the same semantics.**
-
-This is a remaining implementation requirement, but the unsafe behavior is blocked.
-
-## Highest-priority remaining implementation task
-
-Build a shared exact intervention executor so both stages call the same implementation:
+Required invariant:
 
 ```
-Test 1.2 discovery
-      │
-      ▼
-shared intervention definition + executor
-      │
-      ├── Test 1.2 discovery observation
-      │
-      └── Test 2 proof observation
+discovery_semantic_hash == proof_semantic_hash
 ```
 
-Do not duplicate intervention rendering logic.
+The execution path may change fixtures, seeds, proof schedule, and proof objective.
 
-Do not convert an intervention to another control language.
-
-Identity should be content-addressed, for example:
-
-```
-intervention_semantic_sha256
-```
-
-Test 2 should reject any candidate if its proof-time semantic hash differs from discovery-time semantic hash.
+It may not change the discovered control semantics.
 
 ---
 
-# 14. STAGE-CONTRACT CONFLICT THAT HAS BEEN FIXED
+# 14. STAGE-CONTRACT CONFLICT THAT HAS BEEN FIXED# 14. STAGE-CONTRACT CONFLICT THAT HAS BEEN FIXED
 
 The previous Test 1.2 terminal output claimed:
 
@@ -2191,17 +2174,51 @@ Mixed candidates continue receiving evidence until resolved or the configured ma
 
 ## 37.6 Remaining reviewer work
 
-The next reviewer should focus on **new unknowns**, not re-prove the fixed bugs.
+The known Round-1 and Round-2 measurement-integrity defects are closed.
 
-Highest-value targets:
+The next reviewer should focus on **new unknowns and yield optimization**, not re-prove fixed contracts.
 
-1. budget bracket/bisection efficiency;
-2. candidate-quality auditor sweep;
-3. early truncation prediction;
-4. output-contract optimization;
-5. context knee;
-6. sustained-load capability drift;
-7. energy economics;
-8. manifest-finalization performance.
+### Newly closed after the prior review ledger
 
-Any new stop-ship finding should still be patched and covered by a regression test before another long campaign.
+#### Stage-0 budget-search efficiency
+
+Budget calibration now uses:
+
+```
+SCREEN → ESCALATE → CONFIRM
+```
+
+instead of paying all independent replicates at every obviously truncating budget.
+
+The same k/k reproducibility standard is preserved at the candidate boundary.
+
+#### Auditor architecture evidence depth
+
+Stage 0 now uses its fixed role window more efficiently:
+
+- up to 12 spread-out capability families for base executor vs auditor economics;
+- independent second-pass audits;
+- candidate-only vs candidate-plus-untrusted-reasoning audits;
+- deterministic correct / near-miss / gross-wrong candidate-quality probes;
+- verdict-flip and accuracy metrics;
+- fail-closed minimum evidence thresholds.
+
+Questions 35, 36, and 37 are now owned by the Stage-0 role gate.
+
+### Highest-value remaining optimization targets
+
+1. early truncation prediction / safe early abort;
+2. output-contract optimization by task family;
+3. context-window quality/cost knee;
+4. sustained-load capability drift;
+5. energy / hardware economics;
+6. manifest-finalization performance;
+7. richer deterministic diagnostic subscore vectors where binary acceptance hides useful structure;
+8. additional adversarial auditor trust-boundary work:
+   - candidate prompt injection;
+   - rationale/verdict divergence;
+   - malicious tool-output influence.
+
+These are not currently known stop-ship defects.
+
+Any new measurement-integrity failure should still be patched and covered by a regression test before another long campaign.
