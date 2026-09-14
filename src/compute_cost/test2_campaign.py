@@ -4021,38 +4021,30 @@ def _final_recipe_registry(
         policy_key = next(iter(blind_effects), "POLICY-" + policy_lock[:16])
         blind_summary = copy.deepcopy(blind_effects.get(policy_key))
 
-        referenced_ids: list[str] = []
-        for value in (
-            policy.get("intervention_id"),
-            policy.get("fallback_intervention_id"),
-        ):
-            ident = str(value or "")
-            if ident and ident not in referenced_ids:
-                referenced_ids.append(ident)
-        for value in (policy.get("route_map") or {}).values():
-            ident = str(value or "")
-            if ident and ident != "DIRECT" and ident not in referenced_ids:
-                referenced_ids.append(ident)
+        cell_resolution = copy.deepcopy(
+            blind.get("cell_resolution")
+            or (getattr(campaign, "cell_resolution_map", {}) if campaign is not None else {})
+            or {}
+        )
+        aggregate = copy.deepcopy(cell_resolution.get("aggregate") or {})
+        active_cells = [
+            row for row in (cell_resolution.get("cells") or [])
+            if row.get("route_fireable") is True
+        ]
+        referenced_ids = sorted({
+            str(row.get("intervention_id") or "")
+            for row in active_cells
+            if row.get("intervention_id")
+        })
 
         harm_by_intervention: dict[str, Any] = {}
         all_harm_safe = True
         for ident in referenced_ids:
-            matching_recipe = next(
-                (
-                    recipe for recipe in getattr(campaign, "recipes", [])
-                    if str(recipe.get("intervention_id") or "") == ident
-                ),
-                None,
-            ) if campaign is not None else None
-            if matching_recipe is None:
-                harm_by_intervention[ident] = {
-                    "verification_status":"MISSING_HARM_EVIDENCE",
-                    "harm_safe":False,
-                }
-                all_harm_safe = False
-                continue
-            summary = copy.deepcopy(harm_evidence.get(_recipe_key(matching_recipe)))
-            harm_by_intervention[ident] = summary
+            summary = (
+                _harm_evidence_for_intervention(campaign, ident)
+                if campaign is not None else None
+            )
+            harm_by_intervention[ident] = copy.deepcopy(summary)
             if not (
                 summary
                 and summary.get("harm_evidence_sufficient") is True
@@ -4060,7 +4052,7 @@ def _final_recipe_registry(
             ):
                 all_harm_safe = False
 
-        # DIRECT has no applied control and therefore no control-specific harm debt.
+        # DIRECT or a fully narrowed-to-direct policy carries no applied-control harm debt.
         if not referenced_ids:
             all_harm_safe = True
 
@@ -4070,6 +4062,17 @@ def _final_recipe_registry(
             in {"STRONG", "PROMISING", "NULL"}
             and blind_summary.get("classification") != "CENSORING_DOMINATED"
         )
+        cell_gate_ok = bool(
+            aggregate
+            and int(aggregate.get("unresolved_fireable_count", 1)) == 0
+            and aggregate.get("aggregate_shipping_valid") is True
+        )
+        provenance_ok = bool(
+            campaign is not None
+            and campaign.test12_shipping_claim_eligible is True
+            and campaign.provenance_mode == "TEST1.2_COMPILER_MANIFEST"
+        )
+
         return [{
             "recipe_id":"POLICY-" + (policy_lock[:12] or "UNLOCKED"),
             "source_recipe_key":"FROZEN_TEST1.2_POLICY",
@@ -4087,7 +4090,19 @@ def _final_recipe_registry(
                 "referenced_interventions":harm_by_intervention,
                 "all_referenced_controls_harm_safe":all_harm_safe,
             },
-            "verified_for_shipping":bool(blind_ok and all_harm_safe),
+            "cell_resolution_summary":aggregate,
+            "unresolved_cell_count":int(aggregate.get("unresolved_unit_count", 0)),
+            "unresolved_fireable_cell_count":int(
+                aggregate.get("unresolved_fireable_count", 0)
+            ),
+            "disabled_cell_count":len(cell_resolution.get("disabled_cells") or []),
+            "shipping_policy_narrowed":bool(policy.get("test2_cell_gate_applied")),
+            "provenance_mode":(
+                campaign.provenance_mode if campaign is not None else None
+            ),
+            "verified_for_shipping":bool(
+                blind_ok and all_harm_safe and cell_gate_ok and provenance_ok
+            ),
             "required_ingredients":referenced_ids,
             "removed_ingredients":[],
             "semantic_translation_used":False,
@@ -4106,20 +4121,22 @@ def _final_recipe_registry(
             "recipe": recipe,
             "blind_summary": copy.deepcopy(blind_summary),
             "harm_summary": harm_summary,
-            "verified_for_shipping": bool(
+            "scientifically_supported": bool(
                 harm_summary
                 and harm_summary.get("harm_evidence_sufficient") is True
                 and harm_summary.get("harm_safe") is True
                 and blind_summary
                 and blind_summary.get("classification") in {"STRONG", "PROMISING", "NULL"}
             ),
+            "verified_for_shipping":False,
+            "shipping_block_reason":"NON_TEST1.2_PROVENANCE",
+            "provenance_mode":(
+                campaign.provenance_mode if campaign is not None else None
+            ),
             "required_ingredients": list(row.get("required_ingredients") or []),
             "removed_ingredients": list(row.get("removable_ingredients") or []),
         })
-    result.sort(
-        key=lambda row: float((row.get("blind_summary") or {}).get("normalized_effect", -999.0)),
-        reverse=True,
-    )
+    result.sort(key=lambda row: str(row.get("recipe_id") or ""))
     return result
 
 
@@ -4201,6 +4218,8 @@ def _build_finalization_contract(
         "temperature": 0.0,
         "seed": 42,
         "source_test1_run": campaign.handoff.get("run_id"),
+        "provenance_mode":campaign.provenance_mode,
+        "test2_cell_gate_applied":bool(campaign.cell_resolution_map),
     }
 
     rollback = {
@@ -4217,6 +4236,9 @@ def _build_finalization_contract(
     contract = {
         "schema_version": 1,
         "status": "PROVISIONAL_PENDING_TEST3_AND_FINAL_ACCEPTANCE",
+        "provenance_mode":campaign.provenance_mode,
+        "test12_shipping_claim_eligible":campaign.test12_shipping_claim_eligible,
+        "cell_resolution":copy.deepcopy(campaign.cell_resolution_map),
         "base_model": str(campaign.runner.model),
         "primary_recipe": copy.deepcopy(primary),
         "rendered_primary_control_text": rendered_control_text,
@@ -4267,6 +4289,11 @@ def _build_finalization_contract(
             "protected_set_leakage": 0,
             "new_severe_regression_count": 0,
             "verified_control_requires_harm_evidence": True,
+            "all_fireable_routes_require_local_decision_complete":True,
+            "aggregate_must_report_unresolved_unit_count":True,
+            "aggregate_may_not_absorb_unresolved_unit_validity":True,
+            "unresolved_fireable_cell_count_must_equal":0,
+            "standalone_non_test1_2_provenance_may_not_ship":True,
             "harm_max_break_rate": float(campaign.cfg["harm_max_break_rate"]),
             "harm_gate_uses_ci_upper_bound": True,
             "policy_cost_ratio_ceiling": float(campaign.cfg["policy_cost_ratio_ceiling"]),
