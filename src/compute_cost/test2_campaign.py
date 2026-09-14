@@ -3326,11 +3326,276 @@ def phase_knockout(
     return records
 
 
+def _harm_evidence_for_intervention(
+    campaign: Test2Campaign,
+    intervention_id: str,
+) -> dict[str, Any] | None:
+    matches = [
+        copy.deepcopy(summary)
+        for summary in campaign.harm_evidence.values()
+        if str((summary.get("recipe") or {}).get("intervention_id") or "")
+        == str(intervention_id)
+    ]
+    if not matches:
+        return None
+    matches.sort(
+        key=lambda row: (
+            row.get("harm_evidence_sufficient") is True,
+            int(row.get("valid_baseline_pass_sentinels") or 0),
+        ),
+        reverse=True,
+    )
+    return matches[0]
+
+
+def _aggregate_unit_validity(units: list[dict[str, Any]]) -> dict[str, Any]:
+    unresolved = [
+        row for row in units
+        if row.get("evidence_resolved") is not True
+    ]
+    fireable = [
+        row for row in units
+        if row.get("route_fireable") is True
+    ]
+    unresolved_fireable = [
+        row for row in fireable
+        if row.get("evidence_resolved") is not True
+    ]
+    return {
+        "unit_count":len(units),
+        "resolved_unit_count":len(units) - len(unresolved),
+        "unresolved_unit_count":len(unresolved),
+        "unresolved_unit_keys":[
+            str(row.get("cell_key") or row.get("unit_key") or "")
+            for row in unresolved
+        ],
+        "fireable_unit_count":len(fireable),
+        "unresolved_fireable_count":len(unresolved_fireable),
+        "unresolved_fireable_keys":[
+            str(row.get("cell_key") or row.get("unit_key") or "")
+            for row in unresolved_fireable
+        ],
+        "aggregate_shipping_valid":len(unresolved_fireable) == 0,
+        "invariant":"AGGREGATES_MUST_CARRY_UNRESOLVED_UNIT_COUNT_AND_MAY_NOT_ABSORB_UNRESOLVED_VALIDITY",
+    }
+
+
+def _resolve_test2_cell_shipping_policy(
+    campaign: Test2Campaign,
+    recurrence: dict[str, dict[str, Any]],
+    censoring_tradeoff: dict[str, Any],
+) -> dict[str, Any]:
+    manifest = campaign.handoff.get("test2_proof_manifest") or {}
+    original_policy = copy.deepcopy(campaign.handoff.get("winner_policy") or {})
+    proof_status = campaign.proof_scheduler_audit.get("candidates") or {}
+    censor_findings = censoring_tradeoff.get("findings") or {}
+    recipe_by_cell = {
+        str(recipe.get("proof_cell_key") or ""):recipe
+        for recipe in campaign.recipes
+        if recipe.get("proof_cell_key")
+    }
+
+    cells: list[dict[str, Any]] = []
+    disabled_cells: list[dict[str, Any]] = []
+    lane_names = (
+        "promotion",
+        "unknown_resolution",
+        "harm",
+        "censoring",
+        "skip_verified_null",
+    )
+    for lane in lane_names:
+        for entry in (manifest.get("queues") or {}).get(lane, []) or []:
+            if not isinstance(entry, dict) or entry.get("policy_reachable") is not True:
+                continue
+            cell_key = str(entry.get("cell_key") or "")
+            family = str(entry.get("family_id") or "")
+            intervention_id = str(entry.get("intervention_id") or "")
+            recipe = recipe_by_cell.get(cell_key)
+            status = (
+                proof_status.get(_recipe_key(recipe))
+                if recipe is not None else None
+            ) or {}
+            harm = (
+                _harm_evidence_for_intervention(campaign, intervention_id)
+                if intervention_id else None
+            )
+            harm_safe = bool(
+                harm
+                and harm.get("harm_evidence_sufficient") is True
+                and harm.get("harm_safe") is True
+            )
+            effect_resolution = status.get("scientific_resolution")
+            settled = bool(status.get("settled") is True)
+            effect_resolved = False
+            safety_resolved = bool(harm_safe)
+            route_fireable = False
+            final_state = "DISABLED_UNRESOLVED"
+            reason = "LOCAL_PROOF_UNRESOLVED"
+
+            if lane == "promotion":
+                effect_resolved = settled
+                if settled and effect_resolution == "POSITIVE" and harm_safe:
+                    route_fireable = True
+                    final_state = "ACTIVE_VERIFIED"
+                    reason = "LOCAL_POSITIVE_PROOF_AND_HARM_GATE_PASS"
+                elif settled and effect_resolution != "POSITIVE":
+                    final_state = "DISABLED_LOCAL_PROOF_REJECTED"
+                    reason = "CONDITIONAL_CELL_DID_NOT_VERIFY_POSITIVE"
+                elif settled and effect_resolution == "POSITIVE" and not harm_safe:
+                    final_state = "DISABLED_HARM_GATE"
+                    reason = "LOCAL_EFFECT_VERIFIED_BUT_HARM_EVIDENCE_NOT_SAFE"
+            elif lane == "unknown_resolution":
+                effect_resolved = bool(
+                    settled and effect_resolution in {"POSITIVE", "NEGATIVE"}
+                )
+                if effect_resolution == "POSITIVE" and effect_resolved and harm_safe:
+                    route_fireable = True
+                    final_state = "ACTIVE_VERIFIED_FROM_UNKNOWN"
+                    reason = "UNKNOWN_RESOLVED_POSITIVE_AND_HARM_GATE_PASS"
+                elif effect_resolution == "NEGATIVE":
+                    final_state = "DISABLED_UNKNOWN_RESOLVED_NEGATIVE"
+                    reason = "UNKNOWN_RESOLUTION_FOUND_NEGATIVE_EFFECT"
+                elif effect_resolution == "POSITIVE" and not harm_safe:
+                    final_state = "DISABLED_HARM_GATE"
+                    reason = "UNKNOWN_RESOLVED_POSITIVE_BUT_HARM_EVIDENCE_NOT_SAFE"
+                else:
+                    final_state = "DISABLED_UNRESOLVED"
+                    reason = "UNKNOWN_REMAINS_OPEN_AFTER_RESERVED_TEST2_BUDGET"
+            elif lane == "harm":
+                effect_resolved = bool(
+                    harm and harm.get("harm_evidence_sufficient") is True
+                )
+                safety_resolved = effect_resolved
+                final_state = "DISABLED_HARM_VETO"
+                reason = "TEST1.2_HARMFUL_CELL_REMAINS_A_RUNTIME_VETO"
+            elif lane == "censoring":
+                finding = (
+                    censor_findings.get(_recipe_key(recipe))
+                    if recipe is not None else None
+                ) or {}
+                effect_resolved = bool(
+                    finding.get("finding_class")
+                    in {
+                        "CAPABILITY_PLUS_COST_OPPORTUNITY",
+                        "OWN_BUDGET_VALID_NO_CAPABILITY_GAIN",
+                    }
+                )
+                safety_resolved = False
+                final_state = "DISABLED_CENSORING_OR_COST_REQUIRES_RECOMPILE"
+                reason = (
+                    "CENSORING_DIAGNOSED_BUT_CURRENT_FROZEN_POLICY_DOES_NOT_"
+                    "ENCODE_THE_NEW_OPERATING_POINT"
+                    if effect_resolved
+                    else "CENSORING_REMAINS_UNRESOLVED"
+                )
+            elif lane == "skip_verified_null":
+                effect_resolved = True
+                safety_resolved = True
+                final_state = "DISABLED_VERIFIED_NULL_SKIP"
+                reason = "VERIFIED_NULL_PRESERVES_ZERO_CALL_SKIP_RULE"
+
+            evidence_resolved = bool(effect_resolved and safety_resolved)
+            cell = {
+                "cell_key":cell_key,
+                "family_id":family,
+                "intervention_id":intervention_id or None,
+                "source_lane":lane,
+                "test1_2_effect_state":entry.get("test1_2_effect_state"),
+                "test2_scientific_resolution":effect_resolution,
+                "effect_proof_settled":settled,
+                "effect_resolved":effect_resolved,
+                "harm_evidence":copy.deepcopy(harm),
+                "safety_resolved":safety_resolved,
+                "evidence_resolved":evidence_resolved,
+                "route_fireable":route_fireable,
+                "shipping_state":final_state,
+                "reason":reason,
+                "compiler_queue_index":(
+                    recipe.get("compiler_queue_index")
+                    if recipe is not None else None
+                ),
+                "considered_for_shipping":True,
+                "disabled_is_explicit_state_not_policy_absence":not route_fireable,
+            }
+            cells.append(cell)
+            if not route_fireable and intervention_id:
+                disabled_cells.append({
+                    "cell_key":cell_key,
+                    "family_id":family,
+                    "intervention_id":intervention_id,
+                    "state":final_state,
+                    "reason":reason,
+                })
+
+    for intervention_id in (
+        manifest.get("policy_referenced_controls_without_observed_validation_route")
+        or []
+    ):
+        ident = str(intervention_id or "")
+        if not ident:
+            continue
+        unit_key = f"UNOBSERVED_POLICY_ROUTE|{ident}"
+        cells.append({
+            "cell_key":unit_key,
+            "unit_key":unit_key,
+            "family_id":"*",
+            "intervention_id":ident,
+            "source_lane":"unobserved_policy_route",
+            "test1_2_effect_state":"unobserved",
+            "test2_scientific_resolution":None,
+            "effect_proof_settled":False,
+            "effect_resolved":False,
+            "harm_evidence":copy.deepcopy(
+                _harm_evidence_for_intervention(campaign, ident)
+            ),
+            "safety_resolved":False,
+            "evidence_resolved":False,
+            "route_fireable":False,
+            "shipping_state":"DISABLED_UNOBSERVED_POLICY_ROUTE",
+            "reason":"POLICY_REFERENCED_CONTROL_HAS_NO_OBSERVED_FAMILY_ROUTE",
+            "considered_for_shipping":True,
+            "disabled_is_explicit_state_not_policy_absence":True,
+        })
+        disabled_cells.append({
+            "cell_key":unit_key,
+            "family_id":"*",
+            "intervention_id":ident,
+            "state":"DISABLED_UNOBSERVED_POLICY_ROUTE",
+            "reason":"POLICY_REFERENCED_CONTROL_HAS_NO_OBSERVED_FAMILY_ROUTE",
+        })
+
+    narrowed_policy = copy.deepcopy(original_policy)
+    narrowed_policy["disabled_cells"] = disabled_cells
+    narrowed_policy["test2_cell_gate_applied"] = True
+    narrowed_policy["test2_cell_gate_rule"] = (
+        "ONLY_LOCALLY_VERIFIED_AND_HARM_SAFE_FAMILY_X_INTERVENTION_CELLS_MAY_FIRE"
+    )
+    aggregate = _aggregate_unit_validity(cells)
+    return {
+        "schema_version":1,
+        "analysis_type":"TEST2_CELL_LEVEL_SHIPPING_RESOLUTION",
+        "original_policy":original_policy,
+        "narrowed_policy":narrowed_policy,
+        "cells":cells,
+        "disabled_cells":disabled_cells,
+        "active_cells":[
+            copy.deepcopy(row) for row in cells
+            if row.get("route_fireable") is True
+        ],
+        "aggregate":aggregate,
+        "narrow_policy_is_expected_when_evidence_is_sparse":True,
+        "unknown_cells_are_disabled_not_promoted":True,
+        "disabled_route_state_is_persistent_evidence":True,
+    }
+
+
 def phase_blind(
     campaign: Test2Campaign,
     deadline: float,
     knockouts: dict[str, Any],
     recurrence: dict[str, dict[str, Any]],
+    censoring_tradeoff: dict[str, Any],
 ) -> dict[str, Any]:
     recipes = [
         copy.deepcopy(row["minimal_recipe"])
@@ -3356,9 +3621,20 @@ def phase_blind(
 
         winner = copy.deepcopy(campaign.handoff.get("winner_policy") or {})
         expected_lock = str(campaign.handoff.get("winner_lock_sha256") or "")
-        observed_lock = _policy_lock_hash(winner)
-        if expected_lock and observed_lock != expected_lock:
+        observed_test12_lock = _policy_lock_hash(winner)
+        if expected_lock and observed_test12_lock != expected_lock:
             raise ValueError("frozen Test 1.2 policy hash changed before Test 2 blind proof")
+        if campaign.test12_shipping_claim_eligible is not True:
+            raise ValueError("non-Test1.2 provenance cannot enter exact shipping proof")
+
+        cell_resolution = _resolve_test2_cell_shipping_policy(
+            campaign,
+            recurrence,
+            censoring_tradeoff,
+        )
+        campaign.cell_resolution_map = copy.deepcopy(cell_resolution)
+        winner = copy.deepcopy(cell_resolution["narrowed_policy"])
+        observed_lock = _policy_lock_hash(winner)
 
         collection = load_collection(
             Path(campaign.runner.results_root),
@@ -3380,6 +3656,8 @@ def phase_blind(
         recipe = {
             "exact_locked_policy":copy.deepcopy(winner),
             "policy_lock_sha256":observed_lock,
+            "source_test1_2_policy_lock_sha256":observed_test12_lock,
+            "policy_narrowed_by_test2_cell_gate":True,
             "ingredient_ids":[f"POLICY:{winner.get('policy_id','UNKNOWN')}"],
             "dose":1.0,
             "representation":"exact-policy",
@@ -3394,6 +3672,8 @@ def phase_blind(
             converted = {
                 "schema_version":1,
                 "timestamp_utc":campaign.runner._utc(),
+                "provenance_mode":campaign.provenance_mode,
+                "test12_shipping_claim_eligible":campaign.test12_shipping_claim_eligible,
                 "phase":"blind_confirmation",
                 "kind":"blind",
                 "fixture_id":row.get("fixture_id"),
@@ -3422,6 +3702,11 @@ def phase_blind(
                 "source_key":"FROZEN_TEST1.2_POLICY",
                 "policy_id":winner.get("policy_id"),
                 "policy_lock_sha256":observed_lock,
+                "source_test1_2_policy_lock_sha256":observed_test12_lock,
+                "route_disabled_by_test2_cell_gate":bool(
+                    row.get("route_disabled_by_test2_cell_gate")
+                ),
+                "disabled_cell":copy.deepcopy(row.get("disabled_cell")),
                 "semantic_hash_match":True,
                 "model_calls":row.get("model_calls"),
                 "timing":{},
@@ -3461,8 +3746,21 @@ def phase_blind(
         return {
             "recipes_frozen_before_phase":True,
             "locked_policy_proved_exactly":True,
+            "source_test1_2_policy_lock_sha256":observed_test12_lock,
             "policy_lock_sha256":observed_lock,
+            "policy_narrowed_by_test2_cell_gate":True,
             "locked_policy":copy.deepcopy(winner),
+            "cell_resolution":copy.deepcopy(cell_resolution),
+            "unresolved_cell_count":int(
+                (cell_resolution.get("aggregate") or {}).get(
+                    "unresolved_unit_count", 0
+                )
+            ),
+            "unresolved_fireable_cell_count":int(
+                (cell_resolution.get("aggregate") or {}).get(
+                    "unresolved_fireable_count", 0
+                )
+            ),
             "fixture_count":len(fixtures),
             "effects":effects,
             "observations":len(exact_rows),
