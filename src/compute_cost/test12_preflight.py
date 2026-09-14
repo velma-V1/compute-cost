@@ -278,6 +278,11 @@ def build_test12_cell_budget_plan(
         "applicability_counts": counts,
         "eligible_cell_count": len(eligible),
         "explicitly_applicable_cell_count": len(explicit_yes),
+        "untested_applicability_cell_count": len(unresolved_applicability),
+        "untested_applicability_excluded_from_campaign_calls": True,
+        "untested_applicability_backlog": [
+            str(cell["cell_key"]) for cell in unresolved_applicability
+        ],
         "matrix_phase_seconds": matrix_seconds,
         "active_campaign_seconds": COLLECTION_ACTIVE_SECONDS,
         "expected_campaign_physical_calls": expected_calls,
@@ -291,6 +296,7 @@ def build_test12_cell_budget_plan(
         "gating_decision": gating_decision,
         "scheduler_contract": {
             "mandatory_family_surface_floor_preserved": True,
+            "untested_applicability_excluded_until_declared": True,
             "proof_replication_owner": "TEST2",
             "selected_cells_prioritized_after_mandatory_breadth": True,
             "throughput_is_sizing_not_go_no_go": True,
