@@ -426,17 +426,25 @@ def run_runtime_budget_characterization(
     replicates: int = 3,
     safety_factor: float = 1.5,
 ) -> dict[str, Any]:
-    """Replicated Stage-0 family budget calibration.
+    """Replicated Stage-0 family budget calibration using screen -> confirm.
 
-    The operating point is not the first lucky valid completion. A family must
-    produce k/k capability-valid final answers at a budget, then the deployed
-    baseline is moved up by a safety factor and rounded to the tested ladder.
-    No campaign config is mutated here.
+    One seed screens each successively larger budget. Only the first budget
+    that produces a capability-valid final answer receives the remaining
+    independent confirmation seeds. If confirmation fails, screening resumes
+    at the next larger budget. This preserves the k/k reproducibility standard
+    without paying k replicates at budgets already known to truncate.
     """
     ladder = sorted(
         {
-            int(campaign.cfg.get("base_generation_budget") or 256),
-            *[int(v) for v in campaign.cfg.get("generation_budgets", [256, 512, 1024, 2048])],
+            int(v)
+            for v in (
+                campaign.cfg.get("stage0_budget_ladder")
+                or [
+                    campaign.cfg.get("base_generation_budget") or 256,
+                    *(campaign.cfg.get("generation_budgets") or [256, 512, 1024, 2048]),
+                    4096,
+                ]
+            )
         }
     )
     seeds = list(campaign.cfg.get("seeds") or [42, 43, 44])[:replicates]
@@ -447,6 +455,46 @@ def run_runtime_budget_characterization(
     families: dict[str, Any] = {}
     unresolved: list[str] = []
     cases = _representative_cases(campaign)
+    total_screen_calls = 0
+    total_confirmation_calls = 0
+
+    def run_one(
+        case: dict[str, Any],
+        family: str,
+        budget: int,
+        seed: int,
+        role: str,
+    ) -> dict[str, Any] | None:
+        nonlocal total_screen_calls, total_confirmation_calls
+        row = _invoke_probe(
+            campaign,
+            deadline,
+            probe_id=f"stage0-budget-{family}-{budget}-s{seed}-{role}",
+            question_ids=[11,12,13,14,15,16,17,18,19,20],
+            family_id=family,
+            messages=[{"role":"user","content":str(case.get("prompt") or "")}],
+            options={
+                "num_predict":int(budget),
+                "temperature":1.0,
+                "top_p":1.0,
+                "seed":int(seed),
+            },
+            request_fields={"think":"medium"},
+            case=case,
+        )
+        if row is None:
+            return None
+        row["budget_search_role"] = role
+        row["capability_valid_final_answer"] = bool(
+            row.get("ok")
+            and not row.get("content_empty")
+            and row.get("done_reason") != "length"
+        )
+        if role == "SCREEN":
+            total_screen_calls += 1
+        else:
+            total_confirmation_calls += 1
+        return row
 
     for case in cases:
         if not campaign.can_start(deadline):
@@ -459,54 +507,82 @@ def run_runtime_budget_characterization(
         for budget in ladder:
             if not campaign.can_start(deadline):
                 break
+
             obs: list[dict[str, Any]] = []
-            for seed in seeds:
-                if not campaign.can_start(deadline):
-                    break
-                row = _invoke_probe(
-                    campaign,
-                    deadline,
-                    probe_id=f"stage0-budget-{family}-{budget}-s{seed}",
-                    question_ids=[11,12,13,14,15,16,17,18,19,20],
-                    family_id=family,
-                    messages=[{"role":"user","content":str(case.get("prompt") or "")}],
-                    options={
-                        "num_predict":int(budget),
-                        "temperature":1.0,
-                        "top_p":1.0,
-                        "seed":int(seed),
-                    },
-                    request_fields={"think":"medium"},
-                    case=case,
-                )
-                if row is not None:
-                    row["capability_valid_final_answer"] = bool(
-                        row.get("ok")
-                        and not row.get("content_empty")
-                        and row.get("done_reason") != "length"
+            screen = run_one(case, family, int(budget), int(seeds[0]), "SCREEN")
+            if screen is not None:
+                obs.append(screen)
+
+            screen_valid = bool(
+                screen and screen.get("capability_valid_final_answer") is True
+            )
+            if screen_valid:
+                for seed in seeds[1:]:
+                    if not campaign.can_start(deadline):
+                        break
+                    row = run_one(
+                        case,
+                        family,
+                        int(budget),
+                        int(seed),
+                        "CONFIRM",
                     )
-                    obs.append(row)
-            valid = [row for row in obs if row.get("capability_valid_final_answer") is True]
-            passed = [row for row in valid if float(row.get("score") or 0.0) >= 1.0]
+                    if row is not None:
+                        obs.append(row)
+
+            valid = [
+                row for row in obs
+                if row.get("capability_valid_final_answer") is True
+            ]
+            passed = [
+                row for row in valid
+                if float(row.get("score") or 0.0) >= 1.0
+            ]
             levels[str(budget)] = {
                 "attempts":len(obs),
+                "screen_attempted":screen is not None,
+                "screen_valid":screen_valid,
+                "confirmation_attempts":sum(
+                    1 for row in obs
+                    if row.get("budget_search_role") == "CONFIRM"
+                ),
                 "valid_final_answers":len(valid),
                 "valid_rate":(len(valid)/len(obs)) if obs else None,
                 "passes":len(passed),
-                "pass_rate_among_valid":(len(passed)/len(valid)) if valid else None,
-                "seeds":[int(row.get("request",{}).get("options",{}).get("seed") or 0) for row in obs],
-                "done_reasons":sorted({str(row.get("done_reason")) for row in obs}),
+                "pass_rate_among_valid":(
+                    len(passed)/len(valid) if valid else None
+                ),
+                "seeds":[
+                    int(row.get("request",{}).get("options",{}).get("seed") or 0)
+                    for row in obs
+                ],
+                "done_reasons":sorted({
+                    str(row.get("done_reason")) for row in obs
+                }),
                 "mean_eval_count":(
-                    sum(int(row["eval_count"]) for row in obs if isinstance(row.get("eval_count"), int))
-                    / max(1, sum(1 for row in obs if isinstance(row.get("eval_count"), int)))
+                    sum(
+                        int(row["eval_count"])
+                        for row in obs
+                        if isinstance(row.get("eval_count"), int)
+                    )
+                    / max(
+                        1,
+                        sum(
+                            1 for row in obs
+                            if isinstance(row.get("eval_count"), int)
+                        ),
+                    )
                 ),
             }
-            if len(obs) == replicates and len(valid) == replicates and reproducible_boundary is None:
+
+            if (
+                len(obs) == replicates
+                and len(valid) == replicates
+                and reproducible_boundary is None
+            ):
                 reproducible_boundary = int(budget)
-            if len(obs) == replicates and len(passed) == replicates and reproducible_pass_boundary is None:
-                reproducible_pass_boundary = int(budget)
-            if reproducible_boundary is not None:
-                # No need to spend discovery clock proving larger raw boundaries.
+                if len(passed) == replicates:
+                    reproducible_pass_boundary = int(budget)
                 break
 
         if reproducible_boundary is None:
@@ -515,14 +591,21 @@ def run_runtime_budget_characterization(
             safety_headroom_available = False
             basis = "NO_REPRODUCIBLE_VALID_BOUNDARY"
         else:
-            required_safe_budget = float(reproducible_boundary) * float(safety_factor)
+            required_safe_budget = (
+                float(reproducible_boundary) * float(safety_factor)
+            )
             safety_headroom_available = required_safe_budget <= max(ladder)
             safe_budget = _round_up_budget(required_safe_budget, ladder)
             if not safety_headroom_available:
                 unresolved.append(family)
-                basis = "REPRODUCIBLE_BOUNDARY_FOUND_BUT_TESTED_LADDER_LACKS_SAFETY_HEADROOM"
+                basis = (
+                    "REPRODUCIBLE_BOUNDARY_FOUND_BUT_TESTED_LADDER_"
+                    "LACKS_SAFETY_HEADROOM"
+                )
             else:
-                basis = "K_OF_K_VALID_BOUNDARY_WITH_SAFETY_FACTOR"
+                basis = (
+                    "SCREEN_THEN_K_OF_K_CONFIRMATION_WITH_SAFETY_FACTOR"
+                )
 
         families[family] = {
             "fixture_id":_fixture_id(case),
@@ -532,6 +615,7 @@ def run_runtime_budget_characterization(
             "temperature":1.0,
             "top_p":1.0,
             "tested_budget_ladder":list(ladder),
+            "search_strategy":"SCREEN_ESCALATE_CONFIRM",
             "levels":levels,
             "minimum_reproducibly_valid_budget":reproducible_boundary,
             "minimum_reproducibly_passing_budget":reproducible_pass_boundary,
@@ -556,6 +640,10 @@ def run_runtime_budget_characterization(
         "replicates_required":int(replicates),
         "safety_factor":float(safety_factor),
         "budget_ladder":list(ladder),
+        "search_strategy":"SCREEN_ESCALATE_CONFIRM",
+        "screen_calls":total_screen_calls,
+        "confirmation_calls":total_confirmation_calls,
+        "calls_used":total_screen_calls + total_confirmation_calls,
         "families":families,
         "resolved_generation_budget_by_family":resolved,
         "unresolved_families":unresolved,
