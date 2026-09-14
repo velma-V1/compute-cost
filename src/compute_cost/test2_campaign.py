@@ -3028,7 +3028,12 @@ def write_test2_outputs(
         stage="report",
     )
 
-    minimal = _final_recipe_registry(knockouts, blind, campaign.harm_evidence)
+    minimal = _final_recipe_registry(
+        knockouts,
+        blind,
+        campaign.harm_evidence,
+        campaign=campaign,
+    )
     store.write_json(
         "minimal-recipe-registry.json",
         {"schema_version": 1, "recipes": minimal},
