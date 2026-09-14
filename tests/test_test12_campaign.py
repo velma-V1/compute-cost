@@ -2812,3 +2812,87 @@ def test_early_truncation_shadow_report_never_enables_live_abort():
     assert report["global"]["true_positive"] == 1
     assert report["global"]["false_positive"] == 1
     assert report["promotion_still_blocked_by_transport"] is True
+
+
+
+def test_zero_call_context_efficiency_knee_is_diagnostic_only():
+    class Campaign:
+        rows = [
+            {
+                "intervention_category":"CONTEXT_WINDOW",
+                "intervention_id":"CTX-4096",
+                "context_request":4096,
+                "delta_valid":True,
+                "delta":0.0,
+                "score":0.90,
+                "family_id":"context_retrieval",
+                "cost":{"wall_seconds":1.0,"prompt_tokens_observed":1000},
+            },
+            {
+                "intervention_category":"CONTEXT_WINDOW",
+                "intervention_id":"CTX-8192",
+                "context_request":8192,
+                "delta_valid":True,
+                "delta":0.05,
+                "score":0.95,
+                "family_id":"context_retrieval",
+                "cost":{"wall_seconds":2.0,"prompt_tokens_observed":2000},
+            },
+            {
+                "intervention_category":"CONTEXT_WINDOW",
+                "intervention_id":"CTX-16384",
+                "context_request":16384,
+                "delta_valid":True,
+                "delta":0.0,
+                "score":0.90,
+                "family_id":"context_retrieval",
+                "cost":{"wall_seconds":3.0,"prompt_tokens_observed":3000},
+            },
+        ]
+
+    report = test12_module._context_efficiency_knee(Campaign())
+    assert report["analysis_type"] == "ZERO_CALL_DERIVED_DIAGNOSTIC"
+    assert report["capability_claim"] is False
+    assert report["recommended_smallest_observed_pareto_context"] == 4096
+    assert {row["context_request"] for row in report["pareto_front"]} == {
+        4096,
+        8192,
+    }
+    assert 16384 not in {
+        row["context_request"] for row in report["pareto_front"]
+    }
+
+
+def test_zero_call_sustained_load_drift_is_sentinel_not_causal_claim():
+    rows = []
+    for index in range(9):
+        late = index >= 6
+        rows.append({
+            "timestamp_utc":f"2026-09-13T12:00:{index:02d}+00:00",
+            "intervention_id":"CTRL-X",
+            "family_id":"arithmetic_numerical_reasoning",
+            "valid_for_capability":True,
+            "delta_valid":True,
+            "delta":0.0 if not late else -0.1,
+            "score":1.0 if not late else 0.8,
+            "censored_for_capability":late,
+            "cost":{"wall_seconds":1.0 if not late else 1.5},
+        })
+
+    class Campaign:
+        pass
+
+    campaign = Campaign()
+    campaign.rows = rows
+
+    report = test12_module._sustained_load_drift(campaign)
+    assert report["analysis_type"] == "ZERO_CALL_DERIVED_DIAGNOSTIC"
+    assert report["capability_claim"] is False
+    assert report["drift_detected"] is True
+    assert "LATENCY_INCREASE_GT_20_PERCENT" in report["drift_flags"]
+    assert "MEAN_SCORE_DROP_GT_0.05" in report["drift_flags"]
+    assert "CENSORING_RATE_INCREASE_GT_0.05" in report["drift_flags"]
+    assert any(
+        "drift sentinel" in item
+        for item in report["limitations"]
+    )
