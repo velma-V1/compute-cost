@@ -7159,80 +7159,212 @@ def reanalyze_test12_collection(
 
 
 def _residual_ownership(campaign: Test12Campaign) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Assign unresolved failures only after valid applicable cheaper-owner search."""
+    owner_category_universe = {
+        "PROMPT_CONTROL",
+        "REASONING_MODE",
+        "VERIFICATION",
+        "RETRY_RECOVERY",
+        "CONTEXT_SELECTION_COMPRESSION",
+        "TOOL_POLICY",
+    }
+
+    applicable_owner_categories: dict[str, set[str]] = {}
+    for family in TEST2_CAPABILITY_FAMILIES:
+        required: set[str] = set()
+        for category in owner_category_universe:
+            members = [
+                row for row in campaign.interventions
+                if str(row.get("category") or "") == category
+            ]
+            statuses = {
+                mechanism_applicability(row, family)["status"]
+                for row in members
+            }
+            if statuses and statuses <= {"NOT_APPLICABLE"}:
+                continue
+            if members:
+                required.add(category)
+        applicable_owner_categories[family] = required
+
     by_fixture: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for row in campaign.rows:
         if row.get("fixture_id"):
             by_fixture[str(row["fixture_id"])].append(row)
-    fixtures = {}
+
+    fixtures: dict[str, Any] = {}
     phenotypes: dict[str, list[str]] = defaultdict(list)
     for fixture_id, rows in sorted(by_fixture.items()):
-        controls = [row for row in rows if row.get("intervention_id") == "CONTROL"]
-        if not controls or not any(float(row.get("score",0.0)) < 1.0 for row in controls):
+        controls = [
+            row for row in rows
+            if row.get("intervention_id") == "CONTROL"
+            and _capability_valid(row)
+        ]
+        if not controls or not any(
+            float(row.get("score", 0.0)) < 1.0 for row in controls
+        ):
             continue
-        treatment = [row for row in rows if row.get("intervention_id") != "CONTROL"]
+
+        treatment = [
+            row for row in rows
+            if row.get("intervention_id") not in {None, "CONTROL"}
+        ]
+        valid_treatment = [
+            row for row in treatment
+            if row.get("delta_valid") is True
+            and row.get("valid_for_capability") is True
+            and row.get("control_valid_for_capability") is True
+        ]
         rescued_categories = sorted({
             str(row.get("intervention_category"))
-            for row in treatment
-            if float(row.get("control_score",0.0)) < 1.0 and float(row.get("score",0.0)) >= 1.0
+            for row in valid_treatment
+            if float(row.get("control_score", 0.0)) < 1.0
+            and float(row.get("score", 0.0)) >= 1.0
+            and isinstance(row.get("delta"), (int, float))
+            and not isinstance(row.get("delta"), bool)
+            and float(row.get("delta") or 0.0) > 0.0
         })
         failed_classes = [
-            str((row.get("classification") or {}).get("result_class") or "UNKNOWN")
-            for row in treatment
-            if float(row.get("score",0.0)) < 1.0
+            str(
+                (row.get("classification") or {}).get(
+                    "result_class"
+                )
+                or "UNKNOWN"
+            )
+            for row in valid_treatment
+            if float(row.get("score", 0.0)) < 1.0
         ]
-        dominant = max(set(failed_classes), key=failed_classes.count) if failed_classes else "UNKNOWN"
+        dominant = (
+            max(set(failed_classes), key=failed_classes.count)
+            if failed_classes else "UNKNOWN"
+        )
         family = str(rows[0].get("family_id") or "unknown")
         phenotype = f"{family}|{dominant}"
         phenotypes[phenotype].append(fixture_id)
-        tested_categories = sorted({str(row.get("intervention_category")) for row in treatment})
+        tested_categories = sorted({
+            str(row.get("intervention_category"))
+            for row in valid_treatment
+            if row.get("intervention_category")
+        })
+        required_owners = applicable_owner_categories.get(family, set())
+        owner_search_complete = required_owners <= set(tested_categories)
+
         fixtures[fixture_id] = {
             "fixture_id":fixture_id,
             "family_id":family,
             "dominant_failure_class":dominant,
             "phenotype_id":phenotype,
+            "valid_tested_categories":tested_categories,
             "tested_categories":tested_categories,
+            "applicable_cheaper_owner_categories":sorted(required_owners),
+            "owner_search_complete":owner_search_complete,
             "rescued_categories":rescued_categories,
-            "unresolved_after_full_system_search":not bool(rescued_categories),
+            "invalid_or_unpaired_treatment_count":(
+                len(treatment) - len(valid_treatment)
+            ),
+            "unresolved_after_valid_system_search":not bool(
+                rescued_categories
+            ),
+            "unresolved_after_full_system_search":bool(
+                not rescued_categories and owner_search_complete
+            ),
         }
 
-    phenotype_records = {}
-    fine = {}
-    required_owner_categories = {"PROMPT_CONTROL","REASONING_MODE","VERIFICATION","RETRY_RECOVERY","CONTEXT_SELECTION_COMPRESSION","TOOL_POLICY"}
+    phenotype_records: dict[str, Any] = {}
+    fine: dict[str, Any] = {}
     for phenotype, fixture_ids in phenotypes.items():
         records = [fixtures[value] for value in fixture_ids]
-        unresolved = [row for row in records if row["unresolved_after_full_system_search"]]
-        tested = set().union(*(set(row["tested_categories"]) for row in records)) if records else set()
+        unresolved = [
+            row for row in records
+            if row["unresolved_after_valid_system_search"]
+        ]
+        tested = (
+            set().union(*(
+                set(row["valid_tested_categories"])
+                for row in records
+            ))
+            if records else set()
+        )
+        required = (
+            set().union(*(
+                set(row["applicable_cheaper_owner_categories"])
+                for row in records
+            ))
+            if records else set()
+        )
         recurrent = len(unresolved) >= 3
-        owner_tested = len(required_owner_categories & tested) >= 4
+        owner_tested = bool(required) and required <= tested
         record = {
             "phenotype_id":phenotype,
+            "family_id":(
+                records[0]["family_id"] if records else "unknown"
+            ),
             "independent_fixture_count":len(fixture_ids),
             "independent_unresolved_fixture_count":len(unresolved),
             "fixture_ids":sorted(fixture_ids),
-            "unresolved_fixture_ids":sorted(row["fixture_id"] for row in unresolved),
+            "unresolved_fixture_ids":sorted(
+                row["fixture_id"] for row in unresolved
+            ),
+            "valid_tested_categories":sorted(tested),
             "tested_categories":sorted(tested),
+            "applicable_cheaper_owner_categories":sorted(required),
             "owner_search_sufficient_for_tuning":owner_tested,
-            "owner":"FINE_TUNING_CANDIDATE" if recurrent and owner_tested else ("RECOVERED_BY_SYSTEM" if not unresolved else "MORE_SYSTEM_SEARCH_REQUIRED"),
+            "owner_search_rule":"ALL_APPLICABLE_OR_UNKNOWN_CHEAPER_OWNER_CATEGORIES_REQUIRE_VALID_PAIRED_EVIDENCE",
+            "owner":(
+                "FINE_TUNING_CANDIDATE"
+                if recurrent and owner_tested
+                else (
+                    "RECOVERED_BY_SYSTEM"
+                    if not unresolved
+                    else "MORE_SYSTEM_SEARCH_REQUIRED"
+                )
+            ),
         }
-        phenotype_records[phenotype]=record
-        if record["owner"]=="FINE_TUNING_CANDIDATE":
-            fine[phenotype]={
+        phenotype_records[phenotype] = record
+        if record["owner"] == "FINE_TUNING_CANDIDATE":
+            fine[phenotype] = {
                 **copy.deepcopy(record),
                 "qualification":{
                     "recurrent":True,
                     "independent":True,
-                    "prompt_owner_tested":"PROMPT_CONTROL" in tested,
-                    "reasoning_compute_owner_tested":"REASONING_MODE" in tested,
-                    "verification_retry_owner_tested":bool({"VERIFICATION","RETRY_RECOVERY"} & tested),
-                    "context_memory_owner_tested":bool({"CONTEXT_SELECTION_COMPRESSION","MEMORY","STATE_TRACKING"} & tested),
-                    "tool_policy_owner_tested":"TOOL_POLICY" in tested,
+                    "all_applicable_cheaper_owners_tested":True,
+                    "prompt_owner_tested":(
+                        "PROMPT_CONTROL" not in required
+                        or "PROMPT_CONTROL" in tested
+                    ),
+                    "reasoning_compute_owner_tested":(
+                        "REASONING_MODE" not in required
+                        or "REASONING_MODE" in tested
+                    ),
+                    "verification_retry_owner_tested":bool(
+                        not ({"VERIFICATION","RETRY_RECOVERY"} & required)
+                        or ({"VERIFICATION","RETRY_RECOVERY"} & required) <= tested
+                    ),
+                    "context_memory_owner_tested":(
+                        "CONTEXT_SELECTION_COMPRESSION" not in required
+                        or "CONTEXT_SELECTION_COMPRESSION" in tested
+                    ),
+                    "tool_policy_owner_tested":(
+                        "TOOL_POLICY" not in required
+                        or "TOOL_POLICY" in tested
+                    ),
                     "protected_partitions_excluded":True,
                     "next_action":"TEST3_FINE_TUNING_QUALIFICATION",
                 },
             }
+
     return (
-        {"schema_version":1,"fixtures":fixtures,"phenotypes":phenotype_records},
-        {"schema_version":1,"candidates":fine},
+        {
+            "schema_version":2,
+            "ownership_rule":"ALL_APPLICABLE_CHEAPER_OWNERS_REQUIRE_VALID_PAIRED_SEARCH",
+            "fixtures":fixtures,
+            "phenotypes":phenotype_records,
+        },
+        {
+            "schema_version":2,
+            "qualification_rule":"RECURRENT_INDEPENDENT_UNRESOLVED_FAILURES_AFTER_ALL_APPLICABLE_CHEAPER_OWNERS",
+            "candidates":fine,
+        },
     )
 
 
