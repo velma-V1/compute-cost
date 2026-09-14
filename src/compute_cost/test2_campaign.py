@@ -791,10 +791,10 @@ class Test2Campaign:
         }
         self.current_baseline_budgets: dict[str, int] = {}
         inherited_budgets = handoff.get("generation_budget_by_family") or {}
-        if inherited_budgets:
-            self.cfg["generation_budget_by_family"] = {
-                str(family): int(value) for family, value in inherited_budgets.items()
-            }
+        self.generation_budget_by_family = {
+            str(family): int(value)
+            for family, value in inherited_budgets.items()
+        }
         self.noise_sigma = max(
             EPSILON_NOISE,
             float((handoff.get("noise_model") or {}).get("global_noise_sigma", EPSILON_NOISE)),
@@ -851,7 +851,7 @@ class Test2Campaign:
 
         family = _family(case)
         budget = int(
-            (self.cfg.get("generation_budget_by_family") or {}).get(
+            self.generation_budget_by_family.get(
                 family,
                 self.cfg["generation_budget"],
             )
@@ -943,7 +943,7 @@ class Test2Campaign:
         baseline_budget = int(
             self.current_baseline_budgets.get(
                 fixture_id,
-                (self.cfg.get("generation_budget_by_family") or {}).get(
+                self.generation_budget_by_family.get(
                     _family(case),
                     self.cfg["generation_budget"],
                 ),
@@ -1572,7 +1572,7 @@ def phase_censoring_cost_tradeoff(
             baseline_budget = int(
                 censored.get("baseline_generation_budget")
                 or campaign.current_baseline_budgets.get(fixture_id)
-                or (campaign.cfg.get("generation_budget_by_family") or {}).get(
+                or campaign.generation_budget_by_family.get(
                     _family(case),
                     campaign.cfg["generation_budget"],
                 )
@@ -2144,9 +2144,7 @@ def _build_finalization_contract(
         "reasoning_effort": campaign.cfg.get("reasoning_effort"),
         "generation_budget": int(campaign.cfg["generation_budget"]),
         "generation_budget_by_family": copy.deepcopy(
-            getattr(campaign, "generation_budget_by_family", {})
-            or campaign.cfg.get("generation_budget_by_family")
-            or {}
+            campaign.generation_budget_by_family
         ),
         "temperature": 0.0,
         "seed": 42,
