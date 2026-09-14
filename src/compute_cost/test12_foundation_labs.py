@@ -798,6 +798,29 @@ def run_runtime_budget_characterization(
                 row for row in valid
                 if float(row.get("score") or 0.0) >= 1.0
             ]
+            valid_prefix_chunks = [
+                int((row.get("phase_metrics") or {}).get("thinking_chunks_before_first_answer"))
+                for row in valid
+                if isinstance(
+                    (row.get("phase_metrics") or {}).get("thinking_chunks_before_first_answer"),
+                    int,
+                )
+            ]
+            valid_prefix_chars = [
+                int((row.get("phase_metrics") or {}).get("thinking_chars_before_first_answer"))
+                for row in valid
+                if isinstance(
+                    (row.get("phase_metrics") or {}).get("thinking_chars_before_first_answer"),
+                    int,
+                )
+            ]
+            no_answer_invalid_chunks = [
+                int((row.get("phase_metrics") or {}).get("thinking_chunks") or 0)
+                for row in obs
+                if row.get("capability_valid_final_answer") is not True
+                and int((row.get("phase_metrics") or {}).get("answer_chunks") or 0) == 0
+                and isinstance((row.get("phase_metrics") or {}).get("thinking_chunks"), int)
+            ]
             levels[str(budget)] = {
                 "attempts":len(obs),
                 "screen_attempted":screen is not None,
@@ -819,6 +842,15 @@ def run_runtime_budget_characterization(
                 "done_reasons":sorted({
                     str(row.get("done_reason")) for row in obs
                 }),
+                "valid_pre_answer_thinking_chunks":valid_prefix_chunks,
+                "valid_pre_answer_thinking_chars":valid_prefix_chars,
+                "invalid_no_answer_thinking_chunks":no_answer_invalid_chunks,
+                "max_valid_pre_answer_thinking_chunks":(
+                    max(valid_prefix_chunks) if valid_prefix_chunks else None
+                ),
+                "max_valid_pre_answer_thinking_chars":(
+                    max(valid_prefix_chars) if valid_prefix_chars else None
+                ),
                 "mean_eval_count":(
                     sum(
                         int(row["eval_count"])
@@ -867,6 +899,52 @@ def run_runtime_budget_characterization(
                     "SCREEN_THEN_K_OF_K_CONFIRMATION_WITH_SAFETY_FACTOR"
                 )
 
+        boundary_level = (
+            levels.get(str(reproducible_boundary), {})
+            if reproducible_boundary is not None
+            else {}
+        )
+        max_valid_prefix = boundary_level.get(
+            "max_valid_pre_answer_thinking_chunks"
+        )
+        if isinstance(max_valid_prefix, int):
+            shadow_threshold = max(
+                int(max_valid_prefix) + 2,
+                int(math.ceil(float(max_valid_prefix) * 1.5)),
+            )
+        else:
+            shadow_threshold = None
+
+        historical_no_answer = [
+            int(value)
+            for payload in levels.values()
+            for value in (payload.get("invalid_no_answer_thinking_chunks") or [])
+            if isinstance(value, int)
+        ]
+        shadow_hits = (
+            sum(
+                1 for value in historical_no_answer
+                if shadow_threshold is not None and value >= shadow_threshold
+            )
+            if shadow_threshold is not None
+            else 0
+        )
+        shadow_policy = {
+            "status":"SHADOW_ONLY",
+            "activation_allowed":False,
+            "live_abort_supported_by_current_transport":False,
+            "signal":"NO_ANSWER_YET_AND_THINKING_CHUNKS_AT_OR_ABOVE_THRESHOLD",
+            "thinking_chunk_threshold":shadow_threshold,
+            "calibration_max_valid_pre_answer_thinking_chunks":max_valid_prefix,
+            "calibration_false_positive_count":0 if shadow_threshold is not None else None,
+            "historical_invalid_no_answer_observations":len(historical_no_answer),
+            "historical_shadow_hits":shadow_hits,
+            "promotion_requirement":(
+                "INDEPENDENT_SHADOW_VALIDATION_WITH_ZERO_OR_BOUNDED_FALSE_POSITIVES_"
+                "PLUS_LIVE_STREAM_TRANSPORT_SUPPORT"
+            ),
+        }
+
         families[family] = {
             "fixture_id":_fixture_id(case),
             "difficulty_level":int(case.get("difficulty_level") or 0),
@@ -883,6 +961,7 @@ def run_runtime_budget_characterization(
             "safety_factor":float(safety_factor),
             "safety_headroom_available":bool(safety_headroom_available),
             "resolution_basis":basis,
+            "early_truncation_shadow_policy":shadow_policy,
         }
 
     expected_families = sorted({_family(case) for case in cases})
@@ -892,6 +971,10 @@ def run_runtime_budget_characterization(
         family:int(payload["resolved_safe_baseline_budget"])
         for family, payload in families.items()
         if family not in unresolved
+    }
+    shadow_policies = {
+        family:copy.deepcopy(payload.get("early_truncation_shadow_policy") or {})
+        for family, payload in families.items()
     }
     return {
         "schema_version":1,
@@ -906,6 +989,13 @@ def run_runtime_budget_characterization(
         "calls_used":total_screen_calls + total_confirmation_calls,
         "families":families,
         "resolved_generation_budget_by_family":resolved,
+        "early_truncation_shadow_policy":{
+            "schema_version":1,
+            "status":"SHADOW_ONLY",
+            "activation_allowed":False,
+            "live_abort_supported_by_current_transport":False,
+            "families":shadow_policies,
+        },
         "unresolved_families":unresolved,
         "all_families_reproducibly_valid":not bool(unresolved),
         "config_mutated_during_characterization":False,
