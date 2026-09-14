@@ -180,7 +180,7 @@ PHASES = (
     ("runtime_semantics_gate", 10 * 60),
     ("runtime_budget_characterization", 30 * 60),
     ("output_contract_gate", 10 * 60),
-    ("role_specialization_gate", 20 * 60),
+    ("role_specialization_gate", 30 * 60),
     ("baseline_capability_map", 35 * 60),
     ("capability_family_manufacturing_floor", 100 * 60),
     ("mechanism_coverage_floor", 50 * 60),
@@ -189,7 +189,7 @@ PHASES = (
     ("interaction_scout", 30 * 60),
     ("dose_activation_boundaries", 25 * 60),
     ("negative_transfer_sentinels", 25 * 60),
-    ("information_gain_reserve", 25 * 60),
+    ("information_gain_reserve", 15 * 60),
     ("frontier_gap_labs", 35 * 60),
     ("second_frontier_gap_labs", 4 * 60),
 )
