@@ -2353,3 +2353,64 @@ def test_stage0_profile_rejects_thinking_channel_leak(tmp_path):
     )
     assert profile["gate_passed"] is False
     assert "THINKING_CHANNEL_LEAK_OBSERVED" in profile["gate_failures"]
+
+
+
+def test_opportunity_map_excludes_invalid_baseline_failures():
+    cases = [
+        {
+            "id": "invalid-base",
+            "category": "arithmetic_numerical_reasoning",
+            "family_id": "arithmetic_numerical_reasoning",
+            "difficulty_level": 5,
+            "prompt": "a",
+            "scorer": "exact",
+        },
+        {
+            "id": "valid-fail",
+            "category": "arithmetic_numerical_reasoning",
+            "family_id": "arithmetic_numerical_reasoning",
+            "difficulty_level": 6,
+            "prompt": "b",
+            "scorer": "exact",
+        },
+    ]
+
+    class Campaign:
+        case_by_id = {case["id"]: case for case in cases}
+        rows = [
+            {
+                "partition": "DISCOVERY",
+                "fixture_id": "invalid-base",
+                "family_id": "arithmetic_numerical_reasoning",
+                "difficulty_level": 5,
+                "intervention_id": "CONTROL",
+                "score": 0.0,
+                "delta_valid": False,
+                "valid_for_capability": False,
+                "classification": {
+                    "result_class": "THINK_TRUNCATED",
+                    "valid_for_capability": False,
+                },
+            },
+            {
+                "partition": "DISCOVERY",
+                "fixture_id": "valid-fail",
+                "family_id": "arithmetic_numerical_reasoning",
+                "difficulty_level": 6,
+                "intervention_id": "CONTROL",
+                "score": 0.0,
+                "delta_valid": True,
+                "valid_for_capability": True,
+                "classification": {
+                    "result_class": "ANSWER_WRONG",
+                    "valid_for_capability": True,
+                },
+            },
+        ]
+
+    result = test12_module._opportunity_discovery_map(Campaign())
+    assert result["invalid_control_observations_excluded"] == 1
+    assert result["unique_failed_fixtures"] == 1
+    assert result["unresolved_failed_fixtures"] == ["valid-fail"]
+    assert "invalid-base" not in result["unresolved_failed_fixtures"]
