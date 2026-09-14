@@ -1141,6 +1141,7 @@ def test_exact_duplicate_treatment_is_skipped_without_spending_another_call(monk
         clock=lambda: 0.0,
         started_monotonic=0.0,
     )
+    campaign.runtime_profile_sha256 = "UNIT-STAGE0-PROFILE"
     case = campaign.partitions["DISCOVERY"][0]
     intervention = {
         "id": "UNIT-SINGLE",
@@ -1253,6 +1254,7 @@ def test_explicit_exact_repeat_escape_hatch_preserves_deliberate_reproducibility
         clock=lambda: 0.0,
         started_monotonic=0.0,
     )
+    campaign.runtime_profile_sha256 = "UNIT-STAGE0-PROFILE"
     case = campaign.partitions["DISCOVERY"][0]
     intervention = {
         "id": "UNIT-REPEAT",
@@ -1800,7 +1802,7 @@ def test_invalid_runtime_rows_never_create_capability_rescues_or_regressions():
     sanitized, report = _sanitize_collection_observations(raw)
     treatments = [row for row in sanitized if row["intervention_id"] == "CTRL-X"]
     assert all(row["delta_valid"] is False for row in treatments)
-    assert all(row["delta"] == 0.0 for row in treatments)
+    assert all(row["delta"] is None for row in treatments)
     assert report["invalid_capability_pairs"] == 2
 
     rebuilt = _rebuild_collection_analytics(
@@ -1988,7 +1990,7 @@ def test_sanitizer_requires_matched_budget_except_generation_budget_intervention
     budget = next(row for row in sanitized if row["intervention_id"] == "BUDGET-512")
     assert prompt["budget_comparison_valid"] is False
     assert prompt["delta_valid"] is False
-    assert prompt["delta"] == 0.0
+    assert prompt["delta"] is None
     assert budget["budget_comparison_valid"] is True
     assert budget["delta_valid"] is True
     assert budget["delta"] == 1.0
