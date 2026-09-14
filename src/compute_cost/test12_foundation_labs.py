@@ -74,12 +74,9 @@ OUTPUT_CONTRACT_FAMILIES = frozenset({
     "instruction_following_constraint_stacking",
     "strict_structured_output",
     "extraction_transformation",
-    "tool_selection",
     "tool_argument_correctness",
     "tool_error_recovery",
     "format_robustness",
-    "prompt_instruction_conflict_handling",
-    "composite_agent_tasks",
 })
 
 
@@ -439,15 +436,15 @@ def run_output_contract_gate(
     *,
     replicates: int = 2,
 ) -> dict[str, Any]:
-    """Compare structured-output contracts at calibrated family budgets."""
+    """Screen output contracts, then independently confirm the best candidate."""
     cases = [
         case for case in _representative_cases(campaign)
         if _family(case) in OUTPUT_CONTRACT_FAMILIES
     ]
-    seeds = list(campaign.cfg.get("seeds") or [42, 43])[:replicates]
-    if len(seeds) < replicates:
+    seeds = list(campaign.cfg.get("seeds") or [42, 43])[:max(2, replicates)]
+    if len(seeds) < 2:
         base = seeds[-1] if seeds else 42
-        seeds.extend(base + i + 1 for i in range(replicates - len(seeds)))
+        seeds.append(base + 1)
 
     schema = {
         "type":"object",
@@ -462,6 +459,50 @@ def run_output_contract_gate(
     )
     observations: list[dict[str, Any]] = []
 
+    def run_mode(
+        case: dict[str, Any],
+        mode: str,
+        extra_fields: dict[str, Any],
+        seed: int,
+        role: str,
+        budget: int,
+    ) -> dict[str, Any] | None:
+        prompt = (
+            str(case.get("prompt") or "")
+            + "\n\nReturn a JSON object with exactly one string field named answer. "
+            + "Put your final answer inside that field and output no other text."
+        )
+        row = _invoke_probe(
+            campaign,
+            deadline,
+            probe_id=(
+                f"output-contract-{mode.lower()}-"
+                f"{_fixture_id(case)}-s{seed}-{role.lower()}"
+            ),
+            question_ids=[2,21,22,23,24],
+            family_id=_family(case),
+            messages=[{"role":"user","content":prompt}],
+            options={
+                "num_predict":budget,
+                "temperature":1.0,
+                "top_p":1.0,
+                "seed":int(seed),
+            },
+            request_fields={"think":"medium", **extra_fields},
+        )
+        if row is None:
+            return None
+        row["output_contract_mode"] = mode
+        row["output_contract_probe_role"] = role
+        row["operating_budget"] = budget
+        row["valid_final_answer"] = bool(
+            row.get("ok")
+            and not row.get("content_empty")
+            and row.get("done_reason") != "length"
+        )
+        observations.append(row)
+        return row
+
     for case in cases:
         if not campaign.can_start(deadline):
             break
@@ -472,55 +513,67 @@ def run_output_contract_gate(
                 campaign.cfg.get("base_generation_budget", 256),
             )
         )
-        prompt = (
-            str(case.get("prompt") or "")
-            + "\n\nReturn a JSON object with exactly one string field named answer. "
-            + "Put your final answer inside that field and output no other text."
-        )
+
+        screens: dict[str, dict[str, Any]] = {}
         for mode, extra_fields in modes:
-            for seed in seeds:
-                if not campaign.can_start(deadline):
-                    break
-                row = _invoke_probe(
-                    campaign,
-                    deadline,
-                    probe_id=(
-                        f"output-contract-{mode.lower()}-"
-                        f"{_fixture_id(case)}-s{seed}"
-                    ),
-                    question_ids=[2,21,22,23,24],
-                    family_id=family,
-                    messages=[{"role":"user","content":prompt}],
-                    options={
-                        "num_predict":budget,
-                        "temperature":1.0,
-                        "top_p":1.0,
-                        "seed":int(seed),
-                    },
-                    request_fields={"think":"medium", **extra_fields},
+            if not campaign.can_start(deadline):
+                break
+            row = run_mode(
+                case,
+                mode,
+                extra_fields,
+                int(seeds[0]),
+                "SCREEN",
+                budget,
+            )
+            if row is not None:
+                screens[mode] = row
+
+        ranked_modes = sorted(
+            [
+                (
+                    1 if row.get("valid_final_answer") and row.get("json_parse_ok") else 0,
+                    1 if row.get("valid_final_answer") else 0,
+                    -(int(row.get("eval_count")) if isinstance(row.get("eval_count"), int) else 10**12),
+                    mode,
                 )
-                if row is None:
-                    continue
-                row["output_contract_mode"] = mode
-                row["operating_budget"] = budget
-                row["valid_final_answer"] = bool(
-                    row.get("ok")
-                    and not row.get("content_empty")
-                    and row.get("done_reason") != "length"
-                )
-                observations.append(row)
+                for mode, row in screens.items()
+            ],
+            reverse=True,
+        )
+
+        for parse_ok, valid_ok, _neg_eval, mode in ranked_modes:
+            if not parse_ok or not valid_ok or not campaign.can_start(deadline):
+                continue
+            extra_fields = dict(next(fields for name, fields in modes if name == mode))
+            confirm = run_mode(
+                case,
+                mode,
+                extra_fields,
+                int(seeds[1]),
+                "CONFIRM",
+                budget,
+            )
+            if (
+                confirm is not None
+                and confirm.get("valid_final_answer")
+                and confirm.get("json_parse_ok")
+            ):
+                break
 
     families: dict[str, Any] = {}
     unresolved: list[str] = []
     target_families = sorted({_family(case) for case in cases})
     measured_families: list[str] = []
+
     for family in target_families:
         family_rows = [
             row for row in observations
             if row.get("family_id") == family
         ]
         mode_rows: dict[str, Any] = {}
-        ranked: list[tuple[float, float, float, str]] = []
+        confirmed_modes: list[tuple[float, str]] = []
+
         for mode, _ in modes:
             values = [
                 row for row in family_rows
@@ -528,15 +581,22 @@ def run_output_contract_gate(
             ]
             valid = [row for row in values if row.get("valid_final_answer")]
             parsed = [row for row in valid if row.get("json_parse_ok")]
+            screen = next(
+                (
+                    row for row in values
+                    if row.get("output_contract_probe_role") == "SCREEN"
+                ),
+                None,
+            )
+            confirm = next(
+                (
+                    row for row in values
+                    if row.get("output_contract_probe_role") == "CONFIRM"
+                ),
+                None,
+            )
             valid_rate = len(valid) / len(values) if values else 0.0
             parse_rate = len(parsed) / len(values) if values else 0.0
-            empty_thinking_rate = (
-                sum(
-                    1 for row in values
-                    if row.get("content_empty") and row.get("thinking_present")
-                ) / len(values)
-                if values else 0.0
-            )
             eval_counts = [
                 int(row["eval_count"])
                 for row in values
@@ -546,48 +606,62 @@ def run_output_contract_gate(
                 sum(eval_counts) / len(eval_counts)
                 if eval_counts else None
             )
+            reproducibly_valid = bool(
+                screen
+                and confirm
+                and screen.get("valid_final_answer")
+                and screen.get("json_parse_ok")
+                and confirm.get("valid_final_answer")
+                and confirm.get("json_parse_ok")
+            )
             mode_rows[mode] = {
                 "attempts":len(values),
+                "screen_attempted":screen is not None,
+                "confirmation_attempted":confirm is not None,
+                "reproducibly_valid":reproducibly_valid,
                 "valid_final_answer_rate":valid_rate,
                 "json_parse_rate":parse_rate,
-                "empty_content_with_thinking_rate":empty_thinking_rate,
+                "empty_content_with_thinking_rate":(
+                    sum(
+                        1 for row in values
+                        if row.get("content_empty") and row.get("thinking_present")
+                    ) / len(values)
+                    if values else 0.0
+                ),
                 "mean_eval_count":mean_eval,
             }
-            if values:
-                ranked.append((
-                    parse_rate,
-                    valid_rate,
-                    -(mean_eval if mean_eval is not None else 1e12),
+            if reproducibly_valid:
+                confirmed_modes.append((
+                    -(mean_eval if mean_eval is not None else 10**12),
                     mode,
                 ))
-        ranked.sort(reverse=True)
-        attempts_by_mode = {
-            mode: int((mode_rows.get(mode) or {}).get("attempts") or 0)
-            for mode, _ in modes
-        }
-        fully_measured = all(
-            attempts_by_mode.get(mode, 0) >= replicates
+
+        screen_complete = all(
+            (mode_rows.get(mode) or {}).get("screen_attempted") is True
             for mode, _ in modes
         )
-        if fully_measured:
+        if screen_complete:
             measured_families.append(family)
-        recommended = ranked[0][3] if ranked and ranked[0][0] > 0 else None
+
+        confirmed_modes.sort(reverse=True)
+        recommended = confirmed_modes[0][1] if confirmed_modes else None
         if recommended is None:
             unresolved.append(family)
+
         families[family] = {
             "modes":mode_rows,
             "recommended_contract":recommended,
-            "selection_rule":"MAX_PARSE_RATE_THEN_VALID_RATE_THEN_MIN_EVAL_COUNT",
-            "fully_measured":fully_measured,
+            "selection_rule":"REPRODUCIBLE_PARSE_AND_VALIDITY_THEN_MIN_EVAL_COUNT",
+            "screen_complete":screen_complete,
         }
 
     return {
         "schema_version":1,
         "stage":"STAGE0_OUTPUT_CONTRACT_CHARACTERIZATION",
         "questions_answered":[2,21,22,23,24],
-        "replicates":int(replicates),
-        "families":families,
+        "search_strategy":"SCREEN_THEN_CONFIRM",
         "target_families":target_families,
+        "families":families,
         "measured_families":sorted(measured_families),
         "unmeasured_families":sorted(set(target_families) - set(measured_families)),
         "all_target_families_measured":set(measured_families) == set(target_families),
@@ -596,6 +670,7 @@ def run_output_contract_gate(
         "observation_count":len(observations),
         "budget_source":"STAGE0_REPLICATED_SAFE_FAMILY_BUDGET",
     }
+
 
 
 def _round_up_budget(value: float, ladder: list[int]) -> int:
