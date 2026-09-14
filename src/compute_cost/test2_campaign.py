@@ -589,6 +589,14 @@ def load_test1_handoff(
             raise ValueError("Test 2 refuses a Test 1.2 source whose Stage 0 runtime gate did not pass")
 
         registry = _read_json(collection_dir / "full-control-candidate-registry.json")
+        collection_handoff = _read_json(collection_dir / "test1.2-handoff.json")
+        declared_semantic_hashes = {
+            str(key):str(value)
+            for key, value in (
+                collection_handoff.get("intervention_semantic_hashes") or {}
+            ).items()
+            if key and value
+        }
         candidates = [
             copy.deepcopy(row)
             for row in registry.get("candidates") or []
@@ -674,6 +682,12 @@ def load_test1_handoff(
         for ident in selected_ids:
             intervention = copy.deepcopy(candidate_by_id[ident])
             semantic_hash = _intervention_fingerprint(intervention)
+            declared_hash = declared_semantic_hashes.get(ident)
+            if declared_hash and declared_hash != semantic_hash:
+                raise ValueError(
+                    f"Test 1.2 handoff semantic hash mismatch for {ident}"
+                )
+            discovery_hash = declared_hash or semantic_hash
             exact_controls.append({
                 "source":"TEST1.2_EXACT_CONTROL",
                 "source_key":ident,
@@ -681,9 +695,14 @@ def load_test1_handoff(
                 "normalized_effect":0.0,
                 "exact_test12_intervention":intervention,
                 "intervention_id":ident,
-                "semantic_hash":semantic_hash,
-                "discovery_semantic_hash":semantic_hash,
-                "proof_semantic_hash":semantic_hash,
+                "semantic_hash":discovery_hash,
+                "discovery_semantic_hash":discovery_hash,
+                "proof_semantic_hash":discovery_hash,
+                "semantic_hash_provenance":(
+                    "FINALIZED_TEST1.2_HANDOFF"
+                    if declared_hash
+                    else "IMMUTABLE_COLLECTION_REGISTRY_LEGACY"
+                ),
                 "ingredient_ids":[f"TEST12:{ident}"],
                 "dose":1.0,
                 "representation":"exact",
@@ -698,6 +717,27 @@ def load_test1_handoff(
         collection_observations = _read_jsonl(
             collection_dir / "test1.2-observations.jsonl"
         )
+        executed_hashes_by_intervention: dict[str, set[str]] = defaultdict(set)
+        executed_counts_by_intervention: dict[str, int] = defaultdict(int)
+        for row in collection_observations:
+            ident = str(row.get("intervention_id") or "")
+            observed_hash = str(row.get("intervention_semantic_hash") or "")
+            if ident and ident != "CONTROL" and observed_hash:
+                executed_hashes_by_intervention[ident].add(observed_hash)
+                executed_counts_by_intervention[ident] += 1
+        for control in exact_controls:
+            ident = str(control.get("intervention_id") or "")
+            observed_hashes = executed_hashes_by_intervention.get(ident) or set()
+            if observed_hashes:
+                if observed_hashes != {str(control["discovery_semantic_hash"])}:
+                    raise ValueError(
+                        f"executed Test 1.2 semantic provenance mismatch for {ident}"
+                    )
+                control["semantic_hash_provenance"] = "EXECUTED_DISCOVERY_OBSERVATION"
+                control["executed_discovery_observation_count"] = int(
+                    executed_counts_by_intervention.get(ident, 0)
+                )
+
         valid_failure_baseline_by_fixture: dict[str, dict[str, Any]] = {}
         for row in collection_observations:
             fixture_id = str(row.get("fixture_id") or "")
@@ -1060,10 +1100,13 @@ class Test2Campaign:
         self.case_by_id = _case_index(cases)
         self.sequence = 0
         self.rows: list[dict[str, Any]] = []
-        self.current_baselines: dict[str, float] = dict(handoff.get("baselines") or {})
-        self.current_baseline_validity: dict[str, bool] = {
-            str(key): True for key in self.current_baselines
-        }
+        # Prior-run numeric baselines are forensic context only. Test 2 always
+        # re-baselines under its current runtime/budget contract before a delta.
+        self.inherited_baselines_forensic: dict[str, float] = dict(
+            handoff.get("baselines") or {}
+        )
+        self.current_baselines: dict[str, float] = {}
+        self.current_baseline_validity: dict[str, bool] = {}
         self.current_baseline_budgets: dict[str, int] = {}
         inherited_budgets = handoff.get("generation_budget_by_family") or {}
         self.generation_budget_by_family = {
@@ -1080,6 +1123,37 @@ class Test2Campaign:
         self.recipes = source_recipes(handoff, limit=int(self.cfg["top_recipes"]))
         self.exact_test12: Test12Campaign | None = None
         if handoff.get("handoff_mode") == "TEST12_EXACT":
+            source_profile = handoff.get("runtime_profile") or {}
+            source_identity = source_profile.get("identity") or {}
+            current_run_dir = getattr(getattr(runner, "store", None), "run_dir", None)
+            current_runtime_path = (
+                Path(current_run_dir) / "runtime.json"
+                if current_run_dir is not None
+                else None
+            )
+            if current_runtime_path is None or not current_runtime_path.is_file():
+                raise ValueError(
+                    "Test 2 exact proof requires current runtime.json identity evidence"
+                )
+            current_runtime = _read_json(current_runtime_path)
+            current_identity = {
+                "model":current_runtime.get("model"),
+                "runtime_version":current_runtime.get("version"),
+                "model_size_bytes":current_runtime.get("model_size_bytes"),
+                "model_info":current_runtime.get("model_info"),
+            }
+            identity_mismatches = [
+                key
+                for key in ("model","runtime_version","model_size_bytes","model_info")
+                if source_identity.get(key) is not None
+                and current_identity.get(key) != source_identity.get(key)
+            ]
+            if identity_mismatches:
+                raise ValueError(
+                    "Test 2 runtime identity drift from Test 1.2: "
+                    + ", ".join(identity_mismatches)
+                )
+
             source = fresh_model_source(cases)
             source["baselines"] = {}
             exact = Test12Campaign(
@@ -1094,6 +1168,7 @@ class Test2Campaign:
             exact.baseline_generation_budget_by_family = copy.deepcopy(
                 self.generation_budget_by_family
             )
+            exact.runtime_profile_sha256 = handoff.get("runtime_profile_sha256")
             exact_controls = [
                 copy.deepcopy(row["exact_test12_intervention"])
                 for row in self.recipes
@@ -1381,7 +1456,7 @@ class Test2Campaign:
                 "own_budget_cost_probe":own_budget_probe,
                 "censored_for_capability":censored,
                 "censoring_class":(
-                    "CONTROL_EXCEEDS_BASELINE_BUDGET" if censored else None
+                    result_class if censored else None
                 ),
                 "timing":{"wall_s":float((exact_row.get("cost") or {}).get("wall_seconds") or 0.0)},
                 "evidence_refs":copy.deepcopy(exact_row.get("evidence_refs") or {}),
@@ -1516,7 +1591,7 @@ class Test2Campaign:
             "delta_valid": bool(delta_valid),
             "censored_for_capability": bool(censored_for_capability),
             "censoring_class": (
-                "CONTROL_EXCEEDS_BASELINE_BUDGET"
+                result_class
                 if censored_for_capability
                 else None
             ),
