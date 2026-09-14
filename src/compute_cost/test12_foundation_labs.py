@@ -370,9 +370,14 @@ def run_runtime_semantics_gate(campaign: Any, deadline: float) -> dict[str, Any]
         and row.get("thinking_present")
         for row in length_rows
     )
+    answered_question_ids = sorted({
+        int(question_id)
+        for row in rows
+        for question_id in (row.get("question_ids") or [])
+    })
     return {
         "schema_version":1,
-        "questions_answered":[1,2,3,4,5,6,9,10],
+        "questions_answered":answered_question_ids,
         "think_false_behavior":think_false_behavior,
         "format_json_by_family":format_rates,
         "thinking_markup_leak_count":sum(1 for row in rows if row["thinking_markup_in_content"]),
@@ -582,10 +587,29 @@ def build_runtime_characterization_profile(
         gate_reasons.append("RUNTIME_VERSION_NOT_CAPTURED")
     if runtime_snapshot.get("model") not in {None, getattr(campaign.runner, "model", None)}:
         gate_reasons.append("MODEL_IDENTITY_MISMATCH")
+    if int(runtime_semantics.get("thinking_markup_leak_count") or 0) > 0:
+        gate_reasons.append("THINKING_CHANNEL_LEAK_OBSERVED")
     if not budget_characterization.get("all_families_reproducibly_valid"):
         gate_reasons.append("FAMILY_BUDGET_CALIBRATION_INCOMPLETE")
     if not {32,33,34,38}.issubset(role_answered):
         gate_reasons.append("ROLE_SPECIALIZATION_INCOMPLETE")
+    family_count = len(
+        (budget_characterization.get("families") or {})
+    )
+    minimum_role_families = min(
+        10,
+        max(6, int(math.ceil(max(1, family_count) * 0.20))),
+    )
+    if int(role_specialization.get("matched_family_count") or 0) < minimum_role_families:
+        gate_reasons.append("ROLE_SPECIALIZATION_VALID_MATCHED_COVERAGE_INSUFFICIENT")
+    for metric in (
+        "executor_accuracy",
+        "auditor_low_accuracy",
+        "auditor_high_accuracy",
+    ):
+        if role_specialization.get(metric) is None:
+            gate_reasons.append("ROLE_SPECIALIZATION_VALID_SCORE_MISSING")
+            break
 
     identity = {
         "model":getattr(campaign.runner, "model", None),
@@ -600,6 +624,7 @@ def build_runtime_characterization_profile(
         "runtime_semantics":copy.deepcopy(runtime_semantics),
         "budget_characterization":copy.deepcopy(budget_characterization),
         "role_specialization":copy.deepcopy(role_specialization),
+        "minimum_valid_matched_role_families":minimum_role_families,
         "resolved_generation_budget_by_family":copy.deepcopy(
             budget_characterization.get("resolved_generation_budget_by_family") or {}
         ),
