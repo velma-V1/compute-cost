@@ -658,6 +658,7 @@ REQUIRED_OUTPUTS = (
     "capability-family-coverage.json",
     "capability-floor-registry.json",
     "harness-applicability-registry.json",
+    "unaided-model-capability-profile.json",
     "mechanism-family-knowledge-table.json",
     "capability-building-block-manufacturing-map.json",
     "capability-improvement-dossiers.json",
