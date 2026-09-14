@@ -2607,9 +2607,11 @@ def test_stage0_budget_calibration_rejects_max_budget_without_safety_headroom(mo
 
 
 
-def test_control_redundancy_map_clusters_shared_rescue_mechanisms():
+def test_control_redundancy_map_clusters_by_semantics_not_rescue_cooccurrence():
     rows = []
-    for ident in ("CTRL-A", "CTRL-B"):
+    # All three controls have identical valid rescue outcomes. Only A/B share
+    # the same intervention semantics; C must remain outside their cluster.
+    for ident in ("CTRL-A", "CTRL-B", "CTRL-C"):
         for fixture in ("fail-1", "fail-2", "fail-3"):
             rows.append({
                 "partition": "DISCOVERY",
@@ -2623,6 +2625,7 @@ def test_control_redundancy_map_clusters_shared_rescue_mechanisms():
                 "delta": 1.0,
                 "delta_valid": True,
                 "valid_for_capability": True,
+                "control_valid_for_capability": True,
                 "model_calls_per_application": 1,
                 "cost": {},
                 "classification": {
@@ -2636,8 +2639,39 @@ def test_control_redundancy_map_clusters_shared_rescue_mechanisms():
 
     campaign = Campaign()
     campaign.interventions = [
-        {"id": "CTRL-A", "category": "PROMPT_CONTROL"},
-        {"id": "CTRL-B", "category": "PROMPT_CONTROL"},
+        {
+            "id": "CTRL-A",
+            "category": "PROMPT_CONTROL",
+            "mode": "grammar_control",
+            "primitive_id": "REQ",
+            "placement": "prefix",
+            "representation": "prose",
+            "dose": 1.0,
+            "recurrence": 1,
+            "instruction": "Track requirements.",
+        },
+        {
+            "id": "CTRL-B",
+            "category": "PROMPT_CONTROL",
+            "mode": "grammar_control",
+            "primitive_id": "REQ",
+            "placement": "suffix",
+            "representation": "bullets",
+            "dose": 2.0,
+            "recurrence": 2,
+            "instruction": "Track requirements strongly.",
+        },
+        {
+            "id": "CTRL-C",
+            "category": "PROMPT_CONTROL",
+            "mode": "grammar_control",
+            "primitive_id": "EVD",
+            "placement": "prefix",
+            "representation": "prose",
+            "dose": 1.0,
+            "recurrence": 1,
+            "instruction": "Ground claims in evidence.",
+        },
     ]
     campaign.rows = rows
     campaign.cfg = dict(test12_module.DEFAULT_TEST12_CONFIG)
@@ -2646,15 +2680,108 @@ def test_control_redundancy_map_clusters_shared_rescue_mechanisms():
     }
 
     result = test12_module._control_redundancy_map(campaign)
+    assert result["schema_version"] == 2
+    assert result["clustering_basis"] == "INTERVENTION_SEMANTICS_ONLY"
+    assert result["membership_uses_outcomes"] is False
+    assert result["rescue_cooccurrence_used_for_membership"] is False
     assert result["cluster_count"] == 1
     cluster = result["clusters"][0]
     assert set(cluster["member_intervention_ids"]) == {"CTRL-A", "CTRL-B"}
+    assert "CTRL-C" in result["unclustered_intervention_ids"]
+    assert cluster["mechanism_key"] == "PROMPT_PRIMITIVE:REQ"
     assert cluster["semantic_equivalence_claimed"] is False
-    assert cluster["proof_policy"] == "PROVE_REPRESENTATIVE_FIRST_PRESERVE_ALTERNATES"
-    assert len(cluster["alternate_intervention_ids"]) == 1
-    assert set(result["representative_intervention_ids"]) <= {"CTRL-A", "CTRL-B"}
-    assert set(result["alternate_intervention_ids"]) <= {"CTRL-A", "CTRL-B"}
+    assert cluster["membership_uses_outcomes"] is False
+    assert cluster["representative_may_use_valid_outcomes"] is True
 
+
+def test_capability_floor_registry_separates_exhaustive_from_partial_search():
+    family = "arithmetic_numerical_reasoning"
+
+    def baseline(fixture, score):
+        return {
+            "fixture_id": fixture,
+            "family_id": family,
+            "difficulty_level": 5,
+            "intervention_id": "CONTROL",
+            "score": score,
+            "valid_for_capability": True,
+            "classification": {
+                "result_class": "ANSWER_CORRECT" if score >= 1.0 else "ANSWER_INCORRECT",
+                "valid_for_capability": True,
+            },
+        }
+
+    def treatment(fixture, ident, score):
+        return {
+            "fixture_id": fixture,
+            "family_id": family,
+            "difficulty_level": 5,
+            "intervention_id": ident,
+            "control_score": 0.0,
+            "score": score,
+            "delta": score,
+            "delta_valid": True,
+            "valid_for_capability": True,
+            "control_valid_for_capability": True,
+            "classification": {
+                "result_class": "ANSWER_CORRECT" if score >= 1.0 else "ANSWER_INCORRECT",
+                "valid_for_capability": True,
+            },
+        }
+
+    class Campaign:
+        pass
+
+    campaign = Campaign()
+    campaign.interventions = [
+        {"id": "CTRL-A", "category": "PROMPT_CONTROL", "mode": "single"},
+        {"id": "CTRL-B", "category": "VERIFICATION", "mode": "single"},
+    ]
+    campaign.intervention_by_id = {
+        row["id"]: row for row in campaign.interventions
+    }
+    campaign.case_by_id = {
+        "floor-exhaustive": {
+            "id": "floor-exhaustive",
+            "category": family,
+            "difficulty_level": 5,
+        },
+        "floor-partial": {
+            "id": "floor-partial",
+            "category": family,
+            "difficulty_level": 7,
+        },
+        "baseline-pass": {
+            "id": "baseline-pass",
+            "category": family,
+            "difficulty_level": 1,
+        },
+    }
+    campaign.rows = [
+        baseline("floor-exhaustive", 0.0),
+        treatment("floor-exhaustive", "CTRL-A", 0.0),
+        treatment("floor-exhaustive", "CTRL-B", 0.0),
+        baseline("floor-partial", 0.0),
+        treatment("floor-partial", "CTRL-A", 0.0),
+        baseline("baseline-pass", 1.0),
+    ]
+
+    result = test12_module._capability_floor_registry(campaign)
+    assert result["confirmed_declared_harness_floor_count"] == 1
+    assert result["confirmed_declared_harness_floor_fixture_ids"] == [
+        "floor-exhaustive"
+    ]
+    assert result["fixtures"]["floor-exhaustive"]["floor_status"] == (
+        "CONFIRMED_DECLARED_HARNESS_FLOOR"
+    )
+    assert result["fixtures"]["floor-partial"]["floor_status"] == (
+        "UNRESOLVED_PARTIAL_CONTROL_SEARCH"
+    )
+    assert result["fixtures"]["floor-partial"]["control_coverage_fraction"] == 0.5
+    assert result["families"][family]["construct_status"] == (
+        "MIXED_CAPABILITY_BOUNDARY_OBSERVED"
+    )
+    assert family in result["boundary_families"]
 
 
 def test_stage0_budget_search_screens_before_confirmation(monkeypatch):
