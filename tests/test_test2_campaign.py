@@ -360,11 +360,11 @@ def test_test2_control_does_not_mutate_resolved_family_budget(monkeypatch):
     cases = _cases()
     runner = Runner()
     handoff = synthetic_test1_handoff(cases)
-    campaign = Test2Campaign(runner, cases, handoff)
-    case = campaign.partitions["VALIDATION"][0]
+    case = partition_cases(cases)["VALIDATION"][0]
     family = case["category"]
-    campaign.cfg["generation_budget_by_family"] = {family: 1024}
-    before = dict(campaign.cfg["generation_budget_by_family"])
+    handoff["generation_budget_by_family"] = {family: 1024}
+    campaign = Test2Campaign(runner, cases, handoff)
+    before = dict(campaign.generation_budget_by_family)
 
     def fake_execute(runner, case, spec, parent=None, messages_override=None):
         return {
@@ -391,4 +391,5 @@ def test_test2_control_does_not_mutate_resolved_family_budget(monkeypatch):
 
     assert result == 1.0
     assert campaign.current_baseline_budgets[case["id"]] == 1024
-    assert campaign.cfg["generation_budget_by_family"] == before
+    assert campaign.generation_budget_by_family == before
+    assert (campaign.cfg.get("generation_budget_by_family") or {}) == {}
