@@ -10,7 +10,7 @@ from .adaptive import AdaptiveBudgetController, BudgetObservation
 from .classification import classify_result
 from .experiments import ExperimentSpec, changed_fields, make_experiment_id
 from .replay_registry import replay_category
-from .scoring import score_case
+from .scoring import diagnostic_subscore_vector, score_case
 
 
 HARNESS_INVALID = {"SCORER_DEFECT", "TEST_DEFECT", "CAPTURE_GAP"}
@@ -152,10 +152,12 @@ def execute_experiment(
 
     runner._persist_scoring(spec.experiment_id, "characterize", scoring)
     classification = classify_result(case, generation, scoring)
+    diagnostic = diagnostic_subscore_vector(scoring)
     row = {
         "experiment": spec.to_dict(),
         "classification": classification,
         "score": scoring.get("score"),
+        "diagnostic_subscore": diagnostic,
         "status": scoring.get("status"),
         "response_text": response if generation.get("ok", False) else "",
         "scoring_source_channel": "content",
