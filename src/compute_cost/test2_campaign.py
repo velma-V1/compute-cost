@@ -3336,7 +3336,7 @@ def _harm_evidence_for_intervention(
 ) -> dict[str, Any] | None:
     matches = [
         copy.deepcopy(summary)
-        for summary in campaign.harm_evidence.values()
+        for summary in (getattr(campaign, "harm_evidence", {}) or {}).values()
         if str((summary.get("recipe") or {}).get("intervention_id") or "")
         == str(intervention_id)
     ]
