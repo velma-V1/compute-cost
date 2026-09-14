@@ -51,6 +51,7 @@ from compute_cost.test12_toollab import (
 from compute_cost.test12_tuning import (
     TUNING_HARD_SECONDS,
     _acceptance_pass,
+    _build_test2_proof_manifest,
     _candidate_registry,
     _compile_frontier_gap_policy,
     _compile_second_gap_policy,
@@ -1498,6 +1499,7 @@ def test_terminal_tuning_outputs_include_complete_inverted_integration_package()
     expected = {
         "compiled-harness-policy.json",
         "compiled-harness-validation.json",
+        "test2-proof-manifest.json",
         "model-harness-card.json",
         "test1.2-final-acceptance.json",
         "integration-capability-contract.json",
@@ -4333,6 +4335,106 @@ def test_mechanism_family_knowledge_table_binds_effect_cost_conditions_and_harm(
         "TOOL_POLICY:single:tool-a|" + family
     ]
     assert structural["applicability"] == "structural_no"
+
+
+def test_compiler_proof_manifest_rations_only_policy_reachable_cells():
+    family_a = "formal_logic_deduction"
+    family_b = "arithmetic_numerical_reasoning"
+    family_c = "code_comprehension"
+    base_cell = {
+        "mechanism_key":"PROMPT_CONTROL:single:exact",
+        "member_intervention_ids":["CTRL-A"],
+        "applicability":"yes",
+        "conditions":{
+            "status":"POPULATED",
+            "predicate":{
+                "predicate_language":"STRUCTURED_EXACT_OBSERVED_SCOPE_V1",
+            },
+        },
+        "cost":{
+            "status":"MEASURED_SAME_OBSERVATION_SET_AS_EFFECT",
+            "calls":{"mean":1.0},
+        },
+        "effect_observation_binding":["obs"],
+        "harm":{"status":"UNMEASURED"},
+        "null_evidence":{"precision_met":False},
+    }
+    knowledge = {
+        "cells":{
+            "MECH|"+family_a:{
+                **base_cell,
+                "family_id":family_a,
+                "effect":"conditional",
+            },
+            "MECH|"+family_b:{
+                **base_cell,
+                "family_id":family_b,
+                "effect":"unknown",
+                "conditions":{"status":"UNMEASURED","predicate":None},
+            },
+            "MECH|"+family_c:{
+                **base_cell,
+                "family_id":family_c,
+                "effect":"conditional",
+            },
+        },
+    }
+    collection = {
+        "run_id":"collection",
+        "mechanism_family_knowledge":knowledge,
+        "unaided_model_capability":{
+            "families":{
+                family_a:{"status":"MEASURED","pass_rate":0.5},
+                family_b:{"status":"MEASURED","pass_rate":0.25},
+                family_c:{"status":"MEASURED","pass_rate":0.75},
+            },
+        },
+    }
+    winner = {
+        "policy_id":"STATIC-CTRL-A",
+        "mode":"static",
+        "intervention_id":"CTRL-A",
+    }
+    winner_rows = [
+        {
+            "family_id":family_a,
+            "selected_intervention_id":"CTRL-A",
+            "delta_valid":True,
+        },
+        {
+            "family_id":family_a,
+            "selected_intervention_id":"CTRL-A",
+            "delta_valid":True,
+        },
+        {
+            "family_id":family_b,
+            "selected_intervention_id":"CTRL-A",
+            "delta_valid":True,
+        },
+    ]
+    manifest = _build_test2_proof_manifest(
+        collection,
+        winner,
+        winner_rows,
+        {"mean_calls":1.0},
+    )
+
+    assert manifest["effect_size_used_for_ordering"] is False
+    assert manifest["queue_order_contract"] == (
+        "COMPILABILITY_THEN_EXPECTED_TRAFFIC_THEN_COST_NEVER_EFFECT_SIZE"
+    )
+    assert [row["family_id"] for row in manifest["queues"]["promotion"]] == [
+        family_a
+    ]
+    assert [row["family_id"] for row in manifest["queues"]["unknown_resolution"]] == [
+        family_b
+    ]
+    deferred = {
+        row["family_id"]:row
+        for row in manifest["queues"]["deferred"]
+    }
+    assert deferred[family_c]["compilable_status"] == "NOT_REACHABLE_FROM_FROZEN_POLICY"
+    assert manifest["training_stage"]["implementation_authorized"] is False
 
 
 def test_knowledge_table_distinguishes_verified_null_from_censored_null():
