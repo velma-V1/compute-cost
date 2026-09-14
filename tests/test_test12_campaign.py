@@ -3011,6 +3011,94 @@ def test_auditor_executor_thesis_executes_matched_fresh_pairs(monkeypatch):
     assert all(row["operating_budget"] == 1024 for row in result["pairs"])
 
 
+def test_runtime_canary_is_time_based_excluded_and_confirms_drift(monkeypatch):
+    now = [0.0]
+
+    class Store:
+        run_id = "run"
+        jsonl = []
+        written = {}
+
+        @classmethod
+        def append_jsonl(cls, path, row):
+            cls.jsonl.append((path, row))
+
+        @classmethod
+        def write_json(cls, path, row, **kwargs):
+            cls.written[path] = row
+
+    class Runner:
+        store = Store()
+        model = "gpt-oss:20b"
+        _model_call_counts = {"run": 0}
+
+    campaign = object.__new__(test12_module.Test12Campaign)
+    campaign.runner = Runner()
+    campaign.cfg = {
+        "base_generation_budget": 256,
+        "runtime_canary_budget": 256,
+        "runtime_canary_interval_seconds": 600,
+        "runtime_canary_single_drop_fraction": 0.25,
+        "runtime_canary_sustained_drop_fraction": 0.15,
+        "runtime_canary_sustained_count": 3,
+    }
+    campaign.clock = lambda: now[0]
+    campaign.start = 0.0
+    campaign.active_end = 10_000.0
+    campaign.call_start_cutoff = 10_000.0
+    campaign.sequence = 0
+    campaign.call_latency_seconds = []
+    campaign.runtime_profile_sha256 = "profile"
+    campaign.runtime_canary_baseline_tps = None
+    campaign.runtime_canary_last_active_seconds = None
+    campaign.runtime_canary_recent_ratios = []
+    campaign.runtime_canary_failed = False
+    campaign.runtime_canary_count = 0
+    campaign.runtime_canary_last_pass_active_seconds = None
+    campaign._write_recovery_checkpoint = lambda **kwargs: None
+
+    latencies = iter([10.0, 20.0, 20.0])
+
+    def fake_execute(*args, **kwargs):
+        latency = next(latencies)
+        return {
+            "score": 1.0,
+            "classification": {
+                "result_class": "ANSWER_CORRECT",
+                "valid_for_capability": True,
+            },
+            "metrics": {"eval_count": 100},
+            "timing": {"client_latency_ns": int(latency * 1_000_000_000)},
+        }
+
+    monkeypatch.setattr(test12_module, "execute_experiment", fake_execute)
+
+    campaign.maybe_runtime_canary(9_999.0)
+    assert campaign.runtime_canary_baseline_tps == 10.0
+    assert campaign.runtime_canary_last_pass_active_seconds == 0.0
+    assert campaign.call_latency_seconds == []
+
+    now[0] = 599.0
+    campaign.maybe_runtime_canary(9_999.0)
+    assert campaign.runtime_canary_count == 1
+
+    now[0] = 601.0
+    with pytest.raises(ValueError, match="runtime canary failed"):
+        campaign.maybe_runtime_canary(9_999.0)
+
+    assert campaign.runtime_canary_count == 3
+    assert campaign.runtime_canary_failed is True
+    assert campaign.call_latency_seconds == []
+    assert Store.written["test1.2-runtime-canary-stop.json"][
+        "quarantine_after_active_seconds"
+    ] == 0.0
+    assert all(
+        row["excluded_from_latency_ratio"] is True
+        for path, row in Store.jsonl
+        if path == "test1.2-runtime-canaries.jsonl"
+    )
+
+
 def test_stage0_runtime_semantics_verifies_cross_call_statelessness(monkeypatch):
     class Campaign:
         @staticmethod
