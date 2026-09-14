@@ -1546,7 +1546,7 @@ def _auditor_executor_thesis_cases(
     """Round-robin unmatched DISCOVERY fixtures across capability families."""
     excluded = set(excluded_fixture_ids or set())
     by_family: dict[str, list[dict[str, Any]]] = defaultdict(list)
-    for case in list((campaign.partitions or {}).get("DISCOVERY") or []):
+    for case in list((getattr(campaign, "partitions", {}) or {}).get("DISCOVERY") or []):
         fixture_id = _fixture_id(case)
         if fixture_id in excluded:
             continue
