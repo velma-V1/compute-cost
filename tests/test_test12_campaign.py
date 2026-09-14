@@ -2482,3 +2482,48 @@ def test_stage0_budget_calibration_rejects_max_budget_without_safety_headroom(mo
     assert family in result["unresolved_families"]
     assert family not in result["resolved_generation_budget_by_family"]
     assert result["all_families_reproducibly_valid"] is False
+
+
+
+def test_control_redundancy_map_clusters_shared_rescue_mechanisms():
+    rows = []
+    for ident in ("CTRL-A", "CTRL-B"):
+        for fixture in ("fail-1", "fail-2", "fail-3"):
+            rows.append({
+                "partition": "DISCOVERY",
+                "fixture_id": fixture,
+                "family_id": "reasoning",
+                "difficulty_level": 5,
+                "intervention_id": ident,
+                "intervention_category": "PROMPT_CONTROL",
+                "control_score": 0.0,
+                "score": 1.0,
+                "delta": 1.0,
+                "delta_valid": True,
+                "valid_for_capability": True,
+                "model_calls_per_application": 1,
+                "cost": {},
+                "classification": {
+                    "result_class": "ANSWER_CORRECT",
+                    "valid_for_capability": True,
+                },
+            })
+
+    class Campaign:
+        interventions = [
+            {"id": "CTRL-A", "category": "PROMPT_CONTROL"},
+            {"id": "CTRL-B", "category": "PROMPT_CONTROL"},
+        ]
+        rows = rows
+        cfg = dict(test12_module.DEFAULT_TEST12_CONFIG)
+        intervention_by_id = {row["id"]: row for row in interventions}
+
+    result = test12_module._control_redundancy_map(Campaign())
+    assert result["cluster_count"] == 1
+    cluster = result["clusters"][0]
+    assert set(cluster["member_intervention_ids"]) == {"CTRL-A", "CTRL-B"}
+    assert cluster["semantic_equivalence_claimed"] is False
+    assert cluster["proof_policy"] == "PROVE_REPRESENTATIVE_FIRST_PRESERVE_ALTERNATES"
+    assert len(cluster["alternate_intervention_ids"]) == 1
+    assert set(result["representative_intervention_ids"]) <= {"CTRL-A", "CTRL-B"}
+    assert set(result["alternate_intervention_ids"]) <= {"CTRL-A", "CTRL-B"}
