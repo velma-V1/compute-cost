@@ -345,6 +345,7 @@ REQUIRED_OUTPUTS = (
     "activation-boundary-map.json",
     "negative-transfer-map-1.2.json",
     "cost-value-frontier-1.2.json",
+    "control-redundancy-map.json",
     "residual-failure-ownership-1.2.json",
     "fine-tuning-readiness-map-1.2.json",
     "test1.2-priority-queue.json",
@@ -4632,6 +4633,188 @@ def _cost_value_frontier(campaign: Test12Campaign) -> dict[str, Any]:
     }
 
 
+
+def _jaccard(left: set[str], right: set[str]) -> float:
+    union = left | right
+    if not union:
+        return 0.0
+    return len(left & right) / len(union)
+
+
+def _control_redundancy_map(campaign: Test12Campaign) -> dict[str, Any]:
+    """Cluster controls by observed valid rescue/harm behavior.
+
+    This is a proof-budget optimization, not a semantic equivalence claim.
+    Controls are clusterable only when they share at least two rescued fixtures
+    and have strongly overlapping rescue signatures without incompatible harm.
+    Every alternate remains preserved for fallback proof.
+    """
+    by_control: dict[str, dict[str, Any]] = {}
+    frontier = _cost_value_frontier(campaign)
+    frontier_by_id = {
+        str(row.get("intervention_id") or ""): row
+        for row in frontier.get("ranked", [])
+    }
+
+    for intervention in campaign.interventions:
+        ident = str(intervention.get("id") or "")
+        if not ident:
+            continue
+        rows = [
+            row for row in campaign.rows
+            if str(row.get("intervention_id") or "") == ident
+            and row.get("delta_valid") is True
+            and row.get("delta") is not None
+        ]
+        rescue = {
+            str(row.get("fixture_id"))
+            for row in rows
+            if float(row.get("control_score") or 0.0) < 1.0
+            and float(row.get("score") or 0.0) >= 1.0
+            and float(row["delta"]) > 0.0
+        }
+        harm = {
+            str(row.get("fixture_id"))
+            for row in rows
+            if float(row.get("control_score") or 0.0) >= 1.0
+            and float(row["delta"]) < 0.0
+        }
+        censored = {
+            str(row.get("fixture_id"))
+            for row in campaign.rows
+            if str(row.get("intervention_id") or "") == ident
+            and row.get("censored_for_capability") is True
+        }
+        by_control[ident] = {
+            "intervention_id":ident,
+            "category":intervention.get("category"),
+            "rescue_fixture_ids":sorted(rescue),
+            "harm_fixture_ids":sorted(harm),
+            "censored_fixture_ids":sorted(censored),
+            "valid_observation_count":len(rows),
+            "frontier":copy.deepcopy(frontier_by_id.get(ident) or {}),
+        }
+
+    candidates = [
+        ident for ident, row in by_control.items()
+        if len(row["rescue_fixture_ids"]) >= 2
+    ]
+    parent = {ident: ident for ident in candidates}
+
+    def find(value: str) -> str:
+        while parent[value] != value:
+            parent[value] = parent[parent[value]]
+            value = parent[value]
+        return value
+
+    def union(a: str, b: str) -> None:
+        ra, rb = find(a), find(b)
+        if ra != rb:
+            parent[rb] = ra
+
+    similarity_edges: list[dict[str, Any]] = []
+    for index, left_id in enumerate(candidates):
+        left = by_control[left_id]
+        left_rescue = set(left["rescue_fixture_ids"])
+        left_harm = set(left["harm_fixture_ids"])
+        for right_id in candidates[index + 1:]:
+            right = by_control[right_id]
+            right_rescue = set(right["rescue_fixture_ids"])
+            intersection = left_rescue & right_rescue
+            if len(intersection) < 2:
+                continue
+            rescue_similarity = _jaccard(left_rescue, right_rescue)
+            if rescue_similarity < 0.80:
+                continue
+            right_harm = set(right["harm_fixture_ids"])
+            harm_conflict = bool(
+                (left_harm - right_harm)
+                or (right_harm - left_harm)
+            )
+            # Sparse harm evidence should not itself merge or split controls.
+            # A known disagreement in observed harm keeps them separate.
+            if left_harm and right_harm and harm_conflict:
+                continue
+            similarity_edges.append({
+                "left":left_id,
+                "right":right_id,
+                "rescue_jaccard":rescue_similarity,
+                "shared_rescue_fixture_count":len(intersection),
+                "left_category":left.get("category"),
+                "right_category":right.get("category"),
+            })
+            union(left_id, right_id)
+
+    groups: dict[str, list[str]] = defaultdict(list)
+    for ident in candidates:
+        groups[find(ident)].append(ident)
+
+    clusters: list[dict[str, Any]] = []
+    clustered: set[str] = set()
+    for members in groups.values():
+        if len(members) < 2:
+            continue
+
+        def rank_key(ident: str) -> tuple[float, float, int, str]:
+            frontier_row = by_control[ident].get("frontier") or {}
+            return (
+                float(frontier_row.get("net_value") or 0.0),
+                float(frontier_row.get("value_per_call") or 0.0),
+                len(by_control[ident]["rescue_fixture_ids"]),
+                ident,
+            )
+
+        ordered = sorted(members, key=rank_key, reverse=True)
+        representative = ordered[0]
+        clustered.update(ordered)
+        digest = hashlib.sha256(
+            "|".join(sorted(ordered)).encode("utf-8")
+        ).hexdigest()[:12]
+        clusters.append({
+            "cluster_id":"REDUNDANCY-" + digest,
+            "representative_intervention_id":representative,
+            "alternate_intervention_ids":ordered[1:],
+            "member_intervention_ids":ordered,
+            "member_count":len(ordered),
+            "representative_reason":"HIGHEST_COLLECTION_NET_VALUE_THEN_VALUE_PER_CALL_THEN_RESCUE_BREADTH",
+            "proof_policy":"PROVE_REPRESENTATIVE_FIRST_PRESERVE_ALTERNATES",
+            "semantic_equivalence_claimed":False,
+        })
+
+    unclustered = sorted(
+        ident for ident in by_control
+        if ident not in clustered
+    )
+    representative_ids = sorted({
+        str(row["representative_intervention_id"])
+        for row in clusters
+    })
+    alternate_ids = sorted({
+        ident
+        for row in clusters
+        for ident in row["alternate_intervention_ids"]
+    })
+
+    return {
+        "schema_version":1,
+        "purpose":"REDUCE_REDUNDANT_TEST2_PROOF_WITHOUT_DROPPING_CONTROLS",
+        "clustering_basis":"VALID_RESCUE_SIGNATURE_JACCARD_AT_LEAST_0.80_WITH_AT_LEAST_2_SHARED_RESCUES_AND_NO_OBSERVED_HARM_CONFLICT",
+        "semantic_equivalence_claimed":False,
+        "control_count":len(by_control),
+        "cluster_count":len(clusters),
+        "clustered_control_count":len(clustered),
+        "representative_intervention_ids":representative_ids,
+        "alternate_intervention_ids":alternate_ids,
+        "unclustered_intervention_ids":unclustered,
+        "clusters":sorted(clusters, key=lambda row: row["cluster_id"]),
+        "similarity_edges":sorted(
+            similarity_edges,
+            key=lambda row:(-float(row["rescue_jaccard"]), row["left"], row["right"]),
+        ),
+        "controls":by_control,
+    }
+
+
 def _residual_ownership(campaign: Test12Campaign) -> tuple[dict[str, Any], dict[str, Any]]:
     by_fixture: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for row in campaign.rows:
@@ -5219,6 +5402,13 @@ def write_outputs(campaign: Test12Campaign, results: dict[str, Any]) -> None:
     store.write_json("activation-boundary-map.json", {"schema_version":1,"effects":activation}, producer="test1.2", stage="report")
     store.write_json("negative-transfer-map-1.2.json", {"schema_version":1,"effects":negative}, producer="test1.2", stage="report")
     store.write_json("cost-value-frontier-1.2.json", cost_value, producer="test1.2", stage="report")
+    redundancy_map = _control_redundancy_map(campaign)
+    store.write_json(
+        "control-redundancy-map.json",
+        redundancy_map,
+        producer="test1.2",
+        stage="report",
+    )
     store.write_json("residual-failure-ownership-1.2.json", residual, producer="test1.2", stage="report")
     store.write_json("fine-tuning-readiness-map-1.2.json", fine, producer="test1.2", stage="report")
     store.write_json("test1.2-priority-queue.json", {"schema_version":1,"queue":queue}, producer="test1.2", stage="report")
@@ -5267,6 +5457,9 @@ def write_outputs(campaign: Test12Campaign, results: dict[str, Any]) -> None:
         "zero_clock_active_test_seconds_added":zero_clock_training["zero_active_test_seconds_added"],
         "efficiency_audit":"test1.2-efficiency-audit.json",
         "opportunity_discovery_map":"test1.2-opportunity-discovery-map.json",
+        "control_redundancy_map":"control-redundancy-map.json",
+        "redundancy_cluster_count":redundancy_map.get("cluster_count", 0),
+        "redundancy_clustered_control_count":redundancy_map.get("clustered_control_count", 0),
         "collection_role":"OPPORTUNITY_DISCOVERY",
         "proof_owner":"RUN2_TEST2",
         "unique_rescued_fixtures":opportunity_map["unique_rescued_fixtures"],
