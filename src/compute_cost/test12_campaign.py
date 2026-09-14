@@ -7049,8 +7049,7 @@ def _mechanism_family_knowledge_table(
                     "conditional mechanism-family cell requires condition predicate"
                 )
 
-            if pass_population:
-                low, high = _wilson(len(breaks), len(pass_population))
+            if pass_population and harm_precision_met:
                 harm = {
                     "status":"MEASURED",
                     "population":"WITHIN_FAMILY_BASELINE_PASS_SENTINELS",
@@ -7060,8 +7059,34 @@ def _mechanism_family_knowledge_table(
                     "break_rate":len(breaks) / len(pass_population),
                     "confidence_interval":{
                         "method":"WILSON_95",
-                        "low":low,
-                        "high":high,
+                        "low":harm_interval[0],
+                        "high":harm_interval[1],
+                        "width":harm_interval_width,
+                    },
+                    "precision_policy":{
+                        "max_wilson_width":harm_max_width,
+                        "met":True,
+                    },
+                    "observation_binding":[obs_id(row) for row in pass_population],
+                }
+            elif pass_population:
+                harm = {
+                    "status":"UNKNOWN_INSUFFICIENT_PRECISION",
+                    "population":"WITHIN_FAMILY_BASELINE_PASS_SENTINELS",
+                    "population_family":family,
+                    "n":len(pass_population),
+                    "break_count":len(breaks),
+                    "break_rate":None,
+                    "confidence_interval":None,
+                    "diagnostic_wilson_interval":{
+                        "method":"WILSON_95",
+                        "low":harm_interval[0],
+                        "high":harm_interval[1],
+                        "width":harm_interval_width,
+                    },
+                    "precision_policy":{
+                        "max_wilson_width":harm_max_width,
+                        "met":False,
                     },
                     "observation_binding":[obs_id(row) for row in pass_population],
                 }
@@ -7074,6 +7099,10 @@ def _mechanism_family_knowledge_table(
                     "break_count":0,
                     "break_rate":None,
                     "confidence_interval":None,
+                    "precision_policy":{
+                        "max_wilson_width":harm_max_width,
+                        "met":False,
+                    },
                     "observation_binding":[],
                 }
 
@@ -7106,6 +7135,16 @@ def _mechanism_family_knowledge_table(
                 "positive_observation_count":len(positive),
                 "zero_observation_count":len(zero),
                 "negative_observation_count":len(negative),
+                "null_evidence":{
+                    "valid_observation_count":len(valid),
+                    "non_null_event_count":non_null_count,
+                    "wilson_95_non_null_event_interval":{
+                        "low":null_interval[0],
+                        "high":null_interval[1],
+                    },
+                    "max_allowed_upper_bound":null_max_upper,
+                    "precision_met":null_precision_met,
+                },
                 "effect_observation_binding":[obs_id(row) for row in signal_rows],
                 "scheduled_priority":(
                     f"{mechanism_key}|{family}" in campaign.priority_cell_keys
@@ -7129,6 +7168,9 @@ def _mechanism_family_knowledge_table(
         "test1_2_may_assign_verified_positive":False,
         "test2_owns_verified_promotion":True,
         "conditional_requires_predicate":True,
+        "null_verified_requires_wilson_upper_bound_lte":null_max_upper,
+        "harm_rate_requires_wilson_width_lte":harm_max_width,
+        "insufficient_precision_emits_unknown":True,
         "cost_effect_same_observation_set_required":True,
         "composition_defaults_unknown":True,
         "applicability_counts":dict(applicability_counts),
