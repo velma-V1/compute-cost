@@ -6778,6 +6778,142 @@ def _harness_applicability_registry(
 
 
 
+def _unaided_baseline_profile(
+    campaign: Test12Campaign,
+) -> dict[str, Any]:
+    """First-class map of what the model does without a Test 1.2 intervention."""
+    baseline_rows = [
+        row for row in campaign.rows
+        if str(row.get("intervention_id") or "") == "CONTROL"
+    ]
+    families: dict[str, Any] = {}
+    for family in TEST2_CAPABILITY_FAMILIES:
+        rows = [
+            row for row in baseline_rows
+            if str(row.get("family_id") or "") == family
+        ]
+        valid = [row for row in rows if _capability_valid(row)]
+        invalid = [row for row in rows if not _capability_valid(row)]
+        passes = [
+            row for row in valid
+            if float(row.get("score") or 0.0) >= 1.0
+        ]
+        by_difficulty: dict[str, Any] = {}
+        for difficulty in sorted({
+            int(row.get("difficulty_level") or 0) for row in rows
+        }):
+            level_rows = [
+                row for row in rows
+                if int(row.get("difficulty_level") or 0) == difficulty
+            ]
+            level_valid = [
+                row for row in level_rows if _capability_valid(row)
+            ]
+            level_pass = [
+                row for row in level_valid
+                if float(row.get("score") or 0.0) >= 1.0
+            ]
+            by_difficulty[str(difficulty)] = {
+                "raw_observations":len(level_rows),
+                "valid_observations":len(level_valid),
+                "pass_count":len(level_pass),
+                "pass_rate":(
+                    len(level_pass) / len(level_valid)
+                    if level_valid else None
+                ),
+                "mean_score":(
+                    mean(float(row.get("score") or 0.0) for row in level_valid)
+                    if level_valid else None
+                ),
+                "fixture_ids":sorted({
+                    str(row.get("fixture_id") or "")
+                    for row in level_rows if row.get("fixture_id")
+                }),
+            }
+
+        costs = [
+            row for row in valid
+            if isinstance(row.get("cost"), dict)
+        ]
+        families[family] = {
+            "status":"MEASURED" if valid else "UNMEASURED",
+            "raw_observations":len(rows),
+            "valid_observations":len(valid),
+            "invalid_or_censored_observations":len(invalid),
+            "distinct_fixtures":len({
+                str(row.get("fixture_id") or "")
+                for row in rows if row.get("fixture_id")
+            }),
+            "pass_count":len(passes),
+            "pass_rate":(
+                len(passes) / len(valid) if valid else None
+            ),
+            "mean_score":(
+                mean(float(row.get("score") or 0.0) for row in valid)
+                if valid else None
+            ),
+            "observed_difficulty_min":(
+                min(int(row.get("difficulty_level") or 0) for row in valid)
+                if valid else None
+            ),
+            "observed_difficulty_max":(
+                max(int(row.get("difficulty_level") or 0) for row in valid)
+                if valid else None
+            ),
+            "generation_budgets_observed":sorted({
+                int(row.get("generation_budget"))
+                for row in valid
+                if row.get("generation_budget") is not None
+            }),
+            "cost":{
+                "status":"MEASURED_FROM_SAME_BASELINE_ROWS" if costs else "UNMEASURED",
+                "mean_calls":1.0 if costs else None,
+                "mean_tokens":(
+                    mean(
+                        float((row.get("cost") or {}).get("prompt_tokens_observed") or 0.0)
+                        + float((row.get("cost") or {}).get("output_tokens_observed") or 0.0)
+                        for row in costs
+                    ) if costs else None
+                ),
+                "mean_wall_seconds":(
+                    mean(
+                        float((row.get("cost") or {}).get("wall_seconds") or 0.0)
+                        for row in costs
+                    ) if costs else None
+                ),
+            },
+            "by_difficulty":by_difficulty,
+            "observation_binding":[
+                str(
+                    row.get("observation_sha256")
+                    or row.get("experiment_id")
+                    or row.get("fixture_id")
+                    or ""
+                )
+                for row in rows
+            ],
+        }
+
+    return {
+        "schema_version":1,
+        "analysis_type":"UNAIDED_MODEL_CAPABILITY_PROFILE",
+        "model":getattr(campaign.runner, "model", None),
+        "baseline_definition":(
+            "CONTROL_WITH_NO_TEST1_2_INTERVENTION_USING_RESOLVED_"
+            "FAMILY_GENERATION_BUDGET_AND_TEST_RUNTIME"
+        ),
+        "raw_runtime_defaults_claimed":False,
+        "test1_2_intervention_present":False,
+        "baseline_rows_are_effect_denominators":True,
+        "family_count":len(families),
+        "measured_family_count":sum(
+            1 for payload in families.values()
+            if payload["status"] == "MEASURED"
+        ),
+        "families":families,
+    }
+
+
 def _mechanism_family_knowledge_table(
     campaign: Test12Campaign,
 ) -> dict[str, Any]:
