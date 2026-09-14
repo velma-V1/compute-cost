@@ -1878,6 +1878,7 @@ class Test12Campaign:
         seed: int,
     ) -> dict[str, Any] | None:
         self.assert_allowed(case)
+        self.maybe_runtime_canary(deadline)
         signature = self._trial_signature(case, intervention, seed)
         estimated_calls = _estimated_physical_calls(intervention)
         allow_exact_repeat = bool(intervention.get("allow_exact_repeat"))
