@@ -5,6 +5,8 @@ from pathlib import Path
 
 import pytest
 
+import compute_cost.test2_campaign as test2_module
+
 from compute_cost.config import load_config
 from compute_cost.evidence import EvidenceStore
 from compute_cost.runner import BenchmarkRunner
@@ -13,6 +15,8 @@ from compute_cost.test2_campaign import (
     HARD_SECONDS,
     REQUIRED_OUTPUTS,
     Test2Campaign,
+    _effect_map,
+    _final_recipe_registry,
     build_test2_plan,
     load_test1_handoff,
     source_recipes,
@@ -198,3 +202,193 @@ def test_campaign_refuses_test3_protected_fixture(tmp_path: Path):
 
     with pytest.raises(ValueError, match="Test-3 protected"):
         campaign._assert_partition_allowed(protected)
+
+
+
+def test_test2_invalid_delta_persists_as_null_not_fake_zero():
+    class Store:
+        @staticmethod
+        def append_jsonl(*args, **kwargs):
+            return None
+
+    class Runner:
+        store = Store()
+
+        @staticmethod
+        def _utc():
+            return "2026-09-14T00:00:00Z"
+
+    campaign = Test2Campaign.__new__(Test2Campaign)
+    campaign.runner = Runner()
+    campaign.rows = []
+    campaign.cfg = {"generation_budget": 512}
+    campaign._partition = lambda case: "VALIDATION"
+
+    row = campaign._record(
+        {
+            "id": "case-a",
+            "category": "arithmetic_numerical_reasoning",
+            "difficulty_level": 6,
+        },
+        {
+            "score": None,
+            "classification": {
+                "result_class": "THINK_TRUNCATED",
+                "valid_for_capability": False,
+            },
+            "experiment": {
+                "experiment_id": "exp-a",
+                "generation_budget": 512,
+            },
+        },
+        phase="recurrence_higher_order",
+        kind="recurrence",
+        recipe={
+            "ingredient_ids": ["ING-001"],
+            "dose": 1.0,
+            "representation": "prose",
+            "placement": "prefix",
+        },
+        baseline_score=1.0,
+        baseline_valid=True,
+        baseline_budget=512,
+        source_key="x",
+    )
+    assert row["delta_valid"] is False
+    assert row["delta"] is None
+    assert row["censored_for_capability"] is True
+    assert row["censoring_class"] == "CONTROL_EXCEEDS_BASELINE_BUDGET"
+
+
+def test_test2_effect_map_reports_informative_censoring_instead_of_null():
+    recipe = {
+        "ingredient_ids": ["ING-001"],
+        "dose": 1.0,
+        "representation": "prose",
+        "placement": "prefix",
+    }
+    rows = [
+        {
+            "kind": "recurrence",
+            "recipe": recipe,
+            "delta_valid": False,
+            "delta": None,
+            "censored_for_capability": True,
+        }
+        for _ in range(4)
+    ] + [{
+        "kind": "recurrence",
+        "recipe": recipe,
+        "delta_valid": True,
+        "delta": 1.0,
+        "censored_for_capability": False,
+    }]
+    effects = _effect_map(
+        rows,
+        noise_sigma=0.1,
+        bootstrap_samples=20,
+        max_censoring_rate=0.20,
+        key_fn=lambda row: "CTRL",
+    )
+    summary = effects["CTRL"]
+    assert summary["raw_n"] == 5
+    assert summary["valid_n"] == 1
+    assert summary["censored_n"] == 4
+    assert summary["censoring_rate"] == 0.8
+    assert summary["classification"] == "CENSORING_DOMINATED"
+    assert summary["requires_own_budget_cost_probe"] is True
+
+
+def test_final_recipe_cannot_be_shipping_verified_without_harm_evidence():
+    recipe = {
+        "ingredient_ids": ["ING-001"],
+        "dose": 1.0,
+        "representation": "prose",
+        "placement": "prefix",
+    }
+    key = "ING-001"
+    knockouts = {
+        key: {
+            "minimal_recipe": recipe,
+            "required_ingredients": ["ING-001"],
+            "removable_ingredients": [],
+        }
+    }
+    blind = {
+        "effects": {
+            key: {
+                "classification": "STRONG",
+                "normalized_effect": 1.0,
+            }
+        }
+    }
+
+    missing = _final_recipe_registry(knockouts, blind, {})
+    assert missing[0]["verified_for_shipping"] is False
+
+    safe = _final_recipe_registry(
+        knockouts,
+        blind,
+        {
+            key: {
+                "harm_evidence_sufficient": True,
+                "harm_safe": True,
+                "break_rate": 0.0,
+            }
+        },
+    )
+    assert safe[0]["verified_for_shipping"] is True
+
+
+def test_test2_control_does_not_mutate_resolved_family_budget(monkeypatch):
+    class Store:
+        @staticmethod
+        def append_jsonl(*args, **kwargs):
+            return None
+
+    class Runner:
+        def __init__(self):
+            self.config = load_config()
+            self.progress = None
+            self.store = Store()
+            self.model = "gpt-oss:20b"
+
+        @staticmethod
+        def _utc():
+            return "2026-09-14T00:00:00Z"
+
+    cases = _cases()
+    runner = Runner()
+    handoff = synthetic_test1_handoff(cases)
+    campaign = Test2Campaign(runner, cases, handoff)
+    case = campaign.partitions["VALIDATION"][0]
+    family = case["category"]
+    campaign.cfg["generation_budget_by_family"] = {family: 1024}
+    before = dict(campaign.cfg["generation_budget_by_family"])
+
+    def fake_execute(runner, case, spec, parent=None, messages_override=None):
+        return {
+            "score": 1.0,
+            "classification": {
+                "result_class": "ANSWER_CORRECT",
+                "valid_for_capability": True,
+            },
+            "experiment": {
+                "experiment_id": spec.experiment_id,
+                "generation_budget": spec.generation_budget,
+            },
+            "timing": {},
+            "evidence_refs": {},
+        }
+
+    monkeypatch.setattr(test2_module, "execute_experiment", fake_execute)
+    result = campaign.control(
+        case,
+        campaign.clock() + 100.0,
+        phase="unit",
+        force=True,
+    )
+
+    assert result == 1.0
+    assert campaign.current_baseline_budgets[case["id"]] == 1024
+    assert campaign.cfg["generation_budget_by_family"] == before
