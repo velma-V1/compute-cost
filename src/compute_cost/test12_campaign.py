@@ -176,6 +176,17 @@ CALL_START_CUTOFF_SECONDS = COLLECTION_ACTIVE_SECONDS
 
 # Seven-hours-twenty-nine-minutes active; the extra 15 minutes is reserved for preflight/finalization.
 # Campaign-level early stop is prohibited; only replication depth may adapt after mandatory breadth.
+CELL_MATRIX_PHASES = frozenset({
+    "capability_family_manufacturing_floor",
+    "mechanism_coverage_floor",
+    "real_tool_execution",
+    "failure_phenotype_replay",
+    "dose_activation_boundaries",
+    "negative_transfer_sentinels",
+    "information_gain_reserve",
+})
+
+
 PHASES = (
     ("runtime_semantics_gate", 10 * 60),
     ("runtime_budget_characterization", 30 * 60),
@@ -1856,7 +1867,13 @@ class Test12Campaign:
         self.interventions = list(merged_interventions.values())
         self.intervention_by_id = {str(row["id"]): row for row in self.interventions}
         self.priority_cell_keys: set[str] = set()
+        self.priority_cell_order: list[str] = []
+        self.priority_cell_cost_calls: dict[str, int] = {}
         self.priority_cell_scenario = None
+        self.priority_cell_preflight_count = 0
+        self.priority_reselection_count = int(
+            checkpoint.get("priority_reselection_count") or 0
+        )
         store = getattr(runner, "store", None)
         run_dir = getattr(store, "run_dir", None)
         cell_budget_path = (
@@ -1875,15 +1892,52 @@ class Test12Campaign:
                     (cell_budget.get("capacity_scenarios") or {}).get(scenario_name)
                     or {}
                 )
-                self.priority_cell_keys = {
+                self.priority_cell_order = [
                     str(value)
                     for value in (scenario.get("selected_cell_keys") or [])
                     if value
-                }
+                ]
+                self.priority_cell_keys = set(self.priority_cell_order)
+                self.priority_cell_preflight_count = len(self.priority_cell_order)
+                effect_observations = int(
+                    scenario.get("valid_effect_observations_per_cell") or 0
+                )
+                harm_observations = int(
+                    scenario.get("harm_sentinel_observations_per_cell") or 0
+                )
+                per_cell_observations = max(
+                    1,
+                    effect_observations + harm_observations,
+                )
+                for cell in (cell_budget.get("cells") or []):
+                    key = str(cell.get("cell_key") or "")
+                    if not key:
+                        continue
+                    per_application = max(
+                        1,
+                        int(cell.get("estimated_physical_calls_per_application") or 1),
+                    )
+                    self.priority_cell_cost_calls[key] = (
+                        per_application * per_cell_observations
+                    )
                 self.priority_cell_scenario = scenario_name
+                restored_priority = [
+                    str(value)
+                    for value in (checkpoint.get("priority_cell_keys") or [])
+                    if value
+                ]
+                if restored_priority:
+                    restored_set = set(restored_priority)
+                    self.priority_cell_keys = {
+                        key for key in self.priority_cell_order
+                        if key in restored_set
+                    }
             except (OSError, ValueError, TypeError):
                 self.priority_cell_keys = set()
+                self.priority_cell_order = []
+                self.priority_cell_cost_calls = {}
                 self.priority_cell_scenario = None
+                self.priority_cell_preflight_count = 0
         self.allowed_partitions = {"DISCOVERY"}
         self.controls: dict[tuple[str, int], dict[str, Any]] = {}
         self.invalid_controls: dict[tuple[str, int], dict[str, Any]] = {}
@@ -1929,6 +1983,11 @@ class Test12Campaign:
         self.capability_call_origin: int | None = (
             int(checkpoint["capability_call_origin"])
             if checkpoint.get("capability_call_origin") is not None
+            else None
+        )
+        self.capability_start_active_seconds: float | None = (
+            float(checkpoint["capability_start_active_seconds"])
+            if checkpoint.get("capability_start_active_seconds") is not None
             else None
         )
         self.block_index = int(checkpoint.get("campaign_block_index") or 0)
@@ -2066,6 +2125,9 @@ class Test12Campaign:
             "current_phase_elapsed_seconds": self._phase_elapsed_seconds(),
             "efficiency_counters": copy.deepcopy(self.efficiency_counters),
             "capability_call_origin": self.capability_call_origin,
+            "capability_start_active_seconds": self.capability_start_active_seconds,
+            "priority_cell_keys": sorted(self.priority_cell_keys),
+            "priority_reselection_count": self.priority_reselection_count,
             "campaign_block_index": self.block_index,
             "campaign_block_row_start": self.block_row_start,
             "runtime_canary_baseline_tps": self.runtime_canary_baseline_tps,
@@ -9047,6 +9109,7 @@ def run_test12_campaign(
                 )
             if campaign.capability_call_origin is None:
                 campaign.capability_call_origin = campaign._physical_model_calls()
+                campaign.capability_start_active_seconds = campaign._active_elapsed()
         elif phase_name == "baseline_capability_map":
             if not (results.get("runtime_characterization") or {}).get("gate_passed"):
                 raise ValueError("Stage 0 runtime characterization must pass before baseline capability mapping")
