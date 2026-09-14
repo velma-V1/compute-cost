@@ -1,11 +1,126 @@
 # CURRENT REVIEW STATUS
 
 **Branch:** `build/gpt20b-test1.2-full-improvement`  
-**Scientific contract:** Round-1 and Round-2 stop-ship findings closed  
+**Scientific contract:** Round-1, Round-2, and Round-3 stop-ship findings closed  
+**Latest validated scientific code head:** `4fe9a8d9635d870ab31c4e6ebefc418db35c77fd`  
 **Latest Stage-0 deepening:** screen/escalate/confirm budget search + deep auditor evidence + post-budget output-contract optimization + shadow early-truncation calibration + zero-call context/load/energy diagnostics  
 **CI:** Python 3.11 PASS + Python 3.12 PASS
 
-This file preserves historical findings for forensic value. Where an older section conflicts with a later `CURRENT` or `ROUND 2` section, the later section is authoritative.
+This file preserves historical findings for forensic value. Where historical text conflicts with `CURRENT REVIEW STATUS` or a higher-numbered review round, the current/highest-numbered contract is authoritative.
+
+---
+
+# REVIEW ROUND 3 — FAIL-CLOSED PROOF CHAIN RESOLUTION
+
+**External review basis:** live branch after Round-2 implementation  
+**Validated scientific code head:** `4fe9a8d9635d870ab31c4e6ebefc418db35c77fd`  
+**CI:** Python 3.11 PASS + Python 3.12 PASS
+
+Round 3 audited the actual live Test 1.2 → tuning/compiler → Test 2 proof chain rather than the older handoff snapshot. The large architectural blocker described in earlier text is now closed: Test 2 executes exact Test 1.2 controls through `Test12Campaign.treatment()` instead of translating them into the legacy ingredient-recipe language.
+
+The following additional stop-ship defects were found and fixed.
+
+## R3-A — Unknown validity could become evidence — FIXED
+
+Capability/value/training helpers now fail closed.
+
+Required invariant:
+
+```
+missing validity metadata != valid evidence
+delta_valid must be explicitly true for paired capability deltas
+```
+
+This is enforced in:
+
+- Test 1.2 capability summaries;
+- value/manufacturing products;
+- tuning policy scoring;
+- tuning recovery;
+- downstream training-data generation.
+
+Integrity-valid recovery rows are independently recoverable only when all three pair-validity fields explicitly prove the comparison:
+
+```
+delta_valid == true
+valid_for_capability == true
+control_valid_for_capability == true
+```
+
+Anything less remains forensic evidence only and is quarantined from policy scoring.
+
+## R3-B — Inherited Test-1 baselines could silently become current proof — FIXED
+
+Test 2 no longer marks inherited numeric baselines capability-valid by default.
+
+Prior baselines are retained only as forensic context. Test 2 must establish a fresh baseline under its current runtime and matched family budget before computing a proof delta.
+
+## R3-C — Censoring phenotype was mislabeled — FIXED
+
+Censored observations now preserve the actual runtime/capture failure class, for example:
+
+```
+THINK_TRUNCATED
+ANSWER_TRUNCATED
+NO_FINAL_ANSWER
+```
+
+They are no longer mislabeled as `CONTROL_EXCEEDS_BASELINE_BUDGET` when the matched budgets were in fact equal. Budget mismatch and runtime censoring are separate scientific concepts.
+
+## R3-D — Discovery/proof semantic identity was incomplete — FIXED
+
+New Test 1.2 observations record an `intervention_semantic_hash` at execution time.
+
+The finalized Test 1.2 handoff also contains the frozen intervention hash map. Test 2 verifies:
+
+```
+executed discovery definition
+    → finalized Test 1.2 handoff definition
+    → Test 2 proof definition
+```
+
+A mismatch fails closed.
+
+For already-completed legacy Collections that predate per-observation semantic hashes, Test 2 does **not** pretend executed-observation provenance exists. It explicitly labels the weaker source as:
+
+```
+IMMUTABLE_COLLECTION_REGISTRY_LEGACY
+```
+
+Future Collections can reach:
+
+```
+EXECUTED_DISCOVERY_OBSERVATION
+```
+
+after observation-level verification.
+
+## R3-E — Runtime identity was not bound across the whole chain — FIXED
+
+The Stage-0 identity contract is now enforced across:
+
+```
+Collection
+    → Test 1.2 tuning/compiler
+    → Test 2 proof
+```
+
+The compared identity includes, when captured:
+
+- model identifier;
+- Ollama/runtime version;
+- model size;
+- model-info / quantization configuration.
+
+A drift in those fields blocks tuning/proof rather than allowing evidence from different runtime identities to be mixed.
+
+`runtime-characterization-profile.json` is now a formal required Collection dependency for tuning, not merely an incidental file read.
+
+## R3-F — Current execution decision
+
+A real Test 1.2 → tuning → Test 2 campaign may proceed only if its Collection satisfies the current Stage-0/profile contract.
+
+Do **not** grandfather a historical Collection that lacks the required Stage-0 runtime profile merely to avoid a rerun. If a legacy Collection has the required profile but predates observation-level semantic hashes, it may be used only with the explicit legacy provenance label above; no stronger provenance claim is permitted.
 
 ---
 
@@ -65,8 +180,10 @@ Rows may now carry:
 
 ```
 censored_for_capability = true
-censoring_class = CONTROL_EXCEEDS_BASELINE_BUDGET
+censoring_class = <actual runtime/capture failure class>
 ```
+
+Examples include `THINK_TRUNCATED`, `ANSWER_TRUNCATED`, and `NO_FINAL_ANSWER`.
 
 Per-control summaries include:
 
@@ -2012,13 +2129,9 @@ Family budgets are immutable proof inputs from Stage 0.
 
 ### Censoring is explicit
 
-A control that cannot finish under the matched baseline budget becomes:
+A treatment that cannot produce a capability-valid result under the matched baseline budget is censored using its **actual runtime/capture failure phenotype** (for example `THINK_TRUNCATED`, `ANSWER_TRUNCATED`, or `NO_FINAL_ANSWER`) and contributes to per-control censoring rate.
 
-```
-CONTROL_EXCEEDS_BASELINE_BUDGET
-```
-
-and contributes to per-control censoring rate.
+`CONTROL_EXCEEDS_BASELINE_BUDGET` is not used as a substitute label for matched-budget runtime censoring.
 
 High-censoring controls cannot be classified as ordinary null/no-rescue controls.
 
