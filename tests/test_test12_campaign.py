@@ -2981,6 +2981,205 @@ def test_capability_floor_registry_separates_exhaustive_from_partial_search():
 
 
 
+def test_mechanism_screen_uses_one_representative_before_variants(monkeypatch):
+    family = "arithmetic_numerical_reasoning"
+    case = {
+        "id":"fail-a",
+        "category":family,
+        "family_id":family,
+        "difficulty_level":8,
+    }
+    interventions = [
+        {
+            "id":f"REQ-{index}",
+            "category":"PROMPT_CONTROL",
+            "mode":"grammar_control",
+            "primitive_id":"REQ",
+            "placement":"prefix",
+            "representation":"prose",
+            "dose":1.0,
+            "recurrence":index + 1,
+            "instruction":"Track requirements.",
+        }
+        for index in range(4)
+    ] + [{
+        "id":"VERIFY",
+        "category":"VERIFICATION",
+        "mode":"repair",
+        "label":"verify",
+        "instruction":"Verify.",
+    }]
+
+    class Campaign:
+        def __init__(self):
+            self.interventions = interventions
+            self.rows = []
+            self.partitions = {"DISCOVERY":[case]}
+            self.cfg = {
+                "seeds":[42],
+                "mechanism_screen_sentinel_reserve":0,
+                "max_variants_per_surviving_mechanism":4,
+            }
+            self.calls = []
+
+        def can_start(self, _deadline):
+            return True
+
+        def treatment(self, case, deadline, *, phase, intervention, seed):
+            self.calls.append((phase, intervention["id"]))
+            row = {
+                "partition":"DISCOVERY",
+                "fixture_id":case["id"],
+                "family_id":family,
+                "intervention_id":intervention["id"],
+                "intervention_category":intervention["category"],
+                "control_score":0.0,
+                "score":0.0,
+                "delta":0.0,
+                "delta_valid":True,
+                "valid_for_capability":True,
+                "control_valid_for_capability":True,
+            }
+            self.rows.append(row)
+            return row
+
+        def positive_work(self, *args, **kwargs):
+            return None
+
+    campaign = Campaign()
+    monkeypatch.setattr(
+        test12_module,
+        "_source_headroom",
+        lambda campaign: ([case], []),
+    )
+    monkeypatch.setattr(
+        test12_module,
+        "_unresolved_failure_cases",
+        lambda campaign, partition="DISCOVERY": [case],
+    )
+    opportunity_calls = []
+
+    def fake_opportunity(campaign, deadline, *, phase, interventions, **kwargs):
+        opportunity_calls.append((phase, [row["id"] for row in interventions]))
+        return []
+
+    monkeypatch.setattr(test12_module, "_opportunity_search", fake_opportunity)
+    monkeypatch.setattr(
+        test12_module,
+        "_group_summary",
+        lambda rows, cfg, key: {},
+    )
+
+    result = test12_module.phase_controller_screen(campaign, 999.0)
+
+    breadth_ids = [
+        ident for phase, ident in campaign.calls
+        if phase == "mechanism_coverage_floor"
+    ]
+    assert len(breadth_ids) == 2
+    assert len(set(breadth_ids) & {"REQ-0","REQ-1","REQ-2","REQ-3"}) == 1
+    assert "VERIFY" in breadth_ids
+    assert result["_mechanism_screen"]["declared_intervention_count"] == 5
+    assert result["_mechanism_screen"]["semantic_mechanism_count"] == 2
+    assert result["_mechanism_screen"]["variant_candidate_count"] == 0
+    assert not any(
+        phase == "surviving_mechanism_variant_search"
+        for phase, _ids in opportunity_calls
+    )
+
+
+def test_passing_only_family_uses_bounded_sentinel_reserve(monkeypatch):
+    family = "arithmetic_numerical_reasoning"
+    passed_cases = [
+        {
+            "id":f"pass-{index}",
+            "category":family,
+            "family_id":family,
+            "difficulty_level":index + 1,
+        }
+        for index in range(4)
+    ]
+    representatives = {
+        category:{
+            "id":f"IV-{category}",
+            "category":category,
+            "mode":"single",
+            "label":category,
+        }
+        for category in list(test12_module.FAMILY_CONTROL_SURFACES)[:6]
+    }
+
+    class Campaign:
+        def __init__(self):
+            self.partitions = {"DISCOVERY":passed_cases}
+            self.rows = [
+                {
+                    "partition":"DISCOVERY",
+                    "fixture_id":case["id"],
+                    "family_id":family,
+                    "intervention_id":"CONTROL",
+                    "score":1.0,
+                    "valid_for_capability":True,
+                    "classification":{"valid_for_capability":True},
+                }
+                for case in passed_cases
+            ]
+            self.cfg = {
+                "seeds":[42],
+                "baseline_pass_sentinel_surfaces_per_family":2,
+            }
+            self.calls = []
+
+        def can_start(self, _deadline):
+            return True
+
+        def treatment(self, case, deadline, *, phase, intervention, seed):
+            self.calls.append((case["id"], intervention["id"]))
+            row = {
+                "partition":"DISCOVERY",
+                "fixture_id":case["id"],
+                "family_id":family,
+                "intervention_id":intervention["id"],
+                "intervention_category":intervention["category"],
+                "control_score":1.0,
+                "score":1.0,
+                "delta":0.0,
+                "delta_valid":True,
+                "valid_for_capability":True,
+                "control_valid_for_capability":True,
+            }
+            self.rows.append(row)
+            return row
+
+        def positive_work(self, *args, **kwargs):
+            return None
+
+    campaign = Campaign()
+    monkeypatch.setattr(
+        test12_module,
+        "_representative_by_category",
+        lambda campaign: representatives,
+    )
+    monkeypatch.setattr(
+        test12_module,
+        "_unresolved_failure_cases",
+        lambda campaign: [],
+    )
+    monkeypatch.setattr(
+        test12_module,
+        "_opportunity_search",
+        lambda *args, **kwargs: [],
+    )
+    monkeypatch.setattr(
+        test12_module,
+        "_group_summary",
+        lambda rows, cfg, key: {},
+    )
+
+    test12_module.phase_family_control_floor(campaign, 999.0)
+    assert len(campaign.calls) == 2
+
+
 def test_zero_call_reanalysis_preserves_raw_evidence_and_refreshes_manifest(tmp_path):
     run_id = "collection-old"
     store = test12_module.EvidenceStore(tmp_path, run_id)
