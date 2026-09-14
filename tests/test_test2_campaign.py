@@ -257,7 +257,7 @@ def test_test2_invalid_delta_persists_as_null_not_fake_zero():
     assert row["delta_valid"] is False
     assert row["delta"] is None
     assert row["censored_for_capability"] is True
-    assert row["censoring_class"] == "CONTROL_EXCEEDS_BASELINE_BUDGET"
+    assert row["censoring_class"] == "THINK_TRUNCATED"
 
 
 def test_test2_effect_map_reports_informative_censoring_instead_of_null():
@@ -714,7 +714,12 @@ def test_exact_test12_handoff_preserves_failure_provenance(tmp_path: Path):
     )
     collection.write_json(
         "test1.2-handoff.json",
-        {"schema_version": 1},
+        {
+            "schema_version": 1,
+            "intervention_semantic_hashes": {
+                "CTRL-EXACT": test2_module._intervention_fingerprint(intervention)
+            },
+        },
         producer="test",
         stage="test",
     )
@@ -792,6 +797,10 @@ def test_exact_test12_handoff_preserves_failure_provenance(tmp_path: Path):
     handoff = load_test1_handoff(tmp_path, tuning_id, cases)
     failures = handoff["failures"]["failures"]
     assert len(failures) == 1
+    exact_control = handoff["test12_exact_controls"][0]
+    assert exact_control["discovery_semantic_hash"] == test2_module._intervention_fingerprint(intervention)
+    assert exact_control["semantic_hash_provenance"] == "FINALIZED_TEST1.2_HANDOFF"
+
     failure = failures[0]
     assert failure["fixture_id"] == fixture_id
     assert failure["family_id"] == family
