@@ -512,7 +512,9 @@ def run_output_contract_gate(
 
     families: dict[str, Any] = {}
     unresolved: list[str] = []
-    for family in sorted({_family(case) for case in cases}):
+    target_families = sorted({_family(case) for case in cases})
+    measured_families: list[str] = []
+    for family in target_families:
         family_rows = [
             row for row in observations
             if row.get("family_id") == family
@@ -559,6 +561,16 @@ def run_output_contract_gate(
                     mode,
                 ))
         ranked.sort(reverse=True)
+        attempts_by_mode = {
+            mode: int((mode_rows.get(mode) or {}).get("attempts") or 0)
+            for mode, _ in modes
+        }
+        fully_measured = all(
+            attempts_by_mode.get(mode, 0) >= replicates
+            for mode, _ in modes
+        )
+        if fully_measured:
+            measured_families.append(family)
         recommended = ranked[0][3] if ranked and ranked[0][0] > 0 else None
         if recommended is None:
             unresolved.append(family)
@@ -566,6 +578,7 @@ def run_output_contract_gate(
             "modes":mode_rows,
             "recommended_contract":recommended,
             "selection_rule":"MAX_PARSE_RATE_THEN_VALID_RATE_THEN_MIN_EVAL_COUNT",
+            "fully_measured":fully_measured,
         }
 
     return {
@@ -574,6 +587,10 @@ def run_output_contract_gate(
         "questions_answered":[2,21,22,23,24],
         "replicates":int(replicates),
         "families":families,
+        "target_families":target_families,
+        "measured_families":sorted(measured_families),
+        "unmeasured_families":sorted(set(target_families) - set(measured_families)),
+        "all_target_families_measured":set(measured_families) == set(target_families),
         "unresolved_families":sorted(unresolved),
         "all_target_families_have_contract":not bool(unresolved),
         "observation_count":len(observations),
@@ -856,6 +873,8 @@ def build_runtime_characterization_profile(
         gate_reasons.append("FAMILY_BUDGET_CALIBRATION_INCOMPLETE")
     if not {2,21,22,23,24}.issubset(output_answered):
         gate_reasons.append("OUTPUT_CONTRACT_CHARACTERIZATION_INCOMPLETE")
+    if not output_contracts.get("all_target_families_measured"):
+        gate_reasons.append("OUTPUT_CONTRACT_TARGET_COVERAGE_INCOMPLETE")
     if not {32,33,34,35,36,37,38}.issubset(role_answered):
         gate_reasons.append("ROLE_SPECIALIZATION_INCOMPLETE")
     family_count = len(
