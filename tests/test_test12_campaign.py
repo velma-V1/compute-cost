@@ -55,6 +55,7 @@ from compute_cost.test12_tuning import (
     _compile_second_gap_policy,
     _family_is_safe,
     _priority_validation,
+    _runtime_identity_mismatches,
     _score_policy_rows,
     _sanitize_collection_observations,
     _rebuild_collection_analytics,
@@ -1283,6 +1284,32 @@ def test_explicit_exact_repeat_escape_hatch_preserves_deliberate_reproducibility
     assert campaign.efficiency_counters["exact_duplicate_treatments_skipped"] == 0
     assert campaign.efficiency_counters["explicit_exact_repeats_executed"] == 1
 
+
+
+def test_tuning_runtime_identity_gate_detects_model_runtime_or_quant_drift():
+    source = {
+        "identity": {
+            "model": "gpt-oss:20b",
+            "runtime_version": "0.12.0",
+            "model_size_bytes": 123,
+            "model_info": {"quantization_level": "MXFP4"},
+        }
+    }
+    current = {
+        "model": "gpt-oss:20b",
+        "version": "0.12.0",
+        "model_size_bytes": 123,
+        "model_info": {"quantization_level": "MXFP4"},
+    }
+    assert _runtime_identity_mismatches(source, current) == []
+
+    changed = dict(current)
+    changed["version"] = "0.13.0"
+    assert _runtime_identity_mismatches(source, changed) == ["runtime_version"]
+
+    changed = dict(current)
+    changed["model_info"] = {"quantization_level": "Q4_K_M"}
+    assert _runtime_identity_mismatches(source, changed) == ["model_info"]
 
 
 def test_terminal_acceptance_requires_absolute_competence_not_only_zero_regression():
