@@ -87,6 +87,10 @@ REQUIRED_OUTPUTS = (
     "rollback-configuration.json",
     "exact-model-configuration.json",
     "latency-resource-envelope.json",
+    "holdout-consumption-ledger.json",
+    "holdout-replenishment-plan.json",
+    "harness-stopping-rules.json",
+    "training-asset-yield.json",
 )
 
 DEFAULT_TEST2_CONFIG: dict[str, Any] = {
@@ -2222,6 +2226,11 @@ def _build_finalization_contract(
             "new_severe_regression_count": 0,
             "verified_control_requires_harm_evidence": True,
             "harm_max_break_rate": float(campaign.cfg["harm_max_break_rate"]),
+            "harm_gate_uses_ci_upper_bound": True,
+            "policy_cost_ratio_ceiling": float(campaign.cfg["policy_cost_ratio_ceiling"]),
+            "minimum_accuracy_advantage_when_over_cost_ceiling": float(
+                campaign.cfg["minimum_accuracy_advantage_when_over_cost_ceiling"]
+            ),
             "tool_boundary_violation_count": 0,
             "general_recovery_min_success_rate": float(campaign.cfg["general_recovery_threshold"]),
             "tuned_inverted_protected_score_must_not_regress": True,
@@ -2309,7 +2318,7 @@ def write_test2_outputs(
         "harm-sentinel-evidence.json",
         {
             "schema_version":1,
-            "policy":"VERIFIED_CONTROL_REQUIRES_DEDICATED_BASELINE_PASS_HARM_EVIDENCE",
+            "policy":"VERIFIED_CONTROL_REQUIRES_DEDICATED_BASELINE_PASS_HARM_EVIDENCE_AND_WILSON90_UPPER_BOUND_AT_OR_BELOW_CEILING",
             "recipes":copy.deepcopy(campaign.harm_evidence),
         },
         producer="test2",
@@ -2362,6 +2371,37 @@ def write_test2_outputs(
         stage="report",
     )
 
+    training_yield = {
+        "schema_version":1,
+        "raw_test2_observations":len(campaign.rows),
+        "qualified_fine_tuning_phenotypes":len(finetune),
+        "valid_train_eligible_examples":len(dataset),
+        "training_pipeline_has_input":bool(dataset),
+        "success_metric":"VALID_SCIENTIFICALLY_ELIGIBLE_EXAMPLES_NOT_RAW_OBSERVATION_VOLUME",
+        "status":(
+            "TRAINING_INPUT_AVAILABLE"
+            if dataset
+            else "NO_VALID_WEIGHT_TRAINING_INPUT_YET"
+        ),
+        "interpretation":(
+            "A small number of valid examples is preferable to a large contaminated corpus."
+        ),
+    }
+    store.write_json(
+        "training-asset-yield.json",
+        training_yield,
+        producer="test2",
+        stage="report",
+    )
+
+    stopping = _build_harness_stopping_rules(campaign, blind, limits)
+    store.write_json(
+        "harness-stopping-rules.json",
+        stopping,
+        producer="test2",
+        stage="decision",
+    )
+
     protected_ids = [
         _fixture_id(case) for case in campaign.partitions["TEST3_PROTECTED"]
     ]
@@ -2374,6 +2414,15 @@ def write_test2_outputs(
             "fixture_count": len(protected_ids),
             "exposed_by_test2": False,
             "train_eligible": False,
+            "partition_fingerprint":_fixture_set_fingerprint(
+                campaign.partitions["TEST3_PROTECTED"]
+            ),
+            "acceptance_use_budget":1,
+            "retire_permanently_after_first_exposure":True,
+            "same_run_resume_allowed_after_exposure":True,
+            "cross_run_reuse_prohibited":True,
+            "must_claim_holdout_before_exposure":True,
+            "next_cycle_partition_must_not_exist_during_current_cycle_discovery":True,
         },
         producer="test2",
         stage="report",
@@ -2389,6 +2438,30 @@ def write_test2_outputs(
         },
         producer="test2",
         stage="report",
+    )
+
+    blind_claim = copy.deepcopy(blind.get("holdout_claim") or {})
+    replenishment = {
+        "schema_version":1,
+        "current_cycle_run_id":getattr(store, "run_id", None),
+        "consumed_partition":"TEST2_BLIND",
+        "current_blind_claim":blind_claim,
+        "test3_protected_partition_fingerprint":_fixture_set_fingerprint(
+            campaign.partitions["TEST3_PROTECTED"]
+        ),
+        "next_cycle_requirements":{
+            "generate_new_fixtures":True,
+            "source":"NEW_FIELD_FAILURE_PHENOTYPES_NOT_ALREADY_FIXED",
+            "zero_fixture_overlap_with_consumed_holdouts":True,
+            "cycle_n_partition_must_not_exist_during_cycle_n_minus_1_discovery":True,
+            "retire_each_partition_after_acceptance_budget_is_spent":True,
+        },
+    }
+    store.write_json(
+        "holdout-replenishment-plan.json",
+        replenishment,
+        producer="test2",
+        stage="holdout-governance",
     )
 
     unresolved = []
@@ -2435,6 +2508,13 @@ def write_test2_outputs(
         finetune,
         latency,
     )
+    contract["harness_stopping_rules"] = copy.deepcopy(stopping)
+    contract["harness_ceiling_reached"] = bool(stopping.get("harness_ceiling_reached"))
+    contract["next_strategy"] = stopping.get("next_strategy")
+    contract["training_asset_yield"] = copy.deepcopy(training_yield)
+    acceptance["holdout_governance"] = copy.deepcopy(replenishment)
+    acceptance["harness_stopping_rules"] = copy.deepcopy(stopping)
+    acceptance["training_asset_yield"] = copy.deepcopy(training_yield)
     store.write_json(
         "inverted-finalization-contract.json",
         contract,
