@@ -419,6 +419,15 @@ def test_test12_exact_source_recipes_preserve_semantic_hash():
     assert recipes[0]["exact_test12_intervention"] == intervention
     assert recipes[0]["proof_semantic_hash"] == semantic_hash
 
+    two_cells = json.loads(json.dumps(handoff))
+    two_cells["test12_exact_controls"][0]["proof_cell_key"] = "MECH|family-a"
+    second = json.loads(json.dumps(two_cells["test12_exact_controls"][0]))
+    second["proof_cell_key"] = "MECH|family-b"
+    two_cells["test12_exact_controls"].append(second)
+    cell_recipes = source_recipes(two_cells, limit=1)
+    assert len(cell_recipes) == 2
+    assert test2_module._recipe_key(cell_recipes[0]) != test2_module._recipe_key(cell_recipes[1])
+
     mutated = json.loads(json.dumps(handoff))
     mutated["test12_exact_controls"][0]["exact_test12_intervention"]["instruction"] = "Changed"
     with pytest.raises(ValueError, match="semantic drift"):
@@ -713,6 +722,26 @@ def test_exact_test12_handoff_preserves_failure_provenance(tmp_path: Path):
         stage="test",
     )
     collection.write_json(
+        "mechanism-family-knowledge-table.json",
+        {
+            "schema_version":1,
+            "analysis_type":"MECHANISM_X_CAPABILITY_FAMILY_KNOWLEDGE_TABLE",
+            "cells":{},
+        },
+        producer="test",
+        stage="test",
+    )
+    collection.write_json(
+        "unaided-model-capability-profile.json",
+        {
+            "schema_version":1,
+            "analysis_type":"UNAIDED_MODEL_CAPABILITY_PROFILE",
+            "families":{},
+        },
+        producer="test",
+        stage="test",
+    )
+    collection.write_json(
         "test1.2-handoff.json",
         {
             "schema_version": 1,
@@ -792,6 +821,45 @@ def test_exact_test12_handoff_preserves_failure_provenance(tmp_path: Path):
         producer="test",
         stage="test",
     )
+    tuning.write_json(
+        "test2-proof-manifest.json",
+        {
+            "schema_version":1,
+            "analysis_type":"COMPILER_DERIVED_TEST2_CELL_PROOF_MANIFEST",
+            "effect_size_used_for_ordering":False,
+            "queue_order_contract":"COMPILABILITY_THEN_EXPECTED_TRAFFIC_THEN_COST_NEVER_EFFECT_SIZE",
+            "queue_counts":{
+                "promotion":1,
+                "unknown_resolution":0,
+                "harm":0,
+                "censoring":0,
+                "skip_verified_null":0,
+                "deferred":0,
+            },
+            "queues":{
+                "promotion":[{
+                    "cell_key":"PROMPT_CONTROL:single:exact|"+family,
+                    "family_id":family,
+                    "intervention_id":"CTRL-EXACT",
+                    "test1_2_effect_state":"conditional",
+                    "test2_action":"PROMOTE_OR_REJECT",
+                    "compilable_status":"COMPILABLE_PENDING_TEST2_PROOF",
+                    "compiler_sort_key":[0,-1,1.0,"cell"],
+                    "condition":{},
+                    "cost":{"calls":{"mean":1.0}},
+                    "unaided_family_baseline":{},
+                    "effect_observation_binding":["obs-a"],
+                }],
+                "unknown_resolution":[],
+                "harm":[],
+                "censoring":[],
+                "skip_verified_null":[],
+                "deferred":[],
+            },
+        },
+        producer="test",
+        stage="test",
+    )
     tuning.finalize_manifest(metadata={"mode": "test"})
 
     handoff = load_test1_handoff(tmp_path, tuning_id, cases)
@@ -800,6 +868,9 @@ def test_exact_test12_handoff_preserves_failure_provenance(tmp_path: Path):
     exact_control = handoff["test12_exact_controls"][0]
     assert exact_control["discovery_semantic_hash"] == test2_module._intervention_fingerprint(intervention)
     assert exact_control["semantic_hash_provenance"] == "FINALIZED_TEST1.2_HANDOFF"
+    assert exact_control["proof_lane"] == "promotion"
+    assert exact_control["proof_family_id"] == family
+    assert handoff["proof_queue_order_contract"] == "COMPILABILITY_THEN_EXPECTED_TRAFFIC_THEN_COST_NEVER_EFFECT_SIZE"
 
     failure = failures[0]
     assert failure["fixture_id"] == fixture_id
@@ -972,6 +1043,50 @@ def test_recurrence_proof_scheduler_settles_consistent_effect_after_minimum_cove
     assert status["settled"] is True
     assert status["settled_reason"] == "CONSISTENT_POSITIVE_MINIMUM_PROOF_MET"
     assert status["proof_priority"] == -1.0
+
+
+def test_unknown_cell_does_not_become_verified_null_at_recurrence_max():
+    recipe = {
+        "intervention_id":"CTRL-EXACT",
+        "exact_test12_intervention":{
+            "id":"CTRL-EXACT",
+            "category":"PROMPT_CONTROL",
+            "mode":"single",
+        },
+        "discovery_semantic_hash":"abc",
+        "ingredient_ids":["TEST12:CTRL-EXACT"],
+        "proof_cell_key":"MECH|family-a",
+        "proof_family_id":"family-a",
+        "proof_lane":"unknown_resolution",
+        "test1_2_effect_state":"unknown",
+    }
+
+    class Campaign:
+        cfg = {
+            "recurrence_min_independent_fixtures":4,
+            "recurrence_min_distinct_seeds":2,
+            "recurrence_target_valid_observations":6,
+            "recurrence_max_valid_observations":12,
+        }
+        handoff = {"required_policy_control_ids":["CTRL-EXACT"]}
+
+    rows = []
+    for index in range(12):
+        rows.append({
+            "fixture_id":f"fixture-{index % 6}",
+            "proof_seed":42 if index % 2 == 0 else 43,
+            "recipe":recipe,
+            "delta_valid":True,
+            "delta":0.0,
+        })
+
+    status = test2_module._recurrence_candidate_status(
+        Campaign(), recipe, rows
+    )
+    assert status["settled"] is True
+    assert status["scientific_resolution"] == "UNKNOWN"
+    assert status["settled_reason"] == "UNKNOWN_REMAINS_UNRESOLVED_NULL_PRECISION_NOT_MET"
+    assert status["null_observations"] == 12
 
 
 def test_recurrence_next_task_prefers_unseen_fixture_and_seed_debt():
