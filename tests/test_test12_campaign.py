@@ -2143,3 +2143,57 @@ def test_capability_record_requires_stage0_profile_hash():
             seed=42,
             aux=[],
         )
+
+
+def test_tuning_recovery_preserves_legacy_holdout_exposure(tmp_path):
+    run_dir = tmp_path / "legacy-tune"
+    run_dir.mkdir()
+    (run_dir / "test1.2-tuning-recovery-checkpoint.json").write_text(
+        json.dumps({
+            "schema_version": 1,
+            "completed_phases": [
+                "validation_baseline",
+                "test2_blind_acceptance",
+                "test3_protected_acceptance",
+            ],
+            "active_seconds_used": 3600,
+        }),
+        encoding="utf-8",
+    )
+    rows = [
+        {
+            "policy_id": "P",
+            "fixture_id": "blind-1",
+            "family_id": "family-1",
+            "seed": 45,
+            "partition": "TEST2_BLIND",
+            "control_score": 1.0,
+            "score": 1.0,
+            "delta": 0.0,
+        },
+        {
+            "policy_id": "P",
+            "fixture_id": "protected-1",
+            "family_id": "family-1",
+            "seed": 46,
+            "partition": "TEST3_PROTECTED",
+            "control_score": 1.0,
+            "score": 1.0,
+            "delta": 0.0,
+        },
+    ]
+    with (run_dir / "test1.2-tuning-observations.jsonl").open("w", encoding="utf-8") as fh:
+        for row in rows:
+            fh.write(json.dumps(row) + "\n")
+
+    recovered = test12_tuning_module.load_tuning_recovery(run_dir)
+    assert recovered["legacy_holdout_exposure"] == {
+        "TEST2_BLIND": True,
+        "TEST3_PROTECTED": True,
+    }
+    assert all(
+        row.get("partition") not in {"TEST2_BLIND", "TEST3_PROTECTED"}
+        for row in recovered["rows"]
+    )
+    assert "test2_blind_acceptance" not in recovered["checkpoint"]["completed_phases"]
+    assert "test3_protected_acceptance" not in recovered["checkpoint"]["completed_phases"]
