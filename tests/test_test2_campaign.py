@@ -602,3 +602,79 @@ def test_mixed_invalid_failure_evidence_cannot_enter_finetuning():
     assert phenotype["owner"] == "SYSTEM_DISAMBIGUATION_REQUIRED"
     assert queue == []
     assert dataset == []
+
+
+
+def test_effect_map_uses_fixture_as_unit_of_independence():
+    recipe = {
+        "ingredient_ids": ["ING-001"],
+        "dose": 1.0,
+        "representation": "prose",
+        "placement": "prefix",
+    }
+    rows = []
+    for seed in range(10):
+        rows.append({
+            "kind": "recurrence",
+            "fixture_id": "same-fixture",
+            "seed": seed,
+            "recipe": recipe,
+            "delta_valid": True,
+            "delta": 1.0,
+            "censored_for_capability": False,
+        })
+    rows.append({
+        "kind": "recurrence",
+        "fixture_id": "other-fixture",
+        "seed": 42,
+        "recipe": recipe,
+        "delta_valid": True,
+        "delta": -1.0,
+        "censored_for_capability": False,
+    })
+
+    summary = _effect_map(
+        rows,
+        noise_sigma=0.1,
+        bootstrap_samples=40,
+        key_fn=lambda row: "CTRL",
+    )["CTRL"]
+
+    assert summary["raw_valid_n"] == 11
+    assert summary["independent_fixture_n"] == 2
+    assert summary["unit_of_independence"] == "fixture"
+    assert summary["fixture_ids"] == ["other-fixture", "same-fixture"]
+
+
+def test_effect_map_applies_bh_fdr_to_positive_promotions():
+    recipe = {
+        "ingredient_ids": ["ING-001"],
+        "dose": 1.0,
+        "representation": "prose",
+        "placement": "prefix",
+    }
+    rows = []
+    # Three independent all-positive fixtures are suggestive but the exact
+    # one-sided sign-test p=0.125 cannot survive q<=0.10.
+    for index in range(3):
+        rows.append({
+            "kind": "recurrence",
+            "fixture_id": f"fixture-{index}",
+            "recipe": recipe,
+            "delta_valid": True,
+            "delta": 1.0,
+            "censored_for_capability": False,
+        })
+
+    summary = _effect_map(
+        rows,
+        noise_sigma=0.1,
+        bootstrap_samples=40,
+        fdr_level=0.10,
+        key_fn=lambda row: "CTRL",
+    )["CTRL"]
+
+    assert summary["positive_sign_test_p_value"] == pytest.approx(0.125)
+    assert summary["bh_fdr_q_value"] == pytest.approx(0.125)
+    assert summary["classification"] == "UNCERTAIN_MULTIPLICITY"
+    assert summary["classification_before_multiplicity"] in {"STRONG", "PROMISING"}
