@@ -572,6 +572,7 @@ def load_test1_handoff(
             "runtime-characterization-profile.json",
             "test1.2-handoff.json",
             "test1.2-opportunity-discovery-map.json",
+            "control-redundancy-map.json",
             "test1.2-observations.jsonl",
         ]
         missing = [name for name in required if not (collection_dir / name).is_file()]
@@ -589,6 +590,23 @@ def load_test1_handoff(
             if isinstance(row, dict) and row.get("id")
         ]
         candidate_by_id = {str(row["id"]): row for row in candidates}
+        redundancy_map = _read_json(collection_dir / "control-redundancy-map.json")
+        representative_by_member: dict[str, str] = {}
+        redundancy_representatives: list[str] = []
+        redundancy_alternates: list[str] = []
+        for cluster in redundancy_map.get("clusters") or []:
+            representative = str(cluster.get("representative_intervention_id") or "")
+            if representative and representative in candidate_by_id:
+                if representative not in redundancy_representatives:
+                    redundancy_representatives.append(representative)
+            for member in cluster.get("member_intervention_ids") or []:
+                ident = str(member or "")
+                if ident and representative:
+                    representative_by_member[ident] = representative
+            for alternate in cluster.get("alternate_intervention_ids") or []:
+                ident = str(alternate or "")
+                if ident and ident in candidate_by_id and ident not in redundancy_alternates:
+                    redundancy_alternates.append(ident)
 
         policy_registry_path = run_dir / "candidate-harness-registry.json"
         policies = (
@@ -614,12 +632,35 @@ def load_test1_handoff(
         add_required_id(winner.get("fallback_intervention_id"))
         for ident in (winner.get("route_map") or {}).values():
             add_required_id(ident)
+        # Required controls reachable from the frozen winner are never
+        # deduplicated away. They are proof obligations regardless of cluster.
         for ident in required_policy_control_ids:
             add_id(ident)
-        for policy in policies:
-            add_id(policy.get("intervention_id"))
+
+        # Buy the broadest independent mechanism evidence first. Redundancy
+        # clustering changes proof order only; it never deletes an alternate.
+        for ident in redundancy_representatives:
             if len(selected_ids) >= 12:
                 break
+            add_id(ident)
+
+        # Preserve non-redundant compiler candidates next.
+        for policy in policies:
+            if len(selected_ids) >= 12:
+                break
+            ident = str(policy.get("intervention_id") or "")
+            representative = representative_by_member.get(ident)
+            if representative and ident != representative and ident not in required_policy_control_ids:
+                continue
+            add_id(ident)
+
+        # Alternates remain available when capacity remains. They are fallback
+        # proof candidates if their representative fails, censors, or harms.
+        for ident in redundancy_alternates:
+            if len(selected_ids) >= 12:
+                break
+            add_id(ident)
+
         if not selected_ids:
             for row in candidates[:12]:
                 add_id(row.get("id"))
@@ -707,6 +748,8 @@ def load_test1_handoff(
             "winner_policy":winner,
             "winner_lock_sha256":terminal.get("winner_lock_sha256"),
             "required_policy_control_ids":required_policy_control_ids,
+            "control_redundancy_map":copy.deepcopy(redundancy_map),
+            "redundancy_proof_policy":"WINNER_REQUIRED_THEN_CLUSTER_REPRESENTATIVES_THEN_NONREDUNDANT_THEN_ALTERNATES",
             "runtime_profile":runtime_profile,
             "runtime_profile_sha256":runtime_profile.get("profile_sha256"),
             "generation_budget_by_family":copy.deepcopy(
