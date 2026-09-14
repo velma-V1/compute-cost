@@ -175,7 +175,11 @@ def test_collection_plan_is_full_campaign_under_14_hour_two_run_contract():
     assert plan["prohibited_partitions"] == ["TEST2_BLIND", "TEST3_PROTECTED"]
     assert plan["generated_prompt_control_count"] >= 200
     assert plan["control_search_contract"] == (
-        "EVERY_DECLARED_CONTROL_CANDIDATE_GETS_MINIMUM_COVERAGE_THEN_CLOCK_SHIFTS_TO_NOVEL_OPPORTUNITY_DISCOVERY"
+        "SEMANTIC_MECHANISMS_FIRST_VARIANTS_ONLY_AFTER_RESCUE_OR_UNRESOLVED_VALIDITY"
+    )
+    assert plan["measurement_decision_contracts"]
+    assert plan["measurement_decision_rule"].startswith(
+        "MODEL_CALL_MEASUREMENTS_REQUIRE_UNIQUE_OUTCOME_TO_ACTION_FORKS"
     )
     assert plan["adaptive_allocation"]["coverage_floor_first"] is True
     assert plan["adaptive_allocation"]["successive_halving"] is False
@@ -197,6 +201,8 @@ def test_collection_plan_is_full_campaign_under_14_hour_two_run_contract():
     assert plan["adaptive_allocation"]["reserve_family_surface_gap_first"] is True
     assert set(IMPROVEMENT_SURFACE).issubset(set(plan["improvement_surface"]))
     for required in {
+        "measurement-decision-ledger.json",
+        "harness-applicability-registry.json",
         "capability-improvement-dossiers.json",
         "family-value-completeness.json",
         "control-response-tensor.json",
