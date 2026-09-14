@@ -224,10 +224,10 @@ def load_tuning_recovery(run_dir: Path) -> dict[str, Any]:
             and "valid_for_capability" not in row
             and "control_valid_for_capability" not in row
         ):
-            # Legacy/synthetic recovery records may predate campaign-level
-            # evidence capture entirely. Preserve them rather than inventing
-            # invalidity. Real runs with campaign evidence are reconstructed.
-            sanitized_policy_rows.append(row)
+            # Unknown validity cannot be promoted into policy evidence. Preserve
+            # the atomic record for forensics, but quarantine it from scoring.
+            row["recovery_quarantined_unknown_validity"] = True
+            quarantined_policy_rows.append(row)
             continue
 
         key = (str(row.get("fixture_id") or ""), int(row.get("seed") or 0))
@@ -1136,11 +1136,6 @@ def _score_policy_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
     valid_rows=[
         row for row in rows
         if row.get("delta_valid") is True
-        or (
-            "delta_valid" not in row
-            and row.get("valid_for_capability") is not False
-            and row.get("control_valid_for_capability") is not False
-        )
     ]
     invalid_count=len(rows)-len(valid_rows)
     if not valid_rows:
