@@ -1268,7 +1268,7 @@ class TuningRun:
             .get("recommended_safe_baseline_budget_by_family")
             or {}
         )
-        self.campaign.cfg["baseline_generation_budget_by_family"] = {
+        self.campaign.baseline_generation_budget_by_family = {
             str(family): int(budget)
             for family, budget in budget_map.items()
         }
@@ -1282,7 +1282,7 @@ class TuningRun:
                 if case is None:
                     continue
                 recommended = int(
-                    self.campaign.cfg["baseline_generation_budget_by_family"].get(
+                    self.campaign.baseline_generation_budget_by_family.get(
                         _family(case),
                         self.campaign.cfg["base_generation_budget"],
                     )
@@ -1308,7 +1308,7 @@ class TuningRun:
             if case is None:
                 continue
             recommended = int(
-                self.campaign.cfg["baseline_generation_budget_by_family"].get(
+                self.campaign.baseline_generation_budget_by_family.get(
                     _family(case),
                     self.campaign.cfg["base_generation_budget"],
                 )
@@ -1367,7 +1367,7 @@ class TuningRun:
             if case is None:
                 continue
             recommended=int(
-                self.campaign.cfg["baseline_generation_budget_by_family"].get(
+                self.campaign.baseline_generation_budget_by_family.get(
                     _family(case),
                     self.campaign.cfg["base_generation_budget"],
                 )
@@ -1395,7 +1395,7 @@ class TuningRun:
             if case is None:
                 continue
             recommended=int(
-                self.campaign.cfg["baseline_generation_budget_by_family"].get(
+                self.campaign.baseline_generation_budget_by_family.get(
                     _family(case),
                     self.campaign.cfg["base_generation_budget"],
                 )
