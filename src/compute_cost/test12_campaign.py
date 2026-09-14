@@ -368,6 +368,7 @@ DEFAULT_TEST12_CONFIG: dict[str, Any] = {
     "safety_call_cap": 14000,
     "base_generation_budget": 256,
     "generation_budgets": [256, 512, 1024, 2048],
+    "stage0_budget_ladder": [256, 512, 1024, 2048, 4096],
     "context_windows": [4096, 8192, 16384, 32768],
     "seeds": [42, 43, 44],
     "coverage_floor_failures": 4,
