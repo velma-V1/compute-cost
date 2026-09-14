@@ -642,6 +642,146 @@ def test_standalone_provenance_is_explicit_and_cannot_ship():
         test2_module._handoff_provenance({})
 
 
+def test_exact_recovery_scheduler_prefers_same_family_then_verified_transfer():
+    def make_recipe(ident, family, index, calls):
+        intervention = {"id":ident,"category":"PROMPT_CONTROL","mode":"single"}
+        semantic = test2_module._intervention_fingerprint(intervention)
+        return {
+            "intervention_id":ident,
+            "exact_test12_intervention":intervention,
+            "discovery_semantic_hash":semantic,
+            "proof_cell_key":f"{ident}|{family}",
+            "proof_family_id":family,
+            "proof_lane":"promotion",
+            "compiler_queue_index":index,
+            "bound_cost":{"calls":{"mean":calls}},
+            "ingredient_ids":[f"TEST12:{ident}"],
+        }
+
+    same_verified = make_recipe("A","family-a",3,4)
+    same_unresolved = make_recipe("B","family-a",1,1)
+    cross_verified = make_recipe("C","family-b",0,1)
+    cross_unresolved = make_recipe("D","family-c",2,0.5)
+
+    class Campaign:
+        handoff = {"handoff_mode":"TEST12_EXACT"}
+        cfg = {"max_recovery_recipes":4,"recovery_exploration_reserve":1}
+        recipes = [cross_unresolved,cross_verified,same_unresolved,same_verified]
+        proof_scheduler_audit = {
+            "candidates":{
+                test2_module._recipe_key(same_verified):{
+                    "settled":True,"scientific_resolution":"POSITIVE"
+                },
+                test2_module._recipe_key(same_unresolved):{
+                    "settled":False,"scientific_resolution":None
+                },
+                test2_module._recipe_key(cross_verified):{
+                    "settled":True,"scientific_resolution":"POSITIVE"
+                },
+                test2_module._recipe_key(cross_unresolved):{
+                    "settled":False,"scientific_resolution":None
+                },
+            }
+        }
+
+    selected = test2_module._recovery_candidates(
+        Campaign(),
+        {"id":"x","family_id":"family-a","category":"family-a"},
+    )
+    classes = [row["_recovery_selection_class"] for row in selected]
+    assert classes[:3] == [
+        "SAME_FAMILY_VERIFIED",
+        "SAME_FAMILY_UNRESOLVED",
+        "VERIFIED_TRANSFER_CANDIDATE",
+    ]
+    assert classes[-1] == "EXPLICIT_EXPLORATION_RESERVE"
+
+
+def test_exact_unicorn_search_targets_policy_families_before_open_reserve():
+    intervention = {"id":"A","category":"PROMPT_CONTROL","mode":"single"}
+    semantic = test2_module._intervention_fingerprint(intervention)
+    recipe = {
+        "intervention_id":"A",
+        "exact_test12_intervention":intervention,
+        "discovery_semantic_hash":semantic,
+        "proof_cell_key":"A|family-a",
+        "proof_family_id":"family-a",
+        "proof_lane":"unknown_resolution",
+        "compiler_queue_index":0,
+        "ingredient_ids":["TEST12:A"],
+    }
+
+    class Campaign:
+        handoff = {"handoff_mode":"TEST12_EXACT"}
+        recipes = [recipe]
+        proof_scheduler_audit = {"candidates":{}}
+        partitions = {
+            "VALIDATION":[
+                {"id":"a","family_id":"family-a","category":"family-a","difficulty_level":5},
+                {"id":"z","family_id":"family-z","category":"family-z","difficulty_level":10},
+            ]
+        }
+        cfg = {"unicorn_open_reserve_max_calls":0}
+        noise_sigma = 0.1
+        unicorn_search_audit = {}
+        calls = []
+
+        @classmethod
+        def can_start(cls, deadline):
+            return len(cls.calls) < 4
+
+        @classmethod
+        def clock(cls):
+            return float(len(cls.calls))
+
+        @classmethod
+        def treatment(cls, case, deadline, **kwargs):
+            cls.calls.append(case["family_id"])
+            return {
+                "delta_valid":False,
+                "classification":{"result_class":"THINK_TRUNCATED"},
+            }
+
+    test2_module.phase_purple_unicorn(Campaign(),100.0,{}, {})
+    assert Campaign.calls
+    assert set(Campaign.calls) == {"family-a"}
+    assert Campaign.unicorn_search_audit["target_families"] == ["family-a"]
+    assert Campaign.unicorn_search_audit["open_reserve_calls"] == 0
+
+
+def test_exact_knockout_uses_compiler_order_not_effect_size():
+    def make_summary(ident, queue_index, effect):
+        intervention = {"id":ident,"category":"PROMPT_CONTROL","mode":"single"}
+        semantic = test2_module._intervention_fingerprint(intervention)
+        return {
+            "normalized_effect":effect,
+            "n":6,
+            "median_delta":effect,
+            "recipe":{
+                "intervention_id":ident,
+                "exact_test12_intervention":intervention,
+                "discovery_semantic_hash":semantic,
+                "proof_cell_key":f"{ident}|family",
+                "proof_family_id":"family",
+                "compiler_queue_index":queue_index,
+                "ingredient_ids":[f"TEST12:{ident}"],
+            },
+        }
+
+    class Campaign:
+        handoff = {"handoff_mode":"TEST12_EXACT"}
+
+    records = test2_module.phase_knockout(
+        Campaign(),
+        100.0,
+        {
+            "high-effect":make_summary("HIGH",1,100.0),
+            "low-effect":make_summary("LOW",0,0.01),
+        },
+    )
+    assert list(records) == ["low-effect","high-effect"]
+
+
 def test_stopping_rule_2_uses_fresh_blind_cost_exchange():
     class Runner:
         model = "gpt-oss:20b"
