@@ -14,6 +14,7 @@ from .gpt_oss_calibration import materialize_gpt_oss_suite
 from .hardware import collect_hardware_snapshot
 from .report import compare_runs
 from .runner import BenchmarkRunner
+from .test12_campaign import reanalyze_test12_collection
 from .runtimes.ollama import OllamaAdapter
 from .runtimes.oversized_moe import OversizedMoEAdapter
 
@@ -113,6 +114,15 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Resume the same interrupted Test 1.2 collection run ID. Preserves valid evidence and remaining time/call budgets; never starts a full rerun.",
     )
+
+    test12_reanalyze = sub.add_parser(
+        "gpt20b-test1.2-reanalyze",
+        help=(
+            "Recompute Test 1.2 semantic control clustering and capability-floor "
+            "registry from an existing Collection with zero model/runtime calls."
+        ),
+    )
+    test12_reanalyze.add_argument("--collection-run", required=True)
 
     test12_tune = sub.add_parser(
         "gpt20b-test1.2-tune",
@@ -254,6 +264,14 @@ def main(argv: Sequence[str] | None = None) -> int:
         result = {"ok": not problems, "run_id": args.run_id, "problems": problems}
         print(json.dumps(result, indent=2, sort_keys=True))
         return 0 if not problems else 2
+
+    if args.command == "gpt20b-test1.2-reanalyze":
+        result = reanalyze_test12_collection(
+            results_root,
+            args.collection_run,
+        )
+        print(json.dumps(result, indent=2, sort_keys=True, default=str))
+        return 0
 
     config = _config_from_args(args)
     endpoint = config.get("runtime", {}).get("endpoint", "http://127.0.0.1:11434")
