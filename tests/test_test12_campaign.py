@@ -2414,3 +2414,71 @@ def test_opportunity_map_excludes_invalid_baseline_failures():
     assert result["unique_failed_fixtures"] == 1
     assert result["unresolved_failed_fixtures"] == ["valid-fail"]
     assert "invalid-base" not in result["unresolved_failed_fixtures"]
+
+
+
+def test_stage0_budget_calibration_rejects_max_budget_without_safety_headroom(monkeypatch):
+    family = "arithmetic_numerical_reasoning"
+
+    class FakeCampaign:
+        cfg = {
+            "base_generation_budget": 256,
+            "generation_budgets": [256, 512, 1024],
+            "seeds": [42, 43, 44],
+        }
+        partitions = {
+            "DISCOVERY": [{
+                "id": "budget-case-max",
+                "category": family,
+                "difficulty_level": 10,
+                "prompt": "Return 4",
+                "scorer": "exact",
+                "expected": "4",
+            }]
+        }
+
+        @staticmethod
+        def can_start(_deadline):
+            return True
+
+    def fake_probe(
+        campaign,
+        deadline,
+        *,
+        probe_id,
+        question_ids,
+        family_id,
+        messages,
+        options,
+        request_fields=None,
+        case=None,
+    ):
+        budget = int(options["num_predict"])
+        seed = int(options["seed"])
+        valid = budget >= 1024
+        return {
+            "probe_id": probe_id,
+            "question_ids": question_ids,
+            "family_id": family_id,
+            "ok": True,
+            "content_empty": not valid,
+            "done_reason": "stop" if valid else "length",
+            "score": 1.0 if valid else None,
+            "request": {"options": {"seed": seed}},
+            "eval_count": budget if not valid else budget - 8,
+        }
+
+    monkeypatch.setattr(foundation_module, "_invoke_probe", fake_probe)
+    result = foundation_module.run_runtime_budget_characterization(
+        FakeCampaign(),
+        999.0,
+        replicates=3,
+        safety_factor=1.5,
+    )
+
+    info = result["families"][family]
+    assert info["minimum_reproducibly_valid_budget"] == 1024
+    assert info["safety_headroom_available"] is False
+    assert family in result["unresolved_families"]
+    assert family not in result["resolved_generation_budget_by_family"]
+    assert result["all_families_reproducibly_valid"] is False
