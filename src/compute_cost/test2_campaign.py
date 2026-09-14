@@ -4405,7 +4405,14 @@ def write_test2_outputs(
     )
     store.write_json(
         "purple-unicorn-registry.json",
-        {"schema_version": 1, "candidates": unicorns},
+        _report_payload(
+            campaign,
+            {
+                "schema_version":1,
+                "candidates":unicorns,
+                "search_audit":copy.deepcopy(campaign.unicorn_search_audit),
+            },
+        ),
         producer="test2",
         stage="report",
     )
@@ -4424,6 +4431,39 @@ def write_test2_outputs(
         stage="report",
     )
 
+    cell_resolution_payload = (
+        copy.deepcopy(campaign.cell_resolution_map)
+        if campaign.cell_resolution_map
+        else {
+            "schema_version":1,
+            "analysis_type":"TEST2_CELL_LEVEL_SHIPPING_RESOLUTION",
+            "status":"NOT_APPLICABLE_NON_TEST1.2_PROVENANCE",
+            "cells":[],
+            "disabled_cells":[],
+            "active_cells":[],
+            "aggregate":_aggregate_unit_validity([]),
+        }
+    )
+    store.write_json(
+        "test2-cell-resolution-map.json",
+        _report_payload(campaign, cell_resolution_payload),
+        producer="test2",
+        stage="report",
+    )
+    store.write_json(
+        "test2-provenance.json",
+        {
+            "schema_version":1,
+            "provenance_mode":campaign.provenance_mode,
+            "test12_shipping_claim_eligible":campaign.test12_shipping_claim_eligible,
+            "handoff_mode":campaign.handoff.get("handoff_mode"),
+            "source_run":campaign.handoff.get("run_id"),
+            "standalone_outputs_may_not_masquerade_as_test1_2_proof":True,
+        },
+        producer="test2",
+        stage="report",
+    )
+
     minimal = _final_recipe_registry(
         knockouts,
         blind,
@@ -4432,7 +4472,10 @@ def write_test2_outputs(
     )
     store.write_json(
         "minimal-recipe-registry.json",
-        {"schema_version": 1, "recipes": minimal},
+        _report_payload(
+            campaign,
+            {"schema_version":1, "recipes":minimal},
+        ),
         producer="test2",
         stage="report",
     )
@@ -4476,7 +4519,7 @@ def write_test2_outputs(
     }
     store.write_json(
         "training-asset-yield.json",
-        training_yield,
+        _report_payload(campaign, training_yield),
         producer="test2",
         stage="report",
     )
@@ -4666,11 +4709,18 @@ def run_test2_campaign(
         started_monotonic=started_monotonic,
     )
     if not (runner.store.run_dir / "test2-plan.json").is_file():
-        runner.store.write_json("test2-plan.json", plan, producer="test2", stage="preflight")
+        runner.store.write_json(
+            "test2-plan.json",
+            _report_payload(campaign, plan),
+            producer="test2",
+            stage="preflight",
+        )
     runner.store.write_json(
         "test1-handoff-summary.json",
         {
             "schema_version": 1,
+            "provenance_mode":campaign.provenance_mode,
+            "test12_shipping_claim_eligible":campaign.test12_shipping_claim_eligible,
             "source_run": test1_run,
             "source_files": list(REQUIRED_TEST1_FILES),
             "noise_sigma": campaign.noise_sigma,
@@ -4703,17 +4753,27 @@ def run_test2_campaign(
         elif phase_name == "censoring_cost_tradeoff":
             censoring_tradeoff = phase_censoring_cost_tradeoff(campaign, deadline, recurrence)
         elif phase_name == "purple_unicorn":
-            unicorns = phase_purple_unicorn(campaign, deadline, recurrence)
+            unicorns = phase_purple_unicorn(
+                campaign, deadline, recurrence, negative_transfer
+            )
         elif phase_name == "knockout_distillation":
             knockouts = phase_knockout(campaign, deadline, recurrence)
         elif phase_name == "blind_confirmation":
-            blind = phase_blind(campaign, deadline, knockouts, recurrence)
+            blind = phase_blind(
+                campaign,
+                deadline,
+                knockouts,
+                recurrence,
+                censoring_tradeoff,
+            )
         phase_end = clock()
         carry = max(0.0, deadline - phase_end)
         runner.store.append_jsonl(
             "test2-phase-events.jsonl",
             {
                 "phase": phase_name,
+                "provenance_mode":campaign.provenance_mode,
+                "test12_shipping_claim_eligible":campaign.test12_shipping_claim_eligible,
                 "started_monotonic": phase_start,
                 "ended_monotonic": phase_end,
                 "nominal_seconds": nominal_seconds,
@@ -4726,7 +4786,7 @@ def run_test2_campaign(
 
     campaign.runner.store.write_json(
         "censoring-cost-tradeoff.json",
-        censoring_tradeoff,
+        _report_payload(campaign, censoring_tradeoff),
         producer="test2",
         stage="report",
     )
