@@ -1317,119 +1317,128 @@ A model/runtime/benchmark-contract change creates a **new onboarding event**.
 
 # 28. CURRENT TEST 2 SAFETY STATUS
 
-Current Test 2 has been made safer, but **Test 1.2 exact-control handoff is intentionally fail-closed** until a shared exact executor exists.
+The exact-control handoff is now implemented.
 
-Do not remove this guard merely to make the command run.
+For a Test 1.2 source, Test 2:
 
-The next correct implementation should:
+1. loads the frozen provisional Test 1.2 policy;
+2. imports the exact Test 1.2 intervention definitions;
+3. recomputes and verifies semantic hashes;
+4. executes those controls through the same `Test12Campaign.treatment()` path;
+5. preserves the Stage 0 family budget map as immutable proof input;
+6. blind-tests the frozen policy through the same policy executor used during compilation;
+7. refuses semantic translation into the legacy ingredient recipe language.
 
-1. use the same intervention definition in Test 1.2 and Test 2;
-2. use the same renderer/executor;
-3. preserve semantic hash;
-4. change only:
-   - fixtures,
-   - seeds,
-   - proof schedule,
-   - validation/proof objective;
-5. keep operating conditions matched unless operating condition itself is the tested variable.
+Required invariant:
+
+```
+discovery_semantic_hash == proof_semantic_hash
+```
+
+The current fail-closed behavior should remain: any hash mismatch, runtime-profile incompatibility, consumed holdout, or missing exact source evidence must block proof rather than approximate it.
 
 ---
 
 # 29. HIGHEST-VALUE ITEMS STILL MISSING
 
-The reviewer should actively search for additional missing items, but these are already high priority.
+The following items remain genuine improvement opportunities after Round 2. Items already implemented are deliberately omitted.
 
-## 1. Shared exact-control executor
+## 1. Budget search efficiency
 
-Highest priority.
+Stage 0 now requires 3/3 reproducible validity plus safety headroom, but the ladder is still discrete.
 
-One implementation used by both Test 1.2 and Test 2.
+Improve it with bracket/bisect search while preserving:
+- independent replicates;
+- family-level safety factor;
+- fail-closed behavior when the tested maximum has no headroom.
 
-## 2. Semantic intervention hashing
+## 2. Richer role-specialization sweep
 
-Prevent silent control drift between discovery and proof.
+Stage 0 now measures executor versus low/high-effort auditor at the calibrated family budget and excludes invalid role observations.
 
-## 3. Cluster-aware statistics
+Still add:
+- controlled candidate-quality sweep;
+- candidate-alone versus candidate-plus-reasoning;
+- second-audit stability;
+- adversarial candidate-text steering;
+- false-accept/false-reject curves by candidate quality.
 
-Do not treat repeated trials on one fixture as independent evidence.
+## 3. Control redundancy clustering
 
-## 4. Discovery-value scheduler
+Cluster discovered controls by rescued-fixture / failure-phenotype signature so multiple labels for one underlying mechanism do not consume Test 2 proof budget.
 
-Explicitly maximize new phenotypes / unique rescues / harder frontiers.
+## 4. Proof-value scheduler
 
-## 5. Proof-value scheduler
+Allocate Test 2 recurrence calls by expected decision value:
+- near promotion/rejection boundary;
+- high-value but uncertain controls;
+- under-sampled families;
+- high censoring;
+- unresolved harm confidence;
+- unresolved generalization.
 
-Test 2 should allocate replication where uncertainty is decision-relevant.
+Do not spend equal proof clock on already-settled candidates.
 
-## 6. Independent harm model
+## 5. Runtime-invalidity predictive model
 
-Measure rescue and break probability separately.
-
-## 7. Runtime-invalidity model
-
-Track truncation/runtime failure rate by:
-
+Track truncation/runtime failure by:
 - family;
 - difficulty;
 - reasoning effort;
-- budget;
+- generation budget;
 - output contract;
 - context;
 - tool phase.
 
-## 8. Budget bracketing/bisection
+Use it to predict doomed calls early and reallocate clock.
 
-Current ladder is safe but may waste calls.
+## 6. Output-contract optimizer
 
-Find the minimum reproducible valid operating budget efficiently.
+Determine the cheapest reliable contract per family:
+- free text + extraction;
+- explicit JSON instruction;
+- native JSON;
+- schema/grammar.
 
-## 9. Auditor/executor economics
+## 7. Context knee and context/reasoning competition
 
-This can change the whole system architecture.
+Measure real usable context, lost-in-middle, position sensitivity, and latency/VRAM knee under each reasoning effort.
 
-## 10. Control redundancy clustering
+## 8. Sustained-load capability validity
 
-Collapse 50 labels into the smaller number of actual mechanisms.
+Separate warm-load latency degradation from actual capability degradation over a multi-hour run.
 
-## 11. Unresolved capability-floor registry
+## 9. Energy / hardware economics
 
-Treat persistent valid failures as valuable model boundaries.
+Add Wh and thermal state to quality-per-cost decisions for local deployment.
 
-## 12. Progressive difficulty
+## 10. Manifest finalization efficiency
 
-When a family performs strongly, climb until the real frontier is found.
+Current manifest finalization recursively hashes retained files and can create a long invisible post-processing tail. Replace full-file re-reading with streaming/incremental content hashes without weakening integrity.
 
-## 13. Rare-failure search
+### Implemented since the first review
 
-Prioritize new phenotype value, not raw fixture count.
+The following are **no longer missing**:
 
-## 14. Cost-aware controller composition
-
-A two-call controller that adds 1% accuracy may be inferior to direct execution.
-
-## 15. Early-abort prediction
-
-If thinking telemetry predicts inevitable truncation, stop before wasting full budget.
-
-## 16. Exact tool-loop semantics
-
-Especially gpt-oss + Ollama harmony/tool behavior.
-
-## 17. Output-contract optimizer
-
-Find the cheapest reliable structure mode per task family.
-
-## 18. Context knee
-
-Find where extra context costs more than it helps.
-
-## 19. Sustained-load validity
-
-Make sure a seven-hour campaign does not change model behavior because of thermal/resource degradation.
-
-## 20. Energy / hardware economics
-
-For local deployment, quality-per-second is incomplete without resource cost.
+- shared exact Test 1.2 control execution inside Test 2;
+- semantic intervention hashing;
+- fixture-clustered Test 2 effect statistics;
+- Benjamini-Hochberg FDR on positive Test 2 effects;
+- dedicated baseline-pass harm seeking with confidence-bound gating;
+- censoring as a first-class outcome;
+- capability-plus-cost probing for censored controls;
+- immutable Stage 0 family budgets during Test 2;
+- replicated Stage 0 budget calibration with safety headroom;
+- validation-only Test 1.2 compiler;
+- consumable holdout lifecycle and retirement;
+- blind/protected holdout recovery quarantine;
+- invalid-delta JSON null contract;
+- content-only scoring contract;
+- training-asset validity filtering;
+- TEST2_BLIND exclusion from fine-tuning qualification/data;
+- valid unresolved-failure provenance across Test 1.2 → Test 2;
+- exact frozen-policy blind proof;
+- executable harness-to-weights stopping rules.
 
 ---
 
@@ -1970,3 +1979,190 @@ Preserve:
 
 Only replay the missing or damaged atomic slice.
 
+
+
+---
+
+# 37. ROUND 2 IMPLEMENTATION AUDIT
+
+This section records the second adversarial pass after the first external review.
+
+## 37.1 Fixed stop-ship findings
+
+### Undefined delta sentinel
+
+Old unsafe form:
+
+```python
+delta = 0.0  # when comparison was undefined
+```
+
+Current contract:
+
+```
+delta_valid = false
+delta = null
+```
+
+Applied to:
+- Test 1.2 Collection;
+- Test 1.2 compiler/tuning recovery;
+- Test 2.
+
+Consumers must explicitly require `delta_valid == true`.
+
+### Stage 0 is now an executable prerequisite
+
+Capability testing is blocked unless the exact model/runtime profile passes:
+
+- runtime identity captured;
+- critical runtime-semantics probes actually observed;
+- no thinking-channel markup leakage into scored content;
+- every capability family has a reproducibly valid budget;
+- safe budget headroom exists above the measured boundary;
+- valid matched executor/auditor evidence exists.
+
+Every Test 1.2 capability observation carries the runtime-profile SHA256.
+
+### Role-economics confound removed
+
+Executor and auditor are compared using the Stage 0 calibrated family budget.
+
+Invalid/truncated executor or auditor generations are excluded from role accuracy rather than scored as wrong.
+
+### Test 2 budget ratchet removed
+
+Test 2 no longer mutates a family budget based on the first fixture.
+
+Family budgets are immutable proof inputs from Stage 0.
+
+### Censoring is explicit
+
+A control that cannot finish under the matched baseline budget becomes:
+
+```
+CONTROL_EXCEEDS_BASELINE_BUDGET
+```
+
+and contributes to per-control censoring rate.
+
+High-censoring controls cannot be classified as ordinary null/no-rescue controls.
+
+Separate capability-plus-cost probes may test them at their own budget.
+
+### Harm evidence is mandatory
+
+A reachable control cannot be shipping-verified without dedicated baseline-pass sentinel evidence.
+
+Harm uses a confidence-bound gate rather than point break rate alone.
+
+### Fixture is the unit of independence
+
+Test 2 effect statistics first collapse repeated observations to fixture-level effects.
+
+Reported fields include:
+
+```
+raw_valid_n
+independent_fixture_n
+unit_of_independence = fixture
+```
+
+Repeated seeds on one fixture no longer inflate independent N.
+
+### Multiplicity control
+
+Positive Test 2 effects carry exact sign-test p-values and Benjamini-Hochberg FDR q-values.
+
+A nominal STRONG/PROMISING positive that fails the configured FDR level is downgraded to:
+
+```
+UNCERTAIN_MULTIPLICITY
+```
+
+Safety/harm evidence remains conservative and is not rescued by multiplicity.
+
+### Training firewall hardened
+
+Fine-tuning qualification now fails closed when runtime-invalid and capability-valid evidence are mixed under one residual owner.
+
+Only capability-valid independent failures count toward the fine-tuning threshold.
+
+`TEST2_BLIND` and `TEST3_PROTECTED` cannot influence fine-tuning qualification or enter the training dataset.
+
+### Unresolved failure provenance preserved
+
+Collection unresolved failures are derived only from capability-valid baseline evidence.
+
+The Test 1.2 → Test 2 handoff now preserves:
+
+- fixture ID;
+- family ID;
+- difficulty;
+- original measured result class;
+- capability-validity;
+- source experiment ID;
+- source Collection run;
+- original partition.
+
+Synthetic `unknown|UNRESOLVED` phenotype collapse is prohibited.
+
+## 37.2 Recovery / integrity audit
+
+Verified behavior:
+
+- malformed atomic JSONL row is quarantined individually;
+- record hash mismatch is quarantined;
+- elapsed active time survives recovery;
+- physical call count survives recovery;
+- holdout exposure survives recovery;
+- legacy blind/protected rows are quarantined from Test 1.2 optimization;
+- consumed holdout cannot become clean again after a crash;
+- Collection/Tuning handoffs verify source manifests;
+- exact Test 2 handoff verifies full source manifests and semantic identity.
+
+## 37.3 Training-manufacturing audit
+
+`test12_model_manufacturing.py` applies capability-validity filtering before building zero-clock training products.
+
+Comparative training rows require valid comparison evidence.
+
+Discovery is the eligible source partition for Collection-produced training assets.
+
+Test 2 fine-tuning data is restricted to DISCOVERY/VALIDATION and explicit capability-valid residual failures.
+
+Blind/protected evidence is acceptance evidence, never training input.
+
+## 37.4 Current statistical contract
+
+For Test 2:
+
+```
+unit of independence = fixture
+within-fixture repeated seeds = repeated measurement
+positive promotion = effect evidence + FDR
+harm = dedicated sentinel evidence + confidence upper bound
+censoring = separate outcome
+undefined comparison = null delta
+```
+
+Do not revert to pooled raw observation counts.
+
+## 37.5 Remaining reviewer work
+
+The next reviewer should focus on **new unknowns**, not re-prove the fixed bugs.
+
+Highest-value targets:
+
+1. budget bracket/bisection efficiency;
+2. candidate-quality auditor sweep;
+3. control-mechanism redundancy clustering;
+4. proof-value scheduling;
+5. early truncation prediction;
+6. output-contract optimization;
+7. context knee;
+8. sustained-load capability drift;
+9. energy economics;
+10. manifest-finalization performance.
+
+Any new stop-ship finding should still be patched and covered by a regression test before another long campaign.
