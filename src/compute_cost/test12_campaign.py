@@ -6160,7 +6160,14 @@ def write_outputs(campaign: Test12Campaign, results: dict[str, Any]) -> None:
         producer="test1.2",
         stage="report",
     )
-    capability_floor = _capability_floor_registry(campaign)\n    store.write_json(\n        "capability-floor-registry.json",\n        capability_floor,\n        producer="test1.2",\n        stage="report",\n    )\n    store.write_json("residual-failure-ownership-1.2.json", residual, producer="test1.2", stage="report")
+    capability_floor = _capability_floor_registry(campaign)
+    store.write_json(
+        "capability-floor-registry.json",
+        capability_floor,
+        producer="test1.2",
+        stage="report",
+    )
+    store.write_json("residual-failure-ownership-1.2.json", residual, producer="test1.2", stage="report")
     store.write_json("fine-tuning-readiness-map-1.2.json", fine, producer="test1.2", stage="report")
     store.write_json("test1.2-priority-queue.json", {"schema_version":1,"queue":queue}, producer="test1.2", stage="report")
     store.write_json("test1.2-uncertainty-ledger.json", {"schema_version":1,"unknowns":unknowns}, producer="test1.2", stage="report")
@@ -6220,7 +6227,11 @@ def write_outputs(campaign: Test12Campaign, results: dict[str, Any]) -> None:
         "efficiency_audit":"test1.2-efficiency-audit.json",
         "opportunity_discovery_map":"test1.2-opportunity-discovery-map.json",
         "control_redundancy_map":"control-redundancy-map.json",
-        "capability_floor_registry":"capability-floor-registry.json",\n        "confirmed_declared_harness_floor_count":capability_floor.get("confirmed_declared_harness_floor_count", 0),\n        "unresolved_valid_fixture_count":capability_floor.get("unresolved_fixture_count", 0),\n        "construct_boundary_family_count":capability_floor.get("boundary_family_count", 0),\n        "redundancy_cluster_count":redundancy_map.get("cluster_count", 0),
+        "capability_floor_registry":"capability-floor-registry.json",
+        "confirmed_declared_harness_floor_count":capability_floor.get("confirmed_declared_harness_floor_count", 0),
+        "unresolved_valid_fixture_count":capability_floor.get("unresolved_fixture_count", 0),
+        "construct_boundary_family_count":capability_floor.get("boundary_family_count", 0),
+        "redundancy_cluster_count":redundancy_map.get("cluster_count", 0),
         "redundancy_clustered_control_count":redundancy_map.get("clustered_control_count", 0),
         "collection_role":"OPPORTUNITY_DISCOVERY",
         "proof_owner":"RUN2_TEST2",
