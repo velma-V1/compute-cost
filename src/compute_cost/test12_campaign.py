@@ -6704,9 +6704,13 @@ def _harness_applicability_registry(
                 str(row.get("id") or ""),
             ),
         )[0]
+        implementation = mechanism_implementation_status(representative)
         mechanisms[mechanism_key] = {
             "representative_intervention_id":str(representative.get("id") or ""),
             "category":str(representative.get("category") or "UNKNOWN"),
+            "implementation_status":str(implementation["status"]),
+            "implementation_basis":str(implementation["basis"]),
+            "implementation_audit":copy.deepcopy(implementation),
             "member_intervention_ids":sorted(
                 str(row.get("id") or "") for row in members if row.get("id")
             ),
@@ -6717,13 +6721,20 @@ def _harness_applicability_registry(
     for family in TEST2_CAPABILITY_FAMILIES:
         applicable = []
         inapplicable = []
+        unbuilt = []
         unknown = []
         details = {}
         for mechanism_key, payload in mechanisms.items():
             representative = campaign.intervention_by_id.get(
                 payload["representative_intervention_id"]
             ) or {}
-            decision = mechanism_applicability(representative, family)
+            if payload.get("implementation_status") == "UNBUILT":
+                decision = {
+                    "status":"UNBUILT",
+                    "basis":payload.get("implementation_basis"),
+                }
+            else:
+                decision = mechanism_applicability(representative, family)
             status = str(decision["status"])
             details[mechanism_key] = {
                 **copy.deepcopy(payload),
@@ -6734,6 +6745,8 @@ def _harness_applicability_registry(
                 applicable.append(mechanism_key)
             elif status == "NOT_APPLICABLE":
                 inapplicable.append(mechanism_key)
+            elif status == "UNBUILT":
+                unbuilt.append(mechanism_key)
             else:
                 unknown.append(mechanism_key)
 
@@ -6755,10 +6768,12 @@ def _harness_applicability_registry(
             "declared_semantic_mechanism_count":len(mechanisms),
             "applicable_mechanism_count":len(applicable),
             "inapplicable_mechanism_count":len(inapplicable),
+            "unbuilt_mechanism_count":len(unbuilt),
             "unknown_applicability_count":len(unknown),
             "known_applicability_fraction":known_ratio,
             "applicable_mechanism_keys":applicable,
             "inapplicable_mechanism_keys":inapplicable,
+            "unbuilt_mechanism_keys":unbuilt,
             "unknown_mechanism_keys":unknown,
             "harness_gap_status":gap_status,
             "mechanisms":details,
@@ -6769,6 +6784,15 @@ def _harness_applicability_registry(
         "analysis_type":"OUTCOME_BLIND_HARNESS_APPLICABILITY",
         "semantic_mechanism_count":len(mechanisms),
         "family_count":len(families),
+        "built_semantic_mechanism_count":sum(
+            1 for payload in mechanisms.values()
+            if payload.get("implementation_status") == "BUILT"
+        ),
+        "unbuilt_semantic_mechanism_count":sum(
+            1 for payload in mechanisms.values()
+            if payload.get("implementation_status") == "UNBUILT"
+        ),
+        "implementation_status_is_static_zero_call_audit":True,
         "structural_not_applicable_is_not_failure":True,
         "unknown_applicability_is_not_failure":True,
         "model_limit_claim_requires_applicable_mechanism_search":True,
