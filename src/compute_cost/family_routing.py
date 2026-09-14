@@ -63,7 +63,9 @@ def _vector(features: Counter[str], idf: dict[str, float]) -> dict[str, float]:
     for feature, count in features.items():
         if feature not in idf:
             continue
-        weighted[feature] = (1.0 + math.log(max(float(count), _EPS))) * idf[feature]
+        raw_count = float(count)
+        tf = raw_count if raw_count < 1.0 else (1.0 + math.log(raw_count))
+        weighted[feature] = tf * idf[feature]
     norm = math.sqrt(sum(value * value for value in weighted.values()))
     if norm <= _EPS:
         return {}
