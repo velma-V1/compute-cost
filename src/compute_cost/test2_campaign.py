@@ -1578,6 +1578,7 @@ def _effect_map(
         p_values[key] = p_value
         summary["raw_n"] = len(values)
         summary["raw_valid_n"] = len(valid)
+        summary["valid_n"] = len(valid)
         summary["independent_fixture_n"] = len(fixture_deltas)
         summary["unit_of_independence"] = "fixture"
         summary["fixture_ids"] = sorted(by_fixture)
