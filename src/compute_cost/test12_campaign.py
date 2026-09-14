@@ -4416,21 +4416,37 @@ def _opportunity_discovery_map(campaign: Test12Campaign) -> dict[str, Any]:
         row for row in campaign.rows
         if row.get("partition") == "DISCOVERY"
         and row.get("intervention_id") == "CONTROL"
+        and _capability_valid(row)
     ]
     treatments = [
         row for row in campaign.rows
         if row.get("partition") == "DISCOVERY"
         and row.get("intervention_id") not in {None, "CONTROL"}
+        and row.get("delta_valid") is True
+        and row.get("delta") is not None
     ]
-    failed_fixture_ids = {
-        str(row.get("fixture_id"))
-        for row in controls
-        if float(row.get("score", 0.0)) < 1.0
+
+    control_scores_by_fixture: dict[str, list[float]] = defaultdict(list)
+    for row in controls:
+        fixture_id = str(row.get("fixture_id") or "")
+        if fixture_id:
+            control_scores_by_fixture[fixture_id].append(float(row.get("score") or 0.0))
+    baseline_score_by_fixture = {
+        fixture_id: float(median(scores))
+        for fixture_id, scores in control_scores_by_fixture.items()
+        if scores
     }
+    failed_fixture_ids = {
+        fixture_id
+        for fixture_id, score in baseline_score_by_fixture.items()
+        if score < 1.0
+    }
+
     rescue_rows = [
         row for row in treatments
-        if float(row.get("control_score", 0.0)) < 1.0
-        and float(row.get("score", 0.0)) >= 1.0
+        if str(row.get("fixture_id") or "") in failed_fixture_ids
+        and float(row.get("score") or 0.0) >= 1.0
+        and float(row.get("delta") or 0.0) > 0.0
     ]
     rescued_fixture_ids = {str(row.get("fixture_id")) for row in rescue_rows}
     rescue_pairs = {
@@ -4450,11 +4466,19 @@ def _opportunity_discovery_map(campaign: Test12Campaign) -> dict[str, Any]:
         phenotypes[_failure_phenotype(campaign, case)].add(fixture_id)
 
     family_stats = _baseline_family_stats(campaign)
+    unresolved = sorted(failed_fixture_ids - rescued_fixture_ids)
     return {
         "schema_version": 1,
         "collection_role": "OPPORTUNITY_DISCOVERY",
         "proof_owner": "RUN2_TEST2",
         "control_observations": len(controls),
+        "invalid_control_observations_excluded": sum(
+            1
+            for row in campaign.rows
+            if row.get("partition") == "DISCOVERY"
+            and row.get("intervention_id") == "CONTROL"
+            and not _capability_valid(row)
+        ),
         "treatment_observations": len(treatments),
         "unique_failed_fixtures": len(failed_fixture_ids),
         "unique_rescued_fixtures": len(rescued_fixture_ids),
@@ -4464,13 +4488,16 @@ def _opportunity_discovery_map(campaign: Test12Campaign) -> dict[str, Any]:
         "failure_phenotypes": {
             key: sorted(values) for key, values in sorted(phenotypes.items())
         },
-        "repeated_same_fixture_control_observations": max(0, len(treatments) - len(treatment_pairs)),
-        "rescued_fixture_search_policy": "HAND_OFF_AFTER_FIRST_RESCUE",
+        "repeated_same_fixture_control_observations": max(
+            0, len(treatments) - len(treatment_pairs)
+        ),
+        "rescued_fixture_search_policy": "HAND_OFF_AFTER_FIRST_VALID_RESCUE",
         "same_fixture_seed_replication_policy": "RUN2_TEST2_ONLY",
+        "baseline_failure_rule": "MEDIAN_OF_CAPABILITY_VALID_CONTROL_OBSERVATIONS",
         "family_frontier_stats": family_stats,
         "strong_family_difficulty_escalation": True,
         "novel_failure_phenotype_priority": True,
-        "unresolved_failed_fixtures": sorted(failed_fixture_ids - rescued_fixture_ids),
+        "unresolved_failed_fixtures": unresolved,
     }
 
 
