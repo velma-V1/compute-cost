@@ -1691,10 +1691,11 @@ def run_auditor_executor_thesis(
             break
         executor["operating_budget"] = budget
         executor["valid_for_role_economics"] = valid_final(executor)
-        campaign.runner.store.append_jsonl(
-            "test1.2-role-specialization-observations.jsonl",
-            executor,
-        )
+        if executor.get("fresh_model_call") is not False:
+            campaign.runner.store.append_jsonl(
+                "test1.2-role-specialization-observations.jsonl",
+                executor,
+            )
         if not executor["valid_for_role_economics"]:
             invalid_executor += 1
             continue
@@ -1729,10 +1730,11 @@ def run_auditor_executor_thesis(
         audit["candidate_was_correct"] = executor_correct
         audit["expected_verdict"] = expected
         audit["valid_for_role_economics"] = valid_final(audit)
-        campaign.runner.store.append_jsonl(
-            "test1.2-role-specialization-observations.jsonl",
-            audit,
-        )
+        if audit.get("fresh_model_call") is not False:
+            campaign.runner.store.append_jsonl(
+                "test1.2-role-specialization-observations.jsonl",
+                audit,
+            )
         if not audit["valid_for_role_economics"]:
             invalid_auditor += 1
             continue
