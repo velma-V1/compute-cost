@@ -6374,6 +6374,13 @@ def reanalyze_test12_collection(
         handoff.update({
             "control_redundancy_map":"control-redundancy-map.json",
             "capability_floor_registry":"capability-floor-registry.json",
+        "harness_applicability_registry":"harness-applicability-registry.json",
+        "harness_gap_candidate_family_count":len(
+            applicability.get("harness_gap_candidate_families") or []
+        ),
+        "harness_gap_candidate_families":copy.deepcopy(
+            applicability.get("harness_gap_candidate_families") or []
+        ),
             "harness_applicability_registry":"harness-applicability-registry.json",
             "zero_call_reanalysis":"test1.2-zero-call-reanalysis.json",
             "redundancy_cluster_count":redundancy.get("cluster_count", 0),
@@ -7084,6 +7091,13 @@ def write_outputs(campaign: Test12Campaign, results: dict[str, Any]) -> None:
     store.write_json(
         "capability-floor-registry.json",
         capability_floor,
+        producer="test1.2",
+        stage="report",
+    )
+    applicability = _harness_applicability_registry(campaign)
+    store.write_json(
+        "harness-applicability-registry.json",
+        applicability,
         producer="test1.2",
         stage="report",
     )
