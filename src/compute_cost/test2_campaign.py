@@ -1481,6 +1481,17 @@ def _recipe_key(recipe: dict[str, Any]) -> str:
 
 
 def _recurrence_variants(recipes: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    if recipes and any(recipe.get("exact_test12_intervention") is not None for recipe in recipes):
+        result = []
+        for recipe in recipes:
+            if recipe.get("exact_test12_intervention") is None:
+                continue
+            for seed in (42, 43, 44):
+                variant = copy.deepcopy(recipe)
+                variant["_proof_seed"] = seed
+                result.append(variant)
+        return result
+
     result: list[dict[str, Any]] = []
     for recipe in recipes:
         ids = list(recipe["ingredient_ids"])
@@ -1557,6 +1568,14 @@ def phase_recurrence(campaign: Test2Campaign, deadline: float) -> dict[str, dict
 
 
 def _recovery_candidates(campaign: Test2Campaign, case: dict[str, Any]) -> list[dict[str, Any]]:
+    if campaign.handoff.get("handoff_mode") == "TEST12_EXACT":
+        result = []
+        for index, recipe in enumerate(campaign.recipes[: int(campaign.cfg["max_recovery_recipes"])]):
+            exact = copy.deepcopy(recipe)
+            exact["_proof_seed"] = 45 + (index % 3)
+            result.append(exact)
+        return result
+
     family = _family(case)
     result: list[dict[str, Any]] = []
     for recipe in campaign.recipes[:4]:
@@ -2056,11 +2075,14 @@ def phase_purple_unicorn(
     while candidates and recipes and campaign.can_start(deadline):
         case = candidates[(cursor // len(recipes)) % len(candidates)]
         recipe = copy.deepcopy(recipes[cursor % len(recipes)])
-        mode = cursor % 3
-        if mode == 1:
-            recipe["ingredient_ids"] = list(reversed(recipe["ingredient_ids"]))
-        elif mode == 2 and recipe["ingredient_ids"]:
-            recipe["ingredient_ids"] = list(recipe["ingredient_ids"]) + [recipe["ingredient_ids"][0]]
+        if recipe.get("exact_test12_intervention") is not None:
+            recipe["_proof_seed"] = 47 + (cursor % 3)
+        else:
+            mode = cursor % 3
+            if mode == 1:
+                recipe["ingredient_ids"] = list(reversed(recipe["ingredient_ids"]))
+            elif mode == 2 and recipe["ingredient_ids"]:
+                recipe["ingredient_ids"] = list(recipe["ingredient_ids"]) + [recipe["ingredient_ids"][0]]
         observation = campaign.treatment(
             case,
             deadline,
@@ -2098,6 +2120,29 @@ def phase_knockout(
     deadline: float,
     recurrence: dict[str, dict[str, Any]],
 ) -> dict[str, Any]:
+    if campaign.handoff.get("handoff_mode") == "TEST12_EXACT":
+        records: dict[str, Any] = {}
+        ranked_exact = sorted(
+            recurrence.items(),
+            key=lambda item: float(item[1].get("normalized_effect", 0.0)),
+            reverse=True,
+        )
+        for key, summary in ranked_exact[:8]:
+            recipe = copy.deepcopy(summary.get("recipe") or {})
+            if not recipe or recipe.get("exact_test12_intervention") is None:
+                continue
+            records[key] = {
+                "source_recipe":copy.deepcopy(recipe),
+                "full_median_delta":summary.get("median_delta"),
+                "required_ingredients":[],
+                "removable_ingredients":[],
+                "minimal_recipe":copy.deepcopy(recipe),
+                "observations":{"FULL":int(summary.get("n") or 0)},
+                "distillation_status":"EXACT_CONTROL_ATOMIC_OR_ALREADY_COMPOSED",
+                "semantic_mutation_prohibited":True,
+            }
+        return records
+
     ranked = sorted(
         recurrence.items(),
         key=lambda item: float(item[1].get("normalized_effect", 0.0)),
