@@ -1215,11 +1215,6 @@ class Test12Campaign:
         self.allowed_partitions = {"DISCOVERY"}
         self.controls: dict[tuple[str, int], dict[str, Any]] = {}
         self.invalid_controls: dict[tuple[str, int], dict[str, Any]] = {}
-        self.baseline_generation_budget_by_family: dict[str, int] = copy.deepcopy(
-            (self.phase_results.get("runtime_characterization") or {}).get(
-                "resolved_generation_budget_by_family"
-            ) or {}
-        )
         self.rows: list[dict[str, Any]] = copy.deepcopy(self.resume_state.get("rows") or [])
         self.sequence = 1_000_000 + len(self.rows) if self.resume_state else 0
         self.phase_assertions: list[dict[str, Any]] = copy.deepcopy(
@@ -1235,6 +1230,11 @@ class Test12Campaign:
         }
         self.phase_results: dict[str, Any] = copy.deepcopy(
             checkpoint.get("phase_results") or {}
+        )
+        self.baseline_generation_budget_by_family: dict[str, int] = copy.deepcopy(
+            (self.phase_results.get("runtime_characterization") or {}).get(
+                "resolved_generation_budget_by_family"
+            ) or {}
         )
         self.current_phase: str | None = None
         self.current_phase_started: float | None = None
