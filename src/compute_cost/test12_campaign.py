@@ -924,6 +924,221 @@ def partition_test12_cases(
     return result
 
 
+
+def measurement_decision_contracts() -> list[dict[str, Any]]:
+    """Preregister outcome -> action forks before spending model calls."""
+    return [
+        {
+            "measurement":"runtime_semantics_gate",
+            "phase":"runtime_semantics_gate",
+            "model_calls_added_by_measurement":True,
+            "outcomes":[
+                {"outcome":"RUNTIME_CONTRACT_VALID","action":"CONTINUE_STAGE0"},
+                {"outcome":"RUNTIME_CONTRACT_INVALID","action":"STOP_AND_PATCH_RUNTIME"},
+            ],
+        },
+        {
+            "measurement":"runtime_budget_characterization",
+            "phase":"runtime_budget_characterization",
+            "model_calls_added_by_measurement":True,
+            "outcomes":[
+                {"outcome":"REPRODUCIBLE_SAFE_BOUNDARY","action":"LOCK_FAMILY_BUDGET"},
+                {"outcome":"HEADROOM_CORRUPTS_OUTPUT","action":"LOCK_LOWER_REPRODUCIBLE_BOUNDARY"},
+                {"outcome":"NO_REPRODUCIBLE_BOUNDARY","action":"BLOCK_CAPABILITY_CAMPAIGN"},
+            ],
+        },
+        {
+            "measurement":"output_contract_gate",
+            "phase":"output_contract_gate",
+            "model_calls_added_by_measurement":True,
+            "outcomes":[
+                {"outcome":"NATIVE_JSON_BEST","action":"USE_NATIVE_JSON"},
+                {"outcome":"JSON_SCHEMA_BEST","action":"USE_JSON_SCHEMA"},
+                {"outcome":"INSTRUCTION_ONLY_BEST","action":"USE_INSTRUCTION_ONLY"},
+                {"outcome":"NO_RELIABLE_CONTRACT","action":"FLAG_FAMILY_OUTPUT_CONTRACT_GAP"},
+            ],
+        },
+        {
+            "measurement":"auditor_executor_architecture_thesis",
+            "phase":"role_specialization_gate",
+            "model_calls_added_by_measurement":True,
+            "outcomes":[
+                {"outcome":"SUPPORTED","action":"ENABLE_INVERTED_AUDITOR_PATH"},
+                {"outcome":"NOT_SUPPORTED","action":"DISABLE_INVERTED_AUDITOR_PATH"},
+                {"outcome":"INCONCLUSIVE","action":"QUEUE_ROLE_EVIDENCE_FOR_FUTURE_CYCLE"},
+            ],
+        },
+        {
+            "measurement":"baseline_capability_map",
+            "phase":"baseline_capability_map",
+            "model_calls_added_by_measurement":True,
+            "outcomes":[
+                {"outcome":"BASELINE_FAIL","action":"ENTER_RESCUE_SEARCH"},
+                {"outcome":"BASELINE_PASS","action":"SENTINEL_RESERVE_ONLY"},
+                {"outcome":"BASELINE_INVALID","action":"QUARANTINE_FROM_CAPABILITY"},
+            ],
+        },
+        {
+            "measurement":"family_mechanism_floor",
+            "phase":"capability_family_manufacturing_floor",
+            "model_calls_added_by_measurement":True,
+            "outcomes":[
+                {"outcome":"VALID_RESCUE","action":"HANDOFF_FOR_PROOF_AND_DEPRIORITIZE_FIXTURE"},
+                {"outcome":"VALID_NO_RESCUE","action":"TRY_NEXT_APPLICABLE_MECHANISM"},
+                {"outcome":"VALID_HARM","action":"CREATE_NEGATIVE_TRANSFER_VETO"},
+                {"outcome":"INVALID_OR_CENSORED","action":"ROUTE_TO_MEASUREMENT_INTEGRITY_DEBT"},
+            ],
+        },
+        {
+            "measurement":"semantic_mechanism_screen",
+            "phase":"mechanism_coverage_floor",
+            "model_calls_added_by_measurement":True,
+            "outcomes":[
+                {"outcome":"VALID_RESCUE","action":"OPEN_VARIANT_SEARCH_WITHIN_MECHANISM"},
+                {"outcome":"VALID_NO_RESCUE","action":"CLOSE_VARIANTS_FOR_MECHANISM"},
+                {"outcome":"INVALID_OR_CENSORED","action":"ALLOW_BOUNDED_VALIDITY_RESOLUTION_VARIANT"},
+                {"outcome":"VALID_HARM","action":"VETO_MECHANISM_FROM_GLOBAL_PROMOTION"},
+            ],
+        },
+        {
+            "measurement":"real_tool_execution",
+            "phase":"real_tool_execution",
+            "model_calls_added_by_measurement":True,
+            "outcomes":[
+                {"outcome":"TOOL_PATH_VALID","action":"KEEP_TOOL_MECHANISM"},
+                {"outcome":"TOOL_PATH_INVALID","action":"DISABLE_TOOL_MECHANISM"},
+            ],
+        },
+        {
+            "measurement":"failure_phenotype_replay",
+            "phase":"failure_phenotype_replay",
+            "model_calls_added_by_measurement":True,
+            "outcomes":[
+                {"outcome":"NOVEL_PHENOTYPE","action":"RAISE_DISCOVERY_PRIORITY"},
+                {"outcome":"KNOWN_PHENOTYPE","action":"DEPRIORITIZE_DUPLICATE_PHENOTYPE"},
+                {"outcome":"RECOVERED","action":"REMOVE_FIXTURE_FROM_RESCUE_QUEUE"},
+            ],
+        },
+        {
+            "measurement":"interaction_scout",
+            "phase":"interaction_scout",
+            "model_calls_added_by_measurement":True,
+            "outcomes":[
+                {"outcome":"POSITIVE_INTERACTION","action":"KEEP_COMPOSITION_CANDIDATE"},
+                {"outcome":"NULL_INTERACTION","action":"STOP_COMPOSITION_DEPTH"},
+                {"outcome":"NEGATIVE_INTERACTION","action":"VETO_COMPOSITION"},
+            ],
+        },
+        {
+            "measurement":"dose_activation_boundary",
+            "phase":"dose_activation_boundaries",
+            "model_calls_added_by_measurement":True,
+            "outcomes":[
+                {"outcome":"LOWEST_DOSE_WORKS","action":"SELECT_LOWEST_EFFECTIVE_DOSE"},
+                {"outcome":"ONLY_HIGH_DOSE_WORKS","action":"RESTRICT_TO_HIGH_DOSE_CONTEXTS"},
+                {"outcome":"NO_DOSE_WORKS","action":"DROP_DOSE_VARIANTS"},
+                {"outcome":"DOSE_HARMS","action":"CREATE_DOSE_VETO"},
+            ],
+        },
+        {
+            "measurement":"negative_transfer_sentinels",
+            "phase":"negative_transfer_sentinels",
+            "model_calls_added_by_measurement":True,
+            "outcomes":[
+                {"outcome":"HARM_OBSERVED","action":"VETO_GLOBAL_PROMOTION"},
+                {"outcome":"NO_HARM_OBSERVED","action":"KEEP_PROVISIONAL_CANDIDATE"},
+                {"outcome":"INVALID_SENTINEL","action":"QUARANTINE_SENTINEL_EVIDENCE"},
+            ],
+        },
+        {
+            "measurement":"information_gain_reserve",
+            "phase":"information_gain_reserve",
+            "model_calls_added_by_measurement":True,
+            "outcomes":[
+                {"outcome":"HIGH_VALUE_UNRESOLVED_TARGET","action":"SPEND_RESERVE_ON_TARGET"},
+                {"outcome":"NO_HIGH_VALUE_TARGET","action":"SHIFT_RESERVE_TO_NEW_FRONTIER_FIXTURES"},
+            ],
+        },
+        {
+            "measurement":"frontier_gap_labs",
+            "phase":"frontier_gap_labs",
+            "model_calls_added_by_measurement":True,
+            "outcomes":[
+                {"outcome":"NEW_VALID_CAPABILITY_SIGNAL","action":"ADD_FRONTIER_MECHANISM_CANDIDATE"},
+                {"outcome":"NO_VALID_SIGNAL","action":"DO_NOT_EXPAND_FRONTIER_MECHANISM"},
+                {"outcome":"VALID_HARM","action":"ADD_FRONTIER_VETO"},
+            ],
+        },
+        {
+            "measurement":"second_frontier_gap_labs",
+            "phase":"second_frontier_gap_labs",
+            "model_calls_added_by_measurement":True,
+            "outcomes":[
+                {"outcome":"NEW_VALID_CAPABILITY_SIGNAL","action":"ADD_SECOND_GAP_CANDIDATE"},
+                {"outcome":"NO_VALID_SIGNAL","action":"CLOSE_SECOND_GAP_TARGET"},
+                {"outcome":"VALID_HARM","action":"ADD_SECOND_GAP_VETO"},
+            ],
+        },
+        {
+            "measurement":"throughput_yield_and_power_buyback",
+            "phase":"derived_zero_call",
+            "model_calls_added_by_measurement":False,
+            "decision_role":"SIZING_DIAGNOSTIC_ONLY",
+            "outcomes":[
+                {"outcome":"LOW","action":"RECORD_FOR_SIZING"},
+                {"outcome":"NOMINAL","action":"RECORD_FOR_SIZING"},
+                {"outcome":"HIGH","action":"RECORD_FOR_SIZING"},
+            ],
+        },
+    ]
+
+
+def validate_measurement_decision_contracts(
+    contracts: list[dict[str, Any]],
+) -> None:
+    by_phase = {
+        str(row.get("phase") or ""): row
+        for row in contracts
+        if row.get("phase")
+    }
+    missing_phases = sorted(
+        name for name, _seconds in PHASES
+        if name not in by_phase
+    )
+    if missing_phases:
+        raise ValueError(
+            "model-call phases missing decision contracts: "
+            + ", ".join(missing_phases)
+        )
+
+    for contract in contracts:
+        name = str(contract.get("measurement") or "UNNAMED")
+        outcomes = list(contract.get("outcomes") or [])
+        if len(outcomes) < 2:
+            raise ValueError(
+                f"measurement {name} must preregister at least two outcomes"
+            )
+        actions = [
+            str(row.get("action") or "")
+            for row in outcomes
+        ]
+        if any(not action for action in actions):
+            raise ValueError(
+                f"measurement {name} has an outcome without an action"
+            )
+        if bool(contract.get("model_calls_added_by_measurement")):
+            if len(set(actions)) != len(actions):
+                raise ValueError(
+                    f"measurement {name} spends model calls but two outcomes "
+                    "lead to the same action"
+                )
+        elif len(set(actions)) == len(actions):
+            contract["decision_role"] = (
+                contract.get("decision_role")
+                or "ZERO_CALL_DECISION_SUPPORT"
+            )
+
+
 def build_test12_plan(cases: list[dict[str, Any]], *, seed_run: str | None = None) -> dict[str, Any]:
     parts = partition_test12_cases(cases)
     return {
@@ -971,6 +1186,8 @@ def build_test12_plan(cases: list[dict[str, Any]], *, seed_run: str | None = Non
         "role_specialization_gate_required": True,
         "stage0_runtime_characterization_required": True,
         "stage0_must_pass_before_capability_claims": True,
+        "measurement_decision_contracts": measurement_decision_contracts(),
+        "measurement_decision_rule": "MODEL_CALL_MEASUREMENTS_REQUIRE_UNIQUE_OUTCOME_TO_ACTION_FORKS; ZERO_CALL_SIZING_METRICS_MAY_BE_NONDECISIONAL",
         "core_mechanism_count": len(CORE_INTERVENTIONS),
         "generated_prompt_control_count": len(generate_prompt_control_candidates()),
         "finite_control_grammar": copy.deepcopy(CONTROL_GRAMMAR),
@@ -1022,6 +1239,9 @@ def build_test12_plan(cases: list[dict[str, Any]], *, seed_run: str | None = Non
 
 
 def validate_test12_plan(plan: dict[str, Any]) -> None:
+    validate_measurement_decision_contracts(
+        list(plan.get("measurement_decision_contracts") or [])
+    )
     if int(plan["wall_clock_seconds"]) != COLLECTION_HARD_SECONDS:
         raise ValueError("Test 1.2 collection hard ceiling must be 7h44m")
     if sum(int(row["seconds"]) for row in plan["phases"]) != COLLECTION_ACTIVE_SECONDS:
