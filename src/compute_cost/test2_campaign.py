@@ -70,6 +70,7 @@ REQUIRED_OUTPUTS = (
     "failure-phenotype-registry.json",
     "failure-recovery-matrix.json",
     "negative-transfer-boundaries.json",
+    "harm-sentinel-evidence.json",
     "purple-unicorn-registry.json",
     "knockout-registry.json",
     "minimal-recipe-registry.json",
@@ -104,6 +105,9 @@ DEFAULT_TEST2_CONFIG: dict[str, Any] = {
     "partial_recovery_threshold": 0.60,
     "acceptance_latency_ratio": 1.25,
     "max_effect_censoring_rate": 0.20,
+    "harm_sentinel_min_per_control": 16,
+    "harm_min_distinct_families": 4,
+    "harm_max_break_rate": 0.05,
 }
 
 
@@ -534,6 +538,7 @@ class Test2Campaign:
             float((handoff.get("noise_model") or {}).get("global_noise_sigma", EPSILON_NOISE)),
         )
         self.treatment_calls = 0
+        self.harm_evidence: dict[str, Any] = {}
         self.recipes = source_recipes(handoff, limit=int(self.cfg["top_recipes"]))
 
     def can_start(self, deadline: float) -> bool:
@@ -1091,6 +1096,7 @@ def phase_negative_transfer(
     deadline: float,
     recurrence: dict[str, dict[str, Any]],
 ) -> dict[str, Any]:
+    """Adversarial harm-seeking on independently passing baseline sentinels."""
     ranked = sorted(
         recurrence.items(),
         key=lambda item: (
@@ -1108,23 +1114,102 @@ def phase_negative_transfer(
     if not recipes:
         recipes = [copy.deepcopy(row) for row in campaign.recipes[:4]]
 
-    fixtures = _balanced_cases(campaign.partitions["VALIDATION"], len(campaign.partitions["VALIDATION"]))
-    cursor = 0
-    while recipes and fixtures and campaign.can_start(deadline):
-        recipe = recipes[cursor % len(recipes)]
-        case = fixtures[(cursor // len(recipes)) % len(fixtures)]
-        campaign.treatment(
+    # Build a deterministic baseline-pass sentinel pool. Failing baselines are
+    # not informative for "did the control break something that already worked?"
+    validation = _balanced_cases(
+        campaign.partitions["VALIDATION"],
+        len(campaign.partitions["VALIDATION"]),
+    )
+    sentinels: list[dict[str, Any]] = []
+    for case in validation:
+        if not campaign.can_start(deadline):
+            break
+        baseline = campaign.control(
             case,
             deadline,
-            phase="negative_transfer",
-            kind="negative_transfer",
-            recipe=recipe,
-            label="transfer-" + _recipe_key(recipe),
-            source_key="recurrence-map",
+            phase="negative_transfer_sentinel",
         )
-        cursor += 1
-        if cursor >= len(recipes) * len(fixtures):
+        if baseline is not None and baseline >= 1.0:
+            sentinels.append(case)
+
+    min_trials = int(campaign.cfg["harm_sentinel_min_per_control"])
+    min_families = int(campaign.cfg["harm_min_distinct_families"])
+    max_break_rate = float(campaign.cfg["harm_max_break_rate"])
+
+    for recipe in recipes:
+        if not campaign.can_start(deadline):
             break
+        key = _recipe_key(recipe)
+        valid_rows: list[dict[str, Any]] = []
+        attempted_rows: list[dict[str, Any]] = []
+        for case in sentinels:
+            if not campaign.can_start(deadline):
+                break
+            row = campaign.treatment(
+                case,
+                deadline,
+                phase="negative_transfer",
+                kind="harm_probe",
+                recipe=recipe,
+                label="harm-" + key,
+                source_key="baseline-pass-sentinel",
+            )
+            if row is None:
+                continue
+            attempted_rows.append(row)
+            if row.get("delta_valid") is True and row.get("delta") is not None:
+                valid_rows.append(row)
+
+            family_count = len({str(r.get("family_id")) for r in valid_rows})
+            if len(valid_rows) >= min_trials and family_count >= min_families:
+                break
+
+        breaks = [
+            row for row in valid_rows
+            if float(row["delta"]) < 0.0
+        ]
+        families = sorted({str(row.get("family_id")) for row in valid_rows})
+        censoring = [
+            row for row in attempted_rows
+            if row.get("censored_for_capability") is True
+        ]
+        break_rate = len(breaks) / len(valid_rows) if valid_rows else None
+        sufficient = bool(
+            len(valid_rows) >= min_trials
+            and len(families) >= min_families
+        )
+        harm_safe = bool(
+            sufficient
+            and break_rate is not None
+            and break_rate <= max_break_rate
+        )
+        campaign.harm_evidence[key] = {
+            "recipe_key":key,
+            "recipe":copy.deepcopy(recipe),
+            "attempts":len(attempted_rows),
+            "valid_baseline_pass_sentinels":len(valid_rows),
+            "distinct_families":families,
+            "distinct_family_count":len(families),
+            "breaks":len(breaks),
+            "break_rate":break_rate,
+            "censored_observations":len(censoring),
+            "censoring_rate":(
+                len(censoring)/len(attempted_rows)
+                if attempted_rows else None
+            ),
+            "minimum_valid_sentinels_required":min_trials,
+            "minimum_distinct_families_required":min_families,
+            "maximum_break_rate":max_break_rate,
+            "harm_evidence_sufficient":sufficient,
+            "harm_safe":harm_safe,
+            "verification_status":(
+                "HARM_SAFE"
+                if harm_safe
+                else "HARMFUL"
+                if sufficient and break_rate is not None and break_rate > max_break_rate
+                else "INSUFFICIENT_HARM_EVIDENCE"
+            ),
+        }
 
     effects = _effect_map(
         [row for row in campaign.rows if row["phase"] == "negative_transfer"],
@@ -1139,6 +1224,8 @@ def phase_negative_transfer(
             label = "NEGATIVE_TRANSFER"
         elif summary["classification"] in {"STRONG", "PROMISING"}:
             label = "DOMAIN_POSITIVE"
+        elif summary["classification"] == "CENSORING_DOMINATED":
+            label = "CENSORING_DOMINATED"
         elif summary["classification"] == "NULL":
             label = "NEUTRAL"
         else:
@@ -1540,8 +1627,10 @@ def _latency_envelope(campaign: Test2Campaign) -> dict[str, Any]:
 def _final_recipe_registry(
     knockouts: dict[str, Any],
     blind: dict[str, Any],
+    harm_evidence: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     blind_effects = blind.get("effects") or {}
+    harm_evidence = harm_evidence or {}
     result: list[dict[str, Any]] = []
     for source_key, row in knockouts.items():
         recipe = copy.deepcopy(row.get("minimal_recipe") or {})
@@ -1549,12 +1638,21 @@ def _final_recipe_registry(
             continue
         key = _recipe_key(recipe)
         blind_summary = blind_effects.get(key)
+        harm_summary = copy.deepcopy(harm_evidence.get(key))
         result.append({
             "recipe_id": "REC-" + hashlib.sha256(key.encode("utf-8")).hexdigest()[:12],
             "source_recipe_key": source_key,
             "recipe_key": key,
             "recipe": recipe,
             "blind_summary": copy.deepcopy(blind_summary),
+            "harm_summary": harm_summary,
+            "verified_for_shipping": bool(
+                harm_summary
+                and harm_summary.get("harm_evidence_sufficient") is True
+                and harm_summary.get("harm_safe") is True
+                and blind_summary
+                and blind_summary.get("classification") in {"STRONG", "PROMISING", "NULL"}
+            ),
             "required_ingredients": list(row.get("required_ingredients") or []),
             "removed_ingredients": list(row.get("removable_ingredients") or []),
         })
@@ -1574,8 +1672,9 @@ def _build_finalization_contract(
     finetune: list[dict[str, Any]],
     latency: dict[str, Any],
 ) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
-    recipes = _final_recipe_registry(knockouts, blind)
-    primary = recipes[0] if recipes else {
+    recipes = _final_recipe_registry(knockouts, blind, campaign.harm_evidence)
+    verified_recipes = [row for row in recipes if row.get("verified_for_shipping") is True]
+    primary = verified_recipes[0] if verified_recipes else {
         "recipe_id": "REC-NONE",
         "recipe_key": "",
         "recipe": {
@@ -1644,7 +1743,10 @@ def _build_finalization_contract(
             "dose": primary_recipe.get("dose"),
             "recurrence_count": len(primary_recipe.get("ingredient_ids") or []),
         },
-        "alternate_minimal_recipes": copy.deepcopy(recipes[1:]),
+        "alternate_minimal_recipes": copy.deepcopy(verified_recipes[1:]),
+        "unverified_minimal_recipes": copy.deepcopy(
+            [row for row in recipes if row.get("verified_for_shipping") is not True]
+        ),
         "ingredient_definitions": copy.deepcopy(list(INGREDIENTS)),
         "recovery_policies": general_recoveries,
         "negative_transfer_boundaries": harmful,
@@ -1686,6 +1788,8 @@ def _build_finalization_contract(
         "acceptance_gates": {
             "protected_set_leakage": 0,
             "new_severe_regression_count": 0,
+            "verified_control_requires_harm_evidence": True,
+            "harm_max_break_rate": float(campaign.cfg["harm_max_break_rate"]),
             "tool_boundary_violation_count": 0,
             "general_recovery_min_success_rate": float(campaign.cfg["general_recovery_threshold"]),
             "tuned_inverted_protected_score_must_not_regress": True,
@@ -1770,6 +1874,16 @@ def write_test2_outputs(
         stage="report",
     )
     store.write_json(
+        "harm-sentinel-evidence.json",
+        {
+            "schema_version":1,
+            "policy":"VERIFIED_CONTROL_REQUIRES_DEDICATED_BASELINE_PASS_HARM_EVIDENCE",
+            "recipes":copy.deepcopy(campaign.harm_evidence),
+        },
+        producer="test2",
+        stage="report",
+    )
+    store.write_json(
         "purple-unicorn-registry.json",
         {"schema_version": 1, "candidates": unicorns},
         producer="test2",
@@ -1790,7 +1904,7 @@ def write_test2_outputs(
         stage="report",
     )
 
-    minimal = _final_recipe_registry(knockouts, blind)
+    minimal = _final_recipe_registry(knockouts, blind, campaign.harm_evidence)
     store.write_json(
         "minimal-recipe-registry.json",
         {"schema_version": 1, "recipes": minimal},
