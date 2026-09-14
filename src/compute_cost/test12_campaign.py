@@ -268,6 +268,129 @@ RULES = (
     "negative and regressing outputs become weighted same-task preference negatives while stable base successes become rehearsal anchors",
 )
 
+
+TOOL_CAPABILITY_FAMILIES = frozenset({
+    "tool_selection",
+    "tool_argument_correctness",
+    "multi_tool_sequencing",
+    "tool_error_recovery",
+    "composite_agent_tasks",
+})
+
+STATE_CAPABILITY_FAMILIES = frozenset({
+    "temporal_reasoning",
+    "contradictory_information_handling",
+    "multi_turn_state_tracking",
+    "updated_obsolete_state_rejection",
+    "composite_agent_tasks",
+})
+
+CONTEXT_MEMORY_CAPABILITY_FAMILIES = frozenset({
+    "context_retrieval",
+    "context_reasoning",
+    "lost_in_middle_resistance",
+    "distractor_noise_resistance",
+    "contradictory_information_handling",
+    "multi_turn_state_tracking",
+    "updated_obsolete_state_rejection",
+    "memory_compression_summary_fidelity",
+    "composite_agent_tasks",
+})
+
+UNCERTAINTY_CAPABILITY_FAMILIES = frozenset({
+    "ambiguity_detection",
+    "missing_information_handling",
+    "uncertainty_calibration",
+    "hallucination_resistance",
+    "composite_agent_tasks",
+})
+
+UNIVERSAL_MECHANISM_CATEGORIES = frozenset({
+    "PROMPT_CONTROL",
+    "REASONING_MODE",
+    "GENERATION_BUDGET",
+    "CONTEXT_WINDOW",
+    "PLANNING",
+    "VERIFICATION",
+    "CRITIQUE",
+    "RETRY_RECOVERY",
+    "DELEGATION",
+    "ENSEMBLE_CONSENSUS",
+    "ADAPTIVE_ROUTING",
+    "STOP_ESCALATE_POLICY",
+    "COMPOSITION_LAYERING",
+    "COMPUTE_COST_ROUTING",
+    "METAMORPHIC_ROBUSTNESS",
+    "REFLECTION_TRANSFER",
+})
+
+
+def mechanism_applicability(
+    intervention: dict[str, Any],
+    family: str,
+) -> dict[str, Any]:
+    """Conservative structural applicability, independent of outcomes.
+
+    NOT_APPLICABLE is reserved for mechanisms whose required task structure is
+    absent from the capability family. Anything ambiguous remains UNKNOWN so
+    pruning cannot silently turn uncertainty into a harness blind spot.
+    """
+    category = str(intervention.get("category") or "UNKNOWN")
+    family = str(family or "UNKNOWN")
+
+    if category in UNIVERSAL_MECHANISM_CATEGORIES:
+        return {
+            "status":"APPLICABLE",
+            "basis":"CATEGORY_HAS_NO_SPECIAL_STRUCTURAL_PREREQUISITE",
+        }
+    if category in {"TOOL_POLICY", "REAL_TOOL_EXECUTION", "TOOL_CHAOS_RECOVERY", "TOOL_SCHEDULING"}:
+        return {
+            "status":(
+                "APPLICABLE"
+                if family in TOOL_CAPABILITY_FAMILIES
+                else "NOT_APPLICABLE"
+            ),
+            "basis":"REQUIRES_TOOL_SELECTION_ARGUMENT_OR_EXECUTION_STRUCTURE",
+        }
+    if category == "STATE_TRACKING":
+        return {
+            "status":(
+                "APPLICABLE"
+                if family in STATE_CAPABILITY_FAMILIES
+                else "NOT_APPLICABLE"
+            ),
+            "basis":"REQUIRES_TEMPORAL_OR_MUTABLE_AUTHORITATIVE_STATE",
+        }
+    if category in {
+        "MEMORY",
+        "CONTEXT_SELECTION_COMPRESSION",
+        "ACTIVE_MEMORY_CONTROL",
+        "MEMORY_COMPACTION",
+    }:
+        return {
+            "status":(
+                "APPLICABLE"
+                if family in CONTEXT_MEMORY_CAPABILITY_FAMILIES
+                else "NOT_APPLICABLE"
+            ),
+            "basis":"REQUIRES_CONTEXT_OR_MEMORY_STATE_TO_SELECT_PRESERVE_OR_COMPRESS",
+        }
+    if category in {"ABSTENTION_CALIBRATION", "CLARIFICATION_POLICY"}:
+        return {
+            "status":(
+                "APPLICABLE"
+                if family in UNCERTAINTY_CAPABILITY_FAMILIES
+                else "NOT_APPLICABLE"
+            ),
+            "basis":"REQUIRES_AMBIGUITY_UNCERTAINTY_OR_MISSING_INFORMATION_DECISION",
+        }
+    return {
+        "status":"UNKNOWN",
+        "basis":"FAMILY_LABEL_ALONE_DOES_NOT_PROVE_STRUCTURAL_APPLICABILITY",
+    }
+
+
+
 REQUIRED_TEST11_FILES = (
     "test1.1-observations.jsonl",
     "fixture-partitions.json",
