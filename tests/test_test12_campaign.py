@@ -3011,6 +3011,75 @@ def test_auditor_executor_thesis_executes_matched_fresh_pairs(monkeypatch):
     assert all(row["operating_budget"] == 1024 for row in result["pairs"])
 
 
+def test_campaign_block_one_is_calibration_and_real_evidence():
+    class Store:
+        run_id = "run"
+        events = []
+
+        @classmethod
+        def append_jsonl(cls, path, row):
+            cls.events.append((path, row))
+
+    class Runner:
+        store = Store()
+        _model_call_counts = {"run": 510}
+
+    campaign = object.__new__(test12_module.Test12Campaign)
+    campaign.runner = Runner()
+    campaign.cfg = {"campaign_block_physical_calls": 500}
+    campaign.capability_call_origin = 10
+    campaign.block_index = 0
+    campaign.block_row_start = 0
+    campaign.runtime_canary_count = 2
+    campaign.runtime_canary_failed = False
+    campaign.phase_results = {
+        "budget_characterization": {
+            "budget_filling_family_count": 3,
+            "overthink_corruption_family_count": 0,
+        }
+    }
+    campaign.rows = [
+        {
+            "intervention_id": "CONTROL",
+            "family_id": "family-a",
+        },
+        {
+            "intervention_id": "CTRL-A",
+            "family_id": "family-a",
+            "delta_valid": True,
+            "delta": 1.0,
+            "censored_for_capability": False,
+        },
+        {
+            "intervention_id": "CTRL-B",
+            "family_id": "family-b",
+            "delta_valid": True,
+            "delta": -1.0,
+            "censored_for_capability": False,
+        },
+        {
+            "intervention_id": "CTRL-C",
+            "family_id": "family-c",
+            "delta_valid": False,
+            "delta": None,
+            "censored_for_capability": True,
+        },
+    ]
+    campaign._write_recovery_checkpoint = lambda **kwargs: None
+
+    campaign.maybe_block_reassessment()
+
+    assert campaign.block_index == 1
+    event = Store.events[0][1]
+    assert event["block_role"] == "BLOCK1_CALIBRATION_AND_REAL_EVIDENCE"
+    assert event["proof_eligible_rows_in_block"] == 2
+    assert event["positive_rows_in_block"] == 1
+    assert event["negative_rows_in_block"] == 1
+    assert event["censored_rows_in_block"] == 1
+    assert event["throughput_metric_role"] == "SIZING_AND_DIAGNOSTIC_NOT_GO_NO_GO"
+    assert event["automatic_stop"] is False
+
+
 def test_runtime_canary_is_time_based_excluded_and_confirms_drift(monkeypatch):
     now = [0.0]
 
