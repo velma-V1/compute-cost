@@ -10,7 +10,7 @@ from .adaptive import AdaptiveBudgetController, BudgetObservation
 from .classification import classify_result
 from .experiments import ExperimentSpec, changed_fields, make_experiment_id
 from .replay_registry import replay_category
-from .scoring import score_case
+from .scoring import diagnostic_subscore_vector, score_case
 
 
 HARNESS_INVALID = {"SCORER_DEFECT", "TEST_DEFECT", "CAPTURE_GAP"}
@@ -134,6 +134,8 @@ def execute_experiment(
             "seed": spec.seed,
         },
     )
+    if spec.context_request is not None:
+        options["num_ctx"] = int(spec.context_request)
     think_request = spec.reasoning_effort if spec.reasoning_effort is not None else spec.thinking_mode
     generation, invocation, refs = runner._invoke_generation(
         stage="characterize",
@@ -150,12 +152,16 @@ def execute_experiment(
 
     runner._persist_scoring(spec.experiment_id, "characterize", scoring)
     classification = classify_result(case, generation, scoring)
+    diagnostic = diagnostic_subscore_vector(scoring)
     row = {
         "experiment": spec.to_dict(),
         "classification": classification,
         "score": scoring.get("score"),
+        "diagnostic_subscore": diagnostic,
         "status": scoring.get("status"),
         "response_text": response if generation.get("ok", False) else "",
+        "scoring_source_channel": "content",
+        "thinking_channel_excluded_from_scoring": True,
         "metrics": copy.deepcopy(generation.get("metrics") or {}),
         "timing": copy.deepcopy(generation.get("timing") or {}),
         "phase_metrics": copy.deepcopy(generation.get("phase_metrics") or {}),

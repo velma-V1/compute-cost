@@ -66,6 +66,17 @@ def test_parser_supports_sequential_characterization_campaign():
     assert args.suite.endswith("benchmarks\\qwen-characterization-v1.json") or args.suite.endswith("benchmarks/qwen-characterization-v1.json")
 
 
+def test_parser_supports_zero_call_test12_reanalysis():
+    parser = build_parser()
+    args = parser.parse_args([
+        "gpt20b-test1.2-reanalyze",
+        "--collection-run",
+        "collection-123",
+    ])
+    assert args.command == "gpt20b-test1.2-reanalyze"
+    assert args.collection_run == "collection-123"
+
+
 def test_parser_supports_compare_replay_and_verify():
     parser = build_parser()
     assert parser.parse_args(["compare", "run-a", "run-b"]).runs == ["run-a", "run-b"]

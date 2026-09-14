@@ -14,6 +14,7 @@ from .gpt_oss_calibration import materialize_gpt_oss_suite
 from .hardware import collect_hardware_snapshot
 from .report import compare_runs
 from .runner import BenchmarkRunner
+from .test12_campaign import reanalyze_test12_collection
 from .runtimes.ollama import OllamaAdapter
 from .runtimes.oversized_moe import OversizedMoEAdapter
 
@@ -98,6 +99,47 @@ def build_parser() -> argparse.ArgumentParser:
     test11.add_argument("--pull", action="store_true", help="Pull the model if it is not already local.")
     test11.add_argument("--dry-run", action="store_true", help="Validate Test 1.1 with zero model calls; uses synthetic source evidence when --test1-run is omitted.")
 
+    test12 = sub.add_parser(
+        "gpt20b-test1.2",
+        help="Run the <=7h44 Test 1.2 collection campaign for model-to-harness compilation.",
+    )
+    test12.add_argument("--model", default="gpt-oss:20b")
+    test12.add_argument("--suite", default=str(DEFAULT_CAPABILITY_SUITE_PATH))
+    test12.add_argument("--taxonomy", default=str(DEFAULT_CAPABILITY_TAXONOMY_PATH))
+    test12.add_argument("--seed-run", default=None, help="Optional prior Test-1.1 run ID used only as a seed library. New-model collection needs no prior run.")
+    test12.add_argument("--pull", action="store_true", help="Pull the model if it is not already local.")
+    test12.add_argument("--dry-run", action="store_true", help="Validate Test 1.2 with zero model calls. New-model collection requires no prior run.")
+    test12.add_argument(
+        "--resume-run",
+        default=None,
+        help="Resume the same interrupted Test 1.2 collection run ID. Preserves valid evidence and remaining time/call budgets; never starts a full rerun.",
+    )
+
+    test12_reanalyze = sub.add_parser(
+        "gpt20b-test1.2-reanalyze",
+        help=(
+            "Recompute Test 1.2 semantic control clustering and capability-floor "
+            "registry from an existing Collection with zero model/runtime calls."
+        ),
+    )
+    test12_reanalyze.add_argument("--collection-run", required=True)
+
+    test12_tune = sub.add_parser(
+        "gpt20b-test1.2-tune",
+        help="Compile a provisional model-specific harness from a completed Test-1.2 collection run using VALIDATION only; preserves all holdouts for proof.",
+    )
+    test12_tune.add_argument("--model", default="gpt-oss:20b")
+    test12_tune.add_argument("--suite", default=str(DEFAULT_CAPABILITY_SUITE_PATH))
+    test12_tune.add_argument("--taxonomy", default=str(DEFAULT_CAPABILITY_TAXONOMY_PATH))
+    test12_tune.add_argument("--collection-run", required=True)
+    test12_tune.add_argument("--pull", action="store_true")
+    test12_tune.add_argument("--dry-run", action="store_true")
+    test12_tune.add_argument(
+        "--resume-run",
+        default=None,
+        help="Resume the same interrupted Test 1.2 validation/compiler run ID without reopening completed work or resetting the winner lock.",
+    )
+
     test2 = sub.add_parser(
         "gpt20b-test2",
         help="Run the frozen seven-hour GPT-20B break/recover/distill/finalization campaign.",
@@ -105,7 +147,7 @@ def build_parser() -> argparse.ArgumentParser:
     test2.add_argument("--model", default="gpt-oss:20b")
     test2.add_argument("--suite", default=str(DEFAULT_CAPABILITY_SUITE_PATH))
     test2.add_argument("--taxonomy", default=str(DEFAULT_CAPABILITY_TAXONOMY_PATH))
-    test2.add_argument("--test1-run", default=None, help="Completed Test-1 run ID. Required for a real Test-2 run.")
+    test2.add_argument("--test1-run", default=None, help="Completed provisional Test-1.2 tuning run ID for exact proof, or a legacy Test-1 run ID. Required for a real Test-2 run.")
     test2.add_argument("--pull", action="store_true", help="Pull the model if it is not already local.")
     test2.add_argument("--dry-run", action="store_true", help="Validate Test 2 with zero model calls; uses a synthetic handoff when --test1-run is omitted.")
 
@@ -223,6 +265,14 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(json.dumps(result, indent=2, sort_keys=True))
         return 0 if not problems else 2
 
+    if args.command == "gpt20b-test1.2-reanalyze":
+        result = reanalyze_test12_collection(
+            results_root,
+            args.collection_run,
+        )
+        print(json.dumps(result, indent=2, sort_keys=True, default=str))
+        return 0
+
     config = _config_from_args(args)
     endpoint = config.get("runtime", {}).get("endpoint", "http://127.0.0.1:11434")
     timeout = float(config.get("limits", {}).get("request_timeout_s", 120))
@@ -278,6 +328,40 @@ def main(argv: Sequence[str] | None = None) -> int:
             pull=bool(args.pull),
             test1_run=args.test1_run,
             dry_run=bool(args.dry_run),
+        )
+        print(json.dumps({"run_id": run_dir.name, "run_dir": str(run_dir)}, indent=2))
+        return 0
+
+    if args.command == "gpt20b-test1.2":
+        taxonomy = _load_taxonomy(args.taxonomy)
+        validate_capability_suite(suite, taxonomy)
+        suite = materialize_gpt_oss_suite(suite, taxonomy)
+        validate_capability_suite(suite, taxonomy)
+        suite = normalize_capability_suite(suite)
+        runner = BenchmarkRunner(runtime, config, suite, results_root=results_root)
+        run_dir = runner.gpt20b_test12(
+            args.model,
+            pull=bool(args.pull),
+            seed_run=args.seed_run,
+            dry_run=bool(args.dry_run),
+            resume_run=args.resume_run,
+        )
+        print(json.dumps({"run_id": run_dir.name, "run_dir": str(run_dir)}, indent=2))
+        return 0
+
+    if args.command == "gpt20b-test1.2-tune":
+        taxonomy = _load_taxonomy(args.taxonomy)
+        validate_capability_suite(suite, taxonomy)
+        suite = materialize_gpt_oss_suite(suite, taxonomy)
+        validate_capability_suite(suite, taxonomy)
+        suite = normalize_capability_suite(suite)
+        runner = BenchmarkRunner(runtime, config, suite, results_root=results_root)
+        run_dir = runner.gpt20b_test12_tune(
+            args.model,
+            collection_run=args.collection_run,
+            pull=bool(args.pull),
+            dry_run=bool(args.dry_run),
+            resume_run=args.resume_run,
         )
         print(json.dumps({"run_id": run_dir.name, "run_dir": str(run_dir)}, indent=2))
         return 0

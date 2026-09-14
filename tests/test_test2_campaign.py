@@ -5,6 +5,8 @@ from pathlib import Path
 
 import pytest
 
+import compute_cost.test2_campaign as test2_module
+
 from compute_cost.config import load_config
 from compute_cost.evidence import EvidenceStore
 from compute_cost.runner import BenchmarkRunner
@@ -13,6 +15,8 @@ from compute_cost.test2_campaign import (
     HARD_SECONDS,
     REQUIRED_OUTPUTS,
     Test2Campaign,
+    _effect_map,
+    _final_recipe_registry,
     build_test2_plan,
     load_test1_handoff,
     source_recipes,
@@ -198,3 +202,1211 @@ def test_campaign_refuses_test3_protected_fixture(tmp_path: Path):
 
     with pytest.raises(ValueError, match="Test-3 protected"):
         campaign._assert_partition_allowed(protected)
+
+
+
+def test_test2_invalid_delta_persists_as_null_not_fake_zero():
+    class Store:
+        @staticmethod
+        def append_jsonl(*args, **kwargs):
+            return None
+
+    class Runner:
+        store = Store()
+
+        @staticmethod
+        def _utc():
+            return "2026-09-14T00:00:00Z"
+
+    campaign = Test2Campaign.__new__(Test2Campaign)
+    campaign.runner = Runner()
+    campaign.rows = []
+    campaign.cfg = {"generation_budget": 512}
+    campaign._partition = lambda case: "VALIDATION"
+
+    row = campaign._record(
+        {
+            "id": "case-a",
+            "category": "arithmetic_numerical_reasoning",
+            "difficulty_level": 6,
+        },
+        {
+            "score": None,
+            "classification": {
+                "result_class": "THINK_TRUNCATED",
+                "valid_for_capability": False,
+            },
+            "experiment": {
+                "experiment_id": "exp-a",
+                "generation_budget": 512,
+            },
+        },
+        phase="recurrence_higher_order",
+        kind="recurrence",
+        recipe={
+            "ingredient_ids": ["ING-001"],
+            "dose": 1.0,
+            "representation": "prose",
+            "placement": "prefix",
+        },
+        baseline_score=1.0,
+        baseline_valid=True,
+        baseline_budget=512,
+        source_key="x",
+    )
+    assert row["delta_valid"] is False
+    assert row["delta"] is None
+    assert row["censored_for_capability"] is True
+    assert row["censoring_class"] == "THINK_TRUNCATED"
+
+
+def test_test2_effect_map_reports_informative_censoring_instead_of_null():
+    recipe = {
+        "ingredient_ids": ["ING-001"],
+        "dose": 1.0,
+        "representation": "prose",
+        "placement": "prefix",
+    }
+    rows = [
+        {
+            "kind": "recurrence",
+            "recipe": recipe,
+            "delta_valid": False,
+            "delta": None,
+            "censored_for_capability": True,
+        }
+        for _ in range(4)
+    ] + [{
+        "kind": "recurrence",
+        "recipe": recipe,
+        "delta_valid": True,
+        "delta": 1.0,
+        "censored_for_capability": False,
+    }]
+    effects = _effect_map(
+        rows,
+        noise_sigma=0.1,
+        bootstrap_samples=20,
+        max_censoring_rate=0.20,
+        key_fn=lambda row: "CTRL",
+    )
+    summary = effects["CTRL"]
+    assert summary["raw_n"] == 5
+    assert summary["valid_n"] == 1
+    assert summary["censored_n"] == 4
+    assert summary["censoring_rate"] == 0.8
+    assert summary["classification"] == "CENSORING_DOMINATED"
+    assert summary["requires_own_budget_cost_probe"] is True
+
+
+def test_final_recipe_cannot_be_shipping_verified_without_harm_evidence():
+    recipe = {
+        "ingredient_ids": ["ING-001"],
+        "dose": 1.0,
+        "representation": "prose",
+        "placement": "prefix",
+    }
+    key = "ING-001"
+    knockouts = {
+        key: {
+            "minimal_recipe": recipe,
+            "required_ingredients": ["ING-001"],
+            "removable_ingredients": [],
+        }
+    }
+    blind = {
+        "effects": {
+            key: {
+                "classification": "STRONG",
+                "normalized_effect": 1.0,
+            }
+        }
+    }
+
+    missing = _final_recipe_registry(knockouts, blind, {})
+    assert missing[0]["verified_for_shipping"] is False
+
+    safe = _final_recipe_registry(
+        knockouts,
+        blind,
+        {
+            key: {
+                "harm_evidence_sufficient": True,
+                "harm_safe": True,
+                "break_rate": 0.0,
+            }
+        },
+    )
+    assert safe[0]["scientifically_supported"] is True
+    assert safe[0]["verified_for_shipping"] is False
+    assert safe[0]["shipping_block_reason"] == "NON_TEST1.2_PROVENANCE"
+
+
+def test_test2_control_does_not_mutate_resolved_family_budget(monkeypatch):
+    class Store:
+        @staticmethod
+        def append_jsonl(*args, **kwargs):
+            return None
+
+    class Runner:
+        def __init__(self):
+            self.config = load_config()
+            self.progress = None
+            self.store = Store()
+            self.model = "gpt-oss:20b"
+
+        @staticmethod
+        def _utc():
+            return "2026-09-14T00:00:00Z"
+
+    cases = _cases()
+    runner = Runner()
+    handoff = synthetic_test1_handoff(cases)
+    case = partition_cases(cases)["VALIDATION"][0]
+    family = case["category"]
+    handoff["generation_budget_by_family"] = {family: 1024}
+    campaign = Test2Campaign(runner, cases, handoff)
+    before = dict(campaign.generation_budget_by_family)
+
+    def fake_execute(runner, case, spec, parent=None, messages_override=None):
+        return {
+            "score": 1.0,
+            "classification": {
+                "result_class": "ANSWER_CORRECT",
+                "valid_for_capability": True,
+            },
+            "experiment": {
+                "experiment_id": spec.experiment_id,
+                "generation_budget": spec.generation_budget,
+            },
+            "timing": {},
+            "evidence_refs": {},
+        }
+
+    monkeypatch.setattr(test2_module, "execute_experiment", fake_execute)
+    result = campaign.control(
+        case,
+        campaign.clock() + 100.0,
+        phase="unit",
+        force=True,
+    )
+
+    assert result == 1.0
+    assert campaign.current_baseline_budgets[case["id"]] == 1024
+    assert campaign.generation_budget_by_family == before
+    assert (campaign.cfg.get("generation_budget_by_family") or {}) == {}
+
+
+def test_test12_exact_source_recipes_preserve_semantic_hash():
+    intervention = {
+        "id": "CTRL-EXACT",
+        "category": "PROMPT_CONTROL",
+        "mode": "single",
+        "instruction": "Preserve this exact instruction.",
+    }
+    semantic_hash = test2_module._intervention_fingerprint(intervention)
+    handoff = {
+        "handoff_mode": "TEST12_EXACT",
+        "test12_exact_controls": [{
+            "intervention_id": "CTRL-EXACT",
+            "exact_test12_intervention": intervention,
+            "discovery_semantic_hash": semantic_hash,
+            "proof_semantic_hash": semantic_hash,
+            "ingredient_ids": ["TEST12:CTRL-EXACT"],
+        }],
+    }
+
+    recipes = source_recipes(handoff)
+    assert len(recipes) == 1
+    assert recipes[0]["exact_test12_intervention"] == intervention
+    assert recipes[0]["proof_semantic_hash"] == semantic_hash
+
+    two_cells = json.loads(json.dumps(handoff))
+    two_cells["test12_exact_controls"][0]["proof_cell_key"] = "MECH|family-a"
+    second = json.loads(json.dumps(two_cells["test12_exact_controls"][0]))
+    second["proof_cell_key"] = "MECH|family-b"
+    two_cells["test12_exact_controls"].append(second)
+    cell_recipes = source_recipes(two_cells, limit=1)
+    assert len(cell_recipes) == 2
+    assert test2_module._recipe_key(cell_recipes[0]) != test2_module._recipe_key(cell_recipes[1])
+
+    mutated = json.loads(json.dumps(handoff))
+    mutated["test12_exact_controls"][0]["exact_test12_intervention"]["instruction"] = "Changed"
+    with pytest.raises(ValueError, match="semantic drift"):
+        source_recipes(mutated)
+
+
+def test_exact_policy_finalization_requires_blind_harm_and_local_cell_proof():
+    intervention = {
+        "id": "CTRL-EXACT",
+        "category": "PROMPT_CONTROL",
+        "mode": "single",
+        "instruction": "Exact",
+    }
+    semantic_hash = test2_module._intervention_fingerprint(intervention)
+    recipe = {
+        "intervention_id": "CTRL-EXACT",
+        "exact_test12_intervention": intervention,
+        "discovery_semantic_hash": semantic_hash,
+        "proof_semantic_hash": semantic_hash,
+        "proof_cell_key":"MECH|family-a",
+        "proof_family_id":"family-a",
+        "ingredient_ids": ["TEST12:CTRL-EXACT"],
+    }
+    policy = {
+        "policy_id": "STATIC-CTRL-EXACT",
+        "mode": "static",
+        "intervention_id": "CTRL-EXACT",
+        "intervention": intervention,
+        "test2_cell_gate_applied":True,
+    }
+    policy_lock = test2_module.hashlib.sha256(
+        json.dumps(policy, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+    blind_key = "POLICY-" + policy_lock[:16]
+    cell_resolution = {
+        "cells":[{
+            "cell_key":"MECH|family-a",
+            "family_id":"family-a",
+            "intervention_id":"CTRL-EXACT",
+            "evidence_resolved":True,
+            "route_fireable":True,
+            "shipping_state":"ACTIVE_VERIFIED",
+        }],
+        "active_cells":[{
+            "cell_key":"MECH|family-a",
+            "family_id":"family-a",
+            "intervention_id":"CTRL-EXACT",
+            "evidence_resolved":True,
+            "route_fireable":True,
+        }],
+        "disabled_cells":[],
+        "aggregate":{
+            "unit_count":1,
+            "resolved_unit_count":1,
+            "unresolved_unit_count":0,
+            "fireable_unit_count":1,
+            "unresolved_fireable_count":0,
+            "aggregate_shipping_valid":True,
+        },
+    }
+    blind = {
+        "locked_policy_proved_exactly": True,
+        "locked_policy": policy,
+        "policy_lock_sha256": policy_lock,
+        "cell_resolution":cell_resolution,
+        "effects": {
+            blind_key: {
+                "classification": "PROMISING",
+                "normalized_effect": 0.2,
+            }
+        },
+    }
+    harm_summary = {
+        "recipe":recipe,
+        "harm_evidence_sufficient": True,
+        "harm_safe": True,
+        "break_rate_wilson90": [0.0, 0.04],
+    }
+
+    class Campaign:
+        recipes = [recipe]
+        provenance_mode = "TEST1.2_COMPILER_MANIFEST"
+        test12_shipping_claim_eligible = True
+        cell_resolution_map = cell_resolution
+        harm_evidence = {"harm":harm_summary}
+
+    campaign = Campaign()
+    rows = _final_recipe_registry(
+        {},
+        blind,
+        campaign.harm_evidence,
+        campaign=campaign,
+    )
+    assert len(rows) == 1
+    assert rows[0]["verified_for_shipping"] is True
+    assert rows[0]["unresolved_cell_count"] == 0
+    assert rows[0]["recipe"]["exact_locked_policy"] == policy
+    assert rows[0]["semantic_translation_used"] is False
+
+    campaign.harm_evidence["harm"]["harm_safe"] = False
+    blocked = _final_recipe_registry(
+        {},
+        blind,
+        campaign.harm_evidence,
+        campaign=campaign,
+    )
+    assert blocked[0]["verified_for_shipping"] is False
+
+def test_aggregate_validity_reports_unresolved_units_instead_of_absorbing_them():
+    unresolved_fireable = test2_module._aggregate_unit_validity([
+        {"cell_key":"a","evidence_resolved":True,"route_fireable":True},
+        {"cell_key":"b","evidence_resolved":False,"route_fireable":True},
+    ])
+    assert unresolved_fireable["unresolved_unit_count"] == 1
+    assert unresolved_fireable["unresolved_fireable_count"] == 1
+    assert unresolved_fireable["aggregate_shipping_valid"] is False
+
+    unresolved_disabled = test2_module._aggregate_unit_validity([
+        {"cell_key":"a","evidence_resolved":True,"route_fireable":True},
+        {"cell_key":"b","evidence_resolved":False,"route_fireable":False},
+    ])
+    assert unresolved_disabled["unresolved_unit_count"] == 1
+    assert unresolved_disabled["unresolved_fireable_count"] == 0
+    assert unresolved_disabled["aggregate_shipping_valid"] is True
+
+
+def test_cell_resolution_explicitly_disables_unresolved_route_before_blind():
+    def make_recipe(ident, family, lane, index):
+        intervention = {"id":ident,"category":"PROMPT_CONTROL","mode":"single"}
+        semantic = test2_module._intervention_fingerprint(intervention)
+        return {
+            "intervention_id":ident,
+            "exact_test12_intervention":intervention,
+            "discovery_semantic_hash":semantic,
+            "proof_cell_key":f"MECH|{family}",
+            "proof_family_id":family,
+            "proof_lane":lane,
+            "compiler_queue_index":index,
+            "ingredient_ids":[f"TEST12:{ident}"],
+        }
+
+    promoted = make_recipe("CTRL-A","family-a","promotion",0)
+    unknown = make_recipe("CTRL-B","family-b","unknown_resolution",1)
+
+    class Campaign:
+        recipes = [promoted, unknown]
+        handoff = {
+            "winner_policy":{
+                "policy_id":"ROUTER",
+                "mode":"router",
+                "route_map":{"PLAN":"CTRL-A","VERIFY":"CTRL-B"},
+            },
+            "test2_proof_manifest":{
+                "queues":{
+                    "promotion":[{
+                        "cell_key":"MECH|family-a",
+                        "family_id":"family-a",
+                        "intervention_id":"CTRL-A",
+                        "policy_reachable":True,
+                        "test1_2_effect_state":"conditional",
+                    }],
+                    "unknown_resolution":[{
+                        "cell_key":"MECH|family-b",
+                        "family_id":"family-b",
+                        "intervention_id":"CTRL-B",
+                        "policy_reachable":True,
+                        "test1_2_effect_state":"unknown",
+                    }],
+                    "harm":[],
+                    "censoring":[],
+                    "skip_verified_null":[],
+                },
+                "policy_referenced_controls_without_observed_validation_route":[],
+            },
+        }
+        proof_scheduler_audit = {
+            "candidates":{
+                test2_module._recipe_key(promoted):{
+                    "settled":True,
+                    "scientific_resolution":"POSITIVE",
+                },
+                test2_module._recipe_key(unknown):{
+                    "settled":True,
+                    "scientific_resolution":"UNKNOWN",
+                },
+            },
+        }
+        harm_evidence = {
+            "a":{"recipe":promoted,"harm_evidence_sufficient":True,"harm_safe":True},
+            "b":{"recipe":unknown,"harm_evidence_sufficient":True,"harm_safe":True},
+        }
+
+    result = test2_module._resolve_test2_cell_shipping_policy(
+        Campaign(), {}, {"findings":{}}
+    )
+    states = {row["cell_key"]:row["shipping_state"] for row in result["cells"]}
+    assert states["MECH|family-a"] == "ACTIVE_VERIFIED"
+    assert states["MECH|family-b"] == "DISABLED_UNRESOLVED"
+    assert result["aggregate"]["unresolved_unit_count"] == 1
+    assert result["aggregate"]["unresolved_fireable_count"] == 0
+    assert result["aggregate"]["aggregate_shipping_valid"] is True
+    assert result["narrowed_policy"]["disabled_cells"][0]["cell_key"] == "MECH|family-b"
+
+
+def test_standalone_provenance_is_explicit_and_cannot_ship():
+    provenance = test2_module._handoff_provenance(synthetic_test1_handoff(_cases()))
+    assert provenance["standalone_non_test12"] is True
+    assert provenance["test12_shipping_claim_eligible"] is False
+    with pytest.raises(ValueError, match="explicit non-Test1.2 provenance"):
+        test2_module._handoff_provenance({})
+
+
+def test_exact_recovery_scheduler_prefers_same_family_then_verified_transfer():
+    def make_recipe(ident, family, index, calls):
+        intervention = {"id":ident,"category":"PROMPT_CONTROL","mode":"single"}
+        semantic = test2_module._intervention_fingerprint(intervention)
+        return {
+            "intervention_id":ident,
+            "exact_test12_intervention":intervention,
+            "discovery_semantic_hash":semantic,
+            "proof_cell_key":f"{ident}|{family}",
+            "proof_family_id":family,
+            "proof_lane":"promotion",
+            "compiler_queue_index":index,
+            "bound_cost":{"calls":{"mean":calls}},
+            "ingredient_ids":[f"TEST12:{ident}"],
+        }
+
+    same_verified = make_recipe("A","family-a",3,4)
+    same_unresolved = make_recipe("B","family-a",1,1)
+    cross_verified = make_recipe("C","family-b",0,1)
+    cross_unresolved = make_recipe("D","family-c",2,0.5)
+
+    class Campaign:
+        handoff = {"handoff_mode":"TEST12_EXACT"}
+        cfg = {"max_recovery_recipes":4,"recovery_exploration_reserve":1}
+        recipes = [cross_unresolved,cross_verified,same_unresolved,same_verified]
+        proof_scheduler_audit = {
+            "candidates":{
+                test2_module._recipe_key(same_verified):{
+                    "settled":True,"scientific_resolution":"POSITIVE"
+                },
+                test2_module._recipe_key(same_unresolved):{
+                    "settled":False,"scientific_resolution":None
+                },
+                test2_module._recipe_key(cross_verified):{
+                    "settled":True,"scientific_resolution":"POSITIVE"
+                },
+                test2_module._recipe_key(cross_unresolved):{
+                    "settled":False,"scientific_resolution":None
+                },
+            }
+        }
+
+    selected = test2_module._recovery_candidates(
+        Campaign(),
+        {"id":"x","family_id":"family-a","category":"family-a"},
+    )
+    classes = [row["_recovery_selection_class"] for row in selected]
+    assert classes[:3] == [
+        "SAME_FAMILY_VERIFIED",
+        "SAME_FAMILY_UNRESOLVED",
+        "VERIFIED_TRANSFER_CANDIDATE",
+    ]
+    assert classes[-1] == "EXPLICIT_EXPLORATION_RESERVE"
+
+
+def test_exact_unicorn_search_targets_policy_families_before_open_reserve():
+    intervention = {"id":"A","category":"PROMPT_CONTROL","mode":"single"}
+    semantic = test2_module._intervention_fingerprint(intervention)
+    recipe = {
+        "intervention_id":"A",
+        "exact_test12_intervention":intervention,
+        "discovery_semantic_hash":semantic,
+        "proof_cell_key":"A|family-a",
+        "proof_family_id":"family-a",
+        "proof_lane":"unknown_resolution",
+        "compiler_queue_index":0,
+        "ingredient_ids":["TEST12:A"],
+    }
+
+    class Campaign:
+        handoff = {"handoff_mode":"TEST12_EXACT"}
+        recipes = [recipe]
+        proof_scheduler_audit = {"candidates":{}}
+        partitions = {
+            "VALIDATION":[
+                {"id":"a","family_id":"family-a","category":"family-a","difficulty_level":5},
+                {"id":"z","family_id":"family-z","category":"family-z","difficulty_level":10},
+            ]
+        }
+        cfg = {"unicorn_open_reserve_max_calls":0}
+        noise_sigma = 0.1
+        unicorn_search_audit = {}
+        calls = []
+
+        @classmethod
+        def can_start(cls, deadline):
+            return len(cls.calls) < 4
+
+        @classmethod
+        def clock(cls):
+            return float(len(cls.calls))
+
+        @classmethod
+        def treatment(cls, case, deadline, **kwargs):
+            cls.calls.append(case["family_id"])
+            return {
+                "delta_valid":False,
+                "classification":{"result_class":"THINK_TRUNCATED"},
+            }
+
+    campaign = Campaign()
+    test2_module.phase_purple_unicorn(campaign,100.0,{}, {})
+    assert Campaign.calls
+    assert set(Campaign.calls) == {"family-a"}
+    assert campaign.unicorn_search_audit["target_families"] == ["family-a"]
+    assert campaign.unicorn_search_audit["open_reserve_calls"] == 0
+
+
+def test_exact_knockout_uses_compiler_order_not_effect_size():
+    def make_summary(ident, queue_index, effect):
+        intervention = {"id":ident,"category":"PROMPT_CONTROL","mode":"single"}
+        semantic = test2_module._intervention_fingerprint(intervention)
+        return {
+            "normalized_effect":effect,
+            "n":6,
+            "median_delta":effect,
+            "recipe":{
+                "intervention_id":ident,
+                "exact_test12_intervention":intervention,
+                "discovery_semantic_hash":semantic,
+                "proof_cell_key":f"{ident}|family",
+                "proof_family_id":"family",
+                "compiler_queue_index":queue_index,
+                "ingredient_ids":[f"TEST12:{ident}"],
+            },
+        }
+
+    class Campaign:
+        handoff = {"handoff_mode":"TEST12_EXACT"}
+
+    records = test2_module.phase_knockout(
+        Campaign(),
+        100.0,
+        {
+            "high-effect":make_summary("HIGH",1,100.0),
+            "low-effect":make_summary("LOW",0,0.01),
+        },
+    )
+    assert list(records) == ["low-effect","high-effect"]
+
+
+def test_stopping_rule_2_uses_fresh_blind_cost_exchange():
+    class Runner:
+        model = "gpt-oss:20b"
+        results_root = Path("__missing__")
+
+    class Campaign:
+        runner = Runner()
+        cfg = {
+            "harm_max_break_rate": 0.05,
+            "policy_cost_ratio_ceiling": 1.25,
+            "minimum_accuracy_advantage_when_over_cost_ceiling": 0.02,
+        }
+        harm_evidence = {}
+
+    blind = {
+        "effects": {
+            "POLICY-x": {
+                "normalized_effect": 0.1,
+            }
+        },
+        "policy_cost_exchange": {
+            "mean_policy_cost_ratio": 2.0,
+            "accuracy_advantage": 0.0,
+        },
+    }
+    limits = {"phenotypes": {}}
+
+    result = test2_module._build_harness_stopping_rules(Campaign(), blind, limits)
+    by_id = {row["id"]: row for row in result["rules"]}
+    assert by_id["STOP-2"]["triggered"] is True
+    assert result["stop_shipping_new_controls"] is True
+
+
+def test_holdout_partition_is_consumed_once_across_runs(tmp_path):
+    fixtures = [
+        {"id": "blind-1"},
+        {"id": "blind-2"},
+    ]
+
+    class Store:
+        def __init__(self, root, run_id):
+            self.run_id = run_id
+            self.run_dir = root / run_id
+            self.run_dir.mkdir()
+
+        def write_json(self, name, payload, **kwargs):
+            (self.run_dir / name).write_text(json.dumps(payload), encoding="utf-8")
+
+    class Runner:
+        def __init__(self, root, run_id):
+            self.results_root = root
+            self.store = Store(root, run_id)
+
+    class Campaign:
+        def __init__(self, root, run_id):
+            self.runner = Runner(root, run_id)
+            self.cfg = {"holdout_max_cross_run_acceptance_uses": 1}
+
+    first = Campaign(tmp_path, "cycle-1")
+    claim = test2_module._claim_holdout_partition(first, "TEST2_BLIND", fixtures)
+    assert claim["status"] == "CONSUMED_ON_EXPOSURE"
+    assert claim["retire_permanently_after_cycle"] is True
+
+    second = Campaign(tmp_path, "cycle-2")
+    with pytest.raises(ValueError, match="already been consumed"):
+        test2_module._claim_holdout_partition(second, "TEST2_BLIND", fixtures)
+
+
+
+def test_mixed_invalid_failure_evidence_cannot_enter_finetuning():
+    cases = [
+        {
+            "id": f"mix-{i}",
+            "category": "reasoning",
+            "family_id": "reasoning",
+            "difficulty_level": 5,
+            "prompt": f"q{i}",
+            "scorer": "exact",
+            "expected": "x",
+        }
+        for i in range(4)
+    ]
+
+    class Campaign:
+        case_by_id = {case["id"]: case for case in cases}
+        handoff = {"failures": {"failures": []}, "run_id": "source"}
+        cfg = {"fine_tuning_min_independent_failures": 3}
+
+        @staticmethod
+        def _partition(case):
+            return "VALIDATION"
+
+    Campaign.rows = [
+        {
+            "fixture_id": case["id"],
+            "family_id": "reasoning",
+            "partition": "VALIDATION",
+            "experiment_id": f"exp-{i}",
+            "classification": {
+                "result_class": "ANSWER_WRONG",
+                "valid_for_capability": i < 3,
+            },
+            "valid_for_capability": i < 3,
+        }
+        for i, case in enumerate(cases)
+    ]
+
+    limits, queue, dataset = test2_module._build_model_limit_and_finetuning(
+        Campaign(),
+        {"matrix": {}},
+        {"harm": {"boundary_class": "NEUTRAL"}},
+    )
+    phenotype = next(iter(limits["phenotypes"].values()))
+    assert phenotype["valid_independent_fixture_count"] == 3
+    assert phenotype["invalid_fixture_count"] == 1
+    assert phenotype["owner"] == "SYSTEM_DISAMBIGUATION_REQUIRED"
+    assert queue == []
+    assert dataset == []
+
+
+
+def test_effect_map_uses_fixture_as_unit_of_independence():
+    recipe = {
+        "ingredient_ids": ["ING-001"],
+        "dose": 1.0,
+        "representation": "prose",
+        "placement": "prefix",
+    }
+    rows = []
+    for seed in range(10):
+        rows.append({
+            "kind": "recurrence",
+            "fixture_id": "same-fixture",
+            "seed": seed,
+            "recipe": recipe,
+            "delta_valid": True,
+            "delta": 1.0,
+            "censored_for_capability": False,
+        })
+    rows.append({
+        "kind": "recurrence",
+        "fixture_id": "other-fixture",
+        "seed": 42,
+        "recipe": recipe,
+        "delta_valid": True,
+        "delta": -1.0,
+        "censored_for_capability": False,
+    })
+
+    summary = _effect_map(
+        rows,
+        noise_sigma=0.1,
+        bootstrap_samples=40,
+        key_fn=lambda row: "CTRL",
+    )["CTRL"]
+
+    assert summary["raw_valid_n"] == 11
+    assert summary["independent_fixture_n"] == 2
+    assert summary["unit_of_independence"] == "fixture"
+    assert summary["fixture_ids"] == ["other-fixture", "same-fixture"]
+
+
+def test_effect_map_applies_bh_fdr_to_positive_promotions():
+    recipe = {
+        "ingredient_ids": ["ING-001"],
+        "dose": 1.0,
+        "representation": "prose",
+        "placement": "prefix",
+    }
+    rows = []
+    # Three independent all-positive fixtures are suggestive but the exact
+    # one-sided sign-test p=0.125 cannot survive q<=0.10.
+    for index in range(3):
+        rows.append({
+            "kind": "recurrence",
+            "fixture_id": f"fixture-{index}",
+            "recipe": recipe,
+            "delta_valid": True,
+            "delta": 1.0,
+            "censored_for_capability": False,
+        })
+
+    summary = _effect_map(
+        rows,
+        noise_sigma=0.1,
+        bootstrap_samples=40,
+        fdr_level=0.10,
+        key_fn=lambda row: "CTRL",
+    )["CTRL"]
+
+    assert summary["positive_sign_test_p_value"] == pytest.approx(0.125)
+    assert summary["bh_fdr_q_value"] == pytest.approx(0.125)
+    assert summary["classification"] == "UNCERTAIN_MULTIPLICITY"
+    assert summary["classification_before_multiplicity"] in {"STRONG", "PROMISING"}
+
+
+
+def test_exact_test12_handoff_preserves_failure_provenance(tmp_path: Path):
+    cases = _cases()
+    partitions = partition_cases(cases)
+    source_case = partitions["DISCOVERY"][0]
+    fixture_id = source_case["id"]
+    family = source_case["category"]
+
+    collection_id = "collection-source"
+    collection = EvidenceStore(tmp_path, collection_id)
+    intervention = {
+        "id": "CTRL-EXACT",
+        "category": "PROMPT_CONTROL",
+        "mode": "single",
+        "instruction": "Exact control",
+    }
+    collection.write_json(
+        "full-control-candidate-registry.json",
+        {"candidates": [intervention]},
+        producer="test",
+        stage="test",
+    )
+    collection.write_json(
+        "runtime-characterization-profile.json",
+        {
+            "gate_passed": True,
+            "profile_sha256": "profile-sha",
+            "resolved_generation_budget_by_family": {family: 512},
+        },
+        producer="test",
+        stage="test",
+    )
+    collection.write_json(
+        "mechanism-family-knowledge-table.json",
+        {
+            "schema_version":1,
+            "analysis_type":"MECHANISM_X_CAPABILITY_FAMILY_KNOWLEDGE_TABLE",
+            "cells":{},
+        },
+        producer="test",
+        stage="test",
+    )
+    collection.write_json(
+        "unaided-model-capability-profile.json",
+        {
+            "schema_version":1,
+            "analysis_type":"UNAIDED_MODEL_CAPABILITY_PROFILE",
+            "families":{},
+        },
+        producer="test",
+        stage="test",
+    )
+    collection.write_json(
+        "test1.2-handoff.json",
+        {
+            "schema_version": 1,
+            "intervention_semantic_hashes": {
+                "CTRL-EXACT": test2_module._intervention_fingerprint(intervention)
+            },
+        },
+        producer="test",
+        stage="test",
+    )
+    collection.write_json(
+        "test1.2-opportunity-discovery-map.json",
+        {"unresolved_failed_fixtures": [fixture_id]},
+        producer="test",
+        stage="test",
+    )
+    collection.write_json(
+        "control-redundancy-map.json",
+        {
+            "schema_version": 1,
+            "clusters": [],
+            "representative_intervention_ids": [],
+            "alternate_intervention_ids": [],
+        },
+        producer="test",
+        stage="test",
+    )
+    collection.append_jsonl(
+        "test1.2-observations.jsonl",
+        {
+            "fixture_id": fixture_id,
+            "family_id": family,
+            "difficulty_level": source_case["difficulty_level"],
+            "partition": "DISCOVERY",
+            "experiment_id": "baseline-exp",
+            "intervention_id": "CONTROL",
+            "score": 0.0,
+            "valid_for_capability": True,
+            "classification": {
+                "result_class": "ANSWER_WRONG",
+                "valid_for_capability": True,
+            },
+        },
+    )
+    collection.finalize_manifest(metadata={"mode": "test"})
+
+    tuning_id = "tuning-source"
+    tuning = EvidenceStore(tmp_path, tuning_id)
+    tuning.write_json(
+        "test1.2-terminal-handoff.json",
+        {
+            "state": "TEST1.2_PROVISIONAL_COMPILER_COMPLETE",
+            "test2_blind_reserved_and_unexposed": True,
+            "winner_lock_sha256": "winner-lock",
+        },
+        producer="test",
+        stage="test",
+    )
+    tuning.write_json(
+        "inverted-model-integration-package.json",
+        {
+            "release_authorized": False,
+            "collection_run": collection_id,
+        },
+        producer="test",
+        stage="test",
+    )
+    tuning.write_json(
+        "compiled-harness-policy.json",
+        {
+            "winner_policy": {
+                "policy_id": "STATIC-CTRL-EXACT",
+                "mode": "static",
+                "intervention_id": "CTRL-EXACT",
+            }
+        },
+        producer="test",
+        stage="test",
+    )
+    tuning.write_json(
+        "test2-proof-manifest.json",
+        {
+            "schema_version":1,
+            "analysis_type":"COMPILER_DERIVED_TEST2_CELL_PROOF_MANIFEST",
+            "effect_size_used_for_ordering":False,
+            "queue_order_contract":"COMPILABILITY_THEN_EXPECTED_TRAFFIC_THEN_COST_NEVER_EFFECT_SIZE",
+            "queue_counts":{
+                "promotion":1,
+                "unknown_resolution":0,
+                "harm":0,
+                "censoring":0,
+                "skip_verified_null":0,
+                "deferred":0,
+            },
+            "queues":{
+                "promotion":[{
+                    "cell_key":"PROMPT_CONTROL:single:exact|"+family,
+                    "family_id":family,
+                    "intervention_id":"CTRL-EXACT",
+                    "test1_2_effect_state":"conditional",
+                    "test2_action":"PROMOTE_OR_REJECT",
+                    "compilable_status":"COMPILABLE_PENDING_TEST2_PROOF",
+                    "compiler_sort_key":[0,-1,1.0,"cell"],
+                    "condition":{},
+                    "cost":{"calls":{"mean":1.0}},
+                    "unaided_family_baseline":{},
+                    "effect_observation_binding":["obs-a"],
+                }],
+                "unknown_resolution":[],
+                "harm":[],
+                "censoring":[],
+                "skip_verified_null":[],
+                "deferred":[],
+            },
+        },
+        producer="test",
+        stage="test",
+    )
+    tuning.finalize_manifest(metadata={"mode": "test"})
+
+    handoff = load_test1_handoff(tmp_path, tuning_id, cases)
+    failures = handoff["failures"]["failures"]
+    assert len(failures) == 1
+    exact_control = handoff["test12_exact_controls"][0]
+    assert exact_control["discovery_semantic_hash"] == test2_module._intervention_fingerprint(intervention)
+    assert exact_control["semantic_hash_provenance"] == "FINALIZED_TEST1.2_HANDOFF"
+    assert exact_control["proof_lane"] == "promotion"
+    assert exact_control["proof_family_id"] == family
+    assert handoff["proof_queue_order_contract"] == "COMPILABILITY_THEN_EXPECTED_TRAFFIC_THEN_COST_NEVER_EFFECT_SIZE"
+
+    failure = failures[0]
+    assert failure["fixture_id"] == fixture_id
+    assert failure["family_id"] == family
+    assert failure["difficulty_level"] == source_case["difficulty_level"]
+    assert failure["classification"]["result_class"] == "ANSWER_WRONG"
+    assert failure["valid_for_capability"] is True
+    assert failure["source_experiment_id"] == "baseline-exp"
+    assert failure["source_evidence_kind"] == "CAPABILITY_VALID_UNRESOLVED_BASELINE_FAILURE"
+
+
+
+def test_test2_blind_failure_never_enters_finetuning_dataset():
+    cases = [
+        {
+            "id": "valid-a",
+            "category": "reasoning",
+            "family_id": "reasoning",
+            "difficulty_level": 5,
+            "prompt": "a",
+            "scorer": "exact",
+            "expected": "x",
+        },
+        {
+            "id": "valid-b",
+            "category": "reasoning",
+            "family_id": "reasoning",
+            "difficulty_level": 5,
+            "prompt": "b",
+            "scorer": "exact",
+            "expected": "x",
+        },
+        {
+            "id": "blind-c",
+            "category": "reasoning",
+            "family_id": "reasoning",
+            "difficulty_level": 5,
+            "prompt": "c",
+            "scorer": "exact",
+            "expected": "x",
+        },
+    ]
+
+    class Campaign:
+        case_by_id = {case["id"]: case for case in cases}
+        handoff = {"failures": {"failures": []}, "run_id": "source"}
+        cfg = {"fine_tuning_min_independent_failures": 3}
+
+        @staticmethod
+        def _partition(case):
+            return "TEST2_BLIND" if case["id"] == "blind-c" else "VALIDATION"
+
+    Campaign.rows = [
+        {
+            "fixture_id": case["id"],
+            "family_id": "reasoning",
+            "partition": Campaign._partition(case),
+            "experiment_id": f"exp-{case['id']}",
+            "classification": {
+                "result_class": "ANSWER_WRONG",
+                "valid_for_capability": True,
+            },
+            "valid_for_capability": True,
+        }
+        for case in cases
+    ]
+
+    limits, queue, dataset = test2_module._build_model_limit_and_finetuning(
+        Campaign(),
+        {"matrix": {}},
+        {"harm": {"boundary_class": "NEUTRAL"}},
+    )
+
+    assert queue == []
+    assert dataset == []
+    assert all(
+        "blind-c" not in row.get("fixture_ids", [])
+        for row in limits["phenotypes"].values()
+    )
+
+
+
+def test_recurrence_proof_scheduler_requires_independent_fixture_and_seed_coverage():
+    recipe = {
+        "intervention_id": "CTRL-EXACT",
+        "exact_test12_intervention": {
+            "id": "CTRL-EXACT",
+            "category": "PROMPT_CONTROL",
+            "mode": "single",
+        },
+        "discovery_semantic_hash": "abc",
+        "ingredient_ids": ["TEST12:CTRL-EXACT"],
+    }
+
+    class Campaign:
+        cfg = {
+            "recurrence_min_independent_fixtures": 4,
+            "recurrence_min_distinct_seeds": 2,
+            "recurrence_target_valid_observations": 6,
+            "recurrence_max_valid_observations": 12,
+        }
+        handoff = {"required_policy_control_ids": ["CTRL-EXACT"]}
+
+    repeated_one_fixture = [
+        {
+            "phase": "recurrence_higher_order",
+            "fixture_id": "fixture-a",
+            "proof_seed": 42 if index % 2 == 0 else 43,
+            "recipe": recipe,
+            "delta_valid": True,
+            "delta": 1.0,
+        }
+        for index in range(6)
+    ]
+    status = test2_module._recurrence_candidate_status(
+        Campaign(), recipe, repeated_one_fixture
+    )
+    assert status["valid_observations"] == 6
+    assert status["independent_fixture_count"] == 1
+    assert status["distinct_seed_count"] == 2
+    assert status["coverage_ready"] is False
+    assert status["settled"] is False
+    assert status["required_by_frozen_policy"] is True
+
+
+def test_recurrence_proof_scheduler_settles_consistent_effect_after_minimum_coverage():
+    recipe = {
+        "intervention_id": "CTRL-EXACT",
+        "exact_test12_intervention": {
+            "id": "CTRL-EXACT",
+            "category": "PROMPT_CONTROL",
+            "mode": "single",
+        },
+        "discovery_semantic_hash": "abc",
+        "ingredient_ids": ["TEST12:CTRL-EXACT"],
+    }
+
+    class Campaign:
+        cfg = {
+            "recurrence_min_independent_fixtures": 4,
+            "recurrence_min_distinct_seeds": 2,
+            "recurrence_target_valid_observations": 6,
+            "recurrence_max_valid_observations": 12,
+        }
+        handoff = {"required_policy_control_ids": []}
+
+    rows = []
+    fixture_seed = [
+        ("fixture-a", 42),
+        ("fixture-b", 42),
+        ("fixture-c", 43),
+        ("fixture-d", 43),
+        ("fixture-a", 43),
+        ("fixture-b", 43),
+    ]
+    for fixture_id, seed in fixture_seed:
+        rows.append({
+            "phase": "recurrence_higher_order",
+            "fixture_id": fixture_id,
+            "proof_seed": seed,
+            "recipe": recipe,
+            "delta_valid": True,
+            "delta": 1.0,
+        })
+
+    status = test2_module._recurrence_candidate_status(
+        Campaign(), recipe, rows
+    )
+    assert status["coverage_ready"] is True
+    assert status["settled"] is True
+    assert status["settled_reason"] == "CONSISTENT_POSITIVE_MINIMUM_PROOF_MET"
+    assert status["proof_priority"] == -1.0
+
+
+def test_unknown_cell_does_not_become_verified_null_at_recurrence_max():
+    recipe = {
+        "intervention_id":"CTRL-EXACT",
+        "exact_test12_intervention":{
+            "id":"CTRL-EXACT",
+            "category":"PROMPT_CONTROL",
+            "mode":"single",
+        },
+        "discovery_semantic_hash":"abc",
+        "ingredient_ids":["TEST12:CTRL-EXACT"],
+        "proof_cell_key":"MECH|family-a",
+        "proof_family_id":"family-a",
+        "proof_lane":"unknown_resolution",
+        "test1_2_effect_state":"unknown",
+    }
+
+    class Campaign:
+        cfg = {
+            "recurrence_min_independent_fixtures":4,
+            "recurrence_min_distinct_seeds":2,
+            "recurrence_target_valid_observations":6,
+            "recurrence_max_valid_observations":12,
+        }
+        handoff = {"required_policy_control_ids":["CTRL-EXACT"]}
+
+    rows = []
+    for index in range(12):
+        rows.append({
+            "fixture_id":f"fixture-{index % 6}",
+            "proof_seed":42 if index % 2 == 0 else 43,
+            "recipe":recipe,
+            "delta_valid":True,
+            "delta":0.0,
+        })
+
+    status = test2_module._recurrence_candidate_status(
+        Campaign(), recipe, rows
+    )
+    assert status["settled"] is True
+    assert status["scientific_resolution"] == "UNKNOWN"
+    assert status["settled_reason"] == "UNKNOWN_REMAINS_UNRESOLVED_NULL_PRECISION_NOT_MET"
+    assert status["null_observations"] == 12
+
+
+def test_recurrence_next_task_prefers_unseen_fixture_and_seed_debt():
+    recipe = {
+        "intervention_id": "CTRL-EXACT",
+        "exact_test12_intervention": {
+            "id": "CTRL-EXACT",
+            "category": "PROMPT_CONTROL",
+            "mode": "single",
+        },
+        "discovery_semantic_hash": "abc",
+        "ingredient_ids": ["TEST12:CTRL-EXACT"],
+    }
+    fixtures = [
+        {"id": "seen", "category": "reasoning", "difficulty_level": 5},
+        {"id": "unseen-hard", "category": "reasoning", "difficulty_level": 9},
+        {"id": "unseen-easy", "category": "reasoning", "difficulty_level": 2},
+    ]
+    rows = [{
+        "fixture_id": "seen",
+        "proof_seed": 42,
+        "recipe": recipe,
+        "delta_valid": True,
+        "delta": 1.0,
+    }]
+
+    task = test2_module._next_recurrence_task(
+        object(), recipe, fixtures, rows
+    )
+    assert task is not None
+    case, seed = task
+    assert case["id"] == "unseen-hard"
+    assert seed in {43, 44}

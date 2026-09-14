@@ -40,6 +40,30 @@ def _invalid_json_result(response: str, error: dict[str, str]) -> dict[str, Any]
     }
 
 
+def diagnostic_subscore_vector(scoring: dict[str, Any]) -> dict[str, Any]:
+    """Derive a deterministic diagnostic vector without changing hard pass/fail."""
+    checks = [
+        item for item in (scoring.get("checks") or [])
+        if isinstance(item, dict) and "pass" in item
+    ]
+    passed = [item for item in checks if item.get("pass") is True]
+    failed = [item for item in checks if item.get("pass") is not True]
+    total = len(checks)
+    return {
+        "schema_version": 1,
+        "hard_score": scoring.get("score"),
+        "check_count": total,
+        "passed_check_count": len(passed),
+        "failed_check_count": len(failed),
+        "constraint_satisfaction_rate": (
+            len(passed) / total if total else None
+        ),
+        "passed_checks": [str(item.get("name") or "") for item in passed],
+        "failed_checks": [str(item.get("name") or "") for item in failed],
+        "hard_gate_unchanged": True,
+    }
+
+
 def _validate_candidate(source: str, function_name: str) -> str | None:
     try:
         tree = ast.parse(source)

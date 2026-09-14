@@ -5,6 +5,8 @@ from __future__ import annotations
 import copy
 from typing import Any
 
+from .family_routing import classify_family
+
 
 DECISION_ORDER = [
     "CHEAPEST_PROVEN_RAW",
@@ -283,3 +285,34 @@ def route_task(
             }
 
     return _escalate(required, difficulty, "NO_PROVEN_ROUTE")
+
+
+def route_unlabeled_task(
+    policy: dict[str, Any],
+    classifier: dict[str, Any],
+    request_text: str,
+    difficulty: int,
+    *,
+    minimum_classification_margin: float = 0.0,
+    compound_id: str | None = None,
+) -> dict[str, Any]:
+    """Classify an unlabeled request with the same zero-call classifier audited in preflight."""
+    classification = classify_family(request_text, classifier)
+    margin = float(classification.get("classification_margin") or 0.0)
+    if margin < float(minimum_classification_margin):
+        return _escalate(
+            [str(classification["family_id"])],
+            difficulty,
+            "FAMILY_CLASSIFICATION_MARGIN_TOO_LOW",
+            family_classification=classification,
+            minimum_classification_margin=float(minimum_classification_margin),
+        )
+    routed = route_task(
+        policy,
+        [str(classification["family_id"])],
+        difficulty,
+        compound_id=compound_id,
+    )
+    routed["family_classification"] = classification
+    routed["family_classifier_model_calls"] = 0
+    return routed

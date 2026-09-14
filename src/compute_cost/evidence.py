@@ -20,6 +20,12 @@ class EvidenceStore:
         self.run_id = run_id
         self.run_dir = self.root / run_id
         self.run_dir.mkdir(parents=True, exist_ok=True)
+        # In-process digest cache for files written through this EvidenceStore.
+        # Entries are reused only while the on-disk size and mtime fingerprint
+        # still match; external mutation automatically falls back to streaming
+        # re-hash.
+        self._digest_cache: dict[str, dict[str, Any]] = {}
+        self._jsonl_hashers: dict[str, hashlib._Hash] = {}
 
     def _path(self, relative_path: str | Path) -> Path:
         rel = Path(relative_path)
@@ -33,6 +39,44 @@ class EvidenceStore:
     def _sha256(data: bytes) -> str:
         return hashlib.sha256(data).hexdigest()
 
+    @staticmethod
+    def _stream_sha256(path: Path, chunk_bytes: int = 1024 * 1024) -> tuple[int, str]:
+        digest = hashlib.sha256()
+        total = 0
+        with path.open("rb") as handle:
+            while True:
+                chunk = handle.read(chunk_bytes)
+                if not chunk:
+                    break
+                digest.update(chunk)
+                total += len(chunk)
+        return total, digest.hexdigest()
+
+    def _cache_digest(self, path: Path, *, size: int, sha256: str) -> None:
+        stat = path.stat()
+        key = path.relative_to(self.run_dir).as_posix()
+        self._digest_cache[key] = {
+            "bytes": int(size),
+            "sha256": str(sha256),
+            "mtime_ns": int(stat.st_mtime_ns),
+        }
+
+    def _cached_digest(self, path: Path) -> tuple[int, str] | None:
+        key = path.relative_to(self.run_dir).as_posix()
+        cached = self._digest_cache.get(key)
+        if cached is None:
+            return None
+        try:
+            stat = path.stat()
+        except FileNotFoundError:
+            return None
+        if (
+            int(stat.st_size) != int(cached["bytes"])
+            or int(stat.st_mtime_ns) != int(cached["mtime_ns"])
+        ):
+            return None
+        return int(cached["bytes"]), str(cached["sha256"])
+
     def _artifact_record(
         self,
         path: Path,
@@ -41,12 +85,23 @@ class EvidenceStore:
         stage: str | None = None,
         case_id: str | None = None,
         media_type: str | None = None,
+        known_size: int | None = None,
+        known_sha256: str | None = None,
     ) -> dict[str, Any]:
-        data = path.read_bytes()
+        if known_size is not None and known_sha256 is not None:
+            size, sha256 = int(known_size), str(known_sha256)
+            self._cache_digest(path, size=size, sha256=sha256)
+        else:
+            cached = self._cached_digest(path)
+            if cached is None:
+                size, sha256 = self._stream_sha256(path)
+                self._cache_digest(path, size=size, sha256=sha256)
+            else:
+                size, sha256 = cached
         record: dict[str, Any] = {
             "path": path.relative_to(self.run_dir).as_posix(),
-            "bytes": len(data),
-            "sha256": self._sha256(data),
+            "bytes": size,
+            "sha256": sha256,
         }
         if producer is not None:
             record["producer"] = producer
@@ -71,12 +126,17 @@ class EvidenceStore:
         path = self._path(relative_path)
         raw = data.encode("utf-8") if isinstance(data, str) else data
         path.write_bytes(raw)
+        digest = self._sha256(raw)
+        key = path.relative_to(self.run_dir).as_posix()
+        self._jsonl_hashers.pop(key, None)
         return self._artifact_record(
             path,
             producer=producer,
             stage=stage,
             case_id=case_id,
             media_type=media_type,
+            known_size=len(raw),
+            known_sha256=digest,
         )
 
     def write_json(
@@ -100,15 +160,72 @@ class EvidenceStore:
             media_type="application/json",
         )
 
+    def write_json_atomic(
+        self,
+        relative_path: str | Path,
+        value: Any,
+        *,
+        producer: str | None = None,
+        stage: str | None = None,
+        case_id: str | None = None,
+    ) -> dict[str, Any]:
+        """Atomically replace a JSON checkpoint without risking the prior copy."""
+        path = self._path(relative_path)
+        encoded = (
+            json.dumps(value, ensure_ascii=False, sort_keys=True, indent=2, default=str) + "\n"
+        ).encode("utf-8")
+        temp = path.with_name(path.name + ".tmp")
+        temp.write_bytes(encoded)
+        temp.replace(path)
+        digest = self._sha256(encoded)
+        key = path.relative_to(self.run_dir).as_posix()
+        self._jsonl_hashers.pop(key, None)
+        return self._artifact_record(
+            path,
+            producer=producer,
+            stage=stage,
+            case_id=case_id,
+            media_type="application/json",
+            known_size=len(encoded),
+            known_sha256=digest,
+        )
+
     def append_jsonl(self, relative_path: str | Path, value: Any) -> dict[str, Any]:
         path = self._path(relative_path)
         encoded = (json.dumps(value, ensure_ascii=False, sort_keys=True, default=str) + "\n").encode(
             "utf-8"
         )
+        key = path.relative_to(self.run_dir).as_posix()
+
+        hasher = self._jsonl_hashers.get(key)
+        if hasher is not None and self._cached_digest(path) is None:
+            hasher = None
+            self._jsonl_hashers.pop(key, None)
+
+        if hasher is None:
+            hasher = hashlib.sha256()
+            if path.exists():
+                with path.open("rb") as existing:
+                    while True:
+                        chunk = existing.read(1024 * 1024)
+                        if not chunk:
+                            break
+                        hasher.update(chunk)
+            self._jsonl_hashers[key] = hasher
+
         with path.open("ab") as handle:
             handle.write(encoded)
             handle.flush()
-        return self._artifact_record(path, media_type="application/x-ndjson")
+
+        hasher.update(encoded)
+        size = path.stat().st_size
+        digest = hasher.copy().hexdigest()
+        return self._artifact_record(
+            path,
+            media_type="application/x-ndjson",
+            known_size=size,
+            known_sha256=digest,
+        )
 
     def record_capture_gap(
         self,

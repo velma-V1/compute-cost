@@ -81,6 +81,12 @@ def test_generate_derives_observable_thinking_and_answer_phases():
     assert phase["time_to_first_answer_ns"] == 40
     assert phase["thinking_span_ns"] == 10
     assert phase["answer_span_ns"] == 0
+    assert phase["stream_event_count"] == 4
+    assert phase["first_thinking_event_index"] == 0
+    assert phase["first_answer_event_index"] == 2
+    assert phase["thinking_chunks_before_first_answer"] == 2
+    assert phase["thinking_chars_before_first_answer"] == 9
+    assert phase["live_abort_supported_by_current_transport"] is False
     assert "thinking_token_count" not in phase
 
 
