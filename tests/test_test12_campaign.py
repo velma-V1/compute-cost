@@ -591,6 +591,12 @@ def _value_rows_for_one_family():
         "control_cost": dict(base_cost),
         "phase": "mechanism_coverage_floor",
     })
+    for row in rows:
+        row["valid_for_capability"] = True
+        row.setdefault("classification", {})["valid_for_capability"] = True
+        if row.get("intervention_id") != "CONTROL":
+            row["control_valid_for_capability"] = True
+            row["delta_valid"] = True
     return rows
 
 
@@ -1039,12 +1045,16 @@ def test_source_headroom_keeps_unmeasured_cases_unknown_instead_of_failed():
             "partition": "DISCOVERY",
             "fixture_id": cases[0]["id"],
             "score": 1.0,
+            "valid_for_capability": True,
+            "classification": {"valid_for_capability": True},
         },
         {
             "intervention_id": "CONTROL",
             "partition": "DISCOVERY",
             "fixture_id": cases[1]["id"],
             "score": 0.0,
+            "valid_for_capability": True,
+            "classification": {"valid_for_capability": True},
         },
     ]
 
@@ -1489,6 +1499,9 @@ def test_tuning_recovery_salvages_valid_policy_rows_and_preserves_winner_lock(tm
         "score": 1.0,
         "control_score": 1.0,
         "delta": 0.0,
+        "delta_valid": True,
+        "valid_for_capability": True,
+        "control_valid_for_capability": True,
         "model_calls": 1,
     }
     valid["tuning_observation_sha256"] = _tuning_row_hash(valid)
@@ -1648,10 +1661,12 @@ def test_unresolved_failure_queue_prefers_rare_failure_phenotype_and_excludes_re
             "family_id": family,
             "difficulty_level": case["difficulty_level"],
             "score": 0.0,
+            "valid_for_capability": True,
             "classification": {
                 "result_class": "RARE_FAILURE"
                 if case["id"] == "rare-1"
-                else "COMMON_FAILURE"
+                else "COMMON_FAILURE",
+                "valid_for_capability": True,
             },
         })
     fake = type("FakeCampaign", (), {
