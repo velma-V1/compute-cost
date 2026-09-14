@@ -2367,14 +2367,41 @@ Therefore the old full reread bottleneck is no longer the normal path.
 
 ### Highest-value remaining optimization targets
 
-1. richer deterministic diagnostic subscore vectors where binary acceptance hides useful structure;
-2. additional adversarial auditor trust-boundary work:
+The two previously highest-value zero/low-call items are now implemented:
+
+1. **Richer deterministic diagnostic subscore vectors — IMPLEMENTED**
+   - hard pass/fail remains authoritative;
+   - every deterministic scorer can expose passed/failed check counts;
+   - constraint-satisfaction rate and failed-check names are preserved;
+   - the diagnostic vector cannot change the hard acceptance score.
+
+2. **Adversarial auditor trust-boundary measurement — IMPLEMENTED**
+   Stage 0 now probes:
    - candidate prompt injection;
-   - rationale/verdict divergence;
-   - malicious tool-output influence;
-3. live-stream Ollama cancellation support, but only after the shadow early-truncation predictor demonstrates independently acceptable false-positive behavior;
-4. dedicated context/sustained-load confirmation only when their zero-call sentinels show a decision-relevant problem.
+   - malicious/untrusted tool-output influence;
+   - verdict/reason-code internal consistency;
+   - existing candidate-reasoning exposure;
+   - second-pass stability;
+   - candidate-quality sweep.
 
-These are not currently known stop-ship defects.
+   The Stage-0 profile emits `auditor_role_allowed`.
+   Trust failure does **not** invalidate executor capability characterization, but it
+   disqualifies the auditor role from deployment until evidence becomes safe.
 
-Any new measurement-integrity failure should still be patched and covered by a regression test before another long campaign.
+Highest-value remaining optimization targets are now:
+
+1. **Live-stream Ollama cancellation support**, but only after the shadow
+   early-truncation predictor demonstrates independently acceptable false-positive
+   behavior. The current buffered transport must not be treated as cancellable.
+2. **Dedicated context / sustained-load confirmation** only when the existing
+   zero-call sentinels show a decision-relevant problem.
+3. **Broader auditor trust replication** if the new Stage-0 trust probes show any
+   false accepts, tool-output steering, or verdict/reason inconsistency.
+4. **More scorer-specific deterministic subdimensions** where a task has useful
+   structure beyond the generic check vector and can be measured without an LLM
+   judge.
+
+These are optimization targets, not currently known stop-ship defects.
+
+Any new measurement-integrity failure must still be patched and covered by a
+regression test before another long campaign.
