@@ -1594,7 +1594,7 @@ class Test12Campaign:
         *,
         force: bool = False,
     ) -> None:
-        if not self.runtime_profile_sha256:
+        if not self.runtime_profile_sha256 or self.capability_call_origin is None:
             return
         if self.runtime_canary_failed:
             raise ValueError(
