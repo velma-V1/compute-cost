@@ -870,3 +870,129 @@ def test_test2_blind_failure_never_enters_finetuning_dataset():
         "blind-c" not in row.get("fixture_ids", [])
         for row in limits["phenotypes"].values()
     )
+
+
+
+def test_recurrence_proof_scheduler_requires_independent_fixture_and_seed_coverage():
+    recipe = {
+        "intervention_id": "CTRL-EXACT",
+        "exact_test12_intervention": {
+            "id": "CTRL-EXACT",
+            "category": "PROMPT_CONTROL",
+            "mode": "single",
+        },
+        "discovery_semantic_hash": "abc",
+        "ingredient_ids": ["TEST12:CTRL-EXACT"],
+    }
+
+    class Campaign:
+        cfg = {
+            "recurrence_min_independent_fixtures": 4,
+            "recurrence_min_distinct_seeds": 2,
+            "recurrence_target_valid_observations": 6,
+            "recurrence_max_valid_observations": 12,
+        }
+        handoff = {"required_policy_control_ids": ["CTRL-EXACT"]}
+
+    repeated_one_fixture = [
+        {
+            "phase": "recurrence_higher_order",
+            "fixture_id": "fixture-a",
+            "proof_seed": 42 if index % 2 == 0 else 43,
+            "recipe": recipe,
+            "delta_valid": True,
+            "delta": 1.0,
+        }
+        for index in range(6)
+    ]
+    status = test2_module._recurrence_candidate_status(
+        Campaign(), recipe, repeated_one_fixture
+    )
+    assert status["valid_observations"] == 6
+    assert status["independent_fixture_count"] == 1
+    assert status["distinct_seed_count"] == 2
+    assert status["coverage_ready"] is False
+    assert status["settled"] is False
+    assert status["required_by_frozen_policy"] is True
+
+
+def test_recurrence_proof_scheduler_settles_consistent_effect_after_minimum_coverage():
+    recipe = {
+        "intervention_id": "CTRL-EXACT",
+        "exact_test12_intervention": {
+            "id": "CTRL-EXACT",
+            "category": "PROMPT_CONTROL",
+            "mode": "single",
+        },
+        "discovery_semantic_hash": "abc",
+        "ingredient_ids": ["TEST12:CTRL-EXACT"],
+    }
+
+    class Campaign:
+        cfg = {
+            "recurrence_min_independent_fixtures": 4,
+            "recurrence_min_distinct_seeds": 2,
+            "recurrence_target_valid_observations": 6,
+            "recurrence_max_valid_observations": 12,
+        }
+        handoff = {"required_policy_control_ids": []}
+
+    rows = []
+    fixture_seed = [
+        ("fixture-a", 42),
+        ("fixture-b", 42),
+        ("fixture-c", 43),
+        ("fixture-d", 43),
+        ("fixture-a", 43),
+        ("fixture-b", 43),
+    ]
+    for fixture_id, seed in fixture_seed:
+        rows.append({
+            "phase": "recurrence_higher_order",
+            "fixture_id": fixture_id,
+            "proof_seed": seed,
+            "recipe": recipe,
+            "delta_valid": True,
+            "delta": 1.0,
+        })
+
+    status = test2_module._recurrence_candidate_status(
+        Campaign(), recipe, rows
+    )
+    assert status["coverage_ready"] is True
+    assert status["settled"] is True
+    assert status["settled_reason"] == "CONSISTENT_POSITIVE_MINIMUM_PROOF_MET"
+    assert status["proof_priority"] == -1.0
+
+
+def test_recurrence_next_task_prefers_unseen_fixture_and_seed_debt():
+    recipe = {
+        "intervention_id": "CTRL-EXACT",
+        "exact_test12_intervention": {
+            "id": "CTRL-EXACT",
+            "category": "PROMPT_CONTROL",
+            "mode": "single",
+        },
+        "discovery_semantic_hash": "abc",
+        "ingredient_ids": ["TEST12:CTRL-EXACT"],
+    }
+    fixtures = [
+        {"id": "seen", "category": "reasoning", "difficulty_level": 5},
+        {"id": "unseen-hard", "category": "reasoning", "difficulty_level": 9},
+        {"id": "unseen-easy", "category": "reasoning", "difficulty_level": 2},
+    ]
+    rows = [{
+        "fixture_id": "seen",
+        "proof_seed": 42,
+        "recipe": recipe,
+        "delta_valid": True,
+        "delta": 1.0,
+    }]
+
+    task = test2_module._next_recurrence_task(
+        object(), recipe, fixtures, rows
+    )
+    assert task is not None
+    case, seed = task
+    assert case["id"] == "unseen-hard"
+    assert seed in {43, 44}
