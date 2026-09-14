@@ -789,3 +789,73 @@ def test_exact_test12_handoff_preserves_failure_provenance(tmp_path: Path):
     assert failure["valid_for_capability"] is True
     assert failure["source_experiment_id"] == "baseline-exp"
     assert failure["source_evidence_kind"] == "CAPABILITY_VALID_UNRESOLVED_BASELINE_FAILURE"
+
+
+
+def test_test2_blind_failure_never_enters_finetuning_dataset():
+    cases = [
+        {
+            "id": "valid-a",
+            "category": "reasoning",
+            "family_id": "reasoning",
+            "difficulty_level": 5,
+            "prompt": "a",
+            "scorer": "exact",
+            "expected": "x",
+        },
+        {
+            "id": "valid-b",
+            "category": "reasoning",
+            "family_id": "reasoning",
+            "difficulty_level": 5,
+            "prompt": "b",
+            "scorer": "exact",
+            "expected": "x",
+        },
+        {
+            "id": "blind-c",
+            "category": "reasoning",
+            "family_id": "reasoning",
+            "difficulty_level": 5,
+            "prompt": "c",
+            "scorer": "exact",
+            "expected": "x",
+        },
+    ]
+
+    class Campaign:
+        case_by_id = {case["id"]: case for case in cases}
+        handoff = {"failures": {"failures": []}, "run_id": "source"}
+        cfg = {"fine_tuning_min_independent_failures": 3}
+
+        @staticmethod
+        def _partition(case):
+            return "TEST2_BLIND" if case["id"] == "blind-c" else "VALIDATION"
+
+    Campaign.rows = [
+        {
+            "fixture_id": case["id"],
+            "family_id": "reasoning",
+            "partition": Campaign._partition(case),
+            "experiment_id": f"exp-{case['id']}",
+            "classification": {
+                "result_class": "ANSWER_WRONG",
+                "valid_for_capability": True,
+            },
+            "valid_for_capability": True,
+        }
+        for case in cases
+    ]
+
+    limits, queue, dataset = test2_module._build_model_limit_and_finetuning(
+        Campaign(),
+        {"matrix": {}},
+        {"harm": {"boundary_class": "NEUTRAL"}},
+    )
+
+    assert queue == []
+    assert dataset == []
+    assert all(
+        "blind-c" not in row.get("fixture_ids", [])
+        for row in limits["phenotypes"].values()
+    )
