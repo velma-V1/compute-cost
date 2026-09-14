@@ -5549,27 +5549,125 @@ def phase_reserve(campaign: Test12Campaign, deadline: float, summary: dict[str, 
 
 
 def _coverage_ledger(campaign: Test12Campaign) -> dict[str, Any]:
-    by_mechanism: dict[str, dict[str, Any]] = {}
-    for intervention in campaign.interventions:
-        ident = str(intervention["id"])
-        rows = [row for row in campaign.rows if row.get("intervention_id") == ident]
-        by_mechanism[ident] = {
-            "category": intervention["category"],
-            "observations": len(rows),
-            "failure_trials": sum(1 for row in rows if float(row.get("control_score",0.0)) < 1.0),
-            "sentinel_trials": sum(1 for row in rows if float(row.get("control_score",0.0)) >= 1.0),
-            "families": sorted({str(row.get("family_id")) for row in rows}),
-            "phases": sorted({str(row.get("phase")) for row in rows}),
-        }
-    categories = {
-        category: {
-            "mechanisms": sum(1 for row in campaign.interventions if row["category"] == category),
-            "observations": sum(1 for row in campaign.rows if row.get("intervention_category") == category),
-        }
-        for category in sorted({row["category"] for row in campaign.interventions})
-    }
-    return {"schema_version":1,"mechanisms":by_mechanism,"categories":categories}
+    """Preserve variant telemetry while making semantic mechanism the coverage unit."""
+    by_variant: dict[str, dict[str, Any]] = {}
+    by_semantic: dict[str, dict[str, Any]] = {}
+    semantic_members: dict[str, list[dict[str, Any]]] = defaultdict(list)
 
+    for intervention in campaign.interventions:
+        semantic_key = str(
+            _semantic_mechanism_descriptor(intervention)["mechanism_key"]
+        )
+        semantic_members[semantic_key].append(intervention)
+
+        ident = str(intervention["id"])
+        rows = [
+            row for row in campaign.rows
+            if row.get("intervention_id") == ident
+        ]
+        by_variant[ident] = {
+            "semantic_mechanism_key":semantic_key,
+            "category":intervention["category"],
+            "observations":len(rows),
+            "failure_trials":sum(
+                1 for row in rows
+                if float(row.get("control_score", 0.0)) < 1.0
+            ),
+            "sentinel_trials":sum(
+                1 for row in rows
+                if float(row.get("control_score", 0.0)) >= 1.0
+            ),
+            "families":sorted({
+                str(row.get("family_id")) for row in rows
+            }),
+            "phases":sorted({
+                str(row.get("phase")) for row in rows
+            }),
+            "coverage_authority":"FORENSIC_VARIANT_DETAIL_ONLY",
+        }
+
+    for semantic_key, members in sorted(semantic_members.items()):
+        member_ids = {
+            str(row.get("id") or "") for row in members if row.get("id")
+        }
+        rows = [
+            row for row in campaign.rows
+            if str(row.get("intervention_id") or "") in member_ids
+        ]
+        representative = sorted(
+            members,
+            key=lambda row: (
+                _estimated_physical_calls(row),
+                len(str(
+                    row.get("instruction")
+                    or row.get("final_instruction")
+                    or row.get("label")
+                    or ""
+                )),
+                str(row.get("id") or ""),
+            ),
+        )[0]
+        by_semantic[semantic_key] = {
+            "category":str(representative.get("category") or "UNKNOWN"),
+            "member_variant_ids":sorted(member_ids),
+            "declared_variant_count":len(member_ids),
+            "tested_variant_ids":sorted({
+                str(row.get("intervention_id"))
+                for row in rows
+                if row.get("intervention_id")
+            }),
+            "observation_count":len(rows),
+            "failure_trials":sum(
+                1 for row in rows
+                if float(row.get("control_score", 0.0)) < 1.0
+            ),
+            "sentinel_trials":sum(
+                1 for row in rows
+                if float(row.get("control_score", 0.0)) >= 1.0
+            ),
+            "families":sorted({
+                str(row.get("family_id")) for row in rows
+            }),
+            "phases":sorted({
+                str(row.get("phase")) for row in rows
+            }),
+            "screened":bool(rows),
+            "coverage_authority":"DISCOVERY_SEMANTIC_MECHANISM",
+        }
+
+    categories: dict[str, Any] = {}
+    for category in sorted({
+        str(row["category"]) for row in campaign.interventions
+    }):
+        semantic_keys = {
+            key
+            for key, value in by_semantic.items()
+            if value["category"] == category
+        }
+        categories[category] = {
+            "declared_semantic_mechanisms":len(semantic_keys),
+            "screened_semantic_mechanisms":sum(
+                1 for key in semantic_keys
+                if by_semantic[key]["screened"]
+            ),
+            "declared_variants":sum(
+                1 for row in campaign.interventions
+                if str(row["category"]) == category
+            ),
+            "observations":sum(
+                1 for row in campaign.rows
+                if row.get("intervention_category") == category
+            ),
+        }
+
+    return {
+        "schema_version":2,
+        "coverage_unit":"SEMANTIC_MECHANISM",
+        "variant_coverage_is_not_a_completeness_gate":True,
+        "semantic_mechanisms":by_semantic,
+        "variants":by_variant,
+        "categories":categories,
+    }
 
 
 def _opportunity_discovery_map(campaign: Test12Campaign) -> dict[str, Any]:
@@ -7127,22 +7225,44 @@ def _residual_ownership(campaign: Test12Campaign) -> tuple[dict[str, Any], dict[
 
 
 def _control_grammar_coverage(campaign: Test12Campaign) -> dict[str, Any]:
+    """Grammar inventory plus forensic variant exposure; not a flat completeness gate."""
     generated = generate_prompt_control_candidates()
     tested = {
         str(row.get("intervention_id"))
         for row in campaign.rows
         if row.get("intervention_id") not in {None, "CONTROL"}
     }
-    campaign_declared = {str(row["id"]) for row in campaign.interventions}
-    tool_declared = {str(row["id"]) for row in TOOL_HARNESS_POLICIES}
+    campaign_declared = {
+        str(row["id"]) for row in campaign.interventions
+    }
+    tool_declared = {
+        str(row["id"]) for row in TOOL_HARNESS_POLICIES
+    }
     all_declared = campaign_declared | tool_declared
-    prompt_declared = {str(row["id"]) for row in generated}
+    prompt_declared = {
+        str(row["id"]) for row in generated
+    }
+
+    semantic_by_id = {
+        str(row["id"]):str(
+            _semantic_mechanism_descriptor(row)["mechanism_key"]
+        )
+        for row in campaign.interventions
+        if row.get("id")
+    }
+    declared_semantic = set(semantic_by_id.values())
+    tested_semantic = {
+        semantic_by_id[ident]
+        for ident in tested
+        if ident in semantic_by_id
+    }
+
     by_dimension: dict[str, set[str]] = {
-        "primitive": set(),
-        "placement": set(),
-        "representation": set(),
-        "dose": set(),
-        "recurrence": set(),
+        "primitive":set(),
+        "placement":set(),
+        "representation":set(),
+        "dose":set(),
+        "recurrence":set(),
     }
     for row in generated:
         if str(row["id"]) not in tested:
@@ -7152,20 +7272,30 @@ def _control_grammar_coverage(campaign: Test12Campaign) -> dict[str, Any]:
         by_dimension["representation"].add(str(row.get("representation")))
         by_dimension["dose"].add(str(row.get("dose")))
         by_dimension["recurrence"].add(str(row.get("recurrence")))
-    return {
-        "schema_version": 1,
-        "declared_candidate_count": len(all_declared),
-        "tested_candidate_count": len(all_declared & tested),
-        "untested_candidate_ids": sorted(all_declared - tested),
-        "all_declared_candidates_tested": not bool(all_declared - tested),
-        "prompt_grammar_declared_count": len(prompt_declared),
-        "prompt_grammar_tested_count": len(prompt_declared & tested),
-        "tool_harness_policy_ids": sorted(tool_declared),
-        "tool_harness_policies_tested": sorted(tool_declared & tested),
-        "dimension_levels_tested": {key: sorted(value) for key, value in by_dimension.items()},
-        "grammar": copy.deepcopy(CONTROL_GRAMMAR),
-    }
 
+    return {
+        "schema_version":2,
+        "discovery_coverage_unit":"SEMANTIC_MECHANISM",
+        "variant_coverage_is_forensic_not_mandatory":True,
+        "declared_semantic_mechanism_count":len(declared_semantic),
+        "tested_semantic_mechanism_count":len(tested_semantic),
+        "untested_semantic_mechanism_keys":sorted(
+            declared_semantic - tested_semantic
+        ),
+        "declared_candidate_count":len(all_declared),
+        "tested_candidate_count":len(all_declared & tested),
+        "untested_variant_ids":sorted(all_declared - tested),
+        "all_declared_variants_tested":not bool(all_declared - tested),
+        "all_declared_variants_tested_is_not_required":True,
+        "prompt_grammar_declared_count":len(prompt_declared),
+        "prompt_grammar_tested_count":len(prompt_declared & tested),
+        "tool_harness_policy_ids":sorted(tool_declared),
+        "tool_harness_policies_tested":sorted(tool_declared & tested),
+        "dimension_levels_tested":{
+            key:sorted(value) for key, value in by_dimension.items()
+        },
+        "grammar":copy.deepcopy(CONTROL_GRAMMAR),
+    }
 
 
 def _tuning_corpus_rows(campaign: Test12Campaign) -> list[dict[str, Any]]:
