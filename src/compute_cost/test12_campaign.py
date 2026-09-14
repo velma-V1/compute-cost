@@ -23,7 +23,7 @@ import itertools
 import json
 import math
 import time
-from collections import defaultdict
+from collections import Counter, defaultdict
 from pathlib import Path
 from statistics import mean, median
 from typing import Any, Callable, Iterable
