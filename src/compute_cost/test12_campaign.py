@@ -303,6 +303,7 @@ REQUIRED_OUTPUTS = (
     "control-grammar-coverage.json",
     "mechanism-coverage-ledger.json",
     "capability-family-coverage.json",
+    "capability-floor-registry.json",
     "capability-building-block-manufacturing-map.json",
     "capability-improvement-dossiers.json",
     "family-value-completeness.json",
@@ -5115,133 +5116,145 @@ def _cost_value_frontier(campaign: Test12Campaign) -> dict[str, Any]:
 
 
 
-def _jaccard(left: set[str], right: set[str]) -> float:
-    union = left | right
-    if not union:
-        return 0.0
-    return len(left & right) / len(union)
+def _semantic_mechanism_descriptor(intervention: dict[str, Any]) -> dict[str, Any]:
+    """Outcome-blind semantic mechanism identity for hierarchical proof.
+
+    Cluster membership is determined only from the intervention definition.
+    Outcome evidence may rank a representative after membership is frozen, but
+    rescue co-occurrence, harm co-occurrence, scores, and fixture IDs may never
+    define the taxonomy.
+    """
+    ident = str(intervention.get("id") or "")
+    category = str(intervention.get("category") or "UNKNOWN")
+    mode = str(intervention.get("mode") or "single")
+    primitive_id = intervention.get("primitive_id")
+
+    variant_factors = {
+        key: copy.deepcopy(intervention.get(key))
+        for key in (
+            "placement",
+            "representation",
+            "dose",
+            "recurrence",
+            "reasoning_effort",
+            "generation_budget",
+            "context_request",
+            "temperature",
+        )
+        if intervention.get(key) is not None
+    }
+
+    if primitive_id:
+        mechanism_key = f"PROMPT_PRIMITIVE:{primitive_id}"
+        mechanism_basis = {
+            "category": category,
+            "semantic_axis": "primitive_id",
+            "primitive_id": str(primitive_id),
+        }
+    elif mode == "source_recipe":
+        source_recipe = copy.deepcopy(intervention.get("source_recipe") or {})
+        stable = json.dumps(
+            source_recipe,
+            sort_keys=True,
+            separators=(",", ":"),
+            default=str,
+        )
+        mechanism_key = "SOURCE_RECIPE:" + hashlib.sha256(
+            stable.encode("utf-8")
+        ).hexdigest()[:16]
+        mechanism_basis = {
+            "category": category,
+            "semantic_axis": "frozen_source_recipe",
+            "source_recipe_sha256": hashlib.sha256(
+                stable.encode("utf-8")
+            ).hexdigest(),
+        }
+    elif category == "PROMPT_CONTROL":
+        # Non-grammar prompt controls such as decomposition, evidence grounding,
+        # and schema-first are different semantic mechanisms even when they share
+        # the same execution mode.
+        label = str(intervention.get("label") or ident)
+        mechanism_key = f"{category}:{mode}:{label}"
+        mechanism_basis = {
+            "category": category,
+            "mode": mode,
+            "semantic_axis": "named_prompt_mechanism",
+            "label": label,
+        }
+    else:
+        # For non-prompt controls the category + execution topology is the
+        # mechanism; budget/context/effort/etc. remain variant dimensions.
+        mechanism_key = f"{category}:{mode}"
+        mechanism_basis = {
+            "category": category,
+            "mode": mode,
+            "semantic_axis": "category_execution_topology",
+        }
+
+    return {
+        "intervention_id": ident,
+        "mechanism_key": mechanism_key,
+        "mechanism_basis": mechanism_basis,
+        "variant_factors": variant_factors,
+        "semantic_definition_sha256": _intervention_fingerprint(intervention),
+    }
 
 
 def _control_redundancy_map(campaign: Test12Campaign) -> dict[str, Any]:
-    """Cluster controls by observed valid rescue/harm behavior.
+    """Build outcome-blind semantic mechanism clusters.
 
-    This is a proof-budget optimization, not a semantic equivalence claim.
-    Controls are clusterable only when they share at least two rescued fixtures
-    and have strongly overlapping rescue signatures without incompatible harm.
-    Every alternate remains preserved for fallback proof.
+    This is a hierarchical multiplicity/proof-budget artifact. Membership is
+    frozen from what interventions *do*, never from which fixtures they happened
+    to rescue. Valid discovery evidence may choose the first representative
+    inside an already-frozen mechanism cluster; it cannot change membership.
+    Every alternate remains available for within-mechanism follow-up.
     """
-    by_control: dict[str, dict[str, Any]] = {}
     frontier = _cost_value_frontier(campaign)
     frontier_by_id = {
         str(row.get("intervention_id") or ""): row
         for row in frontier.get("ranked", [])
     }
 
+    controls: dict[str, dict[str, Any]] = {}
+    groups: dict[str, list[str]] = defaultdict(list)
     for intervention in campaign.interventions:
         ident = str(intervention.get("id") or "")
         if not ident:
             continue
-        rows = [
+        descriptor = _semantic_mechanism_descriptor(intervention)
+        valid_rows = [
             row for row in campaign.rows
             if str(row.get("intervention_id") or "") == ident
             and row.get("delta_valid") is True
-            and row.get("delta") is not None
+            and row.get("valid_for_capability") is True
+            and row.get("control_valid_for_capability") is True
         ]
-        rescue = {
-            str(row.get("fixture_id"))
-            for row in rows
-            if float(row.get("control_score") or 0.0) < 1.0
-            and float(row.get("score") or 0.0) >= 1.0
-            and float(row["delta"]) > 0.0
+        controls[ident] = {
+            **descriptor,
+            "category": intervention.get("category"),
+            "mode": intervention.get("mode"),
+            "valid_discovery_observation_count": len(valid_rows),
+            "valid_frontier": copy.deepcopy(frontier_by_id.get(ident) or {}),
         }
-        harm = {
-            str(row.get("fixture_id"))
-            for row in rows
-            if float(row.get("control_score") or 0.0) >= 1.0
-            and float(row["delta"]) < 0.0
-        }
-        censored = {
-            str(row.get("fixture_id"))
-            for row in campaign.rows
-            if str(row.get("intervention_id") or "") == ident
-            and row.get("censored_for_capability") is True
-        }
-        by_control[ident] = {
-            "intervention_id":ident,
-            "category":intervention.get("category"),
-            "rescue_fixture_ids":sorted(rescue),
-            "harm_fixture_ids":sorted(harm),
-            "censored_fixture_ids":sorted(censored),
-            "valid_observation_count":len(rows),
-            "frontier":copy.deepcopy(frontier_by_id.get(ident) or {}),
-        }
-
-    candidates = [
-        ident for ident, row in by_control.items()
-        if len(row["rescue_fixture_ids"]) >= 2
-    ]
-    parent = {ident: ident for ident in candidates}
-
-    def find(value: str) -> str:
-        while parent[value] != value:
-            parent[value] = parent[parent[value]]
-            value = parent[value]
-        return value
-
-    def union(a: str, b: str) -> None:
-        ra, rb = find(a), find(b)
-        if ra != rb:
-            parent[rb] = ra
-
-    similarity_edges: list[dict[str, Any]] = []
-    for index, left_id in enumerate(candidates):
-        left = by_control[left_id]
-        left_rescue = set(left["rescue_fixture_ids"])
-        left_harm = set(left["harm_fixture_ids"])
-        for right_id in candidates[index + 1:]:
-            right = by_control[right_id]
-            right_rescue = set(right["rescue_fixture_ids"])
-            intersection = left_rescue & right_rescue
-            if len(intersection) < 2:
-                continue
-            rescue_similarity = _jaccard(left_rescue, right_rescue)
-            if rescue_similarity < 0.80:
-                continue
-            right_harm = set(right["harm_fixture_ids"])
-            harm_conflict = bool(
-                (left_harm - right_harm)
-                or (right_harm - left_harm)
-            )
-            # Sparse harm evidence should not itself merge or split controls.
-            # A known disagreement in observed harm keeps them separate.
-            if left_harm and right_harm and harm_conflict:
-                continue
-            similarity_edges.append({
-                "left":left_id,
-                "right":right_id,
-                "rescue_jaccard":rescue_similarity,
-                "shared_rescue_fixture_count":len(intersection),
-                "left_category":left.get("category"),
-                "right_category":right.get("category"),
-            })
-            union(left_id, right_id)
-
-    groups: dict[str, list[str]] = defaultdict(list)
-    for ident in candidates:
-        groups[find(ident)].append(ident)
+        groups[str(descriptor["mechanism_key"])].append(ident)
 
     clusters: list[dict[str, Any]] = []
     clustered: set[str] = set()
-    for members in groups.values():
+    for mechanism_key, members in sorted(groups.items()):
         if len(members) < 2:
             continue
 
-        def rank_key(ident: str) -> tuple[float, float, int, str]:
-            frontier_row = by_control[ident].get("frontier") or {}
+        def rank_key(ident: str) -> tuple[float, float, float, int, str]:
+            frontier_row = controls[ident].get("valid_frontier") or {}
+            intervention = campaign.intervention_by_id.get(ident) or {}
+            # Outcomes are permitted only as a representative ranking signal
+            # after semantic membership is frozen, and only through the
+            # validity-filtered Collection frontier.
             return (
                 float(frontier_row.get("net_value") or 0.0),
                 float(frontier_row.get("value_per_call") or 0.0),
-                len(by_control[ident]["rescue_fixture_ids"]),
+                -float(_estimated_physical_calls(intervention)),
+                -len(str(intervention.get("instruction") or "")),
                 ident,
             )
 
@@ -5249,21 +5262,33 @@ def _control_redundancy_map(campaign: Test12Campaign) -> dict[str, Any]:
         representative = ordered[0]
         clustered.update(ordered)
         digest = hashlib.sha256(
-            "|".join(sorted(ordered)).encode("utf-8")
+            mechanism_key.encode("utf-8")
         ).hexdigest()[:12]
         clusters.append({
-            "cluster_id":"REDUNDANCY-" + digest,
-            "representative_intervention_id":representative,
-            "alternate_intervention_ids":ordered[1:],
-            "member_intervention_ids":ordered,
-            "member_count":len(ordered),
-            "representative_reason":"HIGHEST_COLLECTION_NET_VALUE_THEN_VALUE_PER_CALL_THEN_RESCUE_BREADTH",
-            "proof_policy":"PROVE_REPRESENTATIVE_FIRST_PRESERVE_ALTERNATES",
-            "semantic_equivalence_claimed":False,
+            "cluster_id": "MECHANISM-" + digest,
+            "mechanism_key": mechanism_key,
+            "mechanism_basis": copy.deepcopy(
+                controls[representative].get("mechanism_basis") or {}
+            ),
+            "representative_intervention_id": representative,
+            "alternate_intervention_ids": ordered[1:],
+            "member_intervention_ids": ordered,
+            "member_count": len(ordered),
+            "representative_reason": (
+                "VALID_DISCOVERY_NET_VALUE_THEN_VALUE_PER_CALL_AFTER_"
+                "OUTCOME_BLIND_MEMBERSHIP_WITH_STATIC_COST_TIEBREAKERS"
+            ),
+            "proof_policy": (
+                "TEST_MECHANISM_REPRESENTATIVE_FIRST_THEN_VARIANTS_"
+                "WITHIN_SUCCESSFUL_OR_UNRESOLVED_MECHANISMS"
+            ),
+            "semantic_equivalence_claimed": False,
+            "membership_uses_outcomes": False,
+            "representative_may_use_valid_outcomes": True,
         })
 
     unclustered = sorted(
-        ident for ident in by_control
+        ident for ident in controls
         if ident not in clustered
     )
     representative_ids = sorted({
@@ -5277,24 +5302,224 @@ def _control_redundancy_map(campaign: Test12Campaign) -> dict[str, Any]:
     })
 
     return {
-        "schema_version":1,
-        "purpose":"REDUCE_REDUNDANT_TEST2_PROOF_WITHOUT_DROPPING_CONTROLS",
-        "clustering_basis":"VALID_RESCUE_SIGNATURE_JACCARD_AT_LEAST_0.80_WITH_AT_LEAST_2_SHARED_RESCUES_AND_NO_OBSERVED_HARM_CONFLICT",
-        "semantic_equivalence_claimed":False,
-        "control_count":len(by_control),
-        "cluster_count":len(clusters),
-        "clustered_control_count":len(clustered),
-        "representative_intervention_ids":representative_ids,
-        "alternate_intervention_ids":alternate_ids,
-        "unclustered_intervention_ids":unclustered,
-        "clusters":sorted(clusters, key=lambda row: row["cluster_id"]),
-        "similarity_edges":sorted(
-            similarity_edges,
-            key=lambda row:(-float(row["rescue_jaccard"]), row["left"], row["right"]),
+        "schema_version": 2,
+        "purpose": (
+            "HIERARCHICAL_MECHANISM_TESTING_WITHOUT_IMPORTING_"
+            "RESCUE_COOCCURRENCE_INTO_THE_TAXONOMY"
         ),
-        "controls":by_control,
+        "clustering_basis": "INTERVENTION_SEMANTICS_ONLY",
+        "membership_uses_outcomes": False,
+        "rescue_cooccurrence_used_for_membership": False,
+        "harm_cooccurrence_used_for_membership": False,
+        "semantic_equivalence_claimed": False,
+        "control_count": len(controls),
+        "mechanism_count": len(groups),
+        "cluster_count": len(clusters),
+        "clustered_control_count": len(clustered),
+        "representative_intervention_ids": representative_ids,
+        "alternate_intervention_ids": alternate_ids,
+        "unclustered_intervention_ids": unclustered,
+        "clusters": sorted(clusters, key=lambda row: row["cluster_id"]),
+        "controls": controls,
     }
 
+
+def _capability_floor_registry(campaign: Test12Campaign) -> dict[str, Any]:
+    """Zero-call construct-validity and harness-floor registry.
+
+    A floor claim requires an explicitly capability-valid baseline failure and
+    no valid rescue. Coverage is reported rather than assumed: unresolved
+    fixtures are distinguished from fixtures exhaustively tested against every
+    declared intervention.
+    """
+    declared_ids = sorted({
+        str(row.get("id"))
+        for row in campaign.interventions
+        if row.get("id")
+    })
+    declared_set = set(declared_ids)
+
+    rows_by_fixture: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for row in campaign.rows:
+        fixture_id = str(row.get("fixture_id") or "")
+        if fixture_id:
+            rows_by_fixture[fixture_id].append(row)
+
+    records: dict[str, dict[str, Any]] = {}
+    family_records: dict[str, list[dict[str, Any]]] = defaultdict(list)
+
+    for fixture_id, rows in sorted(rows_by_fixture.items()):
+        case = campaign.case_by_id.get(fixture_id) or {}
+        family = str(
+            case.get("family_id")
+            or case.get("category")
+            or rows[0].get("family_id")
+            or "unknown"
+        )
+        baseline_rows = [
+            row for row in rows
+            if str(row.get("intervention_id") or "") == "CONTROL"
+            and _capability_valid(row)
+        ]
+        if not baseline_rows:
+            continue
+
+        latest_baseline = baseline_rows[-1]
+        baseline_score = float(latest_baseline.get("score") or 0.0)
+        baseline_failed = baseline_score < 1.0
+
+        valid_treatments = [
+            row for row in rows
+            if str(row.get("intervention_id") or "") not in {"", "CONTROL"}
+            and row.get("delta_valid") is True
+            and row.get("valid_for_capability") is True
+            and row.get("control_valid_for_capability") is True
+        ]
+        tested_ids = {
+            str(row.get("intervention_id"))
+            for row in valid_treatments
+            if row.get("intervention_id")
+        }
+        rescued_ids = sorted({
+            str(row.get("intervention_id"))
+            for row in valid_treatments
+            if float(row.get("control_score") or 0.0) < 1.0
+            and float(row.get("score") or 0.0) >= 1.0
+            and float(row.get("delta") or 0.0) > 0.0
+        })
+        unresolved = bool(baseline_failed and not rescued_ids)
+        exhaustive = bool(
+            unresolved
+            and declared_set
+            and declared_set.issubset(tested_ids)
+        )
+        coverage_fraction = (
+            len(tested_ids & declared_set) / len(declared_set)
+            if declared_set else 0.0
+        )
+        if not baseline_failed:
+            status = "BASELINE_CAPABLE"
+        elif rescued_ids:
+            status = "HARNESS_RECOVERABLE"
+        elif exhaustive:
+            status = "CONFIRMED_DECLARED_HARNESS_FLOOR"
+        else:
+            status = "UNRESOLVED_PARTIAL_CONTROL_SEARCH"
+
+        result_classes = sorted({
+            str((row.get("classification") or {}).get("result_class") or "UNKNOWN")
+            for row in valid_treatments
+        })
+        record = {
+            "fixture_id": fixture_id,
+            "family_id": family,
+            "difficulty_level": int(
+                case.get("difficulty_level")
+                or latest_baseline.get("difficulty_level")
+                or 0
+            ),
+            "baseline_score": baseline_score,
+            "baseline_result_class": str(
+                (latest_baseline.get("classification") or {}).get(
+                    "result_class"
+                )
+                or "UNKNOWN"
+            ),
+            "baseline_valid_for_capability": True,
+            "declared_intervention_count": len(declared_ids),
+            "valid_tested_intervention_count": len(tested_ids & declared_set),
+            "valid_tested_intervention_ids": sorted(tested_ids & declared_set),
+            "control_coverage_fraction": coverage_fraction,
+            "valid_rescue_intervention_ids": rescued_ids,
+            "valid_rescue_count": len(rescued_ids),
+            "observed_valid_treatment_result_classes": result_classes,
+            "unresolved_after_valid_search": unresolved,
+            "tested_against_all_declared_interventions": exhaustive,
+            "floor_status": status,
+        }
+        records[fixture_id] = record
+        family_records[family].append(record)
+
+    family_construct: dict[str, Any] = {}
+    for family in TEST2_CAPABILITY_FAMILIES:
+        cases = [
+            case for case in campaign.case_by_id.values()
+            if _family(case) == family
+        ]
+        measured = family_records.get(family, [])
+        passes = [row for row in measured if row["baseline_score"] >= 1.0]
+        failures = [row for row in measured if row["baseline_score"] < 1.0]
+        unresolved = [
+            row for row in measured
+            if row["unresolved_after_valid_search"]
+        ]
+        confirmed = [
+            row for row in measured
+            if row["floor_status"] == "CONFIRMED_DECLARED_HARNESS_FLOOR"
+        ]
+        levels = sorted({
+            int(row.get("difficulty_level") or 0)
+            for row in measured
+        })
+        if not measured:
+            construct_status = "UNMEASURED"
+        elif passes and failures:
+            construct_status = "MIXED_CAPABILITY_BOUNDARY_OBSERVED"
+        elif failures:
+            construct_status = "FAILURE_ONLY_MEASURED"
+        else:
+            construct_status = "PASS_ONLY_MEASURED"
+
+        family_construct[family] = {
+            "declared_fixture_count": len(cases),
+            "valid_baseline_fixture_count": len(measured),
+            "valid_baseline_pass_count": len(passes),
+            "valid_baseline_failure_count": len(failures),
+            "difficulty_levels_measured": levels,
+            "unresolved_fixture_count": len(unresolved),
+            "confirmed_declared_floor_count": len(confirmed),
+            "construct_status": construct_status,
+        }
+
+    confirmed_ids = sorted(
+        fixture_id for fixture_id, row in records.items()
+        if row["floor_status"] == "CONFIRMED_DECLARED_HARNESS_FLOOR"
+    )
+    unresolved_ids = sorted(
+        fixture_id for fixture_id, row in records.items()
+        if row["unresolved_after_valid_search"]
+    )
+    unmeasured_families = sorted(
+        family for family, payload in family_construct.items()
+        if payload["construct_status"] == "UNMEASURED"
+    )
+    boundary_families = sorted(
+        family for family, payload in family_construct.items()
+        if payload["construct_status"] == "MIXED_CAPABILITY_BOUNDARY_OBSERVED"
+    )
+
+    return {
+        "schema_version": 1,
+        "analysis_type": "ZERO_CALL_CONSTRUCT_VALIDITY_AND_HARNESS_FLOOR",
+        "capability_claim": False,
+        "outcome_filter": (
+            "EXPLICIT_CAPABILITY_VALID_BASELINES_AND_EXPLICIT_VALID_PAIRED_"
+            "TREATMENTS_ONLY"
+        ),
+        "declared_intervention_count": len(declared_ids),
+        "declared_intervention_ids": declared_ids,
+        "measured_fixture_count": len(records),
+        "unresolved_fixture_count": len(unresolved_ids),
+        "unresolved_fixture_ids": unresolved_ids,
+        "confirmed_declared_harness_floor_count": len(confirmed_ids),
+        "confirmed_declared_harness_floor_fixture_ids": confirmed_ids,
+        "boundary_family_count": len(boundary_families),
+        "boundary_families": boundary_families,
+        "unmeasured_family_count": len(unmeasured_families),
+        "unmeasured_families": unmeasured_families,
+        "families": family_construct,
+        "fixtures": records,
+    }
 
 def _residual_ownership(campaign: Test12Campaign) -> tuple[dict[str, Any], dict[str, Any]]:
     by_fixture: dict[str, list[dict[str, Any]]] = defaultdict(list)
@@ -5935,7 +6160,7 @@ def write_outputs(campaign: Test12Campaign, results: dict[str, Any]) -> None:
         producer="test1.2",
         stage="report",
     )
-    store.write_json("residual-failure-ownership-1.2.json", residual, producer="test1.2", stage="report")
+    capability_floor = _capability_floor_registry(campaign)\n    store.write_json(\n        "capability-floor-registry.json",\n        capability_floor,\n        producer="test1.2",\n        stage="report",\n    )\n    store.write_json("residual-failure-ownership-1.2.json", residual, producer="test1.2", stage="report")
     store.write_json("fine-tuning-readiness-map-1.2.json", fine, producer="test1.2", stage="report")
     store.write_json("test1.2-priority-queue.json", {"schema_version":1,"queue":queue}, producer="test1.2", stage="report")
     store.write_json("test1.2-uncertainty-ledger.json", {"schema_version":1,"unknowns":unknowns}, producer="test1.2", stage="report")
@@ -5995,7 +6220,7 @@ def write_outputs(campaign: Test12Campaign, results: dict[str, Any]) -> None:
         "efficiency_audit":"test1.2-efficiency-audit.json",
         "opportunity_discovery_map":"test1.2-opportunity-discovery-map.json",
         "control_redundancy_map":"control-redundancy-map.json",
-        "redundancy_cluster_count":redundancy_map.get("cluster_count", 0),
+        "capability_floor_registry":"capability-floor-registry.json",\n        "confirmed_declared_harness_floor_count":capability_floor.get("confirmed_declared_harness_floor_count", 0),\n        "unresolved_valid_fixture_count":capability_floor.get("unresolved_fixture_count", 0),\n        "construct_boundary_family_count":capability_floor.get("boundary_family_count", 0),\n        "redundancy_cluster_count":redundancy_map.get("cluster_count", 0),
         "redundancy_clustered_control_count":redundancy_map.get("clustered_control_count", 0),
         "collection_role":"OPPORTUNITY_DISCOVERY",
         "proof_owner":"RUN2_TEST2",
