@@ -73,6 +73,7 @@ REQUIRED_TEST1_FILES = (
 
 REQUIRED_OUTPUTS = (
     "recurrence-map.json",
+    "proof-value-scheduler.json",
     "higher-order-hypergraph.json",
     "failure-phenotype-registry.json",
     "failure-recovery-matrix.json",
@@ -107,6 +108,10 @@ DEFAULT_TEST2_CONFIG: dict[str, Any] = {
     "thinking_mode": False,
     "reasoning_effort": None,
     "bootstrap_samples": 500,
+    "recurrence_min_independent_fixtures": 4,
+    "recurrence_min_distinct_seeds": 2,
+    "recurrence_target_valid_observations": 6,
+    "recurrence_max_valid_observations": 12,
     "top_recipes": 12,
     "max_recovery_recipes": 8,
     "negative_transfer_recipes": 8,
@@ -1071,6 +1076,7 @@ class Test2Campaign:
         )
         self.treatment_calls = 0
         self.harm_evidence: dict[str, Any] = {}
+        self.proof_scheduler_audit: dict[str, Any] = {}
         self.recipes = source_recipes(handoff, limit=int(self.cfg["top_recipes"]))
         self.exact_test12: Test12Campaign | None = None
         if handoff.get("handoff_mode") == "TEST12_EXACT":
@@ -1368,6 +1374,7 @@ class Test2Campaign:
                 ),
                 "recipe":copy.deepcopy(recipe),
                 "source_key":source_key,
+                "proof_seed":proof_seed,
                 "semantic_hash_discovery":current_hash,
                 "semantic_hash_proof":proof_hash,
                 "semantic_hash_match":exact_semantic_match,
@@ -1723,37 +1730,302 @@ def _recurrence_variants(recipes: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return list(unique.values())
 
 
+def _recurrence_candidate_status(
+    campaign: Test2Campaign,
+    recipe: dict[str, Any],
+    rows: list[dict[str, Any]],
+) -> dict[str, Any]:
+    key = _recipe_key(recipe)
+    values = [
+        row for row in rows
+        if _recipe_key(row.get("recipe") or {}) == key
+    ]
+    valid = [
+        row for row in values
+        if row.get("delta_valid") is True and row.get("delta") is not None
+    ]
+    fixtures = sorted({str(row.get("fixture_id")) for row in valid})
+    seeds = sorted({
+        int(
+            row.get("proof_seed")
+            or (row.get("recipe") or {}).get("_proof_seed")
+            or 42
+        )
+        for row in valid
+    })
+    censored = [
+        row for row in values
+        if row.get("censored_for_capability") is True
+    ]
+    deltas = [float(row["delta"]) for row in valid]
+
+    min_fixtures = int(campaign.cfg["recurrence_min_independent_fixtures"])
+    min_seeds = int(campaign.cfg["recurrence_min_distinct_seeds"])
+    target_valid = int(campaign.cfg["recurrence_target_valid_observations"])
+    max_valid = int(campaign.cfg["recurrence_max_valid_observations"])
+
+    coverage_ready = bool(
+        len(fixtures) >= min_fixtures
+        and len(seeds) >= min_seeds
+        and len(valid) >= target_valid
+    )
+    all_positive = bool(deltas) and all(value > 0.0 for value in deltas)
+    all_nonpositive = bool(deltas) and all(value <= 0.0 for value in deltas)
+    mixed = bool(deltas) and not all_positive and not all_nonpositive
+
+    if coverage_ready and all_positive:
+        settled = True
+        reason = "CONSISTENT_POSITIVE_MINIMUM_PROOF_MET"
+    elif coverage_ready and all_nonpositive:
+        settled = True
+        reason = "CONSISTENT_NONPOSITIVE_MINIMUM_PROOF_MET"
+    elif len(valid) >= max_valid:
+        settled = True
+        reason = "MAX_PROOF_REACHED_WITH_MIXED_EFFECT"
+    else:
+        settled = False
+        reason = "MORE_PROOF_VALUE_AVAILABLE"
+
+    required_ids = {
+        str(value)
+        for value in campaign.handoff.get("required_policy_control_ids") or []
+    }
+    ident = str(recipe.get("intervention_id") or "")
+    required = ident in required_ids
+
+    fixture_debt = max(0, min_fixtures - len(fixtures))
+    seed_debt = max(0, min_seeds - len(seeds))
+    valid_debt = max(0, target_valid - len(valid))
+    censor_rate = len(censored) / len(values) if values else 0.0
+    priority = (
+        (1000.0 if required else 0.0)
+        + 100.0 * fixture_debt
+        + 40.0 * seed_debt
+        + 10.0 * valid_debt
+        + 25.0 * censor_rate
+        + (30.0 if mixed else 0.0)
+    )
+    if settled:
+        priority = -1.0
+
+    return {
+        "recipe_key":key,
+        "intervention_id":ident or None,
+        "required_by_frozen_policy":required,
+        "attempts":len(values),
+        "valid_observations":len(valid),
+        "independent_fixture_count":len(fixtures),
+        "distinct_seed_count":len(seeds),
+        "fixture_ids":fixtures,
+        "proof_seeds":seeds,
+        "censored_observations":len(censored),
+        "censoring_rate":censor_rate,
+        "positive_observations":sum(1 for value in deltas if value > 0.0),
+        "negative_observations":sum(1 for value in deltas if value < 0.0),
+        "null_observations":sum(1 for value in deltas if value == 0.0),
+        "coverage_ready":coverage_ready,
+        "settled":settled,
+        "settled_reason":reason,
+        "proof_priority":priority,
+    }
+
+
+def _next_recurrence_task(
+    campaign: Test2Campaign,
+    recipe: dict[str, Any],
+    fixtures: list[dict[str, Any]],
+    rows: list[dict[str, Any]],
+) -> tuple[dict[str, Any], int] | None:
+    key = _recipe_key(recipe)
+    existing = [
+        row for row in rows
+        if _recipe_key(row.get("recipe") or {}) == key
+    ]
+    attempted = {
+        (
+            str(row.get("fixture_id") or ""),
+            int(
+                row.get("proof_seed")
+                or (row.get("recipe") or {}).get("_proof_seed")
+                or 42
+            ),
+        )
+        for row in existing
+    }
+    valid_fixture_ids = {
+        str(row.get("fixture_id") or "")
+        for row in existing
+        if row.get("delta_valid") is True
+        and row.get("delta") is not None
+    }
+    valid_seeds = {
+        int(
+            row.get("proof_seed")
+            or (row.get("recipe") or {}).get("_proof_seed")
+            or 42
+        )
+        for row in existing
+        if row.get("delta_valid") is True
+        and row.get("delta") is not None
+    }
+    seed_order = sorted(
+        (42, 43, 44),
+        key=lambda seed: (seed in valid_seeds, seed),
+    )
+    fixture_order = sorted(
+        fixtures,
+        key=lambda case: (
+            _fixture_id(case) in valid_fixture_ids,
+            -int(case.get("difficulty_level") or 0),
+            _family(case),
+            _fixture_id(case),
+        ),
+    )
+    for case in fixture_order:
+        for seed in seed_order:
+            if (_fixture_id(case), seed) not in attempted:
+                return case, seed
+    return None
+
+
 def phase_recurrence(campaign: Test2Campaign, deadline: float) -> dict[str, dict[str, Any]]:
-    variants = _recurrence_variants(campaign.recipes)
     fixtures = _balanced_cases(
         campaign.partitions["VALIDATION"],
         len(campaign.partitions["VALIDATION"]),
     )
     if not fixtures:
-        fixtures = _balanced_cases(campaign.partitions["DISCOVERY"], len(campaign.partitions["DISCOVERY"]))
-    cursor = 0
-    while variants and fixtures and campaign.can_start(deadline):
-        recipe = variants[cursor % len(variants)]
-        case = fixtures[(cursor // len(variants)) % len(fixtures)]
-        campaign.treatment(
-            case,
-            deadline,
-            phase="recurrence_higher_order",
-            kind="recurrence",
-            recipe=recipe,
-            label="recurrence-" + _recipe_key(recipe),
-            source_key="test1-promoted",
+        fixtures = _balanced_cases(
+            campaign.partitions["DISCOVERY"],
+            len(campaign.partitions["DISCOVERY"]),
         )
-        cursor += 1
-        if cursor >= len(variants) * len(fixtures):
-            break
-    return _effect_map(
+
+    exact_mode = bool(
+        campaign.recipes
+        and any(
+            recipe.get("exact_test12_intervention") is not None
+            for recipe in campaign.recipes
+        )
+    )
+    if not exact_mode:
+        variants = _recurrence_variants(campaign.recipes)
+        cursor = 0
+        while variants and fixtures and campaign.can_start(deadline):
+            recipe = variants[cursor % len(variants)]
+            case = fixtures[(cursor // len(variants)) % len(fixtures)]
+            campaign.treatment(
+                case,
+                deadline,
+                phase="recurrence_higher_order",
+                kind="recurrence",
+                recipe=recipe,
+                label="recurrence-" + _recipe_key(recipe),
+                source_key="test1-promoted",
+            )
+            cursor += 1
+            if cursor >= len(variants) * len(fixtures):
+                break
+    else:
+        recipes = [
+            copy.deepcopy(recipe)
+            for recipe in campaign.recipes
+            if recipe.get("exact_test12_intervention") is not None
+        ]
+        exhausted: set[str] = set()
+        while recipes and fixtures and campaign.can_start(deadline):
+            phase_rows = [
+                row for row in campaign.rows
+                if row.get("phase") == "recurrence_higher_order"
+            ]
+            statuses = {
+                _recipe_key(recipe): _recurrence_candidate_status(
+                    campaign, recipe, phase_rows
+                )
+                for recipe in recipes
+            }
+            available = [
+                recipe for recipe in recipes
+                if not statuses[_recipe_key(recipe)]["settled"]
+                and _recipe_key(recipe) not in exhausted
+            ]
+            if not available:
+                break
+            available.sort(
+                key=lambda recipe: (
+                    float(statuses[_recipe_key(recipe)]["proof_priority"]),
+                    -int(statuses[_recipe_key(recipe)]["attempts"]),
+                    _recipe_key(recipe),
+                ),
+                reverse=True,
+            )
+            recipe = copy.deepcopy(available[0])
+            task = _next_recurrence_task(
+                campaign, recipe, fixtures, phase_rows
+            )
+            if task is None:
+                exhausted.add(_recipe_key(recipe))
+                continue
+            case, seed = task
+            recipe["_proof_seed"] = int(seed)
+            observation = campaign.treatment(
+                case,
+                deadline,
+                phase="recurrence_higher_order",
+                kind="recurrence",
+                recipe=recipe,
+                label="recurrence-" + _recipe_key(recipe),
+                source_key="proof-value-scheduler",
+            )
+            if observation is None:
+                exhausted.add(_recipe_key(recipe))
+
+        final_rows = [
+            row for row in campaign.rows
+            if row.get("phase") == "recurrence_higher_order"
+        ]
+        final_statuses = {
+            _recipe_key(recipe): _recurrence_candidate_status(
+                campaign, recipe, final_rows
+            )
+            for recipe in recipes
+        }
+        campaign.proof_scheduler_audit = {
+            "schema_version":1,
+            "phase":"recurrence_higher_order",
+            "mode":"ADAPTIVE_PROOF_VALUE",
+            "objective":"spend fixed proof clock on independent fixture/seed debt and unresolved decisions",
+            "candidate_count":len(recipes),
+            "settled_candidate_count":sum(
+                1 for row in final_statuses.values()
+                if row.get("settled") is True
+            ),
+            "exhausted_candidate_keys":sorted(exhausted),
+            "minimum_independent_fixtures":int(
+                campaign.cfg["recurrence_min_independent_fixtures"]
+            ),
+            "minimum_distinct_seeds":int(
+                campaign.cfg["recurrence_min_distinct_seeds"]
+            ),
+            "target_valid_observations":int(
+                campaign.cfg["recurrence_target_valid_observations"]
+            ),
+            "maximum_valid_observations":int(
+                campaign.cfg["recurrence_max_valid_observations"]
+            ),
+            "candidates":final_statuses,
+        }
+
+    effects = _effect_map(
         [row for row in campaign.rows if row["phase"] == "recurrence_higher_order"],
         noise_sigma=campaign.noise_sigma,
         bootstrap_samples=int(campaign.cfg["bootstrap_samples"]),
         max_censoring_rate=float(campaign.cfg["max_effect_censoring_rate"]),
         key_fn=lambda row: _recipe_key(row["recipe"]),
     )
+    for key, summary in effects.items():
+        status = (campaign.proof_scheduler_audit.get("candidates") or {}).get(key)
+        if status:
+            summary["proof_scheduler_status"] = copy.deepcopy(status)
+    return effects
 
 
 def _recovery_candidates(campaign: Test2Campaign, case: dict[str, Any]) -> list[dict[str, Any]]:
@@ -3145,6 +3417,16 @@ def write_test2_outputs(
     store.write_json(
         "recurrence-map.json",
         {"schema_version": 1, "recipes": recurrence},
+        producer="test2",
+        stage="report",
+    )
+    store.write_json(
+        "proof-value-scheduler.json",
+        copy.deepcopy(campaign.proof_scheduler_audit) or {
+            "schema_version":1,
+            "mode":"LEGACY_OR_NO_EXACT_SCHEDULER",
+            "candidates":{},
+        },
         producer="test2",
         stage="report",
     )
