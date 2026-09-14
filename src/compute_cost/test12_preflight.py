@@ -315,7 +315,14 @@ def build_test12_cell_budget_plan(
             "effect_states": list(EFFECT_STATES),
             "conditional_requires_populated_condition_predicate": True,
             "null_verified_distinct_from_null_censored": True,
+            "null_verified_requires_wilson_upper_bound_lte": float(
+                cfg.get("cell_null_max_wilson_upper", 0.10)
+            ),
             "harm_population_required": True,
+            "harm_rate_requires_wilson_width_lte": float(
+                cfg.get("cell_harm_max_wilson_width", 0.35)
+            ),
+            "insufficient_interval_precision_emits_unknown": True,
             "composition_defaults_unknown": True,
             "cost_and_effect_must_share_observation_set": True,
             "cost_and_effect_must_share_operating_point": True,
