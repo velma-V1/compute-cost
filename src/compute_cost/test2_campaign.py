@@ -1470,6 +1470,14 @@ def _effect_map(
 
 
 def _recipe_key(recipe: dict[str, Any]) -> str:
+    if recipe.get("exact_locked_policy") is not None:
+        payload = json.dumps(
+            recipe["exact_locked_policy"],
+            sort_keys=True,
+            separators=(",", ":"),
+            default=str,
+        )
+        return "POLICY-" + hashlib.sha256(payload.encode("utf-8")).hexdigest()[:16]
     if recipe.get("exact_test12_intervention") is not None:
         semantic_hash = str(
             recipe.get("discovery_semantic_hash")
@@ -2254,6 +2262,105 @@ def phase_blind(
 
     fixtures = _balanced_cases(campaign.partitions["TEST2_BLIND"], len(campaign.partitions["TEST2_BLIND"]))
     holdout_claim = _claim_holdout_partition(campaign, "TEST2_BLIND", fixtures)
+
+    if campaign.handoff.get("handoff_mode") == "TEST12_EXACT":
+        from .test12_tuning import TuningRun, _policy_lock_hash, load_collection
+
+        winner = copy.deepcopy(campaign.handoff.get("winner_policy") or {})
+        expected_lock = str(campaign.handoff.get("winner_lock_sha256") or "")
+        observed_lock = _policy_lock_hash(winner)
+        if expected_lock and observed_lock != expected_lock:
+            raise ValueError("frozen Test 1.2 policy hash changed before Test 2 blind proof")
+
+        collection = load_collection(
+            Path(campaign.runner.results_root),
+            str(campaign.handoff["collection_run"]),
+        )
+        proof = TuningRun(
+            campaign.runner,
+            campaign.cases,
+            collection,
+            clock=campaign.clock,
+            started=campaign.start,
+        )
+        proof.active_end = campaign.active_end
+        proof.campaign.active_end = campaign.active_end
+        proof.campaign.call_start_cutoff = campaign.call_start_cutoff
+        proof.campaign.allowed_partitions = {"TEST2_BLIND"}
+
+        exact_rows: list[dict[str, Any]] = []
+        recipe = {
+            "exact_locked_policy":copy.deepcopy(winner),
+            "policy_lock_sha256":observed_lock,
+            "ingredient_ids":[f"POLICY:{winner.get('policy_id','UNKNOWN')}"],
+            "dose":1.0,
+            "representation":"exact-policy",
+            "placement":"semantic",
+        }
+        for case in fixtures:
+            if not campaign.can_start(deadline):
+                break
+            row = proof.run_policy(winner, case, deadline, seed=50)
+            if row is None:
+                continue
+            converted = {
+                "schema_version":1,
+                "timestamp_utc":campaign.runner._utc(),
+                "phase":"blind_confirmation",
+                "kind":"blind",
+                "fixture_id":row.get("fixture_id"),
+                "family_id":row.get("family_id"),
+                "difficulty_level":int(case.get("difficulty_level",0)),
+                "partition":"TEST2_BLIND",
+                "experiment_id":row.get("tuning_observation_sha256"),
+                "classification":{
+                    "result_class":(
+                        "ANSWER_CORRECT"
+                        if float(row.get("score") or 0.0) >= 1.0
+                        else "ANSWER_WRONG"
+                    ),
+                    "valid_for_capability":bool(row.get("valid_for_capability")),
+                },
+                "valid_for_capability":bool(row.get("valid_for_capability")),
+                "baseline_valid_for_capability":bool(row.get("control_valid_for_capability")),
+                "baseline_generation_budget":row.get("baseline_generation_budget"),
+                "treatment_generation_budget":row.get("treatment_generation_budget"),
+                "budget_comparison_valid":bool(row.get("budget_comparison_valid")),
+                "delta_valid":bool(row.get("delta_valid")),
+                "score":float(row.get("score") or 0.0),
+                "baseline_score":float(row.get("control_score") or 0.0),
+                "delta":row.get("delta") if row.get("delta_valid") is True else None,
+                "recipe":copy.deepcopy(recipe),
+                "source_key":"FROZEN_TEST1.2_POLICY",
+                "policy_id":winner.get("policy_id"),
+                "policy_lock_sha256":observed_lock,
+                "semantic_hash_match":True,
+                "model_calls":row.get("model_calls"),
+                "timing":{},
+                "evidence_refs":{},
+            }
+            campaign.rows.append(converted)
+            campaign.runner.store.append_jsonl("test2-observations.jsonl", converted)
+            exact_rows.append(converted)
+
+        effects = _effect_map(
+            exact_rows,
+            noise_sigma=campaign.noise_sigma,
+            bootstrap_samples=int(campaign.cfg["bootstrap_samples"]),
+            max_censoring_rate=float(campaign.cfg["max_effect_censoring_rate"]),
+            key_fn=lambda row: _recipe_key(row["recipe"]),
+        )
+        return {
+            "recipes_frozen_before_phase":True,
+            "locked_policy_proved_exactly":True,
+            "policy_lock_sha256":observed_lock,
+            "fixture_count":len(fixtures),
+            "effects":effects,
+            "observations":len(exact_rows),
+            "holdout_claim":holdout_claim,
+            "partition_retired_after_this_cycle":True,
+        }
+
     rows_before = len(campaign.rows)
     cursor = 0
     while recipes and fixtures and campaign.can_start(deadline):
@@ -2950,6 +3057,20 @@ def run_test2_campaign(
     plan = build_test2_plan(cases, test1_run=test1_run)
     validate_test2_plan(plan)
     handoff = load_test1_handoff(Path(runner.results_root), test1_run, cases)
+    if handoff.get("handoff_mode") == "TEST12_EXACT":
+        runtime_path = runner.store.run_dir / "runtime.json"
+        if not runtime_path.is_file():
+            raise ValueError("Test 2 requires current runtime.json before exact Test 1.2 proof")
+        current_runtime = _read_json(runtime_path)
+        identity = (handoff.get("runtime_profile") or {}).get("identity") or {}
+        if str(identity.get("model")) != str(runner.model):
+            raise ValueError("Test 2 model identity differs from Stage 0 characterization")
+        if identity.get("runtime_version") != current_runtime.get("version"):
+            raise ValueError(
+                "Test 2 runtime version differs from Stage 0 characterization; "
+                "this is a new onboarding event, not a valid proof continuation"
+            )
+
     campaign = Test2Campaign(
         runner,
         cases,
