@@ -1,0 +1,1532 @@
+# TEST 1.2 + TEST 2 EXTERNAL SCIENTIFIC REVIEW HANDOFF
+
+**Repository:** `velma-V1/compute-cost`  
+**Branch:** `build/gpt20b-test1.2-full-improvement`  
+**Purpose:** Independent adversarial review before another long model campaign  
+**Status:** Review required before the next full Test 1.2 → Test 2 production run
+
+---
+
+# 1. REVIEWER MISSION
+
+Do not treat this as a normal code review.
+
+Treat the repository as a **scientific measurement instrument** that has already demonstrated that it can produce plausible-looking but false conclusions when runtime failures are allowed to enter capability statistics.
+
+Your job is to determine:
+
+1. whether Test 1.2 is actually measuring the model rather than Ollama/runtime/harness behavior;
+2. whether Test 1.2 is spending its fixed clock on **new opportunities** rather than proving the same finding repeatedly;
+3. whether Test 2 is a valid recurrence/robustness/proof stage;
+4. whether the Test 1.2 → Test 2 handoff preserves the **exact semantics** of discovered controls;
+5. whether any invalid observation can still leak into:
+   - capability scores,
+   - rescue counts,
+   - regressions,
+   - control ranking,
+   - routing,
+   - training assets,
+   - negative assets,
+   - fine-tuning candidates,
+   - final acceptance;
+6. whether the complete system is extracting the maximum useful model improvement from the available wall-clock budget;
+7. what is still missing for the strongest possible INVERTED model harness.
+
+Do not assume green CI means the experiment is scientifically correct.
+
+Trace:
+
+```
+raw model generation
+  ↓
+runtime capture
+  ↓
+classification
+  ↓
+capability validity
+  ↓
+baseline
+  ↓
+treatment
+  ↓
+delta
+  ↓
+candidate promotion
+  ↓
+proof / recurrence
+  ↓
+negative-transfer analysis
+  ↓
+routing / harness compile
+  ↓
+training assets
+  ↓
+acceptance decision
+```
+
+Try to break every arrow.
+
+---
+
+# 2. PROJECT GOAL
+
+The project is not trying to produce a benchmark score.
+
+The goal is to build the highest-value external model system possible around a fixed local model.
+
+The harness should make the model:
+
+- more capable;
+- more reliable;
+- more efficient;
+- more difficult to derail;
+- better at hard cases;
+- better with tools;
+- better at state, context, and memory;
+- better at recovery;
+- better at verification;
+- better at knowing when to stop or escalate;
+- safer against negative transfer;
+- more useful as both executor and auditor;
+- capable of producing high-quality later training assets.
+
+The governing objective is:
+
+> **Maximize new decision-changing information and usable capability gain per physical model call and per wall-clock second.**
+
+Project laws:
+
+- Suggestions are a floor, not a ceiling.
+- Data collection is cheap; repeating a long campaign is not.
+- Never remove a valuable test simply to simplify the harness.
+- A known opportunity does not deserve endless proof during discovery.
+- Negative effects are useful evidence and must become routing/veto/boundary knowledge.
+- Invalid runtime behavior is evidence about the runtime, not automatically evidence about model capability.
+- A model improvement is only real if the comparison is scientifically valid.
+- Test 1.2 should search broadly.
+- Test 2 should prove deeply.
+- Final acceptance should be harder than either discovery or proof.
+
+---
+
+# 3. AUTHORITATIVE STAGE OWNERSHIP
+
+This is the architecture that should be reviewed and improved.
+
+## Test 1.2 Collection
+
+**Role: opportunity discovery.**
+
+It should search for:
+
+- new capability failures;
+- new failure phenotypes;
+- new hard boundaries;
+- new valid rescues;
+- new control categories;
+- new negative boundaries;
+- new runtime operating conditions;
+- new tool behavior;
+- new context/state/memory limits;
+- new role-specialization effects;
+- new combinations worth handing forward.
+
+It should not spend most of the clock proving recurrence.
+
+### Test 1.2 discovery law
+
+Once a fixture receives one **valid full rescue**, that fixture/control path should lose discovery priority.
+
+Clock should move toward:
+
+1. unresolved failures;
+2. unseen failure phenotypes;
+3. underexplored families;
+4. harder levels in strong families;
+5. unused control categories;
+6. unexplored interactions;
+7. negative-transfer boundaries;
+8. model/runtime frontier questions.
+
+Proof debt follows the candidate into Test 2.
+
+---
+
+## Test 2
+
+**Role: dedicated proof / recurrence / robustness / distillation stage.**
+
+Test 2 owns:
+
+- recurrence;
+- repeated success;
+- seed stability;
+- cross-fixture generalization;
+- cross-family transfer;
+- negative transfer;
+- failure recovery;
+- robustness;
+- interaction recurrence;
+- minimal recipe / knockout analysis;
+- blind confirmation;
+- cost/latency envelope;
+- proof that the discovered effect is not noise.
+
+Test 2 must **not rediscover the world from scratch**.
+
+It should consume Test 1.2 opportunities and spend the majority of its clock proving or rejecting them.
+
+---
+
+## Final compiler / acceptance
+
+After proof, the system should compile:
+
+- exact operating configuration;
+- routing policy;
+- capability allowlist;
+- negative boundaries;
+- stop/escalate rules;
+- tool policies;
+- context/state/memory rules;
+- verified controls;
+- do-not-use controls;
+- latency/cost envelope;
+- rollback state.
+
+The final acceptance stage should use untouched evidence and must never tune on its own holdout.
+
+---
+
+# 4. MAJOR FAILURE DISCOVERED IN THE FIRST TEST 1.2 RUN
+
+Completed Collection run:
+
+`test1.2-20260913-092435-e9cfd1c8`
+
+Original aggregate results appeared to show:
+
+- 3,698 treatment observations;
+- 537 positive observations;
+- 537 improved failed cases;
+- 537 full rescues;
+- 34 unique rescued fixtures;
+- 305 regressions;
+- 53 strong controls;
+- 2 promising controls.
+
+That interpretation was wrong.
+
+## Critical clue
+
+These three values were identical:
+
+```
+positive observations = 537
+improved failed cases = 537
+full failure rescues = 537
+```
+
+The scorer was effectively binary:
+
+```
+0 → 0
+0 → 1
+1 → 0
+1 → 1
+```
+
+Observed transitions:
+
+```
+1.0 -> 1.0    1713
+0.0 -> 0.0    1143
+0.0 -> 1.0     537
+1.0 -> 0.0     305
+```
+
+Binary scoring itself is not inherently wrong.
+
+The fatal problem was **invalid observations being collapsed to numeric zero**.
+
+---
+
+# 5. FOUNDING MEASUREMENT BUG
+
+The previous Test 1.2 path effectively did:
+
+```python
+valid = classification.valid_for_capability is True
+
+numeric = score if valid else 0.0
+
+delta = numeric - control_score
+```
+
+This meant:
+
+- THINK_TRUNCATED could become score 0;
+- ANSWER_TRUNCATED could become score 0;
+- NO_FINAL_ANSWER could become score 0;
+- runtime failures could become score 0.
+
+An invalid observation therefore became a fake capability failure.
+
+## Consequences actually observed
+
+Reported regressions:
+
+```
+305
+```
+
+Real valid regressions:
+
+```
+5
+```
+
+Invalid regressions:
+
+```
+300
+```
+
+Breakdown:
+
+```
+THINK_TRUNCATED     293
+ANSWER_TRUNCATED      6
+ANSWER_WRONG          4
+RUNTIME_FAILURE       1
+FORMAT_FAILURE        1
+```
+
+Therefore:
+
+> **98.4% of the original reported regressions were not capability regressions.**
+
+---
+
+# 6. THE 537 RESCUES WERE ALSO CONTAMINATED
+
+A baseline-validity audit showed that the apparent rescues overwhelmingly started from invalid baselines.
+
+Invalid baseline classes behind reported rescues:
+
+```
+THINK_TRUNCATED     508
+ANSWER_TRUNCATED     28
+```
+
+That is 536 of the 537 originally reported rescues.
+
+Therefore the original headline:
+
+```
+537 rescues
+53 strong controls
+34 rescued fixtures
+```
+
+must **not** be used as scientific truth.
+
+The correct interpretation is:
+
+> Test 1.2 discovered a massive **generation-budget/runtime boundary**, not 536 independent capability rescues.
+
+This evidence is still valuable, but it belongs in the runtime/budget channel.
+
+---
+
+# 7. FAMILY CONTAMINATION
+
+The 17 value-incomplete capability families contained heavy invalid-output contamination.
+
+Observed result classes across those families:
+
+```
+THINK_TRUNCATED     333
+ANSWER_CORRECT      252
+TOOL_FAILURE         52
+ANSWER_TRUNCATED     26
+ANSWER_WRONG         13
+NO_FINAL_ANSWER       3
+RUNTIME_FAILURE       2
+```
+
+Examples:
+
+```
+instruction_following_constraint_stacking  44 / 57 invalid
+planning_optimization                      37 / 46 invalid
+test_generation_verification               36 / 36 invalid
+refactoring_under_constraints              32 / 46 invalid
+sibling_transfer_generalization            32 / 37 invalid
+self_correction                            30 / 43 invalid
+multi_turn_state_tracking                  30 / 52 invalid
+tool_error_recovery                        24 / 35 invalid
+verification_critique                      23 / 38 invalid
+```
+
+This is especially important because:
+
+- verification,
+- critique,
+- self-correction,
+- uncertainty,
+- tools,
+
+are central to the INVERTED architecture.
+
+---
+
+# 8. REPLICATION PROBLEM
+
+The original Collection produced:
+
+```
+2554 intervention × fixture cells
+```
+
+Replication distribution:
+
+```
+1 observation: 1932 cells
+2 observations:  100 cells
+3 observations:  522 cells
+```
+
+Therefore:
+
+```
+75.6% of cells were singletons
+```
+
+The original “strong” classifications were largely pooled intervention statistics, not repeated proof on the same intervention × failure relationship.
+
+This is now considered correct **for discovery only**.
+
+It is not sufficient for proof.
+
+Test 2 must explicitly measure:
+
+- recurrence;
+- cross-seed stability;
+- cross-fixture generalization;
+- family transfer;
+- harm rate;
+- confidence intervals.
+
+---
+
+# 9. TEST 1.2 DISCOVERY REDESIGN ALREADY IMPLEMENTED
+
+The Collection scheduler has been changed so that:
+
+- one valid full rescue creates an opportunity candidate;
+- a rescued fixture leaves the priority rescue queue;
+- rare/new failure phenotypes outrank repeated copies of known failures;
+- strong families are pushed toward harder unseen cases;
+- different control categories are directed toward underexplored phenotypes;
+- same fixture × same control seed replication is no longer a Collection priority;
+- negative-transfer discovery samples novel sentinels instead of repeatedly proving one boundary;
+- all 40 capability families remain part of the mandatory coverage floor;
+- new clock is directed toward discovery rather than proof.
+
+A new opportunity map tracks:
+
+- unique failing fixtures;
+- unique rescued fixtures;
+- distinct failure phenotypes;
+- unresolved failures;
+- frontier state;
+- repeated-pair waste.
+
+Review this logic in:
+
+`src/compute_cost/test12_campaign.py`
+
+---
+
+# 10. CAPABILITY-VALIDITY FIX ALREADY IMPLEMENTED
+
+The corrected rule is:
+
+> **A capability delta exists only if the baseline and treatment are both capability-valid.**
+
+Invalid rows remain evidence.
+
+They may be used for:
+
+- runtime analysis;
+- truncation analysis;
+- budget calibration;
+- resource behavior;
+- capture diagnostics.
+
+They may **not** become:
+
+- capability failures;
+- capability rescues;
+- regressions;
+- null controls;
+- pruning candidates;
+- training positives;
+- training negatives;
+- fine-tuning candidates;
+- routing labels.
+
+Review these files carefully:
+
+- `src/compute_cost/test12_campaign.py`
+- `src/compute_cost/test12_value.py`
+- `src/compute_cost/test12_model_manufacturing.py`
+- `src/compute_cost/test12_tuning.py`
+
+---
+
+# 11. GENERATION-BUDGET FIX ALREADY IMPLEMENTED
+
+The 536 fake rescues are now treated as useful evidence about the model's required operating budget.
+
+Current rules:
+
+1. determine a capability-valid baseline budget per family;
+2. invalid baseline output is not a capability failure;
+3. non-budget controls must be compared at the same generation budget as baseline;
+4. explicit GENERATION_BUDGET experiments are allowed to change budget;
+5. old evidence measured at obsolete budgets must not suppress new trials;
+6. recovered invalid/obsolete-budget evidence remains on disk but is quarantined from capability scoring.
+
+Reviewer should try to break this invariant:
+
+> A prompt/control/routing/tool intervention must never receive credit simply because it was allowed more generation tokens than its baseline.
+
+---
+
+# 12. TEST 2 STOP-SHIP BUGS THAT HAVE ALREADY BEEN FIXED
+
+The old `test2_campaign.py` had the same invalid→0 failure.
+
+That has been changed.
+
+## Test 2 now:
+
+- records capability validity;
+- refuses to calculate a capability delta from an invalid baseline or invalid treatment;
+- filters invalid rows out of effect maps;
+- tracks baseline and treatment generation budgets;
+- requires a matched budget for capability comparison;
+- escalates baseline budget through a configurable ladder when the model truncates;
+- stores truncation attempts as runtime evidence;
+- uses the first valid operating point instead of calling truncation a failure.
+
+The default ladder is currently:
+
+```
+256
+512
+1024
+2048
+```
+
+Reviewer must determine whether this is the optimal search method or whether a faster bracket/bisect strategy is better.
+
+---
+
+# 13. TEST 1.2 → TEST 2 SEMANTIC COMPATIBILITY
+
+This is now **fail-closed**.
+
+Old Test 2 knows the old `INGREDIENTS` prompt-recipe system.
+
+Test 1.2 can discover controls involving:
+
+- reasoning effort;
+- generation budget;
+- context;
+- prompt structure;
+- verification;
+- retry;
+- routing;
+- tools;
+- state;
+- memory;
+- controller chains;
+- interaction/composition;
+- recovery.
+
+It is scientifically invalid to translate those controls into a generic old prompt recipe.
+
+Therefore current Test 2 intentionally refuses a Test 1.2 handoff until it has an **exact-control execution adapter**.
+
+Current fail-closed rule:
+
+> **No Test 1.2 control may enter Test 2 unless Test 2 can execute the exact intervention definition with the same semantics.**
+
+This is a remaining implementation requirement, but the unsafe behavior is blocked.
+
+## Highest-priority remaining implementation task
+
+Build a shared exact intervention executor so both stages call the same implementation:
+
+```
+Test 1.2 discovery
+      │
+      ▼
+shared intervention definition + executor
+      │
+      ├── Test 1.2 discovery observation
+      │
+      └── Test 2 proof observation
+```
+
+Do not duplicate intervention rendering logic.
+
+Do not convert an intervention to another control language.
+
+Identity should be content-addressed, for example:
+
+```
+intervention_semantic_sha256
+```
+
+Test 2 should reject any candidate if its proof-time semantic hash differs from discovery-time semantic hash.
+
+---
+
+# 14. STAGE-CONTRACT CONFLICT THAT HAS BEEN FIXED
+
+The previous Test 1.2 terminal output claimed:
+
+```
+no_test2_followup_required = true
+```
+
+That contradicted the project law that proof belongs to Test 2.
+
+The contract now states that Test 2 is the authoritative:
+
+```
+RECURRENCE
+ROBUSTNESS
+NEGATIVE_TRANSFER
+DISTILLATION
+PROOF
+```
+
+stage.
+
+Reviewer should verify there is no remaining artifact that tells another model or operator to skip Test 2.
+
+---
+
+# 15. FOUNDATIONAL GPT-OSS / OLLAMA QUESTIONS
+
+These questions must be treated as upstream model/runtime characterization, not ordinary capability tests.
+
+## Runtime semantics
+
+1. Does Ollama accept `think: false` for gpt-oss?
+2. If not, does it error or silently substitute another mode?
+3. Does `format_json: true` or native JSON format produce empty content with populated thinking?
+4. At what rate does this happen per task family?
+5. Is reasoning always separated into `message.thinking`?
+6. Does reasoning ever leak into `content`?
+7. Does `done_reason` distinguish thinking exhaustion from answer exhaustion?
+8. Does `num_predict` cap thinking + answer together or answer only?
+9. What exactly does `eval_count` contain?
+10. Can thinking tokens and answer tokens be separated through this interface?
+11. Does the harness preserve/drop prior analysis correctly through tool loops?
+12. Does a tool call terminate generation cleanly?
+
+## Sampling
+
+13. Is `top_p` falling to Ollama default behavior when omitted?
+14. What changes when `top_p=1.0`?
+15. Temperature 0.0 versus 1.0 by capability family.
+16. Which setting lies on the accuracy/cost Pareto frontier?
+
+## Reasoning budget
+
+17. Minimum reproduced passing generation budget per family.
+18. Minimum passing budget per reasoning effort.
+19. Thinking/answer proportion if observable.
+20. Sharpness of THINK_TRUNCATED → PASS boundary.
+21. Boundary versus difficulty.
+22. 2× / 4× / 10× minimum-budget behavior.
+23. Overthinking/accuracy decline.
+24. Low effort versus high effort.
+25. Accuracy/token Pareto front.
+26. Analysis-loop rate.
+27. Early doomed-generation prediction.
+
+## Output contract
+
+28. First-attempt parse rate.
+29. Developer JSON instructions versus runtime-enforced JSON.
+30. Schema/grammar effect.
+31. Cheapest reliable output contract.
+32. Retry-on-parse-failure convergence.
+33. Wrong answer versus unparseable answer separation.
+
+## Context
+
+34. Real usable context.
+35. Context limit versus reasoning effort.
+36. Observable truncation behavior.
+37. planted-key position sensitivity.
+38. VRAM/latency knee.
+
+## Role specialization
+
+39. Auditor accuracy versus executor accuracy.
+40. Auditor versus executor required budget.
+41. False-accept versus false-reject asymmetry.
+42. Candidate-quality sweep.
+43. Candidate alone versus candidate + reasoning.
+44. second-audit stability.
+45. low-effort versus high-effort audit economics.
+
+## Reliability / trust
+
+Also measure:
+
+- seed spread;
+- warm versus cold;
+- sustained-load degradation;
+- wall-clock and energy cost;
+- prompt injection into auditor candidates;
+- rationale/verdict divergence;
+- reasoning-channel leakage into scored output.
+
+The most important ordering is:
+
+```
+runtime semantics
+    ↓
+minimum valid budget
+    ↓
+role specialization
+    ↓
+capability opportunity search
+```
+
+Do not invert that order.
+
+---
+
+# 16. WHAT TEST 1.2 SHOULD OPTIMIZE FOR
+
+A future Collection should report at minimum:
+
+```
+unique valid baselines
+unique valid failures
+unique failure phenotypes
+unique valid rescues
+unique rescued phenotypes
+unique control categories producing rescue
+hardest valid pass by family
+easiest valid fail by family
+new negative boundaries
+runtime-invalid observations
+invalid rate by family
+calls per new discovery
+seconds per new discovery
+repeated-cell waste
+unresolved capability floor
+```
+
+The scorecard should punish repeated proof during discovery.
+
+Suggested discovery utility:
+
+```
+utility =
+    new_failure_phenotype_value
+  + new_unique_rescue_value
+  + harder_frontier_value
+  + new_control_category_value
+  + new_negative_boundary_value
+  + information_gain
+  - repetition_cost
+  - invalid_call_cost
+  - latency_cost
+```
+
+Do not let the raw number of observations become the success metric.
+
+---
+
+# 17. WHAT TEST 2 SHOULD OPTIMIZE FOR
+
+Test 2 should receive an opportunity registry like:
+
+```
+candidate_id
+semantic_hash
+discovery_family
+discovery_fixture
+failure_phenotype
+control_category
+discovery_budget
+baseline_budget
+discovery_seed
+valid_rescue_count
+verification_debt
+known_negative_boundaries
+estimated_call_cost
+```
+
+Then prove:
+
+### Recurrence
+
+- same candidate;
+- independent seeds;
+- same failure phenotype;
+- no semantic drift.
+
+### Generalization
+
+- independent fixtures;
+- sibling difficulty;
+- nearby difficulty;
+- other families where applicable.
+
+### Harm
+
+For every verified control:
+
+```
+rescue_rate
+break_rate
+rescue_to_break_ratio
+family-specific harm
+global harm
+severity
+```
+
+A control with:
+
+```
+3 rescues : 1 break
+```
+
+is not equivalent to:
+
+```
+30 rescues : 1 break
+```
+
+### Confidence
+
+Use clustered inference where repeated observations from one fixture are not treated as independent trials.
+
+The unit of independence must be explicit.
+
+Reviewer should decide whether the correct cluster is:
+
+- fixture;
+- fixture × seed;
+- failure phenotype;
+- family;
+- campaign block.
+
+---
+
+# 18. BINARY SCORER LIMITATION
+
+Current core capability scoring is often binary.
+
+This is acceptable for hard acceptance:
+
+```
+PASS / FAIL
+```
+
+but insufficient for every analytical task.
+
+Reviewer should determine where richer scoring is needed.
+
+Potential secondary signals:
+
+- exact correctness;
+- partial constraint satisfaction;
+- tool-call correctness;
+- schema validity;
+- argument correctness;
+- factual support;
+- reasoning completeness where observable;
+- number of violated constraints;
+- edit distance from valid structure;
+- plan quality;
+- recovery quality;
+- calibration error.
+
+Do not replace a reliable binary acceptance gate with a vague model judge.
+
+Instead use:
+
+```
+hard pass/fail
++
+diagnostic subscore vector
+```
+
+when deterministic scoring is possible.
+
+---
+
+# 19. FAILURE PHENOTYPE DESIGN
+
+A fixture ID is not a failure type.
+
+Test 1.2 should cluster failures by mechanism.
+
+Candidate phenotype dimensions:
+
+```
+capability family
+result class
+scorer type
+failure subtype
+difficulty band
+runtime validity
+tool phase
+context position
+state age
+constraint count
+dependency depth
+answer-contract type
+```
+
+Reviewer should search for cases where many “different” failures are actually the same phenotype.
+
+Likewise, cluster controls by their rescued-fixture signature.
+
+If 20 controls rescue the same 8 fixtures, they may represent one underlying mechanism with 20 names.
+
+Find the real mechanism count.
+
+---
+
+# 20. UNRESOLVED FAILURE FLOOR
+
+The most valuable output may not be the controls that work.
+
+It may be the valid failures that survive every tested control.
+
+For each unresolved failure, determine:
+
+- valid baseline?
+- enough generation budget?
+- repeated?
+- same phenotype elsewhere?
+- tool/environment limitation?
+- context limitation?
+- genuine model capability limit?
+- recoverable by another model?
+- fine-tuning candidate?
+- should route to stronger model?
+- should abstain?
+
+The unresolved set should become a **model-limit registry**, not a pile of zeros.
+
+---
+
+# 21. AUDITOR / EXECUTOR THESIS
+
+INVERTED depends heavily on role specialization.
+
+The reviewer must determine whether there is a real economic advantage to using the model as an auditor.
+
+Matched design:
+
+```
+same task
+same candidate
+same operating budget accounting
+executor condition
+auditor condition
+```
+
+Measure:
+
+- executor accuracy;
+- auditor accuracy;
+- false accept;
+- false reject;
+- required budget;
+- latency;
+- seed stability;
+- difficulty sensitivity.
+
+If low-effort audit performs like high-effort execution, that materially changes the architecture.
+
+If audit is unreliable or easily steered by candidate text, that also changes the architecture.
+
+---
+
+# 22. TOOL TESTING REQUIREMENTS
+
+Do not confuse:
+
+```
+model knows which tool should be used
+```
+
+with:
+
+```
+model successfully completed a real tool loop
+```
+
+Test separately:
+
+1. tool selection;
+2. argument schema;
+3. argument values;
+4. tool invocation;
+5. stop behavior;
+6. tool result ingestion;
+7. state update;
+8. recovery from tool error;
+9. multi-tool dependency order;
+10. final answer after tool result;
+11. malicious/untrusted tool output;
+12. stale tool state.
+
+The raw Ollama tool-call interface must be tested independently of synthetic tool simulations.
+
+---
+
+# 23. CONTEXT / MEMORY / STATE REQUIREMENTS
+
+Measure independently:
+
+- retrieval;
+- reasoning over retrieved material;
+- lost-in-middle;
+- contradiction;
+- stale state;
+- superseded state;
+- context compression;
+- memory fidelity;
+- active memory evolution;
+- tool-state interaction;
+- long-horizon state transitions.
+
+A large context window is not evidence that the model can use that context.
+
+---
+
+# 24. NEGATIVE EFFECTS MUST BECOME PRODUCT VALUE
+
+Negative observations are not wasted tests.
+
+A valid negative effect should produce one or more of:
+
+- route veto;
+- activation boundary;
+- control exclusion;
+- family-specific exception;
+- safer replacement;
+- retry prohibition;
+- cost avoidance rule;
+- training negative;
+- regression sentinel;
+- rollback trigger.
+
+However:
+
+> Invalid runtime observations must never become negative capability assets.
+
+---
+
+# 25. TRAINING-ASSET FIREWALL
+
+Review every path into:
+
+- distillation;
+- preference data;
+- fine-tuning examples;
+- router supervision;
+- calibration data;
+- failure-credit data;
+- stability anchors.
+
+Required invariant:
+
+```
+training asset
+    ⇒ source observation scientifically valid
+    ⇒ baseline scientifically valid where comparative
+    ⇒ treatment scientifically valid
+    ⇒ partition eligible
+    ⇒ no protected leakage
+```
+
+Any training corpus that violates this must fail closed.
+
+---
+
+# 26. PROTECTED-DATA CONTRACT
+
+The reviewer must verify:
+
+- DISCOVERY may influence candidate generation.
+- VALIDATION may influence selection only where explicitly allowed.
+- TEST2_BLIND may not tune Test 2 candidates after blind opening.
+- TEST3_PROTECTED must not be exposed before its owner stage.
+- protected siblings must not leak into training.
+- report generation must not accidentally reload protected content into optimization.
+
+Partition names alone are not proof of isolation.
+
+Trace file access.
+
+---
+
+# 27. RECOVERY CONTRACT
+
+Long tests must never require a full rerun after a process interruption.
+
+Required behavior:
+
+- same run ID;
+- valid atomic rows survive;
+- elapsed active time survives;
+- physical model-call count survives;
+- completed valid trials survive;
+- malformed atomic record quarantined individually;
+- invalid scientific evidence preserved as diagnostic evidence;
+- only missing/invalid scientific slice is eligible for replay;
+- winner lock cannot reopen after holdout acceptance begins.
+
+A model/runtime/benchmark-contract change creates a **new onboarding event**.
+
+---
+
+# 28. CURRENT TEST 2 SAFETY STATUS
+
+Current Test 2 has been made safer, but **Test 1.2 exact-control handoff is intentionally fail-closed** until a shared exact executor exists.
+
+Do not remove this guard merely to make the command run.
+
+The next correct implementation should:
+
+1. use the same intervention definition in Test 1.2 and Test 2;
+2. use the same renderer/executor;
+3. preserve semantic hash;
+4. change only:
+   - fixtures,
+   - seeds,
+   - proof schedule,
+   - validation/proof objective;
+5. keep operating conditions matched unless operating condition itself is the tested variable.
+
+---
+
+# 29. HIGHEST-VALUE ITEMS STILL MISSING
+
+The reviewer should actively search for additional missing items, but these are already high priority.
+
+## 1. Shared exact-control executor
+
+Highest priority.
+
+One implementation used by both Test 1.2 and Test 2.
+
+## 2. Semantic intervention hashing
+
+Prevent silent control drift between discovery and proof.
+
+## 3. Cluster-aware statistics
+
+Do not treat repeated trials on one fixture as independent evidence.
+
+## 4. Discovery-value scheduler
+
+Explicitly maximize new phenotypes / unique rescues / harder frontiers.
+
+## 5. Proof-value scheduler
+
+Test 2 should allocate replication where uncertainty is decision-relevant.
+
+## 6. Independent harm model
+
+Measure rescue and break probability separately.
+
+## 7. Runtime-invalidity model
+
+Track truncation/runtime failure rate by:
+
+- family;
+- difficulty;
+- reasoning effort;
+- budget;
+- output contract;
+- context;
+- tool phase.
+
+## 8. Budget bracketing/bisection
+
+Current ladder is safe but may waste calls.
+
+Find the minimum reproducible valid operating budget efficiently.
+
+## 9. Auditor/executor economics
+
+This can change the whole system architecture.
+
+## 10. Control redundancy clustering
+
+Collapse 50 labels into the smaller number of actual mechanisms.
+
+## 11. Unresolved capability-floor registry
+
+Treat persistent valid failures as valuable model boundaries.
+
+## 12. Progressive difficulty
+
+When a family performs strongly, climb until the real frontier is found.
+
+## 13. Rare-failure search
+
+Prioritize new phenotype value, not raw fixture count.
+
+## 14. Cost-aware controller composition
+
+A two-call controller that adds 1% accuracy may be inferior to direct execution.
+
+## 15. Early-abort prediction
+
+If thinking telemetry predicts inevitable truncation, stop before wasting full budget.
+
+## 16. Exact tool-loop semantics
+
+Especially gpt-oss + Ollama harmony/tool behavior.
+
+## 17. Output-contract optimizer
+
+Find the cheapest reliable structure mode per task family.
+
+## 18. Context knee
+
+Find where extra context costs more than it helps.
+
+## 19. Sustained-load validity
+
+Make sure a seven-hour campaign does not change model behavior because of thermal/resource degradation.
+
+## 20. Energy / hardware economics
+
+For local deployment, quality-per-second is incomplete without resource cost.
+
+---
+
+# 30. WHAT THE REVIEWER MUST DELIVER
+
+Do not return a generic prose review.
+
+Deliver:
+
+## A. Stop-ship findings
+
+Every issue capable of invalidating a long run.
+
+For each:
+
+```
+severity
+file
+function
+exact failure mode
+scientific consequence
+minimal reproduction
+correct fix
+regression test
+```
+
+## B. Architecture decision
+
+State the final role of:
+
+- Test 1.2 Collection;
+- Test 2;
+- final compiler;
+- Test 3 / protected acceptance if retained.
+
+No overlapping ownership.
+
+## C. Missing high-value experiments
+
+Rank by:
+
+```
+expected information value
+expected capability value
+model-call cost
+wall-clock cost
+implementation complexity
+risk of confounding
+```
+
+## D. Exact-control handoff design
+
+Provide the schema and implementation plan.
+
+## E. Statistical validity plan
+
+Define:
+
+- unit of independence;
+- recurrence threshold;
+- confidence method;
+- clustering;
+- multiple-comparison handling;
+- effect representation for binary outcomes;
+- harm threshold.
+
+## F. Scheduler design
+
+Provide discovery scheduler and proof scheduler separately.
+
+## G. Training firewall audit
+
+Prove invalid/protected observations cannot enter training assets.
+
+## H. Test suite
+
+Add regression tests for every discovered stop-ship failure.
+
+## I. Final answer
+
+Answer:
+
+> **What exact Test 1.2 + Test 2 architecture will produce the most trustworthy and highest-value model improvement under the existing fixed wall-clock constraints?**
+
+Do not optimize for minimal code.
+
+Optimize for highest scientific value and shipping quality.
+
+---
+
+# 31. FILES TO INSPECT FIRST
+
+Start here:
+
+```
+src/compute_cost/test12_campaign.py
+src/compute_cost/test12_foundation_labs.py
+src/compute_cost/test12_value.py
+src/compute_cost/test12_model_manufacturing.py
+src/compute_cost/test12_tuning.py
+src/compute_cost/test2_campaign.py
+tests/test_test12_campaign.py
+tests/test_test12_model_manufacturing.py
+tests/test_test2_campaign.py
+docs/test1.2-model-harness-compiler.md
+```
+
+Then trace:
+
+```
+characterization.py
+runtimes/ollama.py
+runner_core.py
+scoring / classification
+EvidenceStore / manifest
+CLI recovery paths
+```
+
+Do not begin with reports.
+
+Begin with raw-generation capture and work upward.
+
+---
+
+# 32. CURRENT EMPIRICAL FACTS THAT MUST NOT BE LOST
+
+These facts came from the first real Test 1.2 Collection and should remain available as forensic evidence:
+
+```
+Treatment observations: 3698
+Reported positive observations: 537
+Reported full rescues: 537
+Original unique rescued fixtures: 34
+Reported regressions: 305
+
+Valid regressions after audit: 5
+Invalid regressions: 300
+
+Invalid-baseline reported rescues:
+  THINK_TRUNCATED: 508
+  ANSWER_TRUNCATED: 28
+
+Intervention × fixture cells:
+  1 sample: 1932
+  2 samples: 100
+  3 samples: 522
+```
+
+Do not delete these results.
+
+They are evidence of both:
+
+- the model/runtime budget boundary;
+- the failure mode of the old measurement system.
+
+---
+
+# 33. CURRENT RUN IDS
+
+Collection:
+
+```
+test1.2-20260913-092435-e9cfd1c8
+```
+
+Test 1.2 tuning/compile run:
+
+```
+test1.2-tune-20260913-182713-e0af9b02
+```
+
+The tuning run was already partially executed when the validity issue was discovered.
+
+Its evidence must be treated according to the recovery/quarantine rules, not discarded or blindly trusted.
+
+---
+
+# 34. NON-NEGOTIABLE SCIENTIFIC INVARIANTS
+
+The reviewer should turn these into executable assertions wherever possible.
+
+### Validity
+
+```
+capability_delta_defined
+    ⇒ baseline_valid
+    AND treatment_valid
+```
+
+### Budget
+
+```
+non_budget_control_delta_defined
+    ⇒ baseline_budget == treatment_budget
+```
+
+### Semantic identity
+
+```
+test2_proof_candidate
+    ⇒ proof_semantic_hash == discovery_semantic_hash
+```
+
+### Discovery
+
+```
+valid_full_rescue_found
+    ⇒ fixture/control proof priority drops in Test 1.2
+```
+
+### Proof
+
+```
+promotion_to_verified
+    ⇒ independent recurrence evidence exists
+```
+
+### Harm
+
+```
+verified_control
+    ⇒ measured negative-transfer boundary exists
+```
+
+### Training
+
+```
+training_example
+    ⇒ scientifically valid source evidence
+```
+
+### Protection
+
+```
+protected_fixture
+    ⇒ never influences candidate generation or tuning
+```
+
+### Recovery
+
+```
+process interruption
+    ⇒ valid completed evidence survives
+```
+
+---
+
+# 35. FINAL REVIEW STANDARD
+
+Do not approve the system because it “looks much better.”
+
+Approve it only when you can answer yes to all of these:
+
+- Can a truncation still become a capability failure?
+- Can an invalid baseline create a rescue?
+- Can a budget increase masquerade as a prompt improvement?
+- Can Test 2 execute a different control than Test 1.2 discovered?
+- Can repeated observations on one fixture inflate confidence?
+- Can one control hide a large break rate behind a rescue rate?
+- Can protected evidence influence tuning?
+- Can invalid evidence enter training?
+- Can a strong family consume clock on easy repeated cases?
+- Can a weak family consume clock repeating one failure phenotype?
+- Can Test 1.2 spend proof calls that belong in Test 2?
+- Can Test 2 waste proof calls on already-settled questions?
+- Can the harness claim full integration without unresolved families being explicit?
+- Can an interruption force a full rerun?
+- Can final acceptance reopen tuning?
+
+If any answer is **yes**, identify and patch it before approving another long campaign.
+
+---
+
+# 36. REVIEWER DIRECTIVE
+
+You are not being asked to preserve the current architecture.
+
+You are being asked to preserve the **goal**.
+
+If the best design requires:
+
+- moving phases;
+- replacing a scheduler;
+- changing statistics;
+- creating a shared executor;
+- changing handoff schemas;
+- adding instrumentation;
+- removing redundant proof from discovery;
+- increasing difficulty;
+- redistributing the same fixed clock;
+
+do it.
+
+Do not add wall-clock time unless there is no way to recover equivalent or greater value by removing redundancy.
+
+The final system should feel sophisticated internally but simple operationally:
+
+```
+run discovery
+→ run proof
+→ compile exact model policy
+→ accept / constrain / reject
+```
+
+Everything else exists to make those four steps scientifically trustworthy and maximally valuable.
