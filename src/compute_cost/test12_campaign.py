@@ -6797,6 +6797,22 @@ def run_test12_campaign(
             )
         elif phase_name == "role_specialization_gate":
             results["role_specialization"] = run_role_specialization_lab(campaign, deadline)
+            thesis = copy.deepcopy(
+                (results["role_specialization"] or {}).get(
+                    "auditor_executor_thesis"
+                )
+                or {
+                    "schema_version":1,
+                    "status":"UNMEASURED",
+                    "full_campaign_allowed":False,
+                }
+            )
+            runner.store.write_json(
+                "test1.2-auditor-executor-thesis.json",
+                thesis,
+                producer="test1.2-architecture-gate",
+                stage="auditor-executor-thesis",
+            )
             profile = build_runtime_characterization_profile(
                 campaign,
                 results.get("runtime_semantics") or {},
@@ -6819,6 +6835,16 @@ def run_test12_campaign(
                 raise ValueError(
                     "Stage 0 runtime characterization failed; capability testing is blocked: "
                     + ", ".join(profile.get("gate_failures") or [])
+                )
+            if thesis.get("status") != "SUPPORTED":
+                campaign.phase_results = copy.deepcopy(results)
+                campaign._write_recovery_checkpoint(
+                    state="AUDITOR_EXECUTOR_THESIS_NOT_SUPPORTED"
+                )
+                raise ValueError(
+                    "Stage 0 instrument characterization passed, but the matched "
+                    "auditor/executor thesis is not supported; the full inverted "
+                    "campaign is blocked without relabeling the runtime as invalid."
                 )
             if campaign.capability_call_origin is None:
                 campaign.capability_call_origin = campaign._physical_model_calls()
