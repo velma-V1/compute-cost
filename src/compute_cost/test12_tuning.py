@@ -1123,11 +1123,11 @@ def _score_policy_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
         }
     scores=[float(row.get("score") or 0.0) for row in valid_rows]
     control_scores=[float(row.get("control_score") or 0.0) for row in valid_rows]
-    deltas=[float(row.get("delta") or 0.0) for row in valid_rows]
+    deltas=[float(row["delta"]) for row in valid_rows if row.get("delta") is not None]
     regressions=sum(1 for value in deltas if value < 0)
     calls=[float(row.get("model_calls") or 0.0) for row in valid_rows]
     mean_delta=mean(deltas)
-    regression_rate=regressions/len(rows)
+    regression_rate=regressions/len(valid_rows)
     mean_calls=mean(calls)
     return {
         "n":len(valid_rows),
