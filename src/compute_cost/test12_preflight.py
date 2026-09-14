@@ -66,6 +66,7 @@ def _semantic_catalog(
             ),
         )
         representative = ordered[0]
+        implementation = mechanism_implementation_status(representative)
         result[key] = {
             "mechanism_key": key,
             "representative_intervention_id": str(
@@ -75,9 +76,9 @@ def _semantic_catalog(
             "estimated_physical_calls_per_application": int(
                 _estimated_physical_calls(representative)
             ),
-            "implementation_status": str(
-                representative.get("implementation_status") or "BUILT"
-            ),
+            "implementation_status": str(implementation["status"]),
+            "implementation_basis": str(implementation["basis"]),
+            "implementation_audit": copy.deepcopy(implementation),
             "representative": copy.deepcopy(representative),
             "variant_count": len(members),
         }
