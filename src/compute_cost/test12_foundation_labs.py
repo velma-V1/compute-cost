@@ -213,59 +213,6 @@ def _invoke_probe(
 
 
 def _representative_cases(campaign: Any) -> list[dict[str, Any]]:
-    # Cross-call state-isolation probe. The scientific runner assumes each
-    # request is independent; A -> B -> A must not carry fixture/context state
-    # across calls. Temperature zero and a fixed seed make this a runtime
-    # semantics check rather than a stochastic capability comparison.
-    state_sequence: list[dict[str, Any]] = []
-    for label, token in (
-        ("A1", "STATE_ALPHA"),
-        ("B", "STATE_BETA"),
-        ("A2", "STATE_ALPHA"),
-    ):
-        if not campaign.can_start(deadline):
-            break
-        state_row = _invoke_probe(
-            campaign,
-            deadline,
-            probe_id=f"runtime-stateless-{label.lower()}",
-            question_ids=[46],
-            family_id="RUNTIME_SEMANTICS",
-            messages=[{
-                "role":"user",
-                "content":f"Reply with exactly {token} and nothing else.",
-            }],
-            options={
-                "num_predict":64,
-                "temperature":0.0,
-                "top_p":1.0,
-                "seed":777,
-            },
-            request_fields={},
-        )
-        if state_row is not None:
-            state_row["stateless_expected_token"] = token
-            state_sequence.append(state_row)
-            rows.append(state_row)
-
-    state_by_probe = {
-        str(row.get("probe_id") or ""): row
-        for row in state_sequence
-    }
-    state_a1 = state_by_probe.get("runtime-stateless-a1")
-    state_b = state_by_probe.get("runtime-stateless-b")
-    state_a2 = state_by_probe.get("runtime-stateless-a2")
-    statelessness_verified = bool(
-        state_a1
-        and state_b
-        and state_a2
-        and str(state_a1.get("content") or "").strip() == "STATE_ALPHA"
-        and str(state_b.get("content") or "").strip() == "STATE_BETA"
-        and str(state_a2.get("content") or "").strip() == "STATE_ALPHA"
-        and str(state_a1.get("content") or "").strip()
-            == str(state_a2.get("content") or "").strip()
-    )
-
     by_family: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for case in campaign.partitions["DISCOVERY"]:
         by_family[_family(case)].append(case)
@@ -401,6 +348,59 @@ def run_runtime_semantics_gate(campaign: Any, deadline: float) -> dict[str, Any]
             )
             if follow is not None:
                 rows.append(follow)
+
+    # Cross-call state-isolation probe. The scientific runner assumes each
+    # request is independent; A -> B -> A must not carry fixture/context state
+    # across calls. Temperature zero and a fixed seed make this a runtime
+    # semantics check rather than a stochastic capability comparison.
+    state_sequence: list[dict[str, Any]] = []
+    for label, token in (
+        ("A1", "STATE_ALPHA"),
+        ("B", "STATE_BETA"),
+        ("A2", "STATE_ALPHA"),
+    ):
+        if not campaign.can_start(deadline):
+            break
+        state_row = _invoke_probe(
+            campaign,
+            deadline,
+            probe_id=f"runtime-stateless-{label.lower()}",
+            question_ids=[46],
+            family_id="RUNTIME_SEMANTICS",
+            messages=[{
+                "role":"user",
+                "content":f"Reply with exactly {token} and nothing else.",
+            }],
+            options={
+                "num_predict":64,
+                "temperature":0.0,
+                "top_p":1.0,
+                "seed":777,
+            },
+            request_fields={},
+        )
+        if state_row is not None:
+            state_row["stateless_expected_token"] = token
+            state_sequence.append(state_row)
+            rows.append(state_row)
+
+    state_by_probe = {
+        str(row.get("probe_id") or ""): row
+        for row in state_sequence
+    }
+    state_a1 = state_by_probe.get("runtime-stateless-a1")
+    state_b = state_by_probe.get("runtime-stateless-b")
+    state_a2 = state_by_probe.get("runtime-stateless-a2")
+    statelessness_verified = bool(
+        state_a1
+        and state_b
+        and state_a2
+        and str(state_a1.get("content") or "").strip() == "STATE_ALPHA"
+        and str(state_b.get("content") or "").strip() == "STATE_BETA"
+        and str(state_a2.get("content") or "").strip() == "STATE_ALPHA"
+        and str(state_a1.get("content") or "").strip()
+            == str(state_a2.get("content") or "").strip()
+    )
 
     by_family: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for row in rows:
