@@ -6652,6 +6652,8 @@ def run_test12_campaign(
                     "Stage 0 runtime characterization failed; capability testing is blocked: "
                     + ", ".join(profile.get("gate_failures") or [])
                 )
+            if campaign.capability_call_origin is None:
+                campaign.capability_call_origin = campaign._physical_model_calls()
         elif phase_name == "baseline_capability_map":
             if not (results.get("runtime_characterization") or {}).get("gate_passed"):
                 raise ValueError("Stage 0 runtime characterization must pass before baseline capability mapping")
