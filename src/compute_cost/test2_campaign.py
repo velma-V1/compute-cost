@@ -112,6 +112,7 @@ DEFAULT_TEST2_CONFIG: dict[str, Any] = {
     "recurrence_min_distinct_seeds": 2,
     "recurrence_target_valid_observations": 6,
     "recurrence_max_valid_observations": 12,
+    "unknown_resolution_seconds": 25 * 60,
     "top_recipes": 12,
     "max_recovery_recipes": 8,
     "negative_transfer_recipes": 8,
@@ -556,6 +557,17 @@ def load_test1_handoff(
         terminal = _read_json(run_dir / "test1.2-terminal-handoff.json")
         package = _read_json(run_dir / "inverted-model-integration-package.json")
         compiled = _read_json(run_dir / "compiled-harness-policy.json")
+        proof_manifest_path = run_dir / "test2-proof-manifest.json"
+        if not proof_manifest_path.is_file():
+            raise ValueError("Test 2 requires compiler-derived test2-proof-manifest.json")
+        proof_manifest = _read_json(proof_manifest_path)
+        if (
+            proof_manifest.get("analysis_type")
+            != "COMPILER_DERIVED_TEST2_CELL_PROOF_MANIFEST"
+        ):
+            raise ValueError("Test 2 proof-manifest contract drifted")
+        if proof_manifest.get("effect_size_used_for_ordering") is not False:
+            raise ValueError("Test 2 proof queue may not be ordered by discovery effect size")
         if terminal.get("state") != "TEST1.2_PROVISIONAL_COMPILER_COMPLETE":
             raise ValueError("Test 2 requires a completed provisional Test 1.2 compiler handoff")
         if package.get("release_authorized") is not False:
@@ -575,6 +587,8 @@ def load_test1_handoff(
         required = [
             "full-control-candidate-registry.json",
             "runtime-characterization-profile.json",
+            "mechanism-family-knowledge-table.json",
+            "unaided-model-capability-profile.json",
             "test1.2-handoff.json",
             "test1.2-opportunity-discovery-map.json",
             "control-redundancy-map.json",
@@ -628,58 +642,44 @@ def load_test1_handoff(
             else []
         )
         winner = copy.deepcopy(compiled.get("winner_policy") or {})
-        selected_ids: list[str] = []
         required_policy_control_ids: list[str] = []
 
         def add_required_id(value: Any) -> None:
             ident = str(value or "")
-            if ident and ident != "None" and ident in candidate_by_id and ident not in required_policy_control_ids:
+            if (
+                ident
+                and ident != "None"
+                and ident != "DIRECT"
+                and ident in candidate_by_id
+                and ident not in required_policy_control_ids
+            ):
                 required_policy_control_ids.append(ident)
-
-        def add_id(value: Any) -> None:
-            ident = str(value or "")
-            if ident and ident != "None" and ident in candidate_by_id and ident not in selected_ids:
-                selected_ids.append(ident)
 
         add_required_id(winner.get("intervention_id"))
         add_required_id(winner.get("fallback_intervention_id"))
         for ident in (winner.get("route_map") or {}).values():
             add_required_id(ident)
-        # Required controls reachable from the frozen winner are never
-        # deduplicated away. They are proof obligations regardless of cluster.
-        for ident in required_policy_control_ids:
-            add_id(ident)
 
-        # Buy the broadest independent mechanism evidence first. Redundancy
-        # clustering changes proof order only; it never deletes an alternate.
-        for ident in redundancy_representatives:
-            if len(selected_ids) >= 12:
-                break
-            add_id(ident)
-
-        # Preserve non-redundant compiler candidates next.
-        for policy in policies:
-            if len(selected_ids) >= 12:
-                break
-            ident = str(policy.get("intervention_id") or "")
-            representative = representative_by_member.get(ident)
-            if representative and ident != representative and ident not in required_policy_control_ids:
-                continue
-            add_id(ident)
-
-        # Alternates remain available when capacity remains. They are fallback
-        # proof candidates if their representative fails, censors, or harms.
-        for ident in redundancy_alternates:
-            if len(selected_ids) >= 12:
-                break
-            add_id(ident)
-
-        if not selected_ids:
-            for row in candidates[:12]:
-                add_id(row.get("id"))
+        queue_lane_names = (
+            "promotion",
+            "unknown_resolution",
+            "harm",
+            "censoring",
+        )
+        queued_cells: list[tuple[str, dict[str, Any]]] = []
+        for lane in queue_lane_names:
+            for entry in (proof_manifest.get("queues") or {}).get(lane, []) or []:
+                if not isinstance(entry, dict):
+                    continue
+                queued_cells.append((lane, copy.deepcopy(entry)))
 
         exact_controls = []
-        for ident in selected_ids:
+        for queue_index, (lane, entry) in enumerate(queued_cells):
+            ident = str(entry.get("intervention_id") or "")
+            if not ident or ident not in candidate_by_id:
+                raise ValueError(
+                    f"Test 2 proof manifest references unavailable intervention: {ident or '<missing>'}"
+                )
             intervention = copy.deepcopy(candidate_by_id[ident])
             semantic_hash = _intervention_fingerprint(intervention)
             declared_hash = declared_semantic_hashes.get(ident)
@@ -689,9 +689,9 @@ def load_test1_handoff(
                 )
             discovery_hash = declared_hash or semantic_hash
             exact_controls.append({
-                "source":"TEST1.2_EXACT_CONTROL",
-                "source_key":ident,
-                "classification":"PROVISIONAL_TEST1.2",
+                "source":"TEST1.2_COMPILER_CELL_PROOF_MANIFEST",
+                "source_key":str(entry.get("cell_key") or ident),
+                "classification":"PROVISIONAL_TEST1.2_CELL",
                 "normalized_effect":0.0,
                 "exact_test12_intervention":intervention,
                 "intervention_id":ident,
@@ -707,6 +707,22 @@ def load_test1_handoff(
                 "dose":1.0,
                 "representation":"exact",
                 "placement":"semantic",
+                "proof_cell_key":str(entry.get("cell_key") or ""),
+                "proof_family_id":str(entry.get("family_id") or ""),
+                "proof_lane":lane,
+                "compiler_queue_index":queue_index,
+                "compiler_sort_key":copy.deepcopy(entry.get("compiler_sort_key") or []),
+                "compilable_status":entry.get("compilable_status"),
+                "test1_2_effect_state":entry.get("test1_2_effect_state"),
+                "test2_action":entry.get("test2_action"),
+                "condition":copy.deepcopy(entry.get("condition") or {}),
+                "bound_cost":copy.deepcopy(entry.get("cost") or {}),
+                "unaided_family_baseline":copy.deepcopy(
+                    entry.get("unaided_family_baseline") or {}
+                ),
+                "effect_observation_binding":copy.deepcopy(
+                    entry.get("effect_observation_binding") or []
+                ),
             })
 
         opportunity = _read_json(collection_dir / "test1.2-opportunity-discovery-map.json")
@@ -790,11 +806,18 @@ def load_test1_handoff(
             "synthetic":False,
             "handoff_mode":"TEST12_EXACT",
             "test12_exact_controls":exact_controls,
+            "test2_proof_manifest":copy.deepcopy(proof_manifest),
+            "test2_proof_queue_counts":copy.deepcopy(
+                proof_manifest.get("queue_counts") or {}
+            ),
             "winner_policy":winner,
             "winner_lock_sha256":terminal.get("winner_lock_sha256"),
             "required_policy_control_ids":required_policy_control_ids,
             "control_redundancy_map":copy.deepcopy(redundancy_map),
-            "redundancy_proof_policy":"WINNER_REQUIRED_THEN_CLUSTER_REPRESENTATIVES_THEN_NONREDUNDANT_THEN_ALTERNATES",
+            "redundancy_proof_policy":"COMPILER_CELL_MANIFEST_OWNS_PROOF_ORDER",
+            "proof_queue_order_contract":proof_manifest.get(
+                "queue_order_contract"
+            ),
             "runtime_profile":runtime_profile,
             "runtime_profile_sha256":runtime_profile.get("profile_sha256"),
             "generation_budget_by_family":copy.deepcopy(
@@ -905,7 +928,7 @@ def source_recipes(handoff: dict[str, Any], *, limit: int = 12) -> list[dict[str
                     f"Test 1.2 control semantic drift before Test 2: {recipe.get('intervention_id')}"
                 )
             recipe["proof_semantic_hash"] = current_hash
-        return recipes[:limit]
+        return recipes
 
     candidates: list[dict[str, Any]] = []
     for row in (handoff.get("priority_queue") or {}).get("queue", []) or []:
@@ -1746,6 +1769,10 @@ def _recipe_key(recipe: dict[str, Any]) -> str:
             recipe.get("discovery_semantic_hash")
             or _intervention_fingerprint(recipe["exact_test12_intervention"])
         )
+        cell_key = str(recipe.get("proof_cell_key") or "")
+        if cell_key:
+            cell_digest = hashlib.sha256(cell_key.encode("utf-8")).hexdigest()[:12]
+            return "TEST12-" + semantic_hash[:12] + "-CELL-" + cell_digest
         return "TEST12-" + semantic_hash[:16]
     ids = [str(value) for value in recipe.get("ingredient_ids") or []]
     return "->".join(ids)
