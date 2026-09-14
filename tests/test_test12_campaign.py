@@ -2975,6 +2975,9 @@ def test_capability_floor_registry_separates_exhaustive_from_partial_search():
         "MIXED_CAPABILITY_BOUNDARY_OBSERVED"
     )
     assert family in result["boundary_families"]
+    assert result["coverage_unit"] == "SEMANTIC_MECHANISM_NOT_VARIANT"
+    assert result["structurally_inapplicable_is_not_failure"] is True
+    assert result["fundamental_model_limit_claimed"] is False
 
 
 
