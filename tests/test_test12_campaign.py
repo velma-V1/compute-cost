@@ -292,27 +292,29 @@ def test_real_tool_lab_executes_and_returns_errors_for_bad_arguments():
     assert len(TOOL_HARNESS_POLICIES) >= 5
 
 
-def test_tuning_run_finishes_terminal_onboarding_inside_13h59m():
+def test_tuning_run_is_validation_only_and_preserves_future_holdouts():
     cases = _cases()
     plan = build_tuning_plan(cases, collection_run="collection-run")
     validate_tuning_plan(plan)
-    assert plan["allowed_partitions"] == [
-        "VALIDATION",
+    assert plan["allowed_partitions"] == ["VALIDATION"]
+    assert set(plan["prohibited_partitions"]) == {
+        "DISCOVERY",
         "TEST2_BLIND",
         "TEST3_PROTECTED",
-    ]
-    assert plan["prohibited_partitions"] == ["DISCOVERY"]
-    assert plan["phase_partition_policy"]["final_validation_lock"] == "VALIDATION"
-    assert plan["phase_partition_policy"]["test2_blind_acceptance"] == "TEST2_BLIND"
-    assert plan["phase_partition_policy"]["test3_protected_acceptance"] == "TEST3_PROTECTED"
-    assert plan["winner_locked_before_holdouts"] is True
+    }
+    assert set(plan["phase_partition_policy"].values()) == {"VALIDATION"}
+    assert "test2_blind_acceptance" not in plan["phase_partition_policy"]
+    assert "test3_protected_acceptance" not in plan["phase_partition_policy"]
+    assert plan["test2_blind_exposed"] is False
+    assert plan["test3_protected_exposed"] is False
     assert plan["blind_acceptance_is_tuning_input"] is False
     assert plan["protected_acceptance_is_tuning_input"] is False
-    assert plan["no_additional_characterization_test_required"] is True
+    assert plan["winner_locked_before_test2"] is True
+    assert plan["test2_proof_required"] is True
     assert set(plan["terminal_decisions"]) == {
-        "FULL_INVERTED_INTEGRATION",
-        "CONSTRAINED_CAPABILITY_SCOPED_INTEGRATION",
-        "REJECT_MODEL_ADDITION",
+        "PROVISIONAL_READY_FOR_TEST2",
+        "PROVISIONAL_CONSTRAINED_FOR_TEST2",
+        "REJECT_BEFORE_TEST2",
     }
     for required in {
         "test1.2-final-acceptance.json",
