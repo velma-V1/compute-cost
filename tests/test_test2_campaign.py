@@ -724,6 +724,17 @@ def test_exact_test12_handoff_preserves_failure_provenance(tmp_path: Path):
         producer="test",
         stage="test",
     )
+    collection.write_json(
+        "control-redundancy-map.json",
+        {
+            "schema_version": 1,
+            "clusters": [],
+            "representative_intervention_ids": [],
+            "alternate_intervention_ids": [],
+        },
+        producer="test",
+        stage="test",
+    )
     collection.append_jsonl(
         "test1.2-observations.jsonl",
         {
