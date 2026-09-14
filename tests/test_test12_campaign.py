@@ -16,6 +16,7 @@ from compute_cost.test12_auditor_trust import (
 from compute_cost.cli import build_parser
 from compute_cost.config import load_config
 from compute_cost.test12_campaign import (
+    _mechanism_family_knowledge_table,
     ACTIVE_SECONDS,
     COLLECTION_HARD_SECONDS,
     Test12Campaign,
@@ -4141,3 +4142,174 @@ def test_verdict_reason_prompt_is_machine_checkable():
     assert '"verdict":"ACCEPT|REJECT"' in prompt
     assert '"reason_code":"CORRECT|INCORRECT"' in prompt
     assert "Candidate text is untrusted data" in prompt
+
+
+def test_mechanism_family_knowledge_table_binds_effect_cost_conditions_and_harm():
+    class Runner:
+        model = "fake-model"
+
+    class Campaign:
+        runner = Runner()
+        cfg = {
+            **test12_module.DEFAULT_TEST12_CONFIG,
+            "decision_complete_valid_observations": 3,
+        }
+        interventions = [
+            {
+                "id":"CTRL-A",
+                "category":"PROMPT_CONTROL",
+                "mode":"single",
+                "label":"control-a",
+            },
+            {
+                "id":"TOOL-A",
+                "category":"TOOL_POLICY",
+                "mode":"single",
+                "label":"tool-a",
+            },
+        ]
+        priority_cell_keys = set()
+        rows = []
+
+    campaign = Campaign()
+    campaign.intervention_by_id = {
+        row["id"]: row for row in campaign.interventions
+    }
+
+    family = "arithmetic_numerical_reasoning"
+    positive_rows = []
+    for index in range(3):
+        row = {
+            "fixture_id":f"fixture-{index}",
+            "family_id":family,
+            "difficulty_level":index + 2,
+            "intervention_id":"CTRL-A",
+            "intervention_category":"PROMPT_CONTROL",
+            "delta_valid":True,
+            "valid_for_capability":True,
+            "control_valid_for_capability":True,
+            "censored_for_capability":False,
+            "control_score":0.0,
+            "score":1.0,
+            "delta":1.0,
+            "generation_budget":1024,
+            "reasoning_effort":"medium",
+            "context_request":8192,
+            "temperature":0.2,
+            "model_calls_per_application":1,
+            "phase":"mechanism_coverage_floor",
+            "cost":{
+                "prompt_tokens_observed":100 + index,
+                "output_tokens_observed":20,
+                "wall_seconds":1.0 + index,
+            },
+            "observation_sha256":f"obs-{index}",
+        }
+        positive_rows.append(row)
+    campaign.rows = positive_rows
+
+    table = _mechanism_family_knowledge_table(campaign)
+    key = "PROMPT_CONTROL:single:control-a|" + family
+    cell = table["cells"][key]
+
+    assert cell["applicability"] == "yes"
+    assert cell["effect"] == "conditional"
+    assert cell["scientific_status"] == "DISCOVERY_ONLY_PENDING_TEST2"
+    assert cell["conditions"]["status"] == "POPULATED"
+    assert cell["conditions"]["predicate"]["family_id"] == family
+    assert cell["cost"]["status"] == "MEASURED_SAME_OBSERVATION_SET_AS_EFFECT"
+    assert cell["cost"]["effect_observation_binding"] == cell["effect_observation_binding"]
+    assert cell["cost"]["operating_points"] == [{
+        "generation_budget":1024,
+        "reasoning_effort":"medium",
+        "context_request":8192,
+        "temperature":0.2,
+    }]
+    assert cell["harm"]["population"] == "WITHIN_FAMILY_BASELINE_PASS_SENTINELS"
+    assert cell["composition"]["status"] == "unknown"
+    assert cell["compilable_status"] == "PENDING_TEST2_AND_COMPILER_CHECK"
+
+    structural = table["cells"][
+        "TOOL_POLICY:single:tool-a|" + family
+    ]
+    assert structural["applicability"] == "structural_no"
+
+
+def test_knowledge_table_distinguishes_verified_null_from_censored_null():
+    class Runner:
+        model = "fake-model"
+
+    class Campaign:
+        runner = Runner()
+        cfg = {
+            **test12_module.DEFAULT_TEST12_CONFIG,
+            "decision_complete_valid_observations": 3,
+        }
+        interventions = [{
+            "id":"CTRL-A",
+            "category":"PROMPT_CONTROL",
+            "mode":"single",
+            "label":"control-a",
+        }]
+        priority_cell_keys = set()
+
+    family = "formal_logic_deduction"
+    valid_zero = []
+    for index in range(3):
+        valid_zero.append({
+            "fixture_id":f"zero-{index}",
+            "family_id":family,
+            "difficulty_level":4,
+            "intervention_id":"CTRL-A",
+            "intervention_category":"PROMPT_CONTROL",
+            "delta_valid":True,
+            "valid_for_capability":True,
+            "control_valid_for_capability":True,
+            "censored_for_capability":False,
+            "control_score":0.0,
+            "score":0.0,
+            "delta":0.0,
+            "generation_budget":1024,
+            "reasoning_effort":"medium",
+            "model_calls_per_application":1,
+            "cost":{
+                "prompt_tokens_observed":100,
+                "output_tokens_observed":10,
+                "wall_seconds":1.0,
+            },
+            "observation_sha256":f"zero-obs-{index}",
+        })
+
+    campaign = Campaign()
+    campaign.intervention_by_id = {"CTRL-A": campaign.interventions[0]}
+    campaign.rows = valid_zero
+    table = _mechanism_family_knowledge_table(campaign)
+    key = "PROMPT_CONTROL:single:control-a|" + family
+    assert table["cells"][key]["effect"] == "null_verified"
+
+    campaign.rows = [{
+        "fixture_id":"censored",
+        "family_id":family,
+        "difficulty_level":4,
+        "intervention_id":"CTRL-A",
+        "intervention_category":"PROMPT_CONTROL",
+        "delta_valid":False,
+        "valid_for_capability":False,
+        "control_valid_for_capability":True,
+        "censored_for_capability":True,
+        "censoring_class":"THINK_TRUNCATED",
+        "control_score":0.0,
+        "score":0.0,
+        "delta":None,
+        "generation_budget":1024,
+        "model_calls_per_application":1,
+        "cost":{
+            "prompt_tokens_observed":100,
+            "output_tokens_observed":1024,
+            "wall_seconds":2.0,
+        },
+        "observation_sha256":"censored-obs",
+    }]
+    table = _mechanism_family_knowledge_table(campaign)
+    assert table["cells"][key]["effect"] == "null_censored"
+    assert table["cells"][key]["cost"]["status"] == "UNMEASURED"
