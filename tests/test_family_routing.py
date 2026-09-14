@@ -34,6 +34,8 @@ def test_family_classifier_is_zero_call_and_holds_out_prototypes():
     assert report["prototype_fixture_count"] == 3
     assert report["evaluated_fixture_count"] == 3
     assert report["generalization_claim"] is False
+    assert report["confusion_pair_semantics"] == "HYPOTHESIS_SET_NOT_MEASURED_ADJACENCY"
+    assert report["runtime_harm_adjacency_eligible_by_default"] is False
     assert set(report["families"]) == {
         "temporal_reasoning",
         "spatial_reasoning",
