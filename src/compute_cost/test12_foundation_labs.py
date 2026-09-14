@@ -70,6 +70,7 @@ FOUNDATION_QUESTIONS: tuple[dict[str, Any], ...] = (
     {"id":43,"group":"trust","critical":False,"text":"Can candidate text steer auditor verdict?"},
     {"id":44,"group":"trust","critical":False,"text":"Does audit rationale diverge from verdict?"},
     {"id":45,"group":"trust","critical":False,"text":"Can thinking/analysis reach any scored output path?"},
+    {"id":46,"group":"runtime","critical":True,"text":"Are independent calls stateless across repeated fixture execution?"},
 )
 
 CRITICAL_FOUNDATION_IDS = frozenset(
@@ -212,6 +213,59 @@ def _invoke_probe(
 
 
 def _representative_cases(campaign: Any) -> list[dict[str, Any]]:
+    # Cross-call state-isolation probe. The scientific runner assumes each
+    # request is independent; A -> B -> A must not carry fixture/context state
+    # across calls. Temperature zero and a fixed seed make this a runtime
+    # semantics check rather than a stochastic capability comparison.
+    state_sequence: list[dict[str, Any]] = []
+    for label, token in (
+        ("A1", "STATE_ALPHA"),
+        ("B", "STATE_BETA"),
+        ("A2", "STATE_ALPHA"),
+    ):
+        if not campaign.can_start(deadline):
+            break
+        state_row = _invoke_probe(
+            campaign,
+            deadline,
+            probe_id=f"runtime-stateless-{label.lower()}",
+            question_ids=[46],
+            family_id="RUNTIME_SEMANTICS",
+            messages=[{
+                "role":"user",
+                "content":f"Reply with exactly {token} and nothing else.",
+            }],
+            options={
+                "num_predict":64,
+                "temperature":0.0,
+                "top_p":1.0,
+                "seed":777,
+            },
+            request_fields={},
+        )
+        if state_row is not None:
+            state_row["stateless_expected_token"] = token
+            state_sequence.append(state_row)
+            rows.append(state_row)
+
+    state_by_probe = {
+        str(row.get("probe_id") or ""): row
+        for row in state_sequence
+    }
+    state_a1 = state_by_probe.get("runtime-stateless-a1")
+    state_b = state_by_probe.get("runtime-stateless-b")
+    state_a2 = state_by_probe.get("runtime-stateless-a2")
+    statelessness_verified = bool(
+        state_a1
+        and state_b
+        and state_a2
+        and str(state_a1.get("content") or "").strip() == "STATE_ALPHA"
+        and str(state_b.get("content") or "").strip() == "STATE_BETA"
+        and str(state_a2.get("content") or "").strip() == "STATE_ALPHA"
+        and str(state_a1.get("content") or "").strip()
+            == str(state_a2.get("content") or "").strip()
+    )
+
     by_family: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for case in campaign.partitions["DISCOVERY"]:
         by_family[_family(case)].append(case)
@@ -418,7 +472,7 @@ def run_runtime_semantics_gate(campaign: Any, deadline: float) -> dict[str, Any]
             }
             for row in length_rows
         ],
-        "eval_count_semantics":{
+        "cross_call_statelessness_verified":statelessness_verified,\n        "statelessness_probe_sequence":copy.deepcopy(state_sequence),\n        "eval_count_semantics":{
             "native_value":"aggregate generated token count",
             "native_thinking_answer_split_available":False,
             "observable_proxies":["thinking_chars","answer_chars","thinking_chunks","answer_chunks","phase timing"],
@@ -1025,8 +1079,7 @@ def build_runtime_characterization_profile(
             except Exception:
                 runtime_snapshot = {}
 
-    critical_runtime = {1,2,3,4,5,6,9,10}
-    runtime_answered = set(runtime_semantics.get("questions_answered") or [])
+    critical_runtime = {1,2,3,4,5,6,9,10,46}\n    runtime_answered = set(runtime_semantics.get("questions_answered") or [])
     role_answered = set(role_specialization.get("questions_answered") or [])
     budget_answered = set(budget_characterization.get("questions_answered") or [])
     output_answered = set(output_contracts.get("questions_answered") or [])
@@ -1040,7 +1093,7 @@ def build_runtime_characterization_profile(
         gate_reasons.append("MODEL_IDENTITY_MISMATCH")
     if int(runtime_semantics.get("thinking_markup_leak_count") or 0) > 0:
         gate_reasons.append("THINKING_CHANNEL_LEAK_OBSERVED")
-    if not budget_characterization.get("all_families_reproducibly_valid"):
+    if runtime_semantics.get("cross_call_statelessness_verified") is not True:\n        gate_reasons.append("RUNTIME_CROSS_CALL_STATE_ISOLATION_FAILED")\n    if not budget_characterization.get("all_families_reproducibly_valid"):
         gate_reasons.append("FAMILY_BUDGET_CALIBRATION_INCOMPLETE")
     if not {2,21,22,23,24}.issubset(output_answered):
         gate_reasons.append("OUTPUT_CONTRACT_CHARACTERIZATION_INCOMPLETE")
@@ -1742,8 +1795,7 @@ def foundation_question_ledger(
     # Existing Test 1.2 owners for later groups are explicitly declared rather
     # than incorrectly marked as answered by these foundation probes.
     owners = {
-        **{i:"runtime_semantics_gate" for i in (1,2,3,4,5,6,9,10)},
-        **{i:"fractional_compute_surface" for i in range(11,21)},
+        **{i:"runtime_semantics_gate" for i in (1,2,3,4,5,6,9,10,46)},\n        **{i:"fractional_compute_surface" for i in range(11,21)},
         **{i:"output_contract_gate" for i in range(21,25)},
         25:"output_contract_follow_on",
         26:"output_contract_and_existing_format_families",
