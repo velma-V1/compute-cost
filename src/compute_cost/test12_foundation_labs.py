@@ -578,6 +578,10 @@ def build_runtime_characterization_profile(
     gate_reasons = []
     if not critical_runtime.issubset(runtime_answered):
         gate_reasons.append("RUNTIME_SEMANTICS_INCOMPLETE")
+    if not runtime_snapshot.get("version"):
+        gate_reasons.append("RUNTIME_VERSION_NOT_CAPTURED")
+    if runtime_snapshot.get("model") not in {None, getattr(campaign.runner, "model", None)}:
+        gate_reasons.append("MODEL_IDENTITY_MISMATCH")
     if not budget_characterization.get("all_families_reproducibly_valid"):
         gate_reasons.append("FAMILY_BUDGET_CALIBRATION_INCOMPLETE")
     if not {32,33,34,38}.issubset(role_answered):
@@ -603,6 +607,12 @@ def build_runtime_characterization_profile(
         "gate_failures":gate_reasons,
         "capability_claims_allowed":not bool(gate_reasons),
         "profile_scope":"EXACT_MODEL_RUNTIME_QUANT_CONFIGURATION",
+        "scientific_invariants":{
+            "scored_output_channel":"content",
+            "thinking_channel_may_not_enter_scoring":True,
+            "capability_claim_requires_this_profile":True,
+            "runtime_version_must_match":True,
+        },
     }
     stable = json.dumps(payload, sort_keys=True, separators=(",",":"), default=str)
     payload["profile_sha256"] = hashlib.sha256(stable.encode("utf-8")).hexdigest()
