@@ -435,6 +435,20 @@ PROMPT_PRIMITIVE_FAMILY_APPLICABILITY: dict[str, frozenset[str]] = {
     }),
 }
 
+UNIVERSAL_PROMPT_PRIMITIVES = frozenset({
+    "REQ",
+    "DEC",
+    "EVD",
+    "SCH",
+    "VER",
+    "ASM",
+    "AMB",
+    "CON",
+    "MIN",
+    "ALT",
+    "PST",
+})
+
 UNIVERSAL_MECHANISM_CATEGORIES = frozenset({
     "PROMPT_CONTROL",
     "REASONING_MODE",
@@ -556,6 +570,12 @@ def mechanism_applicability(
     family = str(family or "UNKNOWN")
     primitive_id = str(intervention.get("primitive_id") or "")
 
+    if primitive_id in UNIVERSAL_PROMPT_PRIMITIVES:
+        return {
+            "status":"APPLICABLE",
+            "basis":"PROMPT_PRIMITIVE_HAS_NO_REQUIRED_FAMILY_SPECIFIC_STRUCTURE",
+        }
+
     if primitive_id in PROMPT_PRIMITIVE_FAMILY_APPLICABILITY:
         if family in PROMPT_PRIMITIVE_FAMILY_APPLICABILITY[primitive_id]:
             return {
@@ -563,8 +583,8 @@ def mechanism_applicability(
                 "basis":"PROMPT_PRIMITIVE_HAS_DECLARED_FAMILY_RELEVANCE",
             }
         return {
-            "status":"NOT_APPLICABLE",
-            "basis":"PROMPT_PRIMITIVE_DECLARATION_EXCLUDES_FAMILY",
+            "status":"UNKNOWN",
+            "basis":"STRUCTURE_SPECIFIC_PROMPT_PRIMITIVE_REQUIRES_FURTHER_DECLARATION",
         }
 
     if category in UNIVERSAL_MECHANISM_CATEGORIES:
