@@ -632,15 +632,36 @@ def _audit_case(case: dict[str, Any], candidate: str) -> dict[str, Any]:
 
 
 def run_role_specialization_lab(campaign: Any, deadline: float) -> dict[str, Any]:
-    """Paired executor/auditor lab for questions 32-34 and 38."""
+    """Matched executor/auditor economics at Stage-0 calibrated family budgets."""
     rows: list[dict[str, Any]] = []
     cases = _representative_cases(campaign)
-    # Spread across all families when time allows; the deadline remains binding.
+    invalid_executor_count = 0
+    invalid_auditor_count = 0
+
+    def valid_final(row: dict[str, Any] | None) -> bool:
+        return bool(
+            row
+            and row.get("ok") is True
+            and row.get("content_empty") is False
+            and row.get("done_reason") != "length"
+        )
+
     for case in cases:
         if not campaign.can_start(deadline):
             break
         family = _family(case)
-        options = {"num_predict":256,"temperature":1.0,"top_p":1.0,"seed":42}
+        family_budget = int(
+            (getattr(campaign, "baseline_generation_budget_by_family", {}) or {}).get(
+                family,
+                campaign.cfg.get("base_generation_budget", 256),
+            )
+        )
+        options = {
+            "num_predict":family_budget,
+            "temperature":1.0,
+            "top_p":1.0,
+            "seed":42,
+        }
         executor = _invoke_probe(
             campaign,
             deadline,
@@ -654,7 +675,13 @@ def run_role_specialization_lab(campaign: Any, deadline: float) -> dict[str, Any
         )
         if executor is None:
             break
+        executor["operating_budget"] = family_budget
+        executor["valid_for_role_economics"] = valid_final(executor)
         rows.append(executor)
+        if not executor["valid_for_role_economics"]:
+            invalid_executor_count += 1
+            continue
+
         executor_correct = float(executor.get("score") or 0.0) >= 1.0
         expected_verdict = "ACCEPT" if executor_correct else "REJECT"
         audit_case = _audit_case(case, str(executor.get("content") or ""))
@@ -677,17 +704,33 @@ def run_role_specialization_lab(campaign: Any, deadline: float) -> dict[str, Any
                 case=audit_case,
             )
             if audit is not None:
+                audit["operating_budget"] = family_budget
                 audit["candidate_was_correct"] = executor_correct
                 audit["expected_verdict"] = expected_verdict
+                audit["valid_for_role_economics"] = valid_final(audit)
+                if not audit["valid_for_role_economics"]:
+                    invalid_auditor_count += 1
                 rows.append(audit)
                 campaign.runner.store.append_jsonl(
                     "test1.2-role-specialization-observations.jsonl",
                     audit,
                 )
 
-    executor_rows=[row for row in rows if str(row.get("probe_id","")).startswith("role-executor-")]
-    low=[row for row in rows if str(row.get("probe_id","")).startswith("role-auditor-low-")]
-    high=[row for row in rows if str(row.get("probe_id","")).startswith("role-auditor-high-")]
+    executor_rows=[
+        row for row in rows
+        if str(row.get("probe_id","")).startswith("role-executor-")
+        and row.get("valid_for_role_economics") is True
+    ]
+    low=[
+        row for row in rows
+        if str(row.get("probe_id","")).startswith("role-auditor-low-")
+        and row.get("valid_for_role_economics") is True
+    ]
+    high=[
+        row for row in rows
+        if str(row.get("probe_id","")).startswith("role-auditor-high-")
+        and row.get("valid_for_role_economics") is True
+    ]
 
     def accuracy(values: list[dict[str, Any]]) -> float | None:
         scored=[row for row in values if row.get("score") is not None]
@@ -707,10 +750,18 @@ def run_role_specialization_lab(campaign: Any, deadline: float) -> dict[str, Any
         if correct and verdict=="REJECT":
             false_reject += 1
 
+    low_families={str(row.get("family_id")) for row in low}
+    high_families={str(row.get("family_id")) for row in high}
+    matched_families=sorted(
+        {str(row.get("family_id")) for row in executor_rows}
+        & low_families
+        & high_families
+    )
     return {
         "schema_version":1,
         "questions_answered":[32,33,34,38],
-        "matched_family_count":len({str(row.get("family_id")) for row in executor_rows}),
+        "matched_family_count":len(matched_families),
+        "matched_families":matched_families,
         "executor_accuracy":accuracy(executor_rows),
         "auditor_low_accuracy":accuracy(low),
         "auditor_high_accuracy":accuracy(high),
@@ -719,7 +770,13 @@ def run_role_specialization_lab(campaign: Any, deadline: float) -> dict[str, Any
         "auditor_high_mean_eval_count":mean_eval(high),
         "false_accepts":false_accept,
         "false_rejects":false_reject,
+        "invalid_executor_observations_excluded":invalid_executor_count,
+        "invalid_auditor_observations_excluded":invalid_auditor_count,
+        "operating_budget_source":"STAGE0_REPLICATED_SAFE_FAMILY_BUDGET",
         "observation_count":len(rows),
+        "valid_executor_observation_count":len(executor_rows),
+        "valid_low_auditor_observation_count":len(low),
+        "valid_high_auditor_observation_count":len(high),
         "proof_owner":"RUN2_TEST2",
     }
 
