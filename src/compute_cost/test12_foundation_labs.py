@@ -2151,6 +2151,11 @@ def run_role_specialization_lab(campaign: Any, deadline: float) -> dict[str, Any
             "accept_rate":sum(1 for verdict in verdicts if verdict=="ACCEPT")/len(values),
         }
 
+    auditor_executor_thesis = run_auditor_executor_thesis(
+        campaign,
+        deadline,
+    )
+
     low_families={str(row.get("family_id")) for row in low}
     high_families={str(row.get("family_id")) for row in high}
     matched_families=sorted(
@@ -2161,6 +2166,11 @@ def run_role_specialization_lab(campaign: Any, deadline: float) -> dict[str, Any
     return {
         "schema_version":1,
         "questions_answered":[32,33,34,35,36,37,38,43,44],
+        "auditor_executor_thesis":auditor_executor_thesis,
+        "auditor_executor_thesis_status":auditor_executor_thesis.get("status"),
+        "auditor_executor_valid_pairs":auditor_executor_thesis.get("valid_pair_count", 0),
+        "auditor_executor_advantage":auditor_executor_thesis.get("auditor_minus_executor_accuracy"),
+        "auditor_executor_exact_p_value":auditor_executor_thesis.get("one_sided_exact_p_value"),
         "base_family_target":len(cases),
         "matched_family_count":len(matched_families),
         "matched_families":matched_families,
