@@ -1529,6 +1529,33 @@ def test_tuning_recovery_salvages_valid_policy_rows_and_preserves_winner_lock(tm
     assert recovered["checkpoint"]["full_rerun_allowed"] is False
 
 
+def test_tuning_recovery_quarantines_integrity_valid_row_with_unknown_pair_validity(tmp_path):
+    run_dir = tmp_path / "test1.2-tune-unknown-validity"
+    run_dir.mkdir()
+    unknown = {
+        "schema_version": 1,
+        "policy_id": "P-UNKNOWN",
+        "fixture_id": "case-a",
+        "seed": 42,
+        "partition": "VALIDATION",
+        "score": 1.0,
+        "control_score": 0.0,
+        "delta": 1.0,
+        "model_calls": 1,
+    }
+    unknown["tuning_observation_sha256"] = _tuning_row_hash(unknown)
+    (run_dir / "test1.2-tuning-observations.jsonl").write_text(
+        json.dumps(unknown) + "\n",
+        encoding="utf-8",
+    )
+
+    recovered = load_tuning_recovery(run_dir)
+    assert recovered["rows"] == []
+    assert recovered["quarantined_policy_observation_count"] == 1
+    quarantined = recovered["quarantined_policy_rows"][0]
+    assert quarantined["recovery_quarantined_unknown_validity"] is True
+
+
 def test_terminal_plan_forbids_full_rerun_recovery():
     plan = build_tuning_plan(_cases(), collection_run="collection-run")
     assert plan["full_rerun_recovery_prohibited"] is True
