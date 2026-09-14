@@ -2354,6 +2354,7 @@ def phase_blind(
             "recipes_frozen_before_phase":True,
             "locked_policy_proved_exactly":True,
             "policy_lock_sha256":observed_lock,
+            "locked_policy":copy.deepcopy(winner),
             "fixture_count":len(fixtures),
             "effects":effects,
             "observations":len(exact_rows),
@@ -2564,6 +2565,9 @@ def _latency_envelope(campaign: Test2Campaign) -> dict[str, Any]:
     }
 
 
+_FINALIZATION_CAMPAIGN_CONTEXT: "Test2Campaign | None" = None
+
+
 def _final_recipe_registry(
     knockouts: dict[str, Any],
     blind: dict[str, Any],
@@ -2572,6 +2576,84 @@ def _final_recipe_registry(
     blind_effects = blind.get("effects") or {}
     harm_evidence = harm_evidence or {}
     result: list[dict[str, Any]] = []
+
+    if blind.get("locked_policy_proved_exactly") is True:
+        policy = copy.deepcopy(blind.get("locked_policy") or {})
+        policy_lock = str(blind.get("policy_lock_sha256") or "")
+        policy_key = next(iter(blind_effects), "POLICY-" + policy_lock[:16])
+        blind_summary = copy.deepcopy(blind_effects.get(policy_key))
+
+        referenced_ids: list[str] = []
+        for value in (
+            policy.get("intervention_id"),
+            policy.get("fallback_intervention_id"),
+        ):
+            ident = str(value or "")
+            if ident and ident not in referenced_ids:
+                referenced_ids.append(ident)
+        for value in (policy.get("route_map") or {}).values():
+            ident = str(value or "")
+            if ident and ident != "DIRECT" and ident not in referenced_ids:
+                referenced_ids.append(ident)
+
+        harm_by_intervention: dict[str, Any] = {}
+        all_harm_safe = True
+        for ident in referenced_ids:
+            matching_recipe = next(
+                (
+                    recipe for recipe in getattr(_FINALIZATION_CAMPAIGN_CONTEXT, "recipes", [])
+                    if str(recipe.get("intervention_id") or "") == ident
+                ),
+                None,
+            ) if _FINALIZATION_CAMPAIGN_CONTEXT is not None else None
+            if matching_recipe is None:
+                harm_by_intervention[ident] = {
+                    "verification_status":"MISSING_HARM_EVIDENCE",
+                    "harm_safe":False,
+                }
+                all_harm_safe = False
+                continue
+            summary = copy.deepcopy(harm_evidence.get(_recipe_key(matching_recipe)))
+            harm_by_intervention[ident] = summary
+            if not (
+                summary
+                and summary.get("harm_evidence_sufficient") is True
+                and summary.get("harm_safe") is True
+            ):
+                all_harm_safe = False
+
+        # DIRECT has no applied control and therefore no control-specific harm debt.
+        if not referenced_ids:
+            all_harm_safe = True
+
+        blind_ok = bool(
+            blind_summary
+            and blind_summary.get("classification")
+            in {"STRONG", "PROMISING", "NULL"}
+            and blind_summary.get("classification") != "CENSORING_DOMINATED"
+        )
+        return [{
+            "recipe_id":"POLICY-" + (policy_lock[:12] or "UNLOCKED"),
+            "source_recipe_key":"FROZEN_TEST1.2_POLICY",
+            "recipe_key":policy_key,
+            "recipe":{
+                "exact_locked_policy":copy.deepcopy(policy),
+                "policy_lock_sha256":policy_lock,
+                "ingredient_ids":[f"POLICY:{policy.get('policy_id','UNKNOWN')}"],
+                "representation":"exact-policy",
+                "placement":"semantic",
+                "dose":1.0,
+            },
+            "blind_summary":blind_summary,
+            "harm_summary":{
+                "referenced_interventions":harm_by_intervention,
+                "all_referenced_controls_harm_safe":all_harm_safe,
+            },
+            "verified_for_shipping":bool(blind_ok and all_harm_safe),
+            "required_ingredients":referenced_ids,
+            "removed_ingredients":[],
+            "semantic_translation_used":False,
+        }]
     for source_key, row in knockouts.items():
         recipe = copy.deepcopy(row.get("minimal_recipe") or {})
         if not recipe:
@@ -2612,7 +2694,12 @@ def _build_finalization_contract(
     finetune: list[dict[str, Any]],
     latency: dict[str, Any],
 ) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
-    recipes = _final_recipe_registry(knockouts, blind, campaign.harm_evidence)
+    global _FINALIZATION_CAMPAIGN_CONTEXT
+    _FINALIZATION_CAMPAIGN_CONTEXT = campaign
+    try:
+        recipes = _final_recipe_registry(knockouts, blind, campaign.harm_evidence)
+    finally:
+        _FINALIZATION_CAMPAIGN_CONTEXT = None
     verified_recipes = [row for row in recipes if row.get("verified_for_shipping") is True]
     primary = verified_recipes[0] if verified_recipes else {
         "recipe_id": "REC-NONE",
@@ -2638,13 +2725,32 @@ def _build_finalization_contract(
 
     ingredient_index = {item["id"]: item for item in INGREDIENTS}
     primary_recipe = primary.get("recipe") or {}
-    rendered_parts = []
-    for ingredient_id in primary_recipe.get("ingredient_ids") or []:
-        definition = ingredient_index.get(str(ingredient_id))
-        if definition is None:
-            continue
-        rendered_parts.append(str(definition.get("full") or definition.get("short") or ""))
-    rendered_control_text = "\n".join(rendered_parts)
+    exact_policy = primary_recipe.get("exact_locked_policy")
+    if exact_policy is not None:
+        rendered_control_text = None
+        rendering_rule = {
+            "mode":"EXACT_TEST1.2_POLICY",
+            "semantic_translation_allowed":False,
+            "policy_lock_sha256":primary_recipe.get("policy_lock_sha256"),
+        }
+        ingredient_definitions: list[dict[str, Any]] = []
+    else:
+        rendered_parts = []
+        for ingredient_id in primary_recipe.get("ingredient_ids") or []:
+            definition = ingredient_index.get(str(ingredient_id))
+            if definition is None:
+                continue
+            rendered_parts.append(str(definition.get("full") or definition.get("short") or ""))
+        rendered_control_text = "\n".join(rendered_parts)
+        rendering_rule = {
+            "mode":"LEGACY_INGREDIENT_RECIPE",
+            "ingredient_order_is_semantic": True,
+            "placement": primary_recipe.get("placement"),
+            "representation": primary_recipe.get("representation"),
+            "dose": primary_recipe.get("dose"),
+            "recurrence_count": len(primary_recipe.get("ingredient_ids") or []),
+        }
+        ingredient_definitions = copy.deepcopy(list(INGREDIENTS))
 
     exact_model = {
         "model": str(campaign.runner.model),
@@ -2676,18 +2782,12 @@ def _build_finalization_contract(
         "base_model": str(campaign.runner.model),
         "primary_recipe": copy.deepcopy(primary),
         "rendered_primary_control_text": rendered_control_text,
-        "rendering_rule": {
-            "ingredient_order_is_semantic": True,
-            "placement": primary_recipe.get("placement"),
-            "representation": primary_recipe.get("representation"),
-            "dose": primary_recipe.get("dose"),
-            "recurrence_count": len(primary_recipe.get("ingredient_ids") or []),
-        },
+        "rendering_rule": rendering_rule,
         "alternate_minimal_recipes": copy.deepcopy(verified_recipes[1:]),
         "unverified_minimal_recipes": copy.deepcopy(
             [row for row in recipes if row.get("verified_for_shipping") is not True]
         ),
-        "ingredient_definitions": copy.deepcopy(list(INGREDIENTS)),
+        "ingredient_definitions": ingredient_definitions,
         "recovery_policies": general_recoveries,
         "negative_transfer_boundaries": harmful,
         "tool_boundary": {
