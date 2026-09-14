@@ -267,6 +267,15 @@ def build_test12_cell_budget_plan(
         else "DELIBERATE_HIGH_VALUE_SUBSET"
     )
 
+    built_semantic_mechanisms = sum(
+        1 for payload in mechanisms.values()
+        if payload.get("implementation_status") == "BUILT"
+    )
+    unbuilt_semantic_mechanisms = sum(
+        1 for payload in mechanisms.values()
+        if payload.get("implementation_status") == "UNBUILT"
+    )
+
     return {
         "schema_version": 1,
         "analysis_type": "ZERO_MODEL_CALL_MECHANISM_FAMILY_CELL_BUDGET",
