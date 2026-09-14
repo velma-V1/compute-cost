@@ -65,6 +65,8 @@ TUNING_PHASES = (
 REQUIRED_COLLECTION_FILES = (
     "test1.2-observations.jsonl",
     "runtime-characterization-profile.json",
+    "mechanism-family-knowledge-table.json",
+    "unaided-model-capability-profile.json",
     "full-control-candidate-registry.json",
     "control-grammar-coverage.json",
     "mechanism-coverage-ledger.json",
@@ -124,6 +126,7 @@ REQUIRED_TUNING_OUTPUTS = (
     "successive-halving-ledger.json",
     "compiled-harness-policy.json",
     "compiled-harness-validation.json",
+    "test2-proof-manifest.json",
     "do-not-use-registry.json",
     "fine-tuning-training-corpus.jsonl",
     "fine-tuning-qualification.json",
@@ -634,6 +637,22 @@ def load_collection(results_root: Path, run_id: str) -> dict[str, Any]:
         raise ValueError(
             "collection Stage-0 runtime characterization did not pass"
         )
+    mechanism_family_knowledge = _read_json(
+        run_dir / "mechanism-family-knowledge-table.json"
+    )
+    if (
+        mechanism_family_knowledge.get("analysis_type")
+        != "MECHANISM_X_CAPABILITY_FAMILY_KNOWLEDGE_TABLE"
+    ):
+        raise ValueError("collection mechanism-family knowledge-table contract drifted")
+    unaided_model_capability = _read_json(
+        run_dir / "unaided-model-capability-profile.json"
+    )
+    if (
+        unaided_model_capability.get("analysis_type")
+        != "UNAIDED_MODEL_CAPABILITY_PROFILE"
+    ):
+        raise ValueError("collection unaided-model capability-profile contract drifted")
     coverage = _read_json(run_dir / "control-grammar-coverage.json")
     if not coverage.get("all_declared_candidates_tested"):
         raise ValueError("collection did not exercise every declared control candidate")
@@ -831,6 +850,8 @@ def load_collection(results_root: Path, run_id: str) -> dict[str, Any]:
         "run_dir": str(run_dir),
         "registry": registry,
         "runtime_profile": runtime_profile,
+        "mechanism_family_knowledge": mechanism_family_knowledge,
+        "unaided_model_capability": unaided_model_capability,
         "collection_sanitization": collection_sanitization,
         "generation_budget_calibration": budget_calibration,
         "sanitized_collection_observations": sanitized_collection_rows,
@@ -1824,6 +1845,298 @@ def _top_policies(registry: list[dict[str,Any]], scores: dict[str,Any], keep: in
     return selected
 
 
+TEST2_CELL_ACTIONS = {
+    "conditional":"PROMOTE_OR_REJECT",
+    "harmful":"VERIFY_VETO_IF_POLICY_RELEVANT",
+    "null_verified":"PRESERVE_SKIP_NO_PROOF_CALLS",
+    "null_censored":"CENSORING_BUDGET_DIAGNOSIS",
+    "unknown":"RESOLVE_IF_POLICY_DEPENDENT",
+    "structural_no":"NEVER_CALL",
+    "unbuilt":"ENGINEERING_BACKLOG",
+}
+TEST2_SUPPORTED_PREDICATE_LANGUAGES = {
+    "STRUCTURED_EXACT_OBSERVED_SCOPE_V1",
+}
+
+
+def _build_test2_proof_manifest(
+    collection: dict[str, Any],
+    winner: dict[str, Any],
+    winner_rows: list[dict[str, Any]],
+    winner_summary: dict[str, Any],
+) -> dict[str, Any]:
+    """Compile the frozen policy into a bounded cell-level Test-2 proof queue.
+
+    Scientific effect size is intentionally absent from queue ordering.  A cell
+    receives proof clock only when the frozen compiler can actually consult it,
+    its family appears in the compiler's validation-traffic proxy, and its
+    measured cost does not exceed the frozen policy's observed call budget.
+    """
+    knowledge = collection.get("mechanism_family_knowledge") or {}
+    cells = knowledge.get("cells") or {}
+    baseline = collection.get("unaided_model_capability") or {}
+    baseline_families = baseline.get("families") or {}
+
+    valid_winner_rows = [
+        row for row in winner_rows
+        if row.get("delta_valid") is True
+    ]
+    traffic_by_family: dict[str, int] = defaultdict(int)
+    observed_routes: set[tuple[str, str]] = set()
+    referenced_ids: set[str] = set()
+
+    for value in (
+        winner.get("intervention_id"),
+        winner.get("fallback_intervention_id"),
+    ):
+        ident = str(value or "")
+        if ident and ident != "DIRECT":
+            referenced_ids.add(ident)
+    for value in (winner.get("route_map") or {}).values():
+        ident = str(value or "")
+        if ident and ident != "DIRECT":
+            referenced_ids.add(ident)
+
+    for row in valid_winner_rows:
+        family = str(row.get("family_id") or "")
+        if family:
+            traffic_by_family[family] += 1
+        ident = str(row.get("selected_intervention_id") or "")
+        if family and ident and ident != "DIRECT":
+            observed_routes.add((ident, family))
+            referenced_ids.add(ident)
+
+    if str(winner.get("mode") or "") == "static":
+        ident = str(winner.get("intervention_id") or "")
+        if ident and ident != "DIRECT":
+            for family, count in traffic_by_family.items():
+                if count > 0:
+                    observed_routes.add((ident, family))
+
+    policy_call_budget = max(
+        1.0,
+        float(winner_summary.get("mean_calls") or 0.0),
+    )
+    status_rank = {
+        "COMPILABLE_PENDING_TEST2_PROOF":0,
+        "POLICY_RELEVANT_VETO_PENDING_TEST2_HARM_PROOF":0,
+        "COMPILABILITY_BLOCKED_ON_UNKNOWN_EFFECT":1,
+        "COMPILABILITY_BLOCKED_ON_CENSORING":1,
+        "COMPILABLE_SKIP_RULE_DISCOVERY_ONLY":2,
+        "NOT_REACHABLE_FROM_FROZEN_POLICY":8,
+        "NOT_COMPILABLE_COST":9,
+        "NOT_COMPILABLE_PREDICATE":9,
+        "STRUCTURAL_NO":10,
+        "UNBUILT":10,
+    }
+
+    entries: list[dict[str, Any]] = []
+    for cell_key, raw_cell in sorted(cells.items()):
+        cell = copy.deepcopy(raw_cell)
+        family = str(cell.get("family_id") or "")
+        members = [str(value) for value in cell.get("member_intervention_ids") or []]
+        matched_ids = sorted(set(members) & referenced_ids)
+        route_ids = [
+            ident for ident in matched_ids
+            if (ident, family) in observed_routes
+        ]
+        policy_reachable = bool(route_ids)
+        traffic_n = int(traffic_by_family.get(family, 0))
+        applicability = str(cell.get("applicability") or "")
+        effect = str(cell.get("effect") or "unknown")
+        action = TEST2_CELL_ACTIONS.get(effect, "DEFER_UNRECOGNIZED_STATE")
+        if applicability == "structural_no":
+            action = TEST2_CELL_ACTIONS["structural_no"]
+        elif applicability == "unbuilt":
+            action = TEST2_CELL_ACTIONS["unbuilt"]
+
+        predicate = ((cell.get("conditions") or {}).get("predicate") or {})
+        predicate_language = str(predicate.get("predicate_language") or "")
+        predicate_expressible = bool(
+            predicate_language in TEST2_SUPPORTED_PREDICATE_LANGUAGES
+        )
+        calls_payload = (cell.get("cost") or {}).get("calls") or {}
+        mean_calls = calls_payload.get("mean")
+        cost_measured = isinstance(mean_calls, (int, float)) and not isinstance(mean_calls, bool)
+        cost_fits = bool(
+            cost_measured and float(mean_calls) <= policy_call_budget
+        )
+
+        if applicability == "structural_no":
+            compilable_status = "STRUCTURAL_NO"
+        elif applicability == "unbuilt":
+            compilable_status = "UNBUILT"
+        elif not policy_reachable or traffic_n <= 0:
+            compilable_status = "NOT_REACHABLE_FROM_FROZEN_POLICY"
+        elif effect == "null_verified":
+            compilable_status = "COMPILABLE_SKIP_RULE_DISCOVERY_ONLY"
+        elif effect == "conditional":
+            if not predicate_expressible:
+                compilable_status = "NOT_COMPILABLE_PREDICATE"
+            elif not cost_fits:
+                compilable_status = "NOT_COMPILABLE_COST"
+            else:
+                compilable_status = "COMPILABLE_PENDING_TEST2_PROOF"
+        elif effect == "harmful":
+            compilable_status = (
+                "POLICY_RELEVANT_VETO_PENDING_TEST2_HARM_PROOF"
+                if cost_fits else "NOT_COMPILABLE_COST"
+            )
+        elif effect == "unknown":
+            compilable_status = (
+                "COMPILABILITY_BLOCKED_ON_UNKNOWN_EFFECT"
+                if cost_fits else "NOT_COMPILABLE_COST"
+            )
+        elif effect == "null_censored":
+            compilable_status = "COMPILABILITY_BLOCKED_ON_CENSORING"
+        else:
+            compilable_status = "NOT_REACHABLE_FROM_FROZEN_POLICY"
+
+        entry = {
+            "cell_key":str(cell_key),
+            "mechanism_key":cell.get("mechanism_key"),
+            "family_id":family,
+            "intervention_id":route_ids[0] if route_ids else (
+                matched_ids[0] if matched_ids else None
+            ),
+            "member_intervention_ids":members,
+            "test1_2_effect_state":effect,
+            "test2_action":action,
+            "policy_reachable":policy_reachable,
+            "policy_referenced_but_unobserved":bool(
+                matched_ids and not policy_reachable
+            ),
+            "validation_traffic_proxy_n":traffic_n,
+            "traffic_basis":"VALIDATION_FAMILY_FREQUENCY_PROXY_NOT_FIELD_TRAFFIC",
+            "predicate_expressible":predicate_expressible,
+            "predicate_language":predicate_language or None,
+            "condition":copy.deepcopy(cell.get("conditions") or {}),
+            "cost":copy.deepcopy(cell.get("cost") or {}),
+            "mean_measured_calls":float(mean_calls) if cost_measured else None,
+            "policy_call_budget":policy_call_budget,
+            "cost_fits_policy_budget":cost_fits,
+            "compilable_status":compilable_status,
+            "compiler_priority_rank":int(status_rank.get(compilable_status, 99)),
+            "effect_observation_binding":copy.deepcopy(
+                cell.get("effect_observation_binding") or []
+            ),
+            "harm":copy.deepcopy(cell.get("harm") or {}),
+            "null_evidence":copy.deepcopy(cell.get("null_evidence") or {}),
+            "unaided_family_baseline":copy.deepcopy(
+                baseline_families.get(family) or {}
+            ),
+        }
+        entry["compiler_sort_key"] = [
+            int(entry["compiler_priority_rank"]),
+            -int(traffic_n),
+            (
+                float(entry["mean_measured_calls"])
+                if entry["mean_measured_calls"] is not None
+                else 1e12
+            ),
+            str(cell_key),
+        ]
+        entries.append(entry)
+
+    def ordered(values: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        return sorted(
+            values,
+            key=lambda row: (
+                int(row["compiler_priority_rank"]),
+                -int(row["validation_traffic_proxy_n"]),
+                (
+                    float(row["mean_measured_calls"])
+                    if row["mean_measured_calls"] is not None
+                    else 1e12
+                ),
+                str(row["cell_key"]),
+            ),
+        )
+
+    promotion = ordered([
+        row for row in entries
+        if row["compilable_status"] == "COMPILABLE_PENDING_TEST2_PROOF"
+    ])
+    unknown = ordered([
+        row for row in entries
+        if row["compilable_status"] == "COMPILABILITY_BLOCKED_ON_UNKNOWN_EFFECT"
+    ])
+    harm = ordered([
+        row for row in entries
+        if row["compilable_status"]
+        == "POLICY_RELEVANT_VETO_PENDING_TEST2_HARM_PROOF"
+    ])
+    censoring = ordered([
+        row for row in entries
+        if row["compilable_status"] == "COMPILABILITY_BLOCKED_ON_CENSORING"
+    ])
+    skip = ordered([
+        row for row in entries
+        if row["compilable_status"] == "COMPILABLE_SKIP_RULE_DISCOVERY_ONLY"
+    ])
+    deferred = ordered([
+        row for row in entries
+        if row not in promotion
+        and row not in unknown
+        and row not in harm
+        and row not in censoring
+        and row not in skip
+    ])
+
+    referenced_with_no_observed_route = sorted(
+        ident
+        for ident in referenced_ids
+        if not any(route_ident == ident for route_ident, _ in observed_routes)
+    )
+    return {
+        "schema_version":1,
+        "analysis_type":"COMPILER_DERIVED_TEST2_CELL_PROOF_MANIFEST",
+        "source_collection_run":collection.get("run_id"),
+        "winner_policy_id":winner.get("policy_id"),
+        "winner_mode":winner.get("mode"),
+        "policy_call_budget":policy_call_budget,
+        "queue_order_contract":"COMPILABILITY_THEN_EXPECTED_TRAFFIC_THEN_COST_NEVER_EFFECT_SIZE",
+        "effect_size_used_for_ordering":False,
+        "expected_traffic_basis":"VALIDATION_FAMILY_FREQUENCY_PROXY_NOT_FIELD_TRAFFIC",
+        "state_to_action":copy.deepcopy(TEST2_CELL_ACTIONS),
+        "unknown_is_expected_majority_and_has_reserved_test2_budget":True,
+        "proof_budget_contract":{
+            "promotion":"RECURRENCE_PHASE_REMAINDER_AFTER_RESERVED_UNKNOWN_SUBWINDOW",
+            "unknown_resolution":"EXPLICIT_RESERVED_TEST2_RECURRENCE_SUBWINDOW",
+            "harm":"NEGATIVE_TRANSFER_PHASE",
+            "censoring":"CENSORING_COST_TRADEOFF_PHASE",
+            "null_verified":"ZERO_PROOF_CALLS_PRESERVE_SKIP_RULE",
+        },
+        "source_artifacts":{
+            "knowledge_table":"mechanism-family-knowledge-table.json",
+            "unaided_baseline":"unaided-model-capability-profile.json",
+        },
+        "policy_referenced_intervention_ids":sorted(referenced_ids),
+        "policy_referenced_controls_without_observed_validation_route":referenced_with_no_observed_route,
+        "queues":{
+            "promotion":promotion,
+            "unknown_resolution":unknown,
+            "harm":harm,
+            "censoring":censoring,
+            "skip_verified_null":skip,
+            "deferred":deferred,
+        },
+        "queue_counts":{
+            "promotion":len(promotion),
+            "unknown_resolution":len(unknown),
+            "harm":len(harm),
+            "censoring":len(censoring),
+            "skip_verified_null":len(skip),
+            "deferred":len(deferred),
+        },
+        "training_stage":{
+            "status":"STUB_PENDING_TEST2_RESIDUAL_YIELD",
+            "implementation_authorized":False,
+            "reason":"DO_NOT_BUILD_WEIGHT_PIPELINE_AROUND_UNMEASURED_RESIDUAL_YIELD",
+        },
+    }
+
+
 def _fine_tuning_records(run: TuningRun, winner: dict[str,Any]) -> list[dict[str,Any]]:
     winner_id=str(winner["policy_id"])
     rows=[
@@ -2051,6 +2364,19 @@ def run_test12_tuning(
         winner_family_validation=(
             _score_policies_by_family(winner_rows).get(str(winner["policy_id"])) or {}
         )
+    test2_proof_manifest = _build_test2_proof_manifest(
+        collection,
+        winner,
+        winner_rows,
+        winner_summary,
+    )
+    runner.store.write_json(
+        "test2-proof-manifest.json",
+        test2_proof_manifest,
+        producer="test1.2-tuning",
+        stage="provisional-compiler",
+    )
+
     blind_summary={"status":"NOT_EXPOSED_RESERVED_FOR_TEST2","n":0}
     protected_summary={"status":"NOT_EXPOSED_RESERVED_FOR_FINAL_ACCEPTANCE","n":0}
     blind_scores={}
@@ -2156,6 +2482,13 @@ def run_test12_tuning(
         "collection_opportunity_discovery":copy.deepcopy(
             collection.get("opportunity_discovery") or {}
         ),
+        "test2_proof_manifest":"test2-proof-manifest.json",
+        "test2_proof_queue_counts":copy.deepcopy(
+            test2_proof_manifest.get("queue_counts") or {}
+        ),
+        "proof_queue_order_contract":test2_proof_manifest.get(
+            "queue_order_contract"
+        ),
         "direct_default_when_unmatched":True,
         "oracle_routing_prohibited":True,
         "hard_ceiling_total_seconds":TUNING_HARD_SECONDS+COLLECTION_HARD_SECONDS,
@@ -2203,9 +2536,12 @@ def run_test12_tuning(
         "schema_version":1,
         "residual_examples":len(ft),
         "recurrent_residual_families":{k:v for k,v in by_family.items() if v>=3},
-        "weight_tuning_recommended":bool(any(v>=3 for v in by_family.values())),
+        "candidate_signal_present":bool(any(v>=3 for v in by_family.values())),
+        "weight_tuning_recommended":False,
+        "training_stage_status":"STUB_PENDING_TEST2_RESIDUAL_YIELD",
+        "training_implementation_authorized":False,
         "onboarding_dependency":False,
-        "rule":"these are provisional validation-derived weight candidates only; Test 2 must establish persistent model-owned failures before weight tuning is authorized",
+        "rule":"Test 1.2 may record provisional residual candidates, but Test 2 must establish valid persistent model-owned yield before any weight-training implementation is authorized",
     }
     runner.store.write_json("fine-tuning-qualification.json",qualification,producer="test1.2-tuning",stage="report")
 
@@ -2311,6 +2647,10 @@ def run_test12_tuning(
         "winner_policy":winner,
         "winner_lock_sha256":winner_lock_hash,
         "compiled_harness_policy":"compiled-harness-policy.json",
+        "test2_proof_manifest":"test2-proof-manifest.json",
+        "test2_proof_queue_counts":copy.deepcopy(
+            test2_proof_manifest.get("queue_counts") or {}
+        ),
         "capability_contract":"integration-capability-contract.json",
         "validation_result":"test1.2-final-acceptance.json",
         "do_not_use_registry":"do-not-use-registry.json",
@@ -2330,9 +2670,11 @@ def run_test12_tuning(
             else "DO_NOT_ADVANCE_TO_TEST2_WITH_THIS_CANDIDATE"
         ),
         "optional_future_weight_improvement":{
+            "status":"STUB_PENDING_TEST2_RESIDUAL_YIELD",
+            "implementation_authorized":False,
             "qualification":"fine-tuning-qualification.json",
             "training_corpus":"fine-tuning-training-corpus.jsonl",
-            "note":"weight tuning is considered only after Test 2 establishes the persistent capability floor or the harness ceiling is reached",
+            "note":"Do not implement or authorize weight training until Test 2 reports enough valid persistent model-owned residual yield to justify a real training stage.",
         },
         "total_two_run_hard_ceiling_seconds":TUNING_HARD_SECONDS+COLLECTION_HARD_SECONDS,
     }
